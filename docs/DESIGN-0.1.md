@@ -137,6 +137,19 @@ type ProviderResult<T> =
   | { success: false; error: ProviderError };
 ```
 
+### 2.5 DDD Alignment Addenda
+
+To keep the monorepo layout while preserving the domain-driven intent:
+
+- **Domain purity:** `packages/core/src/domain` contains only TypeScript types/interfaces. No runtime helpers, validation libs, or parsing live here.
+- **Validation boundary:** Place Zod or other schemas in `packages/core/src/validation` (or similar) that depends on domain, never the other way around.
+- **Provider contracts:** Decide per version whether services return raw types (`Promise<ContentSummary>`) or wrapped results (`ProviderResult<T>`). If wrapping, keep result/error types in `ports` (or a thin boundary module) and keep domain types clean.
+- **Import rules:** Add an "allowed imports" matrix for `domain → none`, `ports → domain`, `services → domain + ports`, `adapters → domain + ports + services`, `validation → domain`, `apps/cli → all`, and enforce in CI.
+- **Ubiquitous language:** Maintain a short glossary for `ContentItem`, `ContentSummary`, `WritingIdeas`, `WritingKit`, `UserProfile`, `Source` to avoid naming drift.
+- **Adapter guidance:** Mock adapters are demo/test-only. Real providers (e.g., `@looplia/provider-claude`) live in separate packages consuming only `domain` + `ports` types.
+- **CLI scope:** CLI stays demo-only with mock-by-default behavior; CLI concerns (flags, formats) must not leak into core APIs.
+- **Exports policy:** Stable public surface = domain types, ports, services, optional mock namespace. Validation helpers are optional/secondary exports to avoid coupling consumers to a specific validation lib.
+
 ---
 
 ## 3. Monorepo Architecture
