@@ -1009,6 +1009,8 @@ export function rankKits(
 
 ## 7. Adapters
 
+> Note: Adapters in this package should only define interfaces and mock/test doubles. Concrete provider implementations (e.g., Claude, OpenAI, Ollama) should live in external packages under the `@looplia/provider-*` namespace.
+
 ### 7.1 Mock Summarizer
 
 ```typescript
@@ -1789,7 +1791,13 @@ type WritingKitChunk =
   | { type: 'outline'; data: OutlineSection[] };
 ```
 
-### 12.2 Batch Processing (v0.2)
+### 12.2 CLI Enhancements (v0.2)
+
+- Add `--provider` flag to select external providers (e.g., Claude) without changing code.
+- Support `--format json` and `--format markdown` output modes across commands.
+- Default provider (when unspecified): Claude Agent SDK via `@looplia/provider-claude`.
+
+### 12.3 Batch Processing (v0.2)
 
 Process multiple content items efficiently:
 
@@ -1802,7 +1810,7 @@ async function batchBuildWritingKits(
 ): Promise<ProviderResult<WritingKit>[]>
 ```
 
-### 12.3 Provider Ecosystem (v0.3)
+### 12.4 Provider Ecosystem (v0.3)
 
 External provider packages:
 
@@ -1813,7 +1821,11 @@ External provider packages:
 @looplia/provider-deepseek  - DeepSeek integration
 ```
 
-### 12.4 Caching Layer (v0.3)
+The first (default) agent we ship and document is the Claude Agent SDK integration (`@looplia/provider-claude`), which the CLI should use by default unless `--provider` overrides it.
+
+Add an `/examples` directory that shows end-to-end integration with `@looplia/provider-claude` (including an agent-driven writing workflow that exercises provider-specific skills).
+
+### 12.5 Caching Layer (v0.3)
 
 Optional caching for expensive operations:
 
@@ -1829,7 +1841,7 @@ function createCachedSummarizer(
 ): SummarizerProvider
 ```
 
-### 12.5 Plugin System (v0.4)
+### 12.6 Plugin System (v0.4)
 
 Extensibility via plugins:
 
