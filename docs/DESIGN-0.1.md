@@ -150,6 +150,28 @@ To keep the monorepo layout while preserving the domain-driven intent:
 - **CLI scope:** CLI stays demo-only with mock-by-default behavior; CLI concerns (flags, formats) must not leak into core APIs.
 - **Exports policy:** Stable public surface = domain types, ports, services, optional mock namespace. Validation helpers are optional/secondary exports to avoid coupling consumers to a specific validation lib.
 
+#### 2.5.1 Allowed Imports Matrix
+
+| Layer/Package                     | May Import From                          | Must Not Import From                   |
+|-----------------------------------|------------------------------------------|----------------------------------------|
+| `packages/core/src/domain`        | (none)                                   | services, ports, adapters, validation  |
+| `packages/core/src/ports`         | domain                                   | services, adapters, validation         |
+| `packages/core/src/services`      | domain, ports                            | adapters, validation                   |
+| `packages/core/src/adapters`      | domain, ports, services                  | validation                             |
+| `packages/core/src/validation`    | domain                                   | services, ports, adapters              |
+| `apps/cli`                        | domain, ports, services, adapters, validation | (no restriction; outermost)        |
+
+Enforce via lint/CI (e.g., eslint/no-restricted-imports or TS path rules).
+
+#### 2.5.2 Ubiquitous Language (Glossary)
+
+- `ContentItem`: Raw input item (title, url, rawText, source, metadata).
+- `ContentSummary`: Distilled understanding of a `ContentItem` (headline, tldr, bullets, tags, sentiment, category, score).
+- `WritingIdeas`: Creative expansions (hooks, angles, questions) derived from a summary.
+- `WritingKit`: Complete scaffold combining summary, ideas, and an outline for writing.
+- `UserProfile`: Personalization context (topics, style, optional samples).
+- `Source`: Origin info for a content item (type, label/url, metadata).
+
 ---
 
 ## 3. Monorepo Architecture
