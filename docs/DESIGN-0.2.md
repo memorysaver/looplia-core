@@ -31,7 +31,7 @@ Looplia v0.2 introduces the **real provider ecosystem** with **Claude Agent SDK 
 
 ### 1.2 Goals
 
-- Implement `@looplia/provider` package with Claude Agent SDK integration
+- Implement `@looplia-core/provider` package with Claude Agent SDK integration
 - Use `~/.looplia/` as the primary workspace, seeded from bundled templates
 - Enable agents, skills, and plugins via Claude Agent SDK with workspace overrides
 - Maintain backward compatibility with v0.1 core APIs
@@ -53,8 +53,8 @@ Looplia v0.2 introduces the **real provider ecosystem** with **Claude Agent SDK 
 
 | Package | Purpose | Status |
 |---------|---------|--------|
-| `@looplia/provider` | Real provider implementations with subpath exports | NEW |
-| `@looplia/provider/claude-agent-sdk` | Claude Agent SDK integration | NEW |
+| `@looplia-core/provider` | Real provider implementations with subpath exports | NEW |
+| `@looplia-core/provider/claude-agent-sdk` | Claude Agent SDK integration | NEW |
 
 ### 2.2 Key Features
 
@@ -173,7 +173,7 @@ for await (const message of result) {
 
 ### 5.1 Workspace Structure
 
-v0.2 treats `~/.looplia/` (or configured `workspace`) as the canonical source of truth. On first run, the provider copies bundled agents/skills/prompts into that directory; subsequent edits are preserved. The workspace structure is:
+v0.2 treats `~/.looplia/` (or configured `workspace`) as the canonical source of truth. On first run, the provider copies bundled agents/skills/prompts into that directory; subsequent edits are preserved. When the CLI updates, re-bootstrap to copy new templates over existing ones (back up or version user-edited files before overwriting). The workspace structure is:
 
 ```
 ~/.looplia/
@@ -240,13 +240,16 @@ Invoke this skill when the user wants to transform raw content into writing mate
 ### 5.4 Workspace Initialization
 
 ```typescript
-import { ensureWorkspace } from "@looplia/provider/claude-agent-sdk";
+import { ensureWorkspace } from "@looplia-core/provider/claude-agent-sdk";
 
 // Creates ~/.looplia/ (or custom dir) and copies bundled templates if missing
 const workspaceDir = await ensureWorkspace({
   baseDir: "~/.looplia",  // Optional override
   installDefaults: true   // Copy bundled agents/skills/prompts/plugins
 });
+
+// When the CLI updates, re-bootstrap to copy new templates over existing ones.
+// Preserve user edits by backing up or only overwriting known template files.
 ```
 
 ---
@@ -304,7 +307,7 @@ looplia-core/
 
 ```json
 {
-  "name": "@looplia/provider",
+  "name": "@looplia-core/provider",
   "version": "0.2.0",
   "type": "module",
   "exports": {
@@ -452,7 +455,7 @@ export async function ensureWorkspace(config?: {
 ### 7.3 Usage Example
 
 ```typescript
-import { createClaudeProviders } from "@looplia/provider/claude-agent-sdk";
+import { createClaudeProviders } from "@looplia-core/provider/claude-agent-sdk";
 import { buildWritingKit } from "@looplia-core/core";
 
 // Create all providers with default config
@@ -478,13 +481,15 @@ if (result.success) {
 
 ### 8.1 Query Wrapper
 
-The query wrapper handles the Claude Agent SDK interaction, always reading from the workspace (seeded on init):
+The query wrapper handles the Claude Agent SDK interaction and always runs against the workspace (seeded or re-seeded before each call):
 
 ```typescript
 // packages/provider/src/claude-agent-sdk/utils/query-wrapper.ts
 
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import type { ClaudeAgentConfig, ProviderResultWithUsage } from "../config";
+import { ensureWorkspace } from "./workspace";
+import { mapException, mapSdkError } from "./error-mapper";
+import type { ClaudeAgentConfig, ProviderResultWithUsage, ProviderUsage } from "../config";
 
 export async function executeQuery<T>(
   prompt: string,
@@ -493,13 +498,19 @@ export async function executeQuery<T>(
   config: ClaudeAgentConfig
 ): Promise<ProviderResultWithUsage<T>> {
   try {
+    const workspace = await ensureWorkspace({
+      baseDir: config.workspace ?? "~/.looplia",
+      installDefaults: true // re-bootstrap on CLI upgrades to refresh templates
+    });
+
     const result = query({
       prompt,
       options: {
         model: config.model ?? "claude-haiku-4-5-20251001",
+        cwd: workspace,
         systemPrompt,
         permissionMode: "bypassPermissions",
-        allowedTools: ["Skill"],  // Enable Agent Skills
+        allowedTools: config.useFilesystemExtensions === false ? [] : ["Skill"],
         outputFormat: {
           type: "json_schema",
           schema: jsonSchema
@@ -507,7 +518,6 @@ export async function executeQuery<T>(
         timeout: config.timeout ?? 60000
       }
     });
-```
 
     for await (const message of result) {
       if (message.type === "result") {
@@ -516,7 +526,7 @@ export async function executeQuery<T>(
           outputTokens: message.usage?.output_tokens ?? 0,
           totalCostUsd: message.total_cost_usd ?? 0
         };
-```}잘 to=functions.edit deserialization error: JSON parse error: Invalid character at position 1220. Raw content: {
+
         if (message.subtype === "success") {
           return {
             success: true,
@@ -730,7 +740,7 @@ LOOPLIA_HOME=~/.looplia               # Optional workspace override
 
 ### 10.2 Source Precedence
 
-Configuration is resolved strictly in this order: bundled defaults (for initial copy) < workspace files (`~/.looplia/`) < explicit function arguments. Once seeded, workspace edits take priority.
+Configuration is resolved in this order: bundled defaults (for initial copy only) < function arguments (used only to seed missing defaults) < workspace files (`~/.looplia/`) at runtime. After bootstrap, workspace content always wins over function arguments.
 
 ### 10.3 Workspace Bootstrapping
 
@@ -741,7 +751,7 @@ const providers = createClaudeProviders({
 });
 ```
 
-On initialization, the provider copies bundled agents/skills/prompts/plugins into the target workspace if they are missing. Subsequent runs reuse and never overwrite user changes.
+On initialization, the provider copies bundled agents/skills/prompts/plugins into the target workspace. When the CLI updates, re-bootstrap to refresh template files (back up or version templates before overwriting user edits).
 
 ---
 
@@ -749,18 +759,22 @@ On initialization, the provider copies bundled agents/skills/prompts/plugins int
 
 ### 11.1 Unit Tests
 
-Test individual provider implementations:
+Test individual provider implementations. Use mocked SDK responses and a temp workspace directory per test (e.g., `tmpdir`) to avoid real network calls and accidental writes to `~/.looplia`:
 
 ```typescript
 // packages/provider/test/claude-agent-sdk/summarizer.test.ts
 
 import { describe, it, expect, mock } from "bun:test";
 import { createClaudeSummarizer } from "../../src/claude-agent-sdk";
+import { createTempWorkspace } from "./fixtures/test-data"; // helper that creates an isolated temp dir
+
+const tmpWorkspaceDir = createTempWorkspace();
 
 describe("createClaudeSummarizer", () => {
   it("should return valid ContentSummary", async () => {
     const summarizer = createClaudeSummarizer({
-      model: "claude-haiku-4-5-20251001"
+      model: "claude-haiku-4-5-20251001",
+      workspace: tmpWorkspaceDir
     });
 
     const result = await summarizer.summarize(testContent, testUser);
@@ -791,7 +805,7 @@ describe("createClaudeSummarizer", () => {
 
 ### 11.2 Integration Tests
 
-Test full pipeline with mock SDK responses:
+Test full pipeline with mock SDK responses and an isolated workspace:
 
 ```typescript
 // packages/provider/test/claude-agent-sdk/integration.test.ts
@@ -799,11 +813,15 @@ Test full pipeline with mock SDK responses:
 import { describe, it, expect } from "bun:test";
 import { createClaudeProviders } from "../../src/claude-agent-sdk";
 import { buildWritingKit } from "@looplia-core/core";
+import { createTempWorkspace } from "./fixtures/test-data";
+
+const tmpWorkspaceDir = createTempWorkspace();
 
 describe("Full Pipeline Integration", () => {
   it("should build complete writing kit", async () => {
     const providers = createClaudeProviders({
-      model: "claude-haiku-4-5-20251001"
+      model: "claude-haiku-4-5-20251001",
+      workspace: tmpWorkspaceDir
     });
 
     const result = await buildWritingKit(testContent, testUser, providers);
@@ -847,9 +865,9 @@ packages/provider/test/
 
 ### 12.2 v0.3 - Multi-Provider Ecosystem
 
-- [ ] `@looplia/provider/openai` - OpenAI integration
-- [ ] `@looplia/provider/ollama` - Local model support
-- [ ] `@looplia/provider/deepseek` - DeepSeek integration
+- [ ] `@looplia-core/provider/openai` - OpenAI integration
+- [ ] `@looplia-core/provider/ollama` - Local model support
+- [ ] `@looplia-core/provider/deepseek` - DeepSeek integration
 - [ ] Provider selection via CLI flag
 
 ### 12.3 v0.4 - Streaming & Advanced Features
