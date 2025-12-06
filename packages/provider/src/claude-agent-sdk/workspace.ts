@@ -1,9 +1,6 @@
-import { cp, mkdir, readdir, stat } from "node:fs/promises";
+import { cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { dirname, isAbsolute, join, normalize, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import { isAbsolute, join, normalize, resolve } from "node:path";
 
 /**
  * Options for workspace initialization
@@ -12,11 +9,11 @@ export type WorkspaceOptions = {
   /** Base directory for workspace (default: ~/.looplia) */
   baseDir?: string;
 
-  /** Whether to install default agents/skills/prompts (default: true) */
-  installDefaults?: boolean;
+  /** Force destructive refresh from plugin (removes existing workspace) */
+  force?: boolean;
 
-  /** Force overwrite existing files (for template upgrades) */
-  forceUpdate?: boolean;
+  /** Check for required files (agents, skills, CLAUDE.md) */
+  requireFiles?: boolean;
 };
 
 /**
@@ -24,7 +21,7 @@ export type WorkspaceOptions = {
  *
  * @throws Error if homedir() returns empty string
  */
-function expandPath(path: string): string {
+export function expandPath(path: string): string {
   // Handle tilde expansion
   if (path.startsWith("~/") || path === "~") {
     const home = homedir();
@@ -57,132 +54,126 @@ async function pathExists(path: string): Promise<boolean> {
 }
 
 /**
- * Get the bundled assets directory
- *
- * Returns the directory containing bundled agents and skills.
- * In development this is src/claude-agent-sdk/, after build it's dist/claude-agent-sdk/
+ * Get the plugin directory path
  */
-function getBundledAssetsDir(): string {
-  return __dirname;
+export function getPluginPath(): string {
+  // Assuming CLI runs from project root
+  return join(process.cwd(), "plugins", "looplia-writer");
 }
 
 /**
- * Copy a single entry (file or directory)
- *
- * @param srcPath - Source path
- * @param destPath - Destination path
- * @param isDirectory - Whether the entry is a directory
- * @param forceUpdate - If true, overwrite existing files
+ * Check if all required workspace files exist
  */
-async function copyEntry(
-  srcPath: string,
-  destPath: string,
-  isDirectory: boolean,
-  forceUpdate: boolean
-): Promise<void> {
-  // Skip if destination exists and not forcing update
-  if (!forceUpdate && (await pathExists(destPath))) {
-    return;
-  }
-  await cp(srcPath, destPath, { recursive: isDirectory, force: forceUpdate });
-}
+async function checkRequiredFiles(workspaceDir: string): Promise<boolean> {
+  const requiredPaths = [
+    join(workspaceDir, "CLAUDE.md"),
+    join(workspaceDir, ".claude", "agents"),
+    join(workspaceDir, ".claude", "skills"),
+  ];
 
-/**
- * Copy all entries from source to destination directory
- */
-async function copyDirectoryEntries(
-  srcDir: string,
-  destDir: string,
-  forceUpdate: boolean
-): Promise<void> {
-  const entries = await readdir(srcDir, { withFileTypes: true });
-  for (const entry of entries) {
-    const srcPath = join(srcDir, entry.name);
-    const destPath = join(destDir, entry.name);
-    await copyEntry(srcPath, destPath, entry.isDirectory(), forceUpdate);
-  }
-}
-
-/**
- * Copy a single asset directory from bundled to workspace
- */
-async function copyAssetDirectory(
-  bundledDir: string,
-  workspaceDir: string,
-  dir: string,
-  forceUpdate: boolean
-): Promise<void> {
-  const srcDir = join(bundledDir, dir);
-  const destDir = join(workspaceDir, dir);
-
-  if (!(await pathExists(srcDir))) {
-    return;
-  }
-
-  await mkdir(destDir, { recursive: true });
-
-  try {
-    await copyDirectoryEntries(srcDir, destDir, forceUpdate);
-  } catch (error) {
-    // Silently ignore ENOENT errors
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      throw error;
+  for (const path of requiredPaths) {
+    if (!(await pathExists(path))) {
+      return false;
     }
   }
-}
 
-/**
- * Copy bundled assets to workspace
- */
-async function copyBundledAssets(
-  workspaceDir: string,
-  forceUpdate: boolean
-): Promise<void> {
-  const bundledDir = getBundledAssetsDir();
-  const assetDirs = ["agents", "skills"];
-
-  for (const dir of assetDirs) {
-    await copyAssetDirectory(bundledDir, workspaceDir, dir, forceUpdate);
-  }
+  return true;
 }
 
 /**
  * Ensure the Looplia workspace exists and is properly initialized
  *
- * Creates ~/.looplia/ (or configured workspace) and copies bundled
- * agents/skills/prompts if missing. Subsequent edits are preserved
- * unless forceUpdate is set to true.
+ * Creates ~/.looplia/ with .claude/ structure and copies from looplia-writer plugin.
+ * On first run or when force=true, performs destructive refresh from plugin.
  *
  * @param options - Configuration options
  * @returns The absolute path to the workspace directory
  *
+ * @throws Error if plugin directory not found or required files missing without force
+ *
  * @example
  * ```typescript
- * // Normal init (preserves user edits)
+ * // Normal init (bootstraps if needed)
  * const workspace = await ensureWorkspace();
  *
- * // Force update bundled templates
- * const workspace = await ensureWorkspace({ forceUpdate: true });
+ * // Force destructive refresh
+ * const workspace = await ensureWorkspace({ force: true });
+ *
+ * // Check for required files
+ * const workspace = await ensureWorkspace({ requireFiles: true });
  * ```
  */
 export async function ensureWorkspace(
   options?: WorkspaceOptions
 ): Promise<string> {
   const baseDir = options?.baseDir ?? "~/.looplia";
-  const installDefaults = options?.installDefaults ?? true;
-  const forceUpdate = options?.forceUpdate ?? false;
+  const force = options?.force ?? false;
+  const requireFiles = options?.requireFiles ?? false;
 
   const workspaceDir = expandPath(baseDir);
+  const pluginDir = getPluginPath();
 
-  // Create workspace directory structure
-  await mkdir(workspaceDir, { recursive: true });
-  await mkdir(join(workspaceDir, "agents"), { recursive: true });
-  await mkdir(join(workspaceDir, "skills"), { recursive: true });
-  await mkdir(join(workspaceDir, "plugins"), { recursive: true });
+  // Check if plugin directory exists
+  if (!(await pathExists(pluginDir))) {
+    throw new Error(
+      `Plugin directory not found: ${pluginDir}. Ensure you're running from project root.`
+    );
+  }
 
-  // Copy bundled assets if requested
-  if (installDefaults) {
-    await copyBundledAssets(workspaceDir, forceUpdate);
+  const workspaceExists = await pathExists(workspaceDir);
+  const requiredFilesPresent = workspaceExists
+    ? await checkRequiredFiles(workspaceDir)
+    : false;
+
+  // Determine if bootstrap is needed
+  const needsBootstrap =
+    force || !workspaceExists || (requireFiles && !requiredFilesPresent);
+
+  if (needsBootstrap) {
+    // Destructive refresh when forced or when required files are missing
+    if (workspaceExists) {
+      await rm(workspaceDir, { recursive: true, force: true });
+    }
+
+    // Create workspace directory structure
+    await mkdir(workspaceDir, { recursive: true });
+    await mkdir(join(workspaceDir, ".claude"), { recursive: true });
+    await mkdir(join(workspaceDir, "contentItem"), { recursive: true });
+
+    // Copy agents and skills from plugin to .claude/
+    await cp(
+      join(pluginDir, "agents"),
+      join(workspaceDir, ".claude", "agents"),
+      { recursive: true }
+    );
+
+    await cp(
+      join(pluginDir, "skills"),
+      join(workspaceDir, ".claude", "skills"),
+      { recursive: true }
+    );
+
+    // Copy README.md → CLAUDE.md (rename!)
+    const readmePath = join(pluginDir, "README.md");
+    const claudeMdPath = join(workspaceDir, "CLAUDE.md");
+    await cp(readmePath, claudeMdPath);
+
+    // Create default user-profile.json
+    const defaultProfile = {
+      userId: "default",
+      topics: [],
+      style: {
+        tone: "intermediate",
+        targetWordCount: 1000,
+        voice: "first-person",
+      },
+    };
+
+    await writeFile(
+      join(workspaceDir, "user-profile.json"),
+      JSON.stringify(defaultProfile, null, 2),
+      "utf-8"
+    );
   }
 
   return workspaceDir;
@@ -193,4 +184,24 @@ export async function ensureWorkspace(
  */
 export function getWorkspacePath(baseDir?: string): string {
   return expandPath(baseDir ?? "~/.looplia");
+}
+
+/**
+ * Read user profile from workspace
+ */
+export async function readUserProfile(workspaceDir: string): Promise<unknown> {
+  const profilePath = join(workspaceDir, "user-profile.json");
+  const content = await readFile(profilePath, "utf-8");
+  return JSON.parse(content);
+}
+
+/**
+ * Write user profile to workspace
+ */
+export async function writeUserProfile(
+  workspaceDir: string,
+  profile: unknown
+): Promise<void> {
+  const profilePath = join(workspaceDir, "user-profile.json");
+  await writeFile(profilePath, JSON.stringify(profile, null, 2), "utf-8");
 }

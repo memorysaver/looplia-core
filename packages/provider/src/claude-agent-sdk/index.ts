@@ -35,7 +35,16 @@ export {
 } from "./utils/schema-converter";
 export type { WorkspaceOptions } from "./workspace";
 // Re-export workspace utilities
-export { ensureWorkspace, getWorkspacePath } from "./workspace";
+export {
+  ensureWorkspace,
+  expandPath,
+  getPluginPath,
+  getWorkspacePath,
+  readUserProfile,
+  writeUserProfile,
+} from "./workspace";
+// Re-export content I/O utilities
+export { writeContentItem } from "./content-io";
 
 /**
  * Claude-powered providers bundle with usage tracking

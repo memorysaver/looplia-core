@@ -43,12 +43,32 @@ export const ContentItemSchema = z.object({
 // Summary Schemas
 // ─────────────────────────────────────────────────────────────
 
+export const CoreIdeaSchema = z.object({
+  concept: z.string().min(1),
+  explanation: z.string().min(10),
+  examples: z.array(z.string()).optional(),
+});
+
+export const QuoteSchema = z.object({
+  text: z.string().min(1),
+  // Optional but must be HH:MM:SS or MM:SS when present (no normalization applied)
+  timestamp: z
+    .string()
+    .regex(/^(\d{1,2}:\d{2}:\d{2}|\d{1,2}:\d{2})$/, {
+      message: "Use HH:MM:SS or MM:SS",
+    })
+    .optional(),
+  context: z.string().optional(),
+});
+
 export const SummaryScoreSchema = z.object({
   relevanceToUser: z.number().min(0).max(1),
 });
 
 export const ContentSummarySchema = z.object({
   contentId: z.string().min(1),
+
+  // Core fields
   headline: z.string().min(10).max(200),
   tldr: z.string().min(20).max(500),
   bullets: z.array(z.string()).min(1).max(10),
@@ -56,6 +76,16 @@ export const ContentSummarySchema = z.object({
   sentiment: z.enum(["positive", "neutral", "negative"]),
   category: z.string(),
   score: SummaryScoreSchema,
+
+  // Enhanced fields (v0.3)
+  overview: z.string().min(50),
+  keyThemes: z.array(z.string()).min(3).max(7),
+  detailedAnalysis: z.string().min(100),
+  narrativeFlow: z.string().min(50),
+  coreIdeas: z.array(CoreIdeaSchema).min(1).max(10),
+  importantQuotes: z.array(QuoteSchema).min(0).max(20),
+  context: z.string().min(20),
+  relatedConcepts: z.array(z.string()).min(0).max(15),
 });
 
 // ─────────────────────────────────────────────────────────────

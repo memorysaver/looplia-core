@@ -1,0 +1,7 @@
+{
+  "name": "looplia-writer",
+  "version": "0.3.0",
+  "description": "Looplia writing assistant with content analysis and idea generation",
+  "author": "Looplia",
+  "homepage": "https://github.com/looplia/looplia-core/tree/main/plugins/looplia-writer"
+}

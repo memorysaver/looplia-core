@@ -9,7 +9,12 @@ import {
   validateContentItem,
   validateUserProfile,
 } from "@looplia-core/core";
-import { createClaudeProviders } from "@looplia-core/provider/claude-agent-sdk";
+import {
+  createClaudeProviders,
+  ensureWorkspace,
+  readUserProfile,
+  writeContentItem,
+} from "@looplia-core/provider/claude-agent-sdk";
 import {
   createContentItemFromFile,
   formatKitAsMarkdown,
@@ -124,9 +129,9 @@ export async function runKitCommand(args: string[]): Promise<void> {
 
   const format = getArg(parsed, "format") ?? "json";
   const outputPath = getArg(parsed, "output", "o");
-  const topics = parseTopics(getArg(parsed, "topics"));
-  const tone = parseTone(getArg(parsed, "tone") ?? "intermediate");
-  const targetWordCount = parseWordCount(getArg(parsed, "word-count"));
+  const topicsArg = getArg(parsed, "topics");
+  const toneArg = getArg(parsed, "tone");
+  const wordCountArg = getArg(parsed, "word-count");
   const useMock = hasFlag(parsed, "mock", "m");
 
   // Check for API key unless using mock provider
@@ -137,9 +142,45 @@ export async function runKitCommand(args: string[]): Promise<void> {
     process.exit(1);
   }
 
+  // Ensure workspace exists and is initialized
+  const workspace = await ensureWorkspace({ requireFiles: true });
+
+  // Read user profile from workspace (or create from CLI args)
+  let user: UserProfile;
+  try {
+    const profileData = await readUserProfile(workspace);
+    const validation = validateUserProfile(profileData);
+    if (!validation.success) {
+      console.error("Warning: Invalid user-profile.json, using CLI args");
+      user = createUserProfile(
+        parseTopics(topicsArg),
+        parseTone(toneArg ?? "intermediate"),
+        parseWordCount(wordCountArg)
+      );
+    } else {
+      user = validation.data;
+      // Override with CLI args if provided
+      if (topicsArg) {
+        user.topics = parseTopics(topicsArg);
+      }
+      if (toneArg) {
+        user.style.tone = parseTone(toneArg);
+      }
+      if (wordCountArg) {
+        user.style.targetWordCount = parseWordCount(wordCountArg);
+      }
+    }
+  } catch {
+    // No user profile, use CLI args
+    user = createUserProfile(
+      parseTopics(topicsArg),
+      parseTone(toneArg ?? "intermediate"),
+      parseWordCount(wordCountArg)
+    );
+  }
+
   const rawText = readContentFile(filePath);
   const content = createContentItemFromFile(filePath, rawText);
-  const user = createUserProfile(topics, tone, targetWordCount);
 
   const contentValidation = validateContentItem(content);
   if (!contentValidation.success) {
@@ -149,13 +190,9 @@ export async function runKitCommand(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  const userValidation = validateUserProfile(user);
-  if (!userValidation.success) {
-    console.error(
-      `User profile validation error: ${userValidation.error.message}`
-    );
-    process.exit(1);
-  }
+  // Write content to workspace
+  const contentId = await writeContentItem(contentValidation.data, workspace);
+  console.error(`✓ Content written to workspace: ${contentId}`);
 
   // Create providers based on --mock flag
   const providers = useMock
@@ -166,11 +203,8 @@ export async function runKitCommand(args: string[]): Promise<void> {
       }
     : createClaudeProviders();
 
-  const result = await buildWritingKit(
-    contentValidation.data,
-    userValidation.data,
-    providers
-  );
+  console.error("⏳ Processing content...");
+  const result = await buildWritingKit(contentValidation.data, user, providers);
 
   if (!result.success) {
     console.error(`Error: ${result.error.message}`);
