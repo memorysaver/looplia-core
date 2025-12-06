@@ -81,3 +81,54 @@ export function resolveConfig(
     timeout: config?.timeout ?? DEFAULT_CONFIG.timeout,
   };
 }
+
+/**
+ * Validation result for configuration
+ */
+export type ConfigValidationResult = {
+  valid: boolean;
+  errors: string[];
+};
+
+/**
+ * Validate configuration before making API calls
+ *
+ * @param config - Configuration to validate
+ * @returns Validation result with any errors found
+ *
+ * @example
+ * ```typescript
+ * const validation = validateConfig(config);
+ * if (!validation.valid) {
+ *   console.error("Config errors:", validation.errors);
+ * }
+ * ```
+ */
+export function validateConfig(
+  config?: ClaudeAgentConfig
+): ConfigValidationResult {
+  const errors: string[] = [];
+
+  // Check API key
+  const apiKey = config?.apiKey ?? process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    errors.push(
+      "API key is required. Set ANTHROPIC_API_KEY environment variable or provide apiKey in config"
+    );
+  }
+
+  // Validate timeout if provided
+  if (config?.timeout !== undefined && config.timeout <= 0) {
+    errors.push("Timeout must be a positive number");
+  }
+
+  // Validate maxRetries if provided
+  if (config?.maxRetries !== undefined && config.maxRetries < 0) {
+    errors.push("maxRetries must be non-negative");
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}

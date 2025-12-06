@@ -13,11 +13,27 @@ export type SdkResultSubtype =
   | "error_during_execution";
 
 /**
- * SDK result message structure
+ * SDK result message structure (for error handling)
  */
 export type SdkResultMessage = {
   type: "result";
   subtype: SdkResultSubtype;
+  errors?: string[];
+};
+
+/**
+ * Full SDK message structure with all fields
+ * Used for processing query responses
+ */
+export type SdkMessage = {
+  type: string;
+  subtype?: SdkResultSubtype;
+  structured_output?: unknown;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+  };
+  total_cost_usd?: number;
   errors?: string[];
 };
 

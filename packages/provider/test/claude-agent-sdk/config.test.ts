@@ -1,7 +1,8 @@
-import { describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
 import {
   DEFAULT_CONFIG,
   resolveConfig,
+  validateConfig,
 } from "../../src/claude-agent-sdk/config";
 
 describe("config", () => {
@@ -63,6 +64,60 @@ describe("config", () => {
       expect(resolved.model).toBe("custom-model");
       expect(resolved.workspace).toBe(DEFAULT_CONFIG.workspace);
       expect(resolved.useFilesystemExtensions).toBe(true);
+    });
+  });
+
+  describe("validateConfig", () => {
+    const originalApiKey = process.env.ANTHROPIC_API_KEY;
+
+    afterEach(() => {
+      // Restore original env
+      if (originalApiKey) {
+        process.env.ANTHROPIC_API_KEY = originalApiKey;
+      } else {
+        process.env.ANTHROPIC_API_KEY = undefined;
+      }
+    });
+
+    it("should return valid when API key is provided in config", () => {
+      process.env.ANTHROPIC_API_KEY = undefined;
+      const result = validateConfig({ apiKey: "test-key" });
+
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it("should return valid when API key is in environment", () => {
+      process.env.ANTHROPIC_API_KEY = "env-test-key";
+      const result = validateConfig();
+
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it("should return invalid when no API key is available", () => {
+      process.env.ANTHROPIC_API_KEY = undefined;
+      const result = validateConfig();
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.length).toBeGreaterThan(0);
+      expect(result.errors[0]).toContain("API key");
+    });
+
+    it("should return invalid for negative timeout", () => {
+      process.env.ANTHROPIC_API_KEY = "test-key";
+      const result = validateConfig({ timeout: -1 });
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("Timeout"))).toBe(true);
+    });
+
+    it("should return invalid for negative maxRetries", () => {
+      process.env.ANTHROPIC_API_KEY = "test-key";
+      const result = validateConfig({ maxRetries: -1 });
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("maxRetries"))).toBe(true);
     });
   });
 });

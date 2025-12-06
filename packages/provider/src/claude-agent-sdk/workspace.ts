@@ -1,6 +1,6 @@
 import { cp, mkdir, readdir, stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -14,19 +14,34 @@ export type WorkspaceOptions = {
 
   /** Whether to install default agents/skills/prompts (default: true) */
   installDefaults?: boolean;
+
+  /** Force overwrite existing files (for template upgrades) */
+  forceUpdate?: boolean;
 };
 
 /**
- * Expand ~ to home directory
+ * Expand ~ to home directory and validate path safety
+ *
+ * @throws Error if homedir() returns empty string
  */
 function expandPath(path: string): string {
-  if (path.startsWith("~/")) {
-    return join(homedir(), path.slice(2));
+  // Handle tilde expansion
+  if (path.startsWith("~/") || path === "~") {
+    const home = homedir();
+    if (!home) {
+      throw new Error("Unable to determine home directory");
+    }
+    const expanded = path === "~" ? home : join(home, path.slice(2));
+    return normalize(expanded);
   }
-  if (path === "~") {
-    return homedir();
+
+  // For absolute paths, normalize to resolve any .. or . segments
+  if (isAbsolute(path)) {
+    return normalize(path);
   }
-  return path;
+
+  // For relative paths, resolve against cwd and normalize
+  return normalize(resolve(path));
 }
 
 /**
@@ -52,17 +67,24 @@ function getBundledAssetsDir(): string {
 }
 
 /**
- * Copy a single entry (file or directory) if destination doesn't exist
+ * Copy a single entry (file or directory)
+ *
+ * @param srcPath - Source path
+ * @param destPath - Destination path
+ * @param isDirectory - Whether the entry is a directory
+ * @param forceUpdate - If true, overwrite existing files
  */
-async function copyEntryIfMissing(
+async function copyEntry(
   srcPath: string,
   destPath: string,
-  isDirectory: boolean
+  isDirectory: boolean,
+  forceUpdate: boolean
 ): Promise<void> {
-  if (await pathExists(destPath)) {
+  // Skip if destination exists and not forcing update
+  if (!forceUpdate && (await pathExists(destPath))) {
     return;
   }
-  await cp(srcPath, destPath, { recursive: isDirectory });
+  await cp(srcPath, destPath, { recursive: isDirectory, force: forceUpdate });
 }
 
 /**
@@ -70,13 +92,14 @@ async function copyEntryIfMissing(
  */
 async function copyDirectoryEntries(
   srcDir: string,
-  destDir: string
+  destDir: string,
+  forceUpdate: boolean
 ): Promise<void> {
   const entries = await readdir(srcDir, { withFileTypes: true });
   for (const entry of entries) {
     const srcPath = join(srcDir, entry.name);
     const destPath = join(destDir, entry.name);
-    await copyEntryIfMissing(srcPath, destPath, entry.isDirectory());
+    await copyEntry(srcPath, destPath, entry.isDirectory(), forceUpdate);
   }
 }
 
@@ -86,7 +109,8 @@ async function copyDirectoryEntries(
 async function copyAssetDirectory(
   bundledDir: string,
   workspaceDir: string,
-  dir: string
+  dir: string,
+  forceUpdate: boolean
 ): Promise<void> {
   const srcDir = join(bundledDir, dir);
   const destDir = join(workspaceDir, dir);
@@ -98,7 +122,7 @@ async function copyAssetDirectory(
   await mkdir(destDir, { recursive: true });
 
   try {
-    await copyDirectoryEntries(srcDir, destDir);
+    await copyDirectoryEntries(srcDir, destDir, forceUpdate);
   } catch (error) {
     // Silently ignore ENOENT errors
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
@@ -110,12 +134,15 @@ async function copyAssetDirectory(
 /**
  * Copy bundled assets to workspace
  */
-async function copyBundledAssets(workspaceDir: string): Promise<void> {
+async function copyBundledAssets(
+  workspaceDir: string,
+  forceUpdate: boolean
+): Promise<void> {
   const bundledDir = getBundledAssetsDir();
   const assetDirs = ["agents", "skills"];
 
   for (const dir of assetDirs) {
-    await copyAssetDirectory(bundledDir, workspaceDir, dir);
+    await copyAssetDirectory(bundledDir, workspaceDir, dir, forceUpdate);
   }
 }
 
@@ -123,16 +150,27 @@ async function copyBundledAssets(workspaceDir: string): Promise<void> {
  * Ensure the Looplia workspace exists and is properly initialized
  *
  * Creates ~/.looplia/ (or configured workspace) and copies bundled
- * agents/skills/prompts if missing. Subsequent edits are preserved.
+ * agents/skills/prompts if missing. Subsequent edits are preserved
+ * unless forceUpdate is set to true.
  *
  * @param options - Configuration options
  * @returns The absolute path to the workspace directory
+ *
+ * @example
+ * ```typescript
+ * // Normal init (preserves user edits)
+ * const workspace = await ensureWorkspace();
+ *
+ * // Force update bundled templates
+ * const workspace = await ensureWorkspace({ forceUpdate: true });
+ * ```
  */
 export async function ensureWorkspace(
   options?: WorkspaceOptions
 ): Promise<string> {
   const baseDir = options?.baseDir ?? "~/.looplia";
   const installDefaults = options?.installDefaults ?? true;
+  const forceUpdate = options?.forceUpdate ?? false;
 
   const workspaceDir = expandPath(baseDir);
 
@@ -142,9 +180,9 @@ export async function ensureWorkspace(
   await mkdir(join(workspaceDir, "skills"), { recursive: true });
   await mkdir(join(workspaceDir, "plugins"), { recursive: true });
 
-  // Copy bundled assets if requested and they don't exist
+  // Copy bundled assets if requested
   if (installDefaults) {
-    await copyBundledAssets(workspaceDir);
+    await copyBundledAssets(workspaceDir, forceUpdate);
   }
 
   return workspaceDir;

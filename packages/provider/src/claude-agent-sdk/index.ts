@@ -5,12 +5,14 @@ import { createClaudeIdeaGenerator } from "./idea-generator";
 import { createClaudeOutlineGenerator } from "./outline-generator";
 import { createClaudeSummarizer } from "./summarizer";
 
-// Re-export types
+// Re-export types and utilities
 export type {
   ClaudeAgentConfig,
+  ConfigValidationResult,
   ProviderResultWithUsage,
   ProviderUsage,
 } from "./config";
+export { validateConfig } from "./config";
 export type { ClaudeIdeaProvider } from "./idea-generator";
 export { createClaudeIdeaGenerator } from "./idea-generator";
 export type { ClaudeOutlineProvider } from "./outline-generator";

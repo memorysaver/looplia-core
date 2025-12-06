@@ -10,6 +10,7 @@ import { ensureWorkspace } from "../workspace";
 import {
   mapException,
   mapSdkError,
+  type SdkMessage,
   type SdkResultMessage,
 } from "./error-mapper";
 
@@ -19,20 +20,27 @@ const RETRY_BASE_DELAY_MS = 1000;
 /** Maximum delay between retries (ms) */
 const RETRY_MAX_DELAY_MS = 30_000;
 
+/** Cached workspace paths to avoid repeated filesystem checks */
+const workspaceCache = new Map<string, string>();
+
 /**
- * SDK message types we handle
+ * Get or initialize workspace with caching
  */
-type SdkMessage = {
-  type: string;
-  subtype?: string;
-  structured_output?: unknown;
-  usage?: {
-    input_tokens?: number;
-    output_tokens?: number;
-  };
-  total_cost_usd?: number;
-  errors?: string[];
-};
+async function getOrInitWorkspace(
+  baseDir: string,
+  installDefaults: boolean
+): Promise<string> {
+  const cacheKey = `${baseDir}:${installDefaults}`;
+
+  const cached = workspaceCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  const workspace = await ensureWorkspace({ baseDir, installDefaults });
+  workspaceCache.set(cacheKey, workspace);
+  return workspace;
+}
 
 /**
  * Execute a query against the Claude Agent SDK with structured output
@@ -52,11 +60,25 @@ export async function executeQuery<T>(
   try {
     const resolvedConfig = resolveConfig(config);
 
-    // Ensure workspace is initialized
-    const workspace = await ensureWorkspace({
-      baseDir: resolvedConfig.workspace,
-      installDefaults: resolvedConfig.useFilesystemExtensions,
-    });
+    // Validate API key before making request
+    const apiKey = config?.apiKey ?? process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      return {
+        success: false,
+        error: {
+          type: "validation_error",
+          field: "apiKey",
+          message:
+            "API key is required. Set ANTHROPIC_API_KEY environment variable or provide apiKey in config",
+        },
+      };
+    }
+
+    // Get workspace (cached after first init)
+    const workspace = await getOrInitWorkspace(
+      resolvedConfig.workspace,
+      resolvedConfig.useFilesystemExtensions
+    );
 
     // Execute SDK query
     const result = query({
