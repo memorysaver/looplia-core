@@ -49,7 +49,7 @@ async function getOrInitWorkspace(
 export async function executeQuery<T>(
   prompt: string,
   systemPrompt: string,
-  jsonSchema: object,
+  jsonSchema: Record<string, unknown>,
   config?: ClaudeAgentConfig
 ): Promise<ProviderResultWithUsage<T>> {
   try {
@@ -150,7 +150,7 @@ export async function executeQuery<T>(
 export async function executeQueryWithRetry<T>(
   prompt: string,
   systemPrompt: string,
-  jsonSchema: object,
+  jsonSchema: Record<string, unknown>,
   config?: ClaudeAgentConfig
 ): Promise<ProviderResultWithUsage<T>> {
   const resolvedConfig = resolveConfig(config);

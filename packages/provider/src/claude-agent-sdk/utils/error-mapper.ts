@@ -1,4 +1,3 @@
-import type { SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { ProviderError } from "@looplia-core/core";
 
 // Re-export SDK types for convenience
@@ -6,6 +5,11 @@ export type {
   SDKMessage,
   SDKResultMessage,
 } from "@anthropic-ai/claude-agent-sdk";
+
+// Import for local use (separate from re-exports to satisfy linter)
+type SDKMessage = import("@anthropic-ai/claude-agent-sdk").SDKMessage;
+type SDKResultMessage =
+  import("@anthropic-ai/claude-agent-sdk").SDKResultMessage;
 
 /** Default retry delay for rate limit errors (ms) */
 const DEFAULT_RATE_LIMIT_RETRY_MS = 60_000;
