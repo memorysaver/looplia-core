@@ -2,7 +2,7 @@
 
 **Version:** 0.3
 **Status:** Draft
-**Last Updated:** 2025-12-07
+**Last Updated:** 2025-12-07 (Draft, pending v0.3 release)
 
 ---
 
@@ -155,7 +155,10 @@ looplia-core/
 looplia config topics "AI, productivity, writing"
 looplia config style --tone expert --word-count 1500
 looplia config show
+looplia bootstrap  # destructive refresh of ~/.looplia/ when prompted
 ```
+
+`looplia bootstrap` is an explicit, destructive refresh; the CLI will prompt to run it when required workspace files are missing.
 
 **Enhanced Commands:**
 ```bash
@@ -265,7 +268,7 @@ export type Quote = {
   /** The exact quote text */
   text: string;
 
-  /** Timestamp in HH:MM:SS or MM:SS format (for video/audio) */
+  /** Timestamp in HH:MM:SS or MM:SS format (for video/audio); reject other formats */
   timestamp?: string;
 
   /** Contextual information about the quote */
@@ -354,7 +357,11 @@ export const CoreIdeaSchema = z.object({
 
 export const QuoteSchema = z.object({
   text: z.string().min(1),
-  timestamp: z.string().optional(), // Format: HH:MM:SS or MM:SS
+  // Optional but must be HH:MM:SS or MM:SS when present (no normalization applied)
+  timestamp: z
+    .string()
+    .regex(/^(\d{1,2}:\d{2}:\d{2}|\d{1,2}:\d{2})$/, { message: 'Use HH:MM:SS or MM:SS' })
+    .optional(),
   context: z.string().optional()
 });
 
@@ -380,6 +387,8 @@ export const ContentSummarySchema = z.object({
   context: z.string().min(20),
   relatedConcepts: z.array(z.string()).min(0).max(15)
 });
+
+// Note: Timestamp validation is pattern-only (HH:MM:SS or MM:SS) and values are stored as provided.
 ```
 
 ---
@@ -443,17 +452,16 @@ looplia-core/                           # Project root
             └── SKILL.md
 ```
 
-**Bootstrap Process:**
-1. Check if `~/.looplia/` exists
-2. If not:
-   - Create `~/.looplia/` directory
-   - Create `~/.looplia/.claude/` directory
-   - Copy `plugins/looplia-writer/agents/` → `~/.looplia/.claude/agents/`
-   - Copy `plugins/looplia-writer/skills/` → `~/.looplia/.claude/skills/`
-   - Copy `plugins/looplia-writer/README.md` → `~/.looplia/CLAUDE.md` (rename!)
-   - Create `contentItem/` directory
-   - Create default `user-profile.json`
-3. If exists: Skip (preserve user customizations)
+**Bootstrap Process (CLI-managed):**
+- Trigger: User runs `looplia bootstrap`, or the CLI (config/kit) detects that `~/.looplia/CLAUDE.md` or `.claude/agents`/`.claude/skills` are missing and prompts to bootstrap.
+- Behavior: Destructive refresh. The command removes the entire `~/.looplia/` directory before recreating it from the plugin. Users should back up or decline if they have customizations they want to preserve.
+1. Remove existing `~/.looplia/` (after prompt when auto-triggered)
+2. Create `~/.looplia/`, `~/.looplia/.claude/`, and `~/.looplia/contentItem/`
+3. Copy `plugins/looplia-writer/agents/` → `~/.looplia/.claude/agents/`
+4. Copy `plugins/looplia-writer/skills/` → `~/.looplia/.claude/skills/`
+5. Copy `plugins/looplia-writer/README.md` → `~/.looplia/CLAUDE.md` (rename!)
+6. Create default `user-profile.json`
+7. Subsequent CLI runs skip bootstrap unless required files are missing (to avoid accidental wipes)
 
 ### 5.2 README.md (Plugin) / CLAUDE.md (Workspace)
 
@@ -561,6 +569,16 @@ Return JSON matching WritingKit schema with enhanced ContentSummary fields:
 ```
 
 ### 5.3 User Profile Format
+
+**Schema (stored at `~/.looplia/user-profile.json`):**
+- `userId`: string (required, <=128 chars)
+- `topics`: array of `{ topic: string (1-64 chars), interestLevel: 1-5 }`
+- `style`: `{ tone: string, targetWordCount: number (100-5000), voice: 'first-person' | 'third-person' | string }`
+
+**Update semantics:**
+- `looplia config topics` overwrites the full `topics` array (replaces existing entries).
+- `looplia config style` overwrites only the provided style fields (others remain).
+- Users may edit the JSON manually; CLI commands should validate against the schema and reject malformed profiles with a helpful error.
 
 ```json
 {
@@ -959,6 +977,7 @@ async function setTopics(args: string[]): Promise<void> {
   const profilePath = path.join(workspace, 'user-profile.json');
 
   let profile = await readProfile(profilePath);
+  // Overwrite topics array
   profile.topics = topics.map(topic => ({
     topic,
     interestLevel: 3 // Default interest level
@@ -981,6 +1000,22 @@ async function setStyle(args: string[]): Promise<void> {
   await writeProfile(profilePath, profile);
   console.log('✓ Style preferences updated');
 }
+
+#### Bootstrap Command
+
+```typescript
+// apps/cli/src/commands/bootstrap.ts
+
+export async function runBootstrap(): Promise<void> {
+  const workspace = expandPath('~/.looplia');
+  const shouldProceed = await confirmDestructiveAction(`This will delete ${workspace}. Continue?`);
+  if (!shouldProceed) return;
+
+  await fs.rm(workspace, { recursive: true, force: true });
+  await ensureWorkspace({ force: true }); // Recreates from plugins/looplia-writer/
+  console.log('✓ Workspace bootstrapped from plugin (destructive refresh)');
+}
+```
 ```
 
 ### 7.2 Updated Kit Command
@@ -998,10 +1033,10 @@ export async function runKitCommand(args: string[]): Promise<void> {
   // 1. Parse input source
   const content = await loadContent(flags);
 
-  // 2. Ensure workspace exists (bootstrap on first run)
+  // 2. Ensure workspace exists (will prompt to bootstrap if required files are missing)
   const workspace = await ensureWorkspace();
   // workspace = expandPath('~/.looplia')
-  // On first run, copies from plugins/looplia-writer/:
+  // On first run (or after a destructive bootstrap), copies from plugins/looplia-writer/:
   //   - agents/ → ~/.looplia/.claude/agents/
   //   - skills/ → ~/.looplia/.claude/skills/
   //   - README.md → ~/.looplia/CLAUDE.md
@@ -1188,7 +1223,7 @@ Quote { text, timestamp?, context? }
 
 ### 8.3 Phase 3: Provider Package Implementation
 
-**Goal:** Implement workspace bootstrap from looplia-writer plugin
+**Goal:** Implement workspace bootstrap from looplia-writer plugin (destructive refresh when forced)
 
 **Files to create:**
 - `packages/provider/src/claude-agent-sdk/content-io.ts`
@@ -1197,7 +1232,9 @@ Quote { text, timestamp?, context? }
 
 **Files to modify:**
 - `packages/provider/src/claude-agent-sdk/workspace.ts`
-  - Update `ensureWorkspace()` with bootstrap logic:
+  - Update `ensureWorkspace()` with bootstrap logic and detection:
+    - If `force` is true, delete `~/.looplia/` and recreate from plugin (destructive).
+    - If workspace exists but required files (`CLAUDE.md`, `.claude/agents`, `.claude/skills`) are missing, return a status so CLI can prompt the user to run the destructive bootstrap.
     - Copy `plugins/looplia-writer/agents/` → `~/.looplia/.claude/agents/`
     - Copy `plugins/looplia-writer/skills/` → `~/.looplia/.claude/skills/`
     - Copy `plugins/looplia-writer/README.md` → `~/.looplia/CLAUDE.md` (rename!)
@@ -1205,7 +1242,6 @@ Quote { text, timestamp?, context? }
     - Initialize default `user-profile.json`
   - Add `getWorkspacePath()` helper - Return `~/.looplia/` path
   - Add `getPluginPath()` helper - Return `plugins/looplia-writer/` path
-  - Preserve existing workspace (skip if already exists)
 
 - `packages/provider/src/claude-agent-sdk/index.ts`
   - Update to use `expandPath('~/.looplia')` as SDK cwd
@@ -1214,56 +1250,56 @@ Quote { text, timestamp?, context? }
 
 **Bootstrap Implementation:**
 ```typescript
-async function ensureWorkspace(): Promise<string> {
+type EnsureOptions = { force?: boolean; requireFiles?: boolean };
+
+async function ensureWorkspace(options: EnsureOptions = {}): Promise<string> {
   const workspaceDir = expandPath('~/.looplia');
   const projectRoot = process.cwd(); // Assuming CLI runs from project root
   const pluginDir = path.join(projectRoot, 'plugins', 'looplia-writer');
+  const requiredFilesPresent =
+    fs.existsSync(path.join(workspaceDir, 'CLAUDE.md')) &&
+    fs.existsSync(path.join(workspaceDir, '.claude', 'agents')) &&
+    fs.existsSync(path.join(workspaceDir, '.claude', 'skills'));
 
-  if (!fs.existsSync(workspaceDir)) {
-    // First run: Bootstrap workspace from looplia-writer plugin
+  if (options.force || !fs.existsSync(workspaceDir) || (options.requireFiles && !requiredFilesPresent)) {
+    // Destructive refresh when forced or when required files are missing
+    await fs.rm(workspaceDir, { recursive: true, force: true });
     await fs.mkdir(workspaceDir, { recursive: true });
     await fs.mkdir(path.join(workspaceDir, '.claude'), { recursive: true });
     await fs.mkdir(path.join(workspaceDir, 'contentItem'), { recursive: true });
 
-    // Copy agents/ from plugin to workspace
-    await fs.cp(
-      path.join(pluginDir, 'agents'),
-      path.join(workspaceDir, '.claude', 'agents'),
-      { recursive: true }
-    );
+    await fs.cp(path.join(pluginDir, 'agents'), path.join(workspaceDir, '.claude', 'agents'), {
+      recursive: true
+    });
 
-    // Copy skills/ from plugin to workspace
-    await fs.cp(
-      path.join(pluginDir, 'skills'),
-      path.join(workspaceDir, '.claude', 'skills'),
-      { recursive: true }
-    );
+    await fs.cp(path.join(pluginDir, 'skills'), path.join(workspaceDir, '.claude', 'skills'), {
+      recursive: true
+    });
 
-    // Copy README.md and rename to CLAUDE.md
-    await fs.copyFile(
-      path.join(pluginDir, 'README.md'),
-      path.join(workspaceDir, 'CLAUDE.md')
-    );
+    await fs.copyFile(path.join(pluginDir, 'README.md'), path.join(workspaceDir, 'CLAUDE.md'));
 
-    // Create default user profile
     await fs.writeFile(
       path.join(workspaceDir, 'user-profile.json'),
-      JSON.stringify({
-        userId: 'default',
-        topics: [],
-        style: {
-          tone: 'intermediate',
-          targetWordCount: 1000,
-          voice: 'first-person'
-        }
-      }, null, 2)
+      JSON.stringify(
+        {
+          userId: 'default',
+          topics: [],
+          style: {
+            tone: 'intermediate',
+            targetWordCount: 1000,
+            voice: 'first-person'
+          }
+        },
+        null,
+        2
+      )
     );
 
-    console.log('✓ Workspace initialized at ~/.looplia/');
+    console.log('✓ Workspace bootstrapped at ~/.looplia/ (destructive refresh if pre-existing)');
     console.log('✓ Copied looplia-writer agents and skills from plugin');
   }
 
-  return workspaceDir;
+  return workspaceDir; // If required files are missing and force=false, caller should prompt user before retrying with force=true
 }
 ```
 
@@ -1272,20 +1308,23 @@ async function ensureWorkspace(): Promise<string> {
 **Goal:** Implement new CLI commands and workflows
 
 **Files to create:**
+- `apps/cli/src/commands/bootstrap.ts`
+  - `runBootstrap()` - Destructive refresh of `~/.looplia/` from plugin after user confirmation
 - `apps/cli/src/commands/config.ts`
   - `setTopics(topics)` - Configure user topics
   - `setStyle(flags)` - Configure writing style
   - `showProfile()` - Display current profile
+  - Validate `user-profile.json` against schema and fail with a clear error if malformed
 
 **Files to modify:**
 - `apps/cli/src/commands/kit.ts`
-  - Call `ensureWorkspace()` before processing (bootstraps on first run)
+  - Call `ensureWorkspace({ requireFiles: true })` before processing; if required files are missing, prompt user to run `looplia bootstrap` (destructive) and retry with `force: true`
   - Use `writeContentItem()` to copy input to `~/.looplia/contentItem/`
   - Invoke agent with `cwd: expandPath('~/.looplia')` (workspace)
   - Support --file, --url, --youtube
 
 - `apps/cli/src/index.ts`
-  - Add 'config' command routing
+  - Add 'config' and 'bootstrap' command routing
 
 ### 8.5 Phase 5: Documentation
 
@@ -1346,6 +1385,8 @@ async function ensureWorkspace(): Promise<string> {
    ```bash
    rm -rf ~/.looplia/agents
    rm -rf ~/.looplia/skills
+   # or simply run the destructive refresh:
+   looplia bootstrap
    ```
 
 3. **Initialize new workspace:**
@@ -1470,6 +1511,21 @@ describe('CLI Workspace Commands', () => {
 
     expect(kit.summary.overview).toBeDefined();
     expect(kit.summary.keyThemes).toBeInstanceOf(Array);
+  });
+
+  it('should prompt for bootstrap when workspace is missing required files', async () => {
+    const workspace = expandPath('~/.looplia');
+    await fs.rm(workspace, { recursive: true, force: true });
+    const output = await exec('looplia kit --file test-article.txt --format json --yes-bootstrap');
+    expect(output).toContain('Workspace bootstrapped');
+  });
+
+  it('should reject invalid user-profile.json', async () => {
+    const workspace = expandPath('~/.looplia');
+    await fs.mkdir(workspace, { recursive: true });
+    await fs.writeFile(path.join(workspace, 'user-profile.json'), '{"topics": "bad"}');
+    const { stderr } = await exec('looplia config show', { expectFailure: true });
+    expect(stderr).toContain('Invalid user-profile.json');
   });
 });
 ```
@@ -1643,7 +1699,7 @@ Future plugin.json can define workflows:
 .claude/                                     # General Claude Code structure (can be empty)
 ```
 
-**Looplia Writer Plugin Files (11):**
+**Looplia Writer Plugin Files (9):**
 ```
 plugins/looplia-writer/.claude-plugin/plugin.json  # Looplia writer plugin metadata
 plugins/looplia-writer/README.md                    # Plugin mission (→ CLAUDE.md in workspace)
@@ -1667,9 +1723,10 @@ packages/core/src/domain/core-idea.ts
 packages/provider/src/claude-agent-sdk/content-io.ts
 ```
 
-**CLI Commands (1):**
+**CLI Commands (2):**
 ```
 apps/cli/src/commands/config.ts
+apps/cli/src/commands/bootstrap.ts
 ```
 
 ### Modified Files (7)
