@@ -1,46 +1,60 @@
+import type { SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { ProviderError } from "@looplia-core/core";
+
+// Re-export SDK types for convenience
+export type {
+  SDKMessage,
+  SDKResultMessage,
+} from "@anthropic-ai/claude-agent-sdk";
 
 /** Default retry delay for rate limit errors (ms) */
 const DEFAULT_RATE_LIMIT_RETRY_MS = 60_000;
 
 /**
- * SDK result message subtypes for error handling
+ * Type guard to check if an SDK message is a result message
  */
-export type SdkResultSubtype =
-  | "success"
-  | "error_max_turns"
-  | "error_max_budget_usd"
-  | "error_during_execution";
+export function isResultMessage(
+  message: SDKMessage
+): message is SDKResultMessage {
+  return message.type === "result";
+}
 
 /**
- * SDK result message structure (for error handling)
+ * Type guard to check if a result message is a success
  */
-export type SdkResultMessage = {
-  type: "result";
-  subtype: SdkResultSubtype;
-  errors?: string[];
-};
+export function isSuccessResult(
+  message: SDKResultMessage
+): message is SDKResultMessage & { subtype: "success" } {
+  return message.subtype === "success";
+}
 
 /**
- * Full SDK message structure with all fields
- * Used for processing query responses
+ * Type guard to check if a result message is an error
  */
-export type SdkMessage = {
-  type: string;
-  subtype?: SdkResultSubtype;
-  structured_output?: unknown;
-  usage?: {
-    input_tokens?: number;
-    output_tokens?: number;
-  };
-  total_cost_usd?: number;
-  errors?: string[];
-};
+export function isErrorResult(
+  message: SDKResultMessage
+): message is SDKResultMessage & {
+  subtype: Exclude<SDKResultMessage["subtype"], "success">;
+} {
+  return message.subtype !== "success";
+}
+
+/**
+ * Extract error messages from an SDK error result
+ */
+function getErrorMessages(message: SDKResultMessage): string {
+  if (message.subtype === "success") {
+    return "Unknown error";
+  }
+  return message.errors?.join(", ") ?? "Execution error";
+}
 
 /**
  * Map SDK result errors to Looplia ProviderError types
+ *
+ * Uses type guards to safely extract error information without unsafe type assertions.
  */
-export function mapSdkError(message: SdkResultMessage): {
+export function mapSdkError(message: SDKResultMessage): {
   success: false;
   error: ProviderError;
 } {
@@ -69,7 +83,16 @@ export function mapSdkError(message: SdkResultMessage): {
         success: false,
         error: {
           type: "unknown",
-          message: message.errors?.join(", ") ?? "Execution error",
+          message: getErrorMessages(message),
+        },
+      };
+
+    case "error_max_structured_output_retries":
+      return {
+        success: false,
+        error: {
+          type: "unknown",
+          message: "Max structured output retries exceeded",
         },
       };
 

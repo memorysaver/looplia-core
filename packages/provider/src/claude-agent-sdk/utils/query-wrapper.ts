@@ -7,12 +7,7 @@ import type {
 } from "../config";
 import { resolveConfig } from "../config";
 import { ensureWorkspace } from "../workspace";
-import {
-  mapException,
-  mapSdkError,
-  type SdkMessage,
-  type SdkResultMessage,
-} from "./error-mapper";
+import { mapException, mapSdkError } from "./error-mapper";
 
 /** Base delay for exponential backoff (ms) */
 const RETRY_BASE_DELAY_MS = 1000;
@@ -88,35 +83,43 @@ export async function executeQuery<T>(
         cwd: workspace,
         systemPrompt: config?.systemPrompt ?? systemPrompt,
         permissionMode: "bypassPermissions",
+        allowDangerouslySkipPermissions: true,
         allowedTools: resolvedConfig.useFilesystemExtensions ? ["Skill"] : [],
         outputFormat: {
           type: "json_schema",
           schema: jsonSchema,
         },
-        timeout: resolvedConfig.timeout,
       },
     });
 
-    // Process async generator
-    for await (const message of result as AsyncIterable<SdkMessage>) {
+    // Process async generator - query() returns AsyncGenerator<SDKMessage, void>
+    for await (const message of result) {
+      // Use type guard to check for result message
       if (message.type === "result") {
+        // TypeScript now knows message is SDKResultMessage
+        const resultMessage = message;
+
+        // Extract usage from the result message
         const usage: ProviderUsage = {
-          inputTokens: message.usage?.input_tokens ?? 0,
-          outputTokens: message.usage?.output_tokens ?? 0,
-          totalCostUsd: message.total_cost_usd ?? 0,
+          inputTokens: resultMessage.usage.input_tokens ?? 0,
+          outputTokens: resultMessage.usage.output_tokens ?? 0,
+          totalCostUsd: resultMessage.total_cost_usd ?? 0,
         };
 
-        if (message.subtype === "success") {
+        // Check for success using the subtype discriminant
+        if (resultMessage.subtype === "success") {
           return {
             success: true,
-            data: message.structured_output as T,
+            // structured_output is typed as `unknown` in the SDK
+            // We trust that it matches our schema T since we provided the schema
+            data: resultMessage.structured_output as T,
             usage,
           };
         }
 
-        // Handle error results
+        // Handle error results - the SDK guarantees these have the errors array
         return {
-          ...mapSdkError(message as SdkResultMessage),
+          ...mapSdkError(resultMessage),
           usage,
         };
       }
