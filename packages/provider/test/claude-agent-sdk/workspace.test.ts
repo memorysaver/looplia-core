@@ -1,7 +1,7 @@
-import { access, readdir, stat } from "node:fs/promises";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { readdir, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
   ensureWorkspace,
   getWorkspacePath,
@@ -103,7 +103,7 @@ describe("workspace", () => {
       expect(entries).toContain("agents");
     });
 
-    it("should handle ~ path expansion", async () => {
+    it("should handle ~ path expansion", () => {
       // Note: This test doesn't actually create in home dir
       // Just verifies the expansion logic works
       const path = getWorkspacePath("~/test-looplia");

@@ -36,7 +36,9 @@ export function buildOutlinePrompt(
   const hooks = ideas.hooks.map((h) => `- [${h.type}] ${h.text}`).join("\n");
 
   const angles = ideas.angles
-    .map((a) => `- ${a.title}: ${a.description} (relevance: ${a.relevanceScore})`)
+    .map(
+      (a) => `- ${a.title}: ${a.description} (relevance: ${a.relevanceScore})`
+    )
     .join("\n");
 
   const questions = ideas.questions

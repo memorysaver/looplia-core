@@ -1,15 +1,23 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
-import type { ClaudeAgentConfig, ProviderResultWithUsage, ProviderUsage } from "../config";
+import type {
+  ClaudeAgentConfig,
+  ProviderResultWithUsage,
+  ProviderUsage,
+} from "../config";
 import { resolveConfig } from "../config";
 import { ensureWorkspace } from "../workspace";
-import { mapException, mapSdkError, type SdkResultMessage } from "./error-mapper";
+import {
+  mapException,
+  mapSdkError,
+  type SdkResultMessage,
+} from "./error-mapper";
 
 /** Base delay for exponential backoff (ms) */
 const RETRY_BASE_DELAY_MS = 1000;
 
 /** Maximum delay between retries (ms) */
-const RETRY_MAX_DELAY_MS = 30000;
+const RETRY_MAX_DELAY_MS = 30_000;
 
 /**
  * SDK message types we handle
@@ -150,7 +158,10 @@ export async function executeQueryWithRetry<T>(
     }
 
     // Wait before retry (exponential backoff)
-    const delay = Math.min(RETRY_BASE_DELAY_MS * 2 ** attempt, RETRY_MAX_DELAY_MS);
+    const delay = Math.min(
+      RETRY_BASE_DELAY_MS * 2 ** attempt,
+      RETRY_MAX_DELAY_MS
+    );
     await new Promise((resolve) => setTimeout(resolve, delay));
   }
 

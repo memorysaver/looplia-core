@@ -1,7 +1,7 @@
 import type { ProviderError } from "@looplia-core/core";
 
 /** Default retry delay for rate limit errors (ms) */
-const DEFAULT_RATE_LIMIT_RETRY_MS = 60000;
+const DEFAULT_RATE_LIMIT_RETRY_MS = 60_000;
 
 /**
  * SDK result message subtypes for error handling
@@ -77,7 +77,10 @@ export function mapException(error: unknown): {
 } {
   if (error instanceof Error) {
     // API key errors
-    if (error.message.includes("API key") || error.message.includes("api_key")) {
+    if (
+      error.message.includes("API key") ||
+      error.message.includes("api_key")
+    ) {
       return {
         success: false,
         error: {
@@ -106,10 +109,7 @@ export function mapException(error: unknown): {
     }
 
     // Rate limit errors
-    if (
-      error.message.includes("rate limit") ||
-      error.message.includes("429")
-    ) {
+    if (error.message.includes("rate limit") || error.message.includes("429")) {
       return {
         success: false,
         error: {
@@ -121,10 +121,7 @@ export function mapException(error: unknown): {
     }
 
     // Content moderation
-    if (
-      error.message.includes("content") &&
-      error.message.includes("policy")
-    ) {
+    if (error.message.includes("content") && error.message.includes("policy")) {
       return {
         success: false,
         error: {

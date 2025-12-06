@@ -56,7 +56,7 @@ export const DEFAULT_CONFIG = {
   workspace: "~/.looplia",
   useFilesystemExtensions: true,
   maxRetries: 3,
-  timeout: 60000,
+  timeout: 60_000,
 } as const;
 
 /**

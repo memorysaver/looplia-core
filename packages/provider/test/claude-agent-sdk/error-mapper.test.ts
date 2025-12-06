@@ -87,7 +87,9 @@ describe("error-mapper", () => {
     });
 
     it("should map ENOTFOUND to network_error", () => {
-      const result = mapException(new Error("getaddrinfo ENOTFOUND api.anthropic.com"));
+      const result = mapException(
+        new Error("getaddrinfo ENOTFOUND api.anthropic.com")
+      );
 
       expect(result.success).toBe(false);
       expect(result.error.type).toBe("network_error");
@@ -99,7 +101,7 @@ describe("error-mapper", () => {
       expect(result.success).toBe(false);
       expect(result.error.type).toBe("rate_limit");
       if (result.error.type === "rate_limit") {
-        expect(result.error.retryAfterMs).toBe(60000);
+        expect(result.error.retryAfterMs).toBe(60_000);
       }
     });
 

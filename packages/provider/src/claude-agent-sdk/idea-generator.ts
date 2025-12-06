@@ -48,11 +48,11 @@ export function createClaudeIdeaGenerator(
   config?: ClaudeAgentConfig
 ): ClaudeIdeaProvider {
   return {
-    async generateIdeas(summary, user) {
+    generateIdeas(summary, user) {
       return this.generateIdeasWithUsage(summary, user);
     },
 
-    async generateIdeasWithUsage(summary, user) {
+    generateIdeasWithUsage(summary, user) {
       const prompt = config?.promptBuilder
         ? config.promptBuilder({ summary, user })
         : buildIdeasPrompt(summary, user);

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { DEFAULT_CONFIG, resolveConfig } from "../../src/claude-agent-sdk/config";
+import {
+  DEFAULT_CONFIG,
+  resolveConfig,
+} from "../../src/claude-agent-sdk/config";
 
 describe("config", () => {
   describe("DEFAULT_CONFIG", () => {
@@ -8,7 +11,7 @@ describe("config", () => {
       expect(DEFAULT_CONFIG.workspace).toBe("~/.looplia");
       expect(DEFAULT_CONFIG.useFilesystemExtensions).toBe(true);
       expect(DEFAULT_CONFIG.maxRetries).toBe(3);
-      expect(DEFAULT_CONFIG.timeout).toBe(60000);
+      expect(DEFAULT_CONFIG.timeout).toBe(60_000);
     });
   });
 
@@ -18,7 +21,9 @@ describe("config", () => {
 
       expect(resolved.model).toBe(DEFAULT_CONFIG.model);
       expect(resolved.workspace).toBe(DEFAULT_CONFIG.workspace);
-      expect(resolved.useFilesystemExtensions).toBe(DEFAULT_CONFIG.useFilesystemExtensions);
+      expect(resolved.useFilesystemExtensions).toBe(
+        DEFAULT_CONFIG.useFilesystemExtensions
+      );
       expect(resolved.maxRetries).toBe(DEFAULT_CONFIG.maxRetries);
       expect(resolved.timeout).toBe(DEFAULT_CONFIG.timeout);
     });
@@ -29,14 +34,14 @@ describe("config", () => {
         workspace: "/custom/path",
         useFilesystemExtensions: false,
         maxRetries: 5,
-        timeout: 120000,
+        timeout: 120_000,
       });
 
       expect(resolved.model).toBe("claude-sonnet-4-20250514");
       expect(resolved.workspace).toBe("/custom/path");
       expect(resolved.useFilesystemExtensions).toBe(false);
       expect(resolved.maxRetries).toBe(5);
-      expect(resolved.timeout).toBe(120000);
+      expect(resolved.timeout).toBe(120_000);
     });
 
     it("should preserve optional config values", () => {

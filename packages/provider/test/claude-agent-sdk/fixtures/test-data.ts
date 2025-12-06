@@ -75,7 +75,13 @@ export const testSummary: ContentSummary = {
     "Natural language programming is emerging",
     "Developers can focus on higher-level design",
   ],
-  tags: ["AI", "software development", "code generation", "automation", "future of work"],
+  tags: [
+    "AI",
+    "software development",
+    "code generation",
+    "automation",
+    "future of work",
+  ],
   sentiment: "positive",
   category: "article",
   score: {
@@ -101,7 +107,8 @@ export const testIdeas: WritingIdeas = {
   angles: [
     {
       title: "The Human-AI Collaboration",
-      description: "Exploring how developers and AI tools work together to create better software",
+      description:
+        "Exploring how developers and AI tools work together to create better software",
       relevanceScore: 0.9,
     },
     {
@@ -165,7 +172,10 @@ export function createMockSdkResult<T>(data: T) {
  * Mock SDK result for error operations
  */
 export function createMockSdkError(
-  subtype: "error_max_turns" | "error_max_budget_usd" | "error_during_execution",
+  subtype:
+    | "error_max_turns"
+    | "error_max_budget_usd"
+    | "error_during_execution",
   errors?: string[]
 ) {
   return {

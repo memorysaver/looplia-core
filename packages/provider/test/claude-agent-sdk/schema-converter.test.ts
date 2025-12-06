@@ -14,8 +14,13 @@ describe("schema-converter", () => {
 
     it("should have required properties for ContentSummary", () => {
       // The schema should define the structure for ContentSummary
-      // zod-to-json-schema generates a schema with properties
-      expect(SUMMARY_OUTPUT_SCHEMA).toHaveProperty("type");
+      // zod-to-json-schema with name option generates $ref with definitions
+      expect(SUMMARY_OUTPUT_SCHEMA).toHaveProperty("$ref");
+      expect(SUMMARY_OUTPUT_SCHEMA).toHaveProperty("definitions");
+      expect(SUMMARY_OUTPUT_SCHEMA).toHaveProperty(
+        "definitions.ContentSummary.type",
+        "object"
+      );
     });
   });
 
@@ -26,7 +31,13 @@ describe("schema-converter", () => {
     });
 
     it("should have required properties for WritingIdeas", () => {
-      expect(IDEAS_OUTPUT_SCHEMA).toHaveProperty("type");
+      // zod-to-json-schema with name option generates $ref with definitions
+      expect(IDEAS_OUTPUT_SCHEMA).toHaveProperty("$ref");
+      expect(IDEAS_OUTPUT_SCHEMA).toHaveProperty("definitions");
+      expect(IDEAS_OUTPUT_SCHEMA).toHaveProperty(
+        "definitions.WritingIdeas.type",
+        "object"
+      );
     });
   });
 
@@ -40,7 +51,9 @@ describe("schema-converter", () => {
       expect(OUTLINE_OUTPUT_SCHEMA.items.type).toBe("object");
       expect(OUTLINE_OUTPUT_SCHEMA.items.properties).toHaveProperty("heading");
       expect(OUTLINE_OUTPUT_SCHEMA.items.properties).toHaveProperty("notes");
-      expect(OUTLINE_OUTPUT_SCHEMA.items.properties).toHaveProperty("estimatedWords");
+      expect(OUTLINE_OUTPUT_SCHEMA.items.properties).toHaveProperty(
+        "estimatedWords"
+      );
     });
 
     it("should require heading and notes", () => {
@@ -49,7 +62,9 @@ describe("schema-converter", () => {
     });
 
     it("should not require estimatedWords", () => {
-      expect(OUTLINE_OUTPUT_SCHEMA.items.required).not.toContain("estimatedWords");
+      expect(OUTLINE_OUTPUT_SCHEMA.items.required).not.toContain(
+        "estimatedWords"
+      );
     });
   });
 });

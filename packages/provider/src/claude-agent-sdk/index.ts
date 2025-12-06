@@ -4,37 +4,36 @@ import type { ClaudeAgentConfig, ProviderUsage } from "./config";
 import { createClaudeIdeaGenerator } from "./idea-generator";
 import { createClaudeOutlineGenerator } from "./outline-generator";
 import { createClaudeSummarizer } from "./summarizer";
-import { ensureWorkspace } from "./workspace";
 
 // Re-export types
-export type { ClaudeAgentConfig, ProviderUsage } from "./config";
-export type { ProviderResultWithUsage } from "./config";
-export type { WorkspaceOptions } from "./workspace";
-
-// Re-export factory functions
-export { createClaudeSummarizer } from "./summarizer";
-export type { ClaudeSummarizerProvider } from "./summarizer";
-
-export { createClaudeIdeaGenerator } from "./idea-generator";
+export type {
+  ClaudeAgentConfig,
+  ProviderResultWithUsage,
+  ProviderUsage,
+} from "./config";
 export type { ClaudeIdeaProvider } from "./idea-generator";
-
-export { createClaudeOutlineGenerator } from "./outline-generator";
+export { createClaudeIdeaGenerator } from "./idea-generator";
 export type { ClaudeOutlineProvider } from "./outline-generator";
-
-// Re-export workspace utilities
-export { ensureWorkspace, getWorkspacePath } from "./workspace";
-
-// Re-export prompt builders for customization
-export { buildSummarizePrompt, SUMMARIZE_SYSTEM_PROMPT } from "./prompts/summarize";
+export { createClaudeOutlineGenerator } from "./outline-generator";
 export { buildIdeasPrompt, IDEAS_SYSTEM_PROMPT } from "./prompts/ideas";
 export { buildOutlinePrompt, OUTLINE_SYSTEM_PROMPT } from "./prompts/outline";
-
+// Re-export prompt builders for customization
+export {
+  buildSummarizePrompt,
+  SUMMARIZE_SYSTEM_PROMPT,
+} from "./prompts/summarize";
+export type { ClaudeSummarizerProvider } from "./summarizer";
+// Re-export factory functions
+export { createClaudeSummarizer } from "./summarizer";
 // Re-export schemas for reference
 export {
-  SUMMARY_OUTPUT_SCHEMA,
   IDEAS_OUTPUT_SCHEMA,
   OUTLINE_OUTPUT_SCHEMA,
+  SUMMARY_OUTPUT_SCHEMA,
 } from "./utils/schema-converter";
+export type { WorkspaceOptions } from "./workspace";
+// Re-export workspace utilities
+export { ensureWorkspace, getWorkspacePath } from "./workspace";
 
 /**
  * Claude-powered providers bundle with usage tracking
@@ -84,7 +83,10 @@ export function createClaudeProviders(
 
   // Wrap providers to track usage
   const wrappedSummarizer = {
-    async summarize(content: Parameters<typeof summarizer.summarize>[0], user?: Parameters<typeof summarizer.summarize>[1]) {
+    async summarize(
+      content: Parameters<typeof summarizer.summarize>[0],
+      user?: Parameters<typeof summarizer.summarize>[1]
+    ) {
       const result = await summarizer.summarizeWithUsage(content, user);
       if (result.usage) {
         aggregatedUsage.inputTokens += result.usage.inputTokens;
@@ -116,7 +118,11 @@ export function createClaudeProviders(
       ideas: Parameters<typeof outline.generateOutline>[1],
       user: Parameters<typeof outline.generateOutline>[2]
     ) {
-      const result = await outline.generateOutlineWithUsage(summary, ideas, user);
+      const result = await outline.generateOutlineWithUsage(
+        summary,
+        ideas,
+        user
+      );
       if (result.usage) {
         aggregatedUsage.inputTokens += result.usage.inputTokens;
         aggregatedUsage.outputTokens += result.usage.outputTokens;
@@ -142,14 +148,3 @@ export function createClaudeProviders(
     },
   };
 }
-
-/**
- * Initialize or get the Looplia workspace
- *
- * Creates ~/.looplia/ (or configured directory) and copies bundled
- * agents, skills, and prompts if missing. User edits are preserved.
- *
- * @param options - Workspace configuration
- * @returns Absolute path to the workspace directory
- */
-export { ensureWorkspace };

@@ -1,8 +1,22 @@
 import { describe, expect, it } from "bun:test";
-import { buildIdeasPrompt, IDEAS_SYSTEM_PROMPT } from "../../src/claude-agent-sdk/prompts/ideas";
-import { buildOutlinePrompt, OUTLINE_SYSTEM_PROMPT } from "../../src/claude-agent-sdk/prompts/outline";
-import { buildSummarizePrompt, SUMMARIZE_SYSTEM_PROMPT } from "../../src/claude-agent-sdk/prompts/summarize";
-import { testContent, testIdeas, testSummary, testUser } from "./fixtures/test-data";
+import {
+  buildIdeasPrompt,
+  IDEAS_SYSTEM_PROMPT,
+} from "../../src/claude-agent-sdk/prompts/ideas";
+import {
+  buildOutlinePrompt,
+  OUTLINE_SYSTEM_PROMPT,
+} from "../../src/claude-agent-sdk/prompts/outline";
+import {
+  buildSummarizePrompt,
+  SUMMARIZE_SYSTEM_PROMPT,
+} from "../../src/claude-agent-sdk/prompts/summarize";
+import {
+  testContent,
+  testIdeas,
+  testSummary,
+  testUser,
+} from "./fixtures/test-data";
 
 describe("prompts", () => {
   describe("summarize prompts", () => {

@@ -45,7 +45,11 @@ declare module "@anthropic-ai/claude-agent-sdk" {
 
   export type SdkMessage = {
     type: "result" | "message" | "tool_use";
-    subtype?: "success" | "error_max_turns" | "error_max_budget_usd" | "error_during_execution";
+    subtype?:
+      | "success"
+      | "error_max_turns"
+      | "error_max_budget_usd"
+      | "error_during_execution";
     structured_output?: unknown;
     usage?: {
       input_tokens?: number;

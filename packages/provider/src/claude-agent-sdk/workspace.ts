@@ -52,6 +52,62 @@ function getBundledAssetsDir(): string {
 }
 
 /**
+ * Copy a single entry (file or directory) if destination doesn't exist
+ */
+async function copyEntryIfMissing(
+  srcPath: string,
+  destPath: string,
+  isDirectory: boolean
+): Promise<void> {
+  if (await pathExists(destPath)) {
+    return;
+  }
+  await cp(srcPath, destPath, { recursive: isDirectory });
+}
+
+/**
+ * Copy all entries from source to destination directory
+ */
+async function copyDirectoryEntries(
+  srcDir: string,
+  destDir: string
+): Promise<void> {
+  const entries = await readdir(srcDir, { withFileTypes: true });
+  for (const entry of entries) {
+    const srcPath = join(srcDir, entry.name);
+    const destPath = join(destDir, entry.name);
+    await copyEntryIfMissing(srcPath, destPath, entry.isDirectory());
+  }
+}
+
+/**
+ * Copy a single asset directory from bundled to workspace
+ */
+async function copyAssetDirectory(
+  bundledDir: string,
+  workspaceDir: string,
+  dir: string
+): Promise<void> {
+  const srcDir = join(bundledDir, dir);
+  const destDir = join(workspaceDir, dir);
+
+  if (!(await pathExists(srcDir))) {
+    return;
+  }
+
+  await mkdir(destDir, { recursive: true });
+
+  try {
+    await copyDirectoryEntries(srcDir, destDir);
+  } catch (error) {
+    // Silently ignore ENOENT errors
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw error;
+    }
+  }
+}
+
+/**
  * Copy bundled assets to workspace
  */
 async function copyBundledAssets(workspaceDir: string): Promise<void> {
@@ -59,36 +115,7 @@ async function copyBundledAssets(workspaceDir: string): Promise<void> {
   const assetDirs = ["agents", "skills"];
 
   for (const dir of assetDirs) {
-    const srcDir = join(bundledDir, dir);
-    const destDir = join(workspaceDir, dir);
-
-    if (await pathExists(srcDir)) {
-      // Create destination directory
-      await mkdir(destDir, { recursive: true });
-
-      // Copy files recursively
-      try {
-        const entries = await readdir(srcDir, { withFileTypes: true });
-        for (const entry of entries) {
-          const srcPath = join(srcDir, entry.name);
-          const destPath = join(destDir, entry.name);
-
-          // Only copy if destination doesn't exist (preserve user edits)
-          if (!(await pathExists(destPath))) {
-            if (entry.isDirectory()) {
-              await cp(srcPath, destPath, { recursive: true });
-            } else {
-              await cp(srcPath, destPath);
-            }
-          }
-        }
-      } catch (error) {
-        // Silently ignore if source doesn't exist
-        if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-          throw error;
-        }
-      }
-    }
+    await copyAssetDirectory(bundledDir, workspaceDir, dir);
   }
 }
 

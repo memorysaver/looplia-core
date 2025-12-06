@@ -52,11 +52,11 @@ export function createClaudeSummarizer(
   config?: ClaudeAgentConfig
 ): ClaudeSummarizerProvider {
   return {
-    async summarize(content, user) {
+    summarize(content, user) {
       return this.summarizeWithUsage(content, user);
     },
 
-    async summarizeWithUsage(content, user) {
+    summarizeWithUsage(content, user) {
       const prompt = config?.promptBuilder
         ? config.promptBuilder(content)
         : buildSummarizePrompt(content, user);

@@ -1,7 +1,4 @@
-import {
-  ContentSummarySchema,
-  WritingIdeasSchema,
-} from "@looplia-core/core";
+import { ContentSummarySchema, WritingIdeasSchema } from "@looplia-core/core";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
 /**

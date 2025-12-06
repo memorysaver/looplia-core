@@ -50,11 +50,11 @@ export function createClaudeOutlineGenerator(
   config?: ClaudeAgentConfig
 ): ClaudeOutlineProvider {
   return {
-    async generateOutline(summary, ideas, user) {
+    generateOutline(summary, ideas, user) {
       return this.generateOutlineWithUsage(summary, ideas, user);
     },
 
-    async generateOutlineWithUsage(summary, ideas, user) {
+    generateOutlineWithUsage(summary, ideas, user) {
       const prompt = config?.promptBuilder
         ? config.promptBuilder({ summary, ideas, user })
         : buildOutlinePrompt(summary, ideas, user);
