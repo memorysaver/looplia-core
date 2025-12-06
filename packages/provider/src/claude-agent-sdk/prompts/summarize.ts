@@ -1,5 +1,8 @@
 import type { ContentItem, UserProfile } from "@looplia-core/core";
 
+/** Maximum content length before truncation (characters) */
+const MAX_CONTENT_LENGTH = 5000;
+
 /**
  * System prompt for content summarization
  */
@@ -43,8 +46,8 @@ User Context:
     : "";
 
   const truncatedText =
-    content.rawText.length > 5000
-      ? `${content.rawText.substring(0, 5000)}...[truncated]`
+    content.rawText.length > MAX_CONTENT_LENGTH
+      ? `${content.rawText.substring(0, MAX_CONTENT_LENGTH)}...[truncated]`
       : content.rawText;
 
   return `Analyze and summarize the following content:

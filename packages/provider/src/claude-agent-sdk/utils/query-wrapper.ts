@@ -5,14 +5,19 @@ import { resolveConfig } from "../config";
 import { ensureWorkspace } from "../workspace";
 import { mapException, mapSdkError, type SdkResultMessage } from "./error-mapper";
 
+/** Base delay for exponential backoff (ms) */
+const RETRY_BASE_DELAY_MS = 1000;
+
+/** Maximum delay between retries (ms) */
+const RETRY_MAX_DELAY_MS = 30000;
+
 /**
  * SDK message types we handle
  */
 type SdkMessage = {
   type: string;
   subtype?: string;
-  // biome-ignore lint/suspicious/noExplicitAny: SDK returns unknown structured output
-  structured_output?: any;
+  structured_output?: unknown;
   usage?: {
     input_tokens?: number;
     output_tokens?: number;
@@ -145,7 +150,7 @@ export async function executeQueryWithRetry<T>(
     }
 
     // Wait before retry (exponential backoff)
-    const delay = Math.min(1000 * 2 ** attempt, 30000);
+    const delay = Math.min(RETRY_BASE_DELAY_MS * 2 ** attempt, RETRY_MAX_DELAY_MS);
     await new Promise((resolve) => setTimeout(resolve, delay));
   }
 

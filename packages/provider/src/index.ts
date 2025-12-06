@@ -3,23 +3,26 @@
  *
  * Real provider implementations for Looplia Core.
  *
+ * Prefer using subpath imports for tree-shaking:
  * @example
  * ```typescript
- * // Import Claude Agent SDK provider
  * import { createClaudeProviders } from "@looplia-core/provider/claude-agent-sdk";
- *
- * // Or import from main entry point
- * import { ClaudeAgentSDK } from "@looplia-core/provider";
- * const providers = ClaudeAgentSDK.createClaudeProviders();
  * ```
  */
 
-// Re-export Claude Agent SDK module as namespace
-export * as ClaudeAgentSDK from "./claude-agent-sdk/index";
-
-// Re-export common types from config
+// Re-export common types used across providers
 export type {
   ClaudeAgentConfig,
-  ProviderUsage,
   ProviderResultWithUsage,
+  ProviderUsage,
 } from "./claude-agent-sdk/config";
+
+// Re-export factory functions for convenience
+// (prefer subpath import for better tree-shaking)
+export {
+  createClaudeIdeaGenerator,
+  createClaudeOutlineGenerator,
+  createClaudeProviders,
+  createClaudeSummarizer,
+  ensureWorkspace,
+} from "./claude-agent-sdk/index";

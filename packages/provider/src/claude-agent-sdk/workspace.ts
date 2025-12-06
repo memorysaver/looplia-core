@@ -43,15 +43,11 @@ async function pathExists(path: string): Promise<boolean> {
 
 /**
  * Get the bundled assets directory
+ *
+ * Returns the directory containing bundled agents and skills.
+ * In development this is src/claude-agent-sdk/, after build it's dist/claude-agent-sdk/
  */
 function getBundledAssetsDir(): string {
-  // In development: src/claude-agent-sdk/
-  // In production: dist/claude-agent-sdk/
-  const srcAgents = join(__dirname, "agents");
-  const distAgents = join(__dirname, "../dist/claude-agent-sdk/agents");
-
-  // Check which one exists at runtime
-  // During build, we're in src, after build, assets are copied to dist
   return __dirname;
 }
 

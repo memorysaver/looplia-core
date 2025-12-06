@@ -39,7 +39,7 @@ Summary:
 - Category: ${summary.category}
 
 User Profile:
-- Topics of Interest: ${user.topics.map((t) => `${t.topic} (${t.interest})`).join(", ")}
+- Topics of Interest: ${user.topics.map((t) => `${t.topic} (level ${t.interestLevel})`).join(", ")}
 - Writing Tone: ${user.style.tone}
 - Target Word Count: ${user.style.targetWordCount}
 - Voice: ${user.style.voice}

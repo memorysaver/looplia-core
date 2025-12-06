@@ -71,6 +71,14 @@ describe("prompts", () => {
       expect(prompt).toContain(testUser.style.voice);
     });
 
+    it("should include user topics with interest levels", () => {
+      const prompt = buildIdeasPrompt(testSummary, testUser);
+
+      // Verify interest levels are included (not just topic names)
+      expect(prompt).toContain("artificial intelligence (level 5)");
+      expect(prompt).toContain("software development (level 4)");
+    });
+
     it("should mention hook types", () => {
       const prompt = buildIdeasPrompt(testSummary, testUser);
 

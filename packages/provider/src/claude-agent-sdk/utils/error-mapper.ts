@@ -1,5 +1,8 @@
 import type { ProviderError } from "@looplia-core/core";
 
+/** Default retry delay for rate limit errors (ms) */
+const DEFAULT_RATE_LIMIT_RETRY_MS = 60000;
+
 /**
  * SDK result message subtypes for error handling
  */
@@ -111,7 +114,7 @@ export function mapException(error: unknown): {
         success: false,
         error: {
           type: "rate_limit",
-          retryAfterMs: 60000, // Default 1 minute
+          retryAfterMs: DEFAULT_RATE_LIMIT_RETRY_MS,
           message: error.message,
         },
       };
