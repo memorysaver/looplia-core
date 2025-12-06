@@ -3,17 +3,19 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 
 /**
  * JSON Schema for ContentSummary output
+ * Uses openApi3 target to get inline schema without $ref (required by Claude API)
  */
 export const SUMMARY_OUTPUT_SCHEMA = zodToJsonSchema(ContentSummarySchema, {
-  name: "ContentSummary",
+  target: "openApi3",
   $refStrategy: "none",
 });
 
 /**
  * JSON Schema for WritingIdeas output
+ * Uses openApi3 target to get inline schema without $ref (required by Claude API)
  */
 export const IDEAS_OUTPUT_SCHEMA = zodToJsonSchema(WritingIdeasSchema, {
-  name: "WritingIdeas",
+  target: "openApi3",
   $refStrategy: "none",
 });
 

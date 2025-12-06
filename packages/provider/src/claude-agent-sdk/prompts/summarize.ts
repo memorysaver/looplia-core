@@ -41,7 +41,7 @@ User Context:
 - Word Count Target: ${user.style.targetWordCount}`
     : "";
 
-  const languageInfo = content.metadata.language
+  const languageInfo = content.metadata?.language
     ? `Language: ${content.metadata.language}`
     : "";
 

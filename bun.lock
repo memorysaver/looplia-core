@@ -13,7 +13,7 @@
     },
     "apps/cli": {
       "name": "@looplia-core/cli",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "bin": {
         "looplia": "./dist/index.js",
       },
@@ -50,6 +50,7 @@
       "devDependencies": {
         "@looplia-core/config": "workspace:*",
         "@types/node": "^22.0.0",
+        "tsup": "^8.5.1",
         "typescript": "^5.0.0",
       },
     },
@@ -64,6 +65,7 @@
       "devDependencies": {
         "@looplia-core/config": "workspace:*",
         "@types/bun": "^1.0.0",
+        "tsup": "^8.5.1",
       },
     },
   },

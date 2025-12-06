@@ -13,14 +13,10 @@ describe("schema-converter", () => {
     });
 
     it("should have required properties for ContentSummary", () => {
-      // The schema should define the structure for ContentSummary
-      // zod-to-json-schema with name option generates $ref with definitions
-      expect(SUMMARY_OUTPUT_SCHEMA).toHaveProperty("$ref");
-      expect(SUMMARY_OUTPUT_SCHEMA).toHaveProperty("definitions");
-      expect(SUMMARY_OUTPUT_SCHEMA).toHaveProperty(
-        "definitions.ContentSummary.type",
-        "object"
-      );
+      // openApi3 target generates inline schema with type at root (required by Claude API)
+      expect(SUMMARY_OUTPUT_SCHEMA).toHaveProperty("type", "object");
+      expect(SUMMARY_OUTPUT_SCHEMA).toHaveProperty("properties");
+      expect(SUMMARY_OUTPUT_SCHEMA).toHaveProperty("required");
     });
   });
 
@@ -31,13 +27,10 @@ describe("schema-converter", () => {
     });
 
     it("should have required properties for WritingIdeas", () => {
-      // zod-to-json-schema with name option generates $ref with definitions
-      expect(IDEAS_OUTPUT_SCHEMA).toHaveProperty("$ref");
-      expect(IDEAS_OUTPUT_SCHEMA).toHaveProperty("definitions");
-      expect(IDEAS_OUTPUT_SCHEMA).toHaveProperty(
-        "definitions.WritingIdeas.type",
-        "object"
-      );
+      // openApi3 target generates inline schema with type at root (required by Claude API)
+      expect(IDEAS_OUTPUT_SCHEMA).toHaveProperty("type", "object");
+      expect(IDEAS_OUTPUT_SCHEMA).toHaveProperty("properties");
+      expect(IDEAS_OUTPUT_SCHEMA).toHaveProperty("required");
     });
   });
 

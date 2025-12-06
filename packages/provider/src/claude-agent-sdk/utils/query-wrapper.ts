@@ -38,6 +38,64 @@ async function getOrInitWorkspace(
 }
 
 /**
+ * Extract usage metrics from SDK result message
+ */
+function extractUsage(resultMessage: {
+  usage: { input_tokens?: number; output_tokens?: number };
+  total_cost_usd?: number;
+}): ProviderUsage {
+  return {
+    inputTokens: resultMessage.usage.input_tokens ?? 0,
+    outputTokens: resultMessage.usage.output_tokens ?? 0,
+    totalCostUsd: resultMessage.total_cost_usd ?? 0,
+  };
+}
+
+/**
+ * Process SDK result message and return appropriate provider result
+ */
+function processResultMessage<T>(
+  resultMessage: {
+    subtype: string;
+    structured_output?: unknown;
+    usage: { input_tokens?: number; output_tokens?: number };
+    total_cost_usd?: number;
+  },
+  usage: ProviderUsage
+): ProviderResultWithUsage<T> {
+  const sdkResult = resultMessage as Record<string, unknown>;
+
+  // Check for true success: subtype=success, no is_error flag, has structured output
+  if (
+    resultMessage.subtype === "success" &&
+    !sdkResult.is_error &&
+    resultMessage.structured_output !== undefined
+  ) {
+    return {
+      success: true,
+      data: resultMessage.structured_output as T,
+      usage,
+    };
+  }
+
+  // Handle case where SDK reports success but has error flag
+  if (resultMessage.subtype === "success" && sdkResult.is_error) {
+    const errorMessage =
+      typeof sdkResult.result === "string"
+        ? sdkResult.result
+        : "SDK returned error despite success subtype";
+    return {
+      success: false,
+      error: { type: "sdk_error", message: errorMessage },
+      usage,
+    };
+  }
+
+  // Handle error results
+  return { ...mapSdkError(resultMessage), usage };
+}
+
+/**
  * Execute a query against the Claude Agent SDK with structured output
  *
  * @param prompt - User prompt to send
@@ -94,35 +152,12 @@ export async function executeQuery<T>(
 
     // Process async generator - query() returns AsyncGenerator<SDKMessage, void>
     for await (const message of result) {
-      // Use type guard to check for result message
-      if (message.type === "result") {
-        // TypeScript now knows message is SDKResultMessage
-        const resultMessage = message;
-
-        // Extract usage from the result message
-        const usage: ProviderUsage = {
-          inputTokens: resultMessage.usage.input_tokens ?? 0,
-          outputTokens: resultMessage.usage.output_tokens ?? 0,
-          totalCostUsd: resultMessage.total_cost_usd ?? 0,
-        };
-
-        // Check for success using the subtype discriminant
-        if (resultMessage.subtype === "success") {
-          return {
-            success: true,
-            // structured_output is typed as `unknown` in the SDK
-            // We trust that it matches our schema T since we provided the schema
-            data: resultMessage.structured_output as T,
-            usage,
-          };
-        }
-
-        // Handle error results - the SDK guarantees these have the errors array
-        return {
-          ...mapSdkError(resultMessage),
-          usage,
-        };
+      if (message.type !== "result") {
+        continue;
       }
+
+      const usage = extractUsage(message);
+      return processResultMessage<T>(message, usage);
     }
 
     // No result received
