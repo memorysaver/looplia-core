@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import {
   createMockSummarizer,
   summarizeContent,
+  validateContentItem,
   type ContentItem,
 } from "@looplia-core/core";
 import { parseArgs, getArg, hasFlag, formatSummaryAsMarkdown } from "../utils";
@@ -66,9 +67,16 @@ export async function runSummarizeCommand(args: string[]): Promise<void> {
     metadata: {},
   };
 
+  // Validate input at boundary
+  const validation = validateContentItem(content);
+  if (!validation.success) {
+    console.error(`Validation error: ${validation.error.message}`);
+    process.exit(1);
+  }
+
   // Summarize using mock provider
   const provider = createMockSummarizer();
-  const result = await summarizeContent(content, undefined, provider);
+  const result = await summarizeContent(validation.data, undefined, provider);
 
   if (!result.success) {
     console.error(`Error: ${result.error.message}`);

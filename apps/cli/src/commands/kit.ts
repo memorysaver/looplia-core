@@ -4,6 +4,8 @@ import {
   createMockIdeaGenerator,
   createMockOutlineGenerator,
   buildWritingKit,
+  validateContentItem,
+  validateUserProfile,
   type ContentItem,
   type UserProfile,
   type UserTopic,
@@ -105,6 +107,19 @@ export async function runKitCommand(args: string[]): Promise<void> {
     },
   };
 
+  // Validate inputs at boundary
+  const contentValidation = validateContentItem(content);
+  if (!contentValidation.success) {
+    console.error(`Content validation error: ${contentValidation.error.message}`);
+    process.exit(1);
+  }
+
+  const userValidation = validateUserProfile(user);
+  if (!userValidation.success) {
+    console.error(`User profile validation error: ${userValidation.error.message}`);
+    process.exit(1);
+  }
+
   // Build kit using mock providers
   const providers = {
     summarizer: createMockSummarizer(),
@@ -112,7 +127,11 @@ export async function runKitCommand(args: string[]): Promise<void> {
     outline: createMockOutlineGenerator(),
   };
 
-  const result = await buildWritingKit(content, user, providers);
+  const result = await buildWritingKit(
+    contentValidation.data,
+    userValidation.data,
+    providers
+  );
 
   if (!result.success) {
     console.error(`Error: ${result.error.message}`);
