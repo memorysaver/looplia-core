@@ -65,3 +65,53 @@ looplia-core/
 - `bun run check-types`: Check TypeScript types across all apps
 - `cd apps/docs && bun run dev`: Start documentation site
 - `cd apps/docs && bun run build`: Build documentation site
+
+## CLI Usage
+
+The `looplia` CLI provides content intelligence tools from the command line.
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `looplia summarize` | Summarize content from a file into structured output |
+| `looplia kit` | Build a complete writing kit (summary + ideas + outline) |
+
+### Quick Examples
+
+```bash
+# Summarize a file (requires ANTHROPIC_API_KEY)
+looplia summarize --file ./article.txt
+
+# Build a writing kit with options
+looplia kit --file ./article.txt --topics "ai,productivity" --tone expert
+
+# Use mock provider (no API key needed)
+looplia summarize --file ./article.txt --mock
+
+# Output as markdown
+looplia kit --file ./article.txt --format markdown --mock
+```
+
+### Local Development
+
+After building the project, you can link the CLI globally for development:
+
+```bash
+# Build the project
+bun run build
+
+# Link CLI globally (run once)
+cd apps/cli && bun link
+
+# Now 'looplia' command is available anywhere
+looplia --help
+```
+
+The link is a symlink to your local build. Any time you rebuild (`bun run build`), the global `looplia` command automatically uses the latest version.
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `ANTHROPIC_API_KEY` | Required for Claude API calls (skip with `--mock` flag) |
