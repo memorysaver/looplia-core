@@ -145,8 +145,9 @@ export async function createTempWorkspace(): Promise<{
     cleanup: async () => {
       try {
         await rm(path, { recursive: true, force: true });
-      } catch {
-        // Ignore cleanup errors
+      } catch (error) {
+        // Log cleanup errors for debugging but don't fail tests
+        console.warn(`Failed to cleanup temp workspace ${path}:`, error);
       }
     },
   };

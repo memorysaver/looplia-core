@@ -630,7 +630,7 @@ import {
   WritingIdeasSchema
 } from "@looplia-core/core";
 
-export const SUMMARYOUTPUT_SCHEMA = zodToJsonSchema(ContentSummarySchema);
+export const SUMMARY_OUTPUT_SCHEMA = zodToJsonSchema(ContentSummarySchema);
 export const IDEAS_OUTPUT_SCHEMA = zodToJsonSchema(WritingIdeasSchema);
 
 // For outline (array)
@@ -641,7 +641,7 @@ export const OUTLINE_OUTPUT_SCHEMA = {
     properties: {
       heading: { type: "string" },
       notes: { type: "string" },
-      estimatedWords: { type: "number", optional: true }
+      estimatedWords: { type: "number" }
     },
     required: ["heading", "notes"]
   }
