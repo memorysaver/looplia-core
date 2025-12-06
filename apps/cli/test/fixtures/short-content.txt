@@ -1,0 +1,1 @@
+This is a minimal test article with just enough content to pass basic validation requirements.

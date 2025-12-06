@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import { runKitCommand } from "./commands/kit";
 import { runSummarizeCommand } from "./commands/summarize";
 
@@ -33,7 +31,11 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const [command, ...rest] = args;
 
-  if (args.includes("--help") || args.includes("-h") || !command) {
+  // Show global help only if no command or help is requested without a command
+  if (
+    !command ||
+    (args.length === 1 && (args[0] === "--help" || args[0] === "-h"))
+  ) {
     printHelp();
     process.exit(0);
   }
