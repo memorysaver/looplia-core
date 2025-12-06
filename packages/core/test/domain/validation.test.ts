@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  validateContentSummary,
   validateContentItem,
+  validateContentSummary,
   validateUserProfile,
   validateWritingIdeas,
 } from "../../src/validation/schemas";

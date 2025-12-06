@@ -1,7 +1,7 @@
 import type { ContentItem } from "../domain/content";
+import type { ProviderResult } from "../domain/errors";
 import type { ContentSummary } from "../domain/summary";
 import type { UserProfile } from "../domain/user-profile";
-import type { ProviderResult } from "../domain/errors";
 
 /**
  * Provider interface for content summarization
@@ -12,7 +12,7 @@ import type { ProviderResult } from "../domain/errors";
  * - Determine sentiment
  * - Calculate relevance score based on user profile
  */
-export interface SummarizerProvider {
+export type SummarizerProvider = {
   /**
    * Summarize content item
    *
@@ -24,4 +24,4 @@ export interface SummarizerProvider {
     content: ContentItem,
     user?: UserProfile
   ): Promise<ProviderResult<ContentSummary>>;
-}
+};

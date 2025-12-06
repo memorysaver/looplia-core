@@ -1,8 +1,8 @@
-import type { ContentSummary } from "../domain/summary";
-import type { WritingIdeas } from "../domain/ideas";
-import type { OutlineSection } from "../domain/writing-kit";
-import type { UserProfile } from "../domain/user-profile";
 import type { ProviderResult } from "../domain/errors";
+import type { WritingIdeas } from "../domain/ideas";
+import type { ContentSummary } from "../domain/summary";
+import type { UserProfile } from "../domain/user-profile";
+import type { OutlineSection } from "../domain/writing-kit";
 
 /**
  * Provider interface for generating article outlines
@@ -13,7 +13,7 @@ import type { ProviderResult } from "../domain/errors";
  * - Consider user's target word count
  * - Incorporate selected angles and hooks
  */
-export interface OutlineProvider {
+export type OutlineProvider = {
   /**
    * Generate article outline
    *
@@ -27,4 +27,4 @@ export interface OutlineProvider {
     ideas: WritingIdeas,
     user: UserProfile
   ): Promise<ProviderResult<OutlineSection[]>>;
-}
+};

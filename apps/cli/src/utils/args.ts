@@ -1,33 +1,44 @@
+function isValueArg(arg: string | undefined): arg is string {
+  return arg !== undefined && !arg.startsWith("-");
+}
+
+function extractKey(arg: string): string | null {
+  if (arg.startsWith("--")) {
+    return arg.slice(2);
+  }
+  if (arg.startsWith("-") && arg.length === 2) {
+    return arg.slice(1);
+  }
+  return null;
+}
+
 /**
  * Parse command line arguments into a key-value object
  */
 export function parseArgs(args: string[]): Record<string, string | boolean> {
   const result: Record<string, string | boolean> = {};
+  let i = 0;
 
-  for (let i = 0; i < args.length; i++) {
+  while (i < args.length) {
     const arg = args[i];
-    if (!arg) continue;
+    if (!arg) {
+      i += 1;
+      continue;
+    }
 
-    if (arg.startsWith("--")) {
-      const key = arg.slice(2);
-      const nextArg = args[i + 1];
+    const key = extractKey(arg);
+    if (!key) {
+      i += 1;
+      continue;
+    }
 
-      if (nextArg && !nextArg.startsWith("-")) {
-        result[key] = nextArg;
-        i++;
-      } else {
-        result[key] = true;
-      }
-    } else if (arg.startsWith("-") && arg.length === 2) {
-      const key = arg.slice(1);
-      const nextArg = args[i + 1];
-
-      if (nextArg && !nextArg.startsWith("-")) {
-        result[key] = nextArg;
-        i++;
-      } else {
-        result[key] = true;
-      }
+    const nextArg = args[i + 1];
+    if (isValueArg(nextArg)) {
+      result[key] = nextArg;
+      i += 2;
+    } else {
+      result[key] = true;
+      i += 1;
     }
   }
 
@@ -47,7 +58,7 @@ export function getArg(
       return value;
     }
   }
-  return undefined;
+  return;
 }
 
 /**

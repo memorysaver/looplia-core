@@ -53,9 +53,7 @@ export function formatKitAsMarkdown(kit: WritingKit): string {
     "",
     "### Hooks",
     "",
-    ...kit.ideas.hooks.map(
-      (hook) => `- **[${hook.type}]** ${hook.text}`
-    ),
+    ...kit.ideas.hooks.map((hook) => `- **[${hook.type}]** ${hook.text}`),
     "",
     "### Angles",
     "",
@@ -66,9 +64,7 @@ export function formatKitAsMarkdown(kit: WritingKit): string {
     "",
     "### Questions to Explore",
     "",
-    ...kit.ideas.questions.map(
-      (q) => `- **[${q.type}]** ${q.question}`
-    ),
+    ...kit.ideas.questions.map((q) => `- **[${q.type}]** ${q.question}`),
     "",
     "---",
     "",

@@ -1,16 +1,16 @@
-import type { OutlineProvider } from "../../ports/outline-generator";
-import type { ContentSummary } from "../../domain/summary";
+import type { ProviderResult } from "../../domain/errors";
 import type { WritingIdeas } from "../../domain/ideas";
+import type { ContentSummary } from "../../domain/summary";
 import type { UserProfile } from "../../domain/user-profile";
 import type { OutlineSection } from "../../domain/writing-kit";
-import type { ProviderResult } from "../../domain/errors";
+import type { OutlineProvider } from "../../ports/outline-generator";
 
 /**
  * Create a mock outline generator for testing
  */
 export function createMockOutlineGenerator(): OutlineProvider {
   return {
-    async generateOutline(
+    generateOutline(
       summary: ContentSummary,
       ideas: WritingIdeas,
       user: UserProfile
@@ -42,7 +42,7 @@ export function createMockOutlineGenerator(): OutlineProvider {
         },
       ];
 
-      return { success: true, data: outline };
+      return Promise.resolve({ success: true, data: outline });
     },
   };
 }

@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
-import { summarizeContent } from "../../src/services/summarization-engine";
-import type { SummarizerProvider } from "../../src/ports/summarizer";
+import { describe, expect, it, vi } from "vitest";
 import type { ContentItem } from "../../src/domain/content";
+import type { SummarizerProvider } from "../../src/ports/summarizer";
+import { summarizeContent } from "../../src/services/summarization-engine";
 
 describe("summarizeContent", () => {
   const mockContent: ContentItem = {
@@ -40,7 +40,11 @@ describe("summarizeContent", () => {
     const mockProvider: SummarizerProvider = {
       summarize: vi.fn().mockResolvedValue({
         success: false,
-        error: { type: "rate_limit", retryAfterMs: 1000, message: "Rate limited" },
+        error: {
+          type: "rate_limit",
+          retryAfterMs: 1000,
+          message: "Rate limited",
+        },
       }),
     };
 

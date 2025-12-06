@@ -1,10 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { buildWritingKit } from "../../src/services/writing-kit-engine";
-import { createMockSummarizer } from "../../src/adapters/mock/mock-summarizer";
+import { describe, expect, it } from "vitest";
 import { createMockIdeaGenerator } from "../../src/adapters/mock/mock-idea-generator";
 import { createMockOutlineGenerator } from "../../src/adapters/mock/mock-outline-generator";
+import { createMockSummarizer } from "../../src/adapters/mock/mock-summarizer";
 import type { ContentItem } from "../../src/domain/content";
 import type { UserProfile } from "../../src/domain/user-profile";
+import { buildWritingKit } from "../../src/services/writing-kit-engine";
 
 describe("Full Pipeline Integration", () => {
   const content: ContentItem = {

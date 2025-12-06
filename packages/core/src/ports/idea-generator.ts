@@ -1,7 +1,7 @@
-import type { ContentSummary } from "../domain/summary";
-import type { WritingIdeas } from "../domain/ideas";
-import type { UserProfile } from "../domain/user-profile";
 import type { ProviderResult } from "../domain/errors";
+import type { WritingIdeas } from "../domain/ideas";
+import type { ContentSummary } from "../domain/summary";
+import type { UserProfile } from "../domain/user-profile";
 
 /**
  * Provider interface for generating writing ideas
@@ -12,7 +12,7 @@ import type { ProviderResult } from "../domain/errors";
  * - Formulate exploratory questions
  * - Consider user's interests and style
  */
-export interface IdeaProvider {
+export type IdeaProvider = {
   /**
    * Generate writing ideas from summary
    *
@@ -24,4 +24,4 @@ export interface IdeaProvider {
     summary: ContentSummary,
     user: UserProfile
   ): Promise<ProviderResult<WritingIdeas>>;
-}
+};

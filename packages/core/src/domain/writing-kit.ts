@@ -1,19 +1,19 @@
-import type { ContentSummary } from "./summary";
 import type { WritingIdeas } from "./ideas";
+import type { ContentSummary } from "./summary";
 
 /**
  * Simplified source reference for display
  */
-export interface WritingKitSource {
+export type WritingKitSource = {
   id: string;
   label: string;
   url: string;
-}
+};
 
 /**
  * An outline section
  */
-export interface OutlineSection {
+export type OutlineSection = {
   /** Section heading */
   heading: string;
 
@@ -22,23 +22,23 @@ export interface OutlineSection {
 
   /** Estimated word count for this section */
   estimatedWords?: number;
-}
+};
 
 /**
  * Writing kit metadata
  */
-export interface WritingKitMeta {
+export type WritingKitMeta = {
   /** Overall relevance to user (0-1) */
   relevanceToUser: number;
 
   /** Estimated reading time in minutes */
   estimatedReadingTimeMinutes: number;
-}
+};
 
 /**
  * Complete writing scaffold combining summary, ideas, and outline
  */
-export interface WritingKit {
+export type WritingKit = {
   /** Reference to source content */
   contentId: string;
 
@@ -56,4 +56,4 @@ export interface WritingKit {
 
   /** Kit metadata */
   meta: WritingKitMeta;
-}
+};

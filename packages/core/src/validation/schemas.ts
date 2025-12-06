@@ -102,7 +102,7 @@ export const UserTopicSchema = z.object({
 
 export const WritingStyleSchema = z.object({
   tone: z.enum(["beginner", "intermediate", "expert", "mixed"]),
-  targetWordCount: z.number().min(100).max(10000),
+  targetWordCount: z.number().min(100).max(10_000),
   voice: z.enum(["first-person", "third-person", "instructional"]),
 });
 

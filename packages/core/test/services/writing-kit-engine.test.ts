@@ -1,18 +1,24 @@
-import { describe, it, expect, vi } from "vitest";
-import { buildWritingKit } from "../../src/services/writing-kit-engine";
+import { describe, expect, it, vi } from "vitest";
 import type { ContentItem } from "../../src/domain/content";
 import type { UserProfile } from "../../src/domain/user-profile";
-import type { SummarizerProvider } from "../../src/ports/summarizer";
 import type { IdeaProvider } from "../../src/ports/idea-generator";
 import type { OutlineProvider } from "../../src/ports/outline-generator";
+import type { SummarizerProvider } from "../../src/ports/summarizer";
+import { buildWritingKit } from "../../src/services/writing-kit-engine";
 
 describe("buildWritingKit", () => {
   const mockContent: ContentItem = {
     id: "test-1",
     title: "Test Article",
     url: "https://example.com",
-    rawText: "This is a test article. It has multiple sentences. And some more content here.",
-    source: { id: "test", type: "custom", url: "https://source.com", label: "Test Source" },
+    rawText:
+      "This is a test article. It has multiple sentences. And some more content here.",
+    source: {
+      id: "test",
+      type: "custom",
+      url: "https://source.com",
+      label: "Test Source",
+    },
     metadata: {},
   };
 
@@ -40,9 +46,22 @@ describe("buildWritingKit", () => {
 
     const mockIdeas = {
       contentId: "test-1",
-      hooks: [{ text: "What if testing was easy?", type: "curiosity" as const }],
-      angles: [{ title: "Beginner Guide", description: "Guide for newbies", relevanceScore: 0.9 }],
-      questions: [{ question: "How does testing improve quality?", type: "practical" as const }],
+      hooks: [
+        { text: "What if testing was easy?", type: "curiosity" as const },
+      ],
+      angles: [
+        {
+          title: "Beginner Guide",
+          description: "Guide for newbies",
+          relevanceScore: 0.9,
+        },
+      ],
+      questions: [
+        {
+          question: "How does testing improve quality?",
+          type: "practical" as const,
+        },
+      ],
     };
 
     const mockOutline = [
@@ -52,18 +71,28 @@ describe("buildWritingKit", () => {
     ];
 
     const summarizer: SummarizerProvider = {
-      summarize: vi.fn().mockResolvedValue({ success: true, data: mockSummary }),
+      summarize: vi
+        .fn()
+        .mockResolvedValue({ success: true, data: mockSummary }),
     };
 
     const idea: IdeaProvider = {
-      generateIdeas: vi.fn().mockResolvedValue({ success: true, data: mockIdeas }),
+      generateIdeas: vi
+        .fn()
+        .mockResolvedValue({ success: true, data: mockIdeas }),
     };
 
     const outline: OutlineProvider = {
-      generateOutline: vi.fn().mockResolvedValue({ success: true, data: mockOutline }),
+      generateOutline: vi
+        .fn()
+        .mockResolvedValue({ success: true, data: mockOutline }),
     };
 
-    const result = await buildWritingKit(mockContent, mockUser, { summarizer, idea, outline });
+    const result = await buildWritingKit(mockContent, mockUser, {
+      summarizer,
+      idea,
+      outline,
+    });
 
     expect(result.success).toBe(true);
     if (result.success) {
@@ -81,7 +110,11 @@ describe("buildWritingKit", () => {
     const summarizer: SummarizerProvider = {
       summarize: vi.fn().mockResolvedValue({
         success: false,
-        error: { type: "rate_limit", retryAfterMs: 1000, message: "Rate limited" },
+        error: {
+          type: "rate_limit",
+          retryAfterMs: 1000,
+          message: "Rate limited",
+        },
       }),
     };
 
@@ -93,7 +126,11 @@ describe("buildWritingKit", () => {
       generateOutline: vi.fn(),
     };
 
-    const result = await buildWritingKit(mockContent, mockUser, { summarizer, idea, outline });
+    const result = await buildWritingKit(mockContent, mockUser, {
+      summarizer,
+      idea,
+      outline,
+    });
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -116,7 +153,9 @@ describe("buildWritingKit", () => {
     };
 
     const summarizer: SummarizerProvider = {
-      summarize: vi.fn().mockResolvedValue({ success: true, data: mockSummary }),
+      summarize: vi
+        .fn()
+        .mockResolvedValue({ success: true, data: mockSummary }),
     };
 
     const idea: IdeaProvider = {
@@ -130,7 +169,11 @@ describe("buildWritingKit", () => {
       generateOutline: vi.fn(),
     };
 
-    const result = await buildWritingKit(mockContent, mockUser, { summarizer, idea, outline });
+    const result = await buildWritingKit(mockContent, mockUser, {
+      summarizer,
+      idea,
+      outline,
+    });
 
     expect(result.success).toBe(false);
     if (!result.success) {

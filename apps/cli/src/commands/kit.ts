@@ -1,16 +1,19 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import {
-  createMockSummarizer,
+  buildWritingKit,
+  type ContentItem,
   createMockIdeaGenerator,
   createMockOutlineGenerator,
-  buildWritingKit,
-  validateContentItem,
-  validateUserProfile,
-  type ContentItem,
+  createMockSummarizer,
   type UserProfile,
   type UserTopic,
+  validateContentItem,
+  validateUserProfile,
 } from "@looplia-core/core";
-import { parseArgs, getArg, hasFlag, formatKitAsMarkdown } from "../utils";
+import { formatKitAsMarkdown, getArg, hasFlag, parseArgs } from "../utils";
+
+const VALID_TONES = ["beginner", "intermediate", "expert", "mixed"] as const;
+type Tone = (typeof VALID_TONES)[number];
 
 function printKitHelp(): void {
   console.log(`
@@ -33,6 +36,72 @@ Example:
 `);
 }
 
+function parseTopics(topicsArg: string | undefined): UserTopic[] {
+  if (!topicsArg) {
+    return [];
+  }
+  return topicsArg.split(",").map((t) => ({
+    topic: t.trim(),
+    interestLevel: 3 as const,
+  }));
+}
+
+function parseTone(toneArg: string): Tone {
+  return VALID_TONES.includes(toneArg as Tone)
+    ? (toneArg as Tone)
+    : "intermediate";
+}
+
+function readContentFile(filePath: string): string {
+  try {
+    return readFileSync(filePath, "utf-8");
+  } catch {
+    console.error(`Error: Could not read file: ${filePath}`);
+    process.exit(1);
+  }
+}
+
+function createContentItem(filePath: string, rawText: string): ContentItem {
+  return {
+    id: `cli-${Date.now()}`,
+    title: filePath.split("/").pop() ?? "Untitled",
+    url: `file://${filePath}`,
+    rawText,
+    source: {
+      id: "cli",
+      type: "custom",
+      url: `file://${filePath}`,
+      label: "CLI Input",
+    },
+    metadata: {},
+  };
+}
+
+function createUserProfile(
+  topics: UserTopic[],
+  tone: Tone,
+  targetWordCount: number
+): UserProfile {
+  return {
+    userId: "cli-user",
+    topics,
+    style: {
+      tone,
+      targetWordCount: Number.isNaN(targetWordCount) ? 1000 : targetWordCount,
+      voice: "first-person",
+    },
+  };
+}
+
+function writeOutput(output: string, outputPath: string | undefined): void {
+  if (outputPath) {
+    writeFileSync(outputPath, output);
+    console.log(`Writing kit written to: ${outputPath}`);
+  } else {
+    console.log(output);
+  }
+}
+
 export async function runKitCommand(args: string[]): Promise<void> {
   const parsed = parseArgs(args);
 
@@ -50,77 +119,33 @@ export async function runKitCommand(args: string[]): Promise<void> {
 
   const format = getArg(parsed, "format") ?? "json";
   const outputPath = getArg(parsed, "output", "o");
-  const topicsArg = getArg(parsed, "topics");
-  const toneArg = getArg(parsed, "tone") ?? "intermediate";
-  const wordCountArg = getArg(parsed, "word-count") ?? "1000";
+  const topics = parseTopics(getArg(parsed, "topics"));
+  const tone = parseTone(getArg(parsed, "tone") ?? "intermediate");
+  const targetWordCount = Number.parseInt(
+    getArg(parsed, "word-count") ?? "1000",
+    10
+  );
 
-  // Parse topics
-  const topics: UserTopic[] = topicsArg
-    ? topicsArg.split(",").map((t) => ({
-        topic: t.trim(),
-        interestLevel: 3 as const,
-      }))
-    : [];
+  const rawText = readContentFile(filePath);
+  const content = createContentItem(filePath, rawText);
+  const user = createUserProfile(topics, tone, targetWordCount);
 
-  // Validate tone
-  const validTones = ["beginner", "intermediate", "expert", "mixed"] as const;
-  type Tone = (typeof validTones)[number];
-  const tone: Tone = validTones.includes(toneArg as Tone)
-    ? (toneArg as Tone)
-    : "intermediate";
-
-  // Parse word count
-  const targetWordCount = Number.parseInt(wordCountArg, 10);
-
-  // Read content file
-  let rawText: string;
-  try {
-    rawText = readFileSync(filePath, "utf-8");
-  } catch {
-    console.error(`Error: Could not read file: ${filePath}`);
-    process.exit(1);
-  }
-
-  // Create content item
-  const content: ContentItem = {
-    id: `cli-${Date.now()}`,
-    title: filePath.split("/").pop() ?? "Untitled",
-    url: `file://${filePath}`,
-    rawText,
-    source: {
-      id: "cli",
-      type: "custom",
-      url: `file://${filePath}`,
-      label: "CLI Input",
-    },
-    metadata: {},
-  };
-
-  // Create user profile
-  const user: UserProfile = {
-    userId: "cli-user",
-    topics,
-    style: {
-      tone,
-      targetWordCount: Number.isNaN(targetWordCount) ? 1000 : targetWordCount,
-      voice: "first-person",
-    },
-  };
-
-  // Validate inputs at boundary
   const contentValidation = validateContentItem(content);
   if (!contentValidation.success) {
-    console.error(`Content validation error: ${contentValidation.error.message}`);
+    console.error(
+      `Content validation error: ${contentValidation.error.message}`
+    );
     process.exit(1);
   }
 
   const userValidation = validateUserProfile(user);
   if (!userValidation.success) {
-    console.error(`User profile validation error: ${userValidation.error.message}`);
+    console.error(
+      `User profile validation error: ${userValidation.error.message}`
+    );
     process.exit(1);
   }
 
-  // Build kit using mock providers
   const providers = {
     summarizer: createMockSummarizer(),
     idea: createMockIdeaGenerator(),
@@ -138,19 +163,10 @@ export async function runKitCommand(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  // Format output
-  let output: string;
-  if (format === "markdown") {
-    output = formatKitAsMarkdown(result.data);
-  } else {
-    output = JSON.stringify(result.data, null, 2);
-  }
+  const output =
+    format === "markdown"
+      ? formatKitAsMarkdown(result.data)
+      : JSON.stringify(result.data, null, 2);
 
-  // Write output
-  if (outputPath) {
-    writeFileSync(outputPath, output);
-    console.log(`Writing kit written to: ${outputPath}`);
-  } else {
-    console.log(output);
-  }
+  writeOutput(output, outputPath);
 }

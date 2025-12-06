@@ -6,7 +6,7 @@ export type SourceType = "rss" | "youtube" | "podcast" | "twitter" | "custom";
 /**
  * Represents a content source (feed, channel, etc.)
  */
-export interface Source {
+export type Source = {
   /** Unique identifier for the source */
   id: string;
 
@@ -21,12 +21,12 @@ export interface Source {
 
   /** Additional source-specific metadata */
   metadata?: Record<string, unknown>;
-}
+};
 
 /**
  * Well-known metadata fields for content
  */
-export interface ContentMetadata {
+export type ContentMetadata = {
   /** ISO 639-1 language code (e.g., 'en', 'zh') */
   language?: string;
 
@@ -41,12 +41,12 @@ export interface ContentMetadata {
 
   /** Additional provider-specific fields */
   [key: string]: unknown;
-}
+};
 
 /**
  * Raw content item to be processed
  */
-export interface ContentItem {
+export type ContentItem = {
   /** Unique identifier */
   id: string;
 
@@ -67,4 +67,4 @@ export interface ContentItem {
 
   /** Content metadata */
   metadata: ContentMetadata;
-}
+};

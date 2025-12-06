@@ -1,15 +1,15 @@
 /**
  * Summary scoring metrics
  */
-export interface SummaryScore {
+export type SummaryScore = {
   /** How relevant to user's interests (0-1) */
   relevanceToUser: number;
-}
+};
 
 /**
  * Summarized content with key insights
  */
-export interface ContentSummary {
+export type ContentSummary = {
   /** Reference to source content */
   contentId: string;
 
@@ -33,4 +33,4 @@ export interface ContentSummary {
 
   /** Relevance scores */
   score: SummaryScore;
-}
+};

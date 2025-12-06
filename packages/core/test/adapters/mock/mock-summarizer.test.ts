@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { createMockSummarizer } from "../../../src/adapters/mock/mock-summarizer";
 import type { ContentItem } from "../../../src/domain/content";
 import type { UserProfile } from "../../../src/domain/user-profile";
@@ -53,7 +53,10 @@ describe("createMockSummarizer", () => {
       },
     };
 
-    const resultWithUser = await summarizer.summarize(mockContent, userWithMatchingTopics);
+    const resultWithUser = await summarizer.summarize(
+      mockContent,
+      userWithMatchingTopics
+    );
     const resultWithoutUser = await summarizer.summarize(mockContent);
 
     expect(resultWithUser.success).toBe(true);

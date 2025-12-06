@@ -1,11 +1,11 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import {
+  type ContentItem,
   createMockSummarizer,
   summarizeContent,
   validateContentItem,
-  type ContentItem,
 } from "@looplia-core/core";
-import { parseArgs, getArg, hasFlag, formatSummaryAsMarkdown } from "../utils";
+import { formatSummaryAsMarkdown, getArg, hasFlag, parseArgs } from "../utils";
 
 function printSummarizeHelp(): void {
   console.log(`

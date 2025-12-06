@@ -1,8 +1,8 @@
-import type { SummarizerProvider } from "../../ports/summarizer";
 import type { ContentItem } from "../../domain/content";
-import type { UserProfile } from "../../domain/user-profile";
-import type { ContentSummary } from "../../domain/summary";
 import type { ProviderResult } from "../../domain/errors";
+import type { ContentSummary } from "../../domain/summary";
+import type { UserProfile } from "../../domain/user-profile";
+import type { SummarizerProvider } from "../../ports/summarizer";
 
 /**
  * Create a mock summarizer for testing
@@ -10,18 +10,22 @@ import type { ProviderResult } from "../../domain/errors";
  * This provider generates summaries without calling any LLM.
  * Useful for testing, demos, and development.
  */
+const SENTENCE_SPLIT_REGEX = /[.!?]+/;
+const WORD_SPLIT_REGEX = /\s+/;
+
 export function createMockSummarizer(): SummarizerProvider {
   return {
-    async summarize(
+    summarize(
       content: ContentItem,
       user?: UserProfile
     ): Promise<ProviderResult<ContentSummary>> {
       const text = content.rawText.trim();
-      const sentences = text.split(/[.!?]+/).filter((s) => s.trim());
+      const sentences = text
+        .split(SENTENCE_SPLIT_REGEX)
+        .filter((s) => s.trim());
 
       // Extract first sentence as headline
-      const headline =
-        sentences[0]?.trim().slice(0, 200) ?? content.title;
+      const headline = sentences[0]?.trim().slice(0, 200) ?? content.title;
 
       // Use first few sentences as TLDR
       const tldr = sentences.slice(0, 3).join(". ").slice(0, 500) || headline;
@@ -30,7 +34,7 @@ export function createMockSummarizer(): SummarizerProvider {
       const bullets = sentences.slice(0, 5).map((s) => s.trim());
 
       // Simple tag extraction (words that appear multiple times)
-      const words = text.toLowerCase().split(/\s+/);
+      const words = text.toLowerCase().split(WORD_SPLIT_REGEX);
       const wordCounts = new Map<string, number>();
       for (const word of words) {
         if (word.length > 4) {
@@ -64,7 +68,7 @@ export function createMockSummarizer(): SummarizerProvider {
         },
       };
 
-      return { success: true, data: summary };
+      return Promise.resolve({ success: true, data: summary });
     },
   };
 }

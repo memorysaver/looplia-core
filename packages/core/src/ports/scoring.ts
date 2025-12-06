@@ -8,7 +8,7 @@ import type { UserProfile } from "../domain/user-profile";
  * requiring historical data (like novelty detection)
  * should be handled at the application layer.
  */
-export interface ScoringPolicy {
+export type ScoringPolicy = {
   /**
    * Calculate relevance score for content
    *
@@ -17,14 +17,16 @@ export interface ScoringPolicy {
    * @returns Relevance score (0-1)
    */
   relevance(summary: ContentSummary, user: UserProfile): number;
-}
+};
 
 /**
  * Default scoring policy based on topic matching
  */
 export const defaultScoringPolicy: ScoringPolicy = {
   relevance(summary, user) {
-    if (user.topics.length === 0) return 0.5;
+    if (user.topics.length === 0) {
+      return 0.5;
+    }
 
     const summaryTags = new Set(summary.tags.map((t) => t.toLowerCase()));
 

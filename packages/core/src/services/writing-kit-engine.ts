@@ -1,26 +1,28 @@
 import type { ContentItem } from "../domain/content";
-import type { UserProfile } from "../domain/user-profile";
-import type { WritingKit } from "../domain/writing-kit";
 import type { ProviderResult } from "../domain/errors";
 import { err } from "../domain/errors";
-import type { SummarizerProvider } from "../ports/summarizer";
+import type { UserProfile } from "../domain/user-profile";
+import type { WritingKit } from "../domain/writing-kit";
 import type { IdeaProvider } from "../ports/idea-generator";
 import type { OutlineProvider } from "../ports/outline-generator";
+import type { SummarizerProvider } from "../ports/summarizer";
 
 /**
  * Provider bundle for building a complete writing kit
  */
-export interface WritingKitProviders {
+export type WritingKitProviders = {
   summarizer: SummarizerProvider;
   idea: IdeaProvider;
   outline: OutlineProvider;
-}
+};
+
+const WORD_SPLIT_REGEX = /\s+/;
 
 /**
  * Estimate reading time based on word count
  */
 function estimateReadingTime(text: string): number {
-  const words = text.split(/\s+/).length;
+  const words = text.split(WORD_SPLIT_REGEX).length;
   const wordsPerMinute = 250;
   return Math.max(1, Math.round(words / wordsPerMinute));
 }

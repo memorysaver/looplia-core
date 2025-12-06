@@ -1,15 +1,15 @@
-import type { IdeaProvider } from "../../ports/idea-generator";
+import type { ProviderResult } from "../../domain/errors";
+import type { WritingIdeas } from "../../domain/ideas";
 import type { ContentSummary } from "../../domain/summary";
 import type { UserProfile } from "../../domain/user-profile";
-import type { WritingIdeas } from "../../domain/ideas";
-import type { ProviderResult } from "../../domain/errors";
+import type { IdeaProvider } from "../../ports/idea-generator";
 
 /**
  * Create a mock idea generator for testing
  */
 export function createMockIdeaGenerator(): IdeaProvider {
   return {
-    async generateIdeas(
+    generateIdeas(
       summary: ContentSummary,
       user: UserProfile
     ): Promise<ProviderResult<WritingIdeas>> {
@@ -49,7 +49,7 @@ export function createMockIdeaGenerator(): IdeaProvider {
         ],
       };
 
-      return { success: true, data: ideas };
+      return Promise.resolve({ success: true, data: ideas });
     },
   };
 }

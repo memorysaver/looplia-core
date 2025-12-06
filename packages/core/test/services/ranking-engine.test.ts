@@ -1,10 +1,14 @@
-import { describe, it, expect } from "vitest";
-import { rankKits } from "../../src/services/ranking-engine";
-import type { WritingKit } from "../../src/domain/writing-kit";
+import { describe, expect, it } from "vitest";
 import type { UserProfile } from "../../src/domain/user-profile";
+import type { WritingKit } from "../../src/domain/writing-kit";
+import { rankKits } from "../../src/services/ranking-engine";
 
 describe("rankKits", () => {
-  const createMockKit = (id: string, tags: string[], relevance: number): WritingKit => ({
+  const createMockKit = (
+    id: string,
+    tags: string[],
+    relevance: number
+  ): WritingKit => ({
     contentId: id,
     source: { id: "src", label: "Source", url: "https://example.com" },
     summary: {
@@ -20,7 +24,9 @@ describe("rankKits", () => {
     ideas: {
       contentId: id,
       hooks: [{ text: "Hook", type: "curiosity" }],
-      angles: [{ title: "Angle", description: "Description", relevanceScore: 0.5 }],
+      angles: [
+        { title: "Angle", description: "Description", relevanceScore: 0.5 },
+      ],
       questions: [{ question: "Question?", type: "practical" }],
     },
     suggestedOutline: [{ heading: "Section", notes: "Notes" }],

@@ -1,5 +1,5 @@
-import type { WritingKit } from "../domain/writing-kit";
 import type { UserProfile } from "../domain/user-profile";
+import type { WritingKit } from "../domain/writing-kit";
 import type { ScoringPolicy } from "../ports/scoring";
 import { defaultScoringPolicy } from "../ports/scoring";
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { runSummarizeCommand } from "./commands/summarize";
 import { runKitCommand } from "./commands/kit";
+import { runSummarizeCommand } from "./commands/summarize";
 
 const VERSION = "0.1.0";
 

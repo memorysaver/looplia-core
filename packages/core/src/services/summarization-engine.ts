@@ -1,7 +1,7 @@
 import type { ContentItem } from "../domain/content";
+import type { ProviderResult } from "../domain/errors";
 import type { ContentSummary } from "../domain/summary";
 import type { UserProfile } from "../domain/user-profile";
-import type { ProviderResult } from "../domain/errors";
 import type { SummarizerProvider } from "../ports/summarizer";
 
 /**
@@ -12,7 +12,7 @@ import type { SummarizerProvider } from "../ports/summarizer";
  * @param provider - Summarizer implementation
  * @returns Summary or error
  */
-export async function summarizeContent(
+export function summarizeContent(
   content: ContentItem,
   user: UserProfile | undefined,
   provider: SummarizerProvider

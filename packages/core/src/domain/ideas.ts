@@ -1,18 +1,18 @@
 /**
  * An attention-grabbing opening hook
  */
-export interface WritingHook {
+export type WritingHook = {
   /** The hook text */
   text: string;
 
   /** Why this hook works */
   type: "emotional" | "curiosity" | "controversy" | "statistic" | "story";
-}
+};
 
 /**
  * A narrative angle or perspective
  */
-export interface WritingAngle {
+export type WritingAngle = {
   /** Short title for the angle */
   title: string;
 
@@ -21,23 +21,23 @@ export interface WritingAngle {
 
   /** How relevant to user's interests (0-1) */
   relevanceScore: number;
-}
+};
 
 /**
  * A question to explore in writing
  */
-export interface WritingQuestion {
+export type WritingQuestion = {
   /** The question */
   question: string;
 
   /** Question category */
   type: "analytical" | "practical" | "philosophical" | "comparative";
-}
+};
 
 /**
  * Creative expansion of summarized content into writing materials
  */
-export interface WritingIdeas {
+export type WritingIdeas = {
   /** Reference to source content */
   contentId: string;
 
@@ -58,4 +58,4 @@ export interface WritingIdeas {
    * Usage: Answer 2-3 questions in your writing
    */
   questions: WritingQuestion[];
-}
+};
