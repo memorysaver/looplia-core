@@ -1,11 +1,17 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import {
-  type ContentItem,
   createMockSummarizer,
   summarizeContent,
   validateContentItem,
 } from "@looplia-core/core";
-import { formatSummaryAsMarkdown, getArg, hasFlag, parseArgs } from "../utils";
+import {
+  createContentItemFromFile,
+  formatSummaryAsMarkdown,
+  getArg,
+  hasFlag,
+  parseArgs,
+  readContentFile,
+} from "../utils";
 
 function printSummarizeHelp(): void {
   console.log(`
@@ -43,29 +49,11 @@ export async function runSummarizeCommand(args: string[]): Promise<void> {
   const format = getArg(parsed, "format") ?? "json";
   const outputPath = getArg(parsed, "output", "o");
 
-  // Read content file
-  let rawText: string;
-  try {
-    rawText = readFileSync(filePath, "utf-8");
-  } catch {
-    console.error(`Error: Could not read file: ${filePath}`);
-    process.exit(1);
-  }
+  // Read content file using shared utility
+  const rawText = readContentFile(filePath);
 
-  // Create content item
-  const content: ContentItem = {
-    id: `cli-${Date.now()}`,
-    title: filePath.split("/").pop() ?? "Untitled",
-    url: `file://${filePath}`,
-    rawText,
-    source: {
-      id: "cli",
-      type: "custom",
-      url: `file://${filePath}`,
-      label: "CLI Input",
-    },
-    metadata: {},
-  };
+  // Create content item using shared utility
+  const content = createContentItemFromFile(filePath, rawText);
 
   // Validate input at boundary
   const validation = validateContentItem(content);

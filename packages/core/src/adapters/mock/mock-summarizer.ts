@@ -12,6 +12,44 @@ import type { SummarizerProvider } from "../../ports/summarizer";
  */
 const SENTENCE_SPLIT_REGEX = /[.!?]+/;
 const WORD_SPLIT_REGEX = /\s+/;
+const NON_ALPHA_NUMERIC_REGEX = /[^a-z0-9]/g;
+const MIN_WORD_LENGTH = 4;
+const MIN_WORD_FREQUENCY = 2;
+const MAX_TAGS = 5;
+
+// Common English stopwords to filter out from tag extraction
+const STOPWORDS = new Set([
+  "about",
+  "after",
+  "again",
+  "being",
+  "could",
+  "every",
+  "first",
+  "found",
+  "great",
+  "having",
+  "however",
+  "might",
+  "never",
+  "other",
+  "really",
+  "since",
+  "still",
+  "their",
+  "there",
+  "these",
+  "think",
+  "those",
+  "through",
+  "under",
+  "until",
+  "using",
+  "where",
+  "which",
+  "while",
+  "would",
+]);
 
 export function createMockSummarizer(): SummarizerProvider {
   return {
@@ -33,18 +71,19 @@ export function createMockSummarizer(): SummarizerProvider {
       // Extract some "bullets" from the text
       const bullets = sentences.slice(0, 5).map((s) => s.trim());
 
-      // Simple tag extraction (words that appear multiple times)
+      // Tag extraction with stopword filtering and punctuation cleanup
       const words = text.toLowerCase().split(WORD_SPLIT_REGEX);
       const wordCounts = new Map<string, number>();
       for (const word of words) {
-        if (word.length > 4) {
-          wordCounts.set(word, (wordCounts.get(word) ?? 0) + 1);
+        const cleanWord = word.replace(NON_ALPHA_NUMERIC_REGEX, "");
+        if (cleanWord.length > MIN_WORD_LENGTH && !STOPWORDS.has(cleanWord)) {
+          wordCounts.set(cleanWord, (wordCounts.get(cleanWord) ?? 0) + 1);
         }
       }
       const tags = [...wordCounts.entries()]
-        .filter(([, count]) => count > 2)
+        .filter(([, count]) => count > MIN_WORD_FREQUENCY)
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
+        .slice(0, MAX_TAGS)
         .map(([word]) => word);
 
       // Calculate mock relevance

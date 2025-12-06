@@ -18,13 +18,15 @@ export type WritingKitProviders = {
 
 const WORD_SPLIT_REGEX = /\s+/;
 
+/** Average reading speed in words per minute for estimation */
+const AVERAGE_READING_WORDS_PER_MINUTE = 250;
+
 /**
  * Estimate reading time based on word count
  */
 function estimateReadingTime(text: string): number {
   const words = text.split(WORD_SPLIT_REGEX).length;
-  const wordsPerMinute = 250;
-  return Math.max(1, Math.round(words / wordsPerMinute));
+  return Math.max(1, Math.round(words / AVERAGE_READING_WORDS_PER_MINUTE));
 }
 
 /**

@@ -1,7 +1,6 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import {
   buildWritingKit,
-  type ContentItem,
   createMockIdeaGenerator,
   createMockOutlineGenerator,
   createMockSummarizer,
@@ -10,10 +9,21 @@ import {
   validateContentItem,
   validateUserProfile,
 } from "@looplia-core/core";
-import { formatKitAsMarkdown, getArg, hasFlag, parseArgs } from "../utils";
+import {
+  createContentItemFromFile,
+  formatKitAsMarkdown,
+  getArg,
+  hasFlag,
+  parseArgs,
+  readContentFile,
+} from "../utils";
 
 const VALID_TONES = ["beginner", "intermediate", "expert", "mixed"] as const;
 type Tone = (typeof VALID_TONES)[number];
+
+const MIN_WORD_COUNT = 100;
+const MAX_WORD_COUNT = 10_000;
+const DEFAULT_WORD_COUNT = 1000;
 
 function printKitHelp(): void {
   console.log(`
@@ -28,7 +38,7 @@ Options:
   --output, -o       Output file path (default: stdout)
   --topics           Comma-separated topics of interest
   --tone             Writing tone: beginner, intermediate, expert, mixed (default: intermediate)
-  --word-count       Target word count (default: 1000)
+  --word-count       Target word count (default: 1000, range: 100-10000)
   --help, -h         Show this help
 
 Example:
@@ -52,29 +62,19 @@ function parseTone(toneArg: string): Tone {
     : "intermediate";
 }
 
-function readContentFile(filePath: string): string {
-  try {
-    return readFileSync(filePath, "utf-8");
-  } catch {
-    console.error(`Error: Could not read file: ${filePath}`);
-    process.exit(1);
+function parseWordCount(wordCountArg: string | undefined): number {
+  const parsed = Number.parseInt(
+    wordCountArg ?? String(DEFAULT_WORD_COUNT),
+    10
+  );
+  if (
+    Number.isNaN(parsed) ||
+    parsed < MIN_WORD_COUNT ||
+    parsed > MAX_WORD_COUNT
+  ) {
+    return DEFAULT_WORD_COUNT;
   }
-}
-
-function createContentItem(filePath: string, rawText: string): ContentItem {
-  return {
-    id: `cli-${Date.now()}`,
-    title: filePath.split("/").pop() ?? "Untitled",
-    url: `file://${filePath}`,
-    rawText,
-    source: {
-      id: "cli",
-      type: "custom",
-      url: `file://${filePath}`,
-      label: "CLI Input",
-    },
-    metadata: {},
-  };
+  return parsed;
 }
 
 function createUserProfile(
@@ -87,7 +87,7 @@ function createUserProfile(
     topics,
     style: {
       tone,
-      targetWordCount: Number.isNaN(targetWordCount) ? 1000 : targetWordCount,
+      targetWordCount,
       voice: "first-person",
     },
   };
@@ -121,13 +121,10 @@ export async function runKitCommand(args: string[]): Promise<void> {
   const outputPath = getArg(parsed, "output", "o");
   const topics = parseTopics(getArg(parsed, "topics"));
   const tone = parseTone(getArg(parsed, "tone") ?? "intermediate");
-  const targetWordCount = Number.parseInt(
-    getArg(parsed, "word-count") ?? "1000",
-    10
-  );
+  const targetWordCount = parseWordCount(getArg(parsed, "word-count"));
 
   const rawText = readContentFile(filePath);
-  const content = createContentItem(filePath, rawText);
+  const content = createContentItemFromFile(filePath, rawText);
   const user = createUserProfile(topics, tone, targetWordCount);
 
   const contentValidation = validateContentItem(content);
