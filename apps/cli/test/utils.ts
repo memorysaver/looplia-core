@@ -1,7 +1,13 @@
 import { spawn } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+// Get the directory where this test file is located
+const __dirname = dirname(fileURLToPath(import.meta.url));
+// CLI root is one level up from test/
+const CLI_ROOT = join(__dirname, "..");
 
 /**
  * Execute the CLI binary and capture output
@@ -12,11 +18,11 @@ export function execCLI(args: string[]): Promise<{
   exitCode: number;
 }> {
   return new Promise((resolve, reject) => {
-    // Path to the compiled CLI entry point
-    const cliPath = join(process.cwd(), "dist", "index.js");
+    // Path to the compiled CLI entry point (relative to CLI root, not cwd)
+    const cliPath = join(CLI_ROOT, "dist", "index.js");
 
     const child = spawn("node", [cliPath, ...args], {
-      cwd: process.cwd(),
+      cwd: CLI_ROOT,
       env: process.env,
     });
 

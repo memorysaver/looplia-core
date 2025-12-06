@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { createMockSummarizer } from "../../../src/adapters/mock/mock-summarizer";
 import type { ContentItem } from "../../../src/domain/content";
 import type { UserProfile } from "../../../src/domain/user-profile";

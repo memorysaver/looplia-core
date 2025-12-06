@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, mock } from "bun:test";
 import type { ContentItem } from "../../src/domain/content";
 import type { SummarizerProvider } from "../../src/ports/summarizer";
 import { summarizeContent } from "../../src/services/summarization-engine";
@@ -14,38 +14,46 @@ describe("summarizeContent", () => {
   };
 
   it("should return summary from provider", async () => {
-    const mockProvider: SummarizerProvider = {
-      summarize: vi.fn().mockResolvedValue({
-        success: true,
+    const mockSummarize = mock(() =>
+      Promise.resolve({
+        success: true as const,
         data: {
           contentId: "test-1",
           headline: "Test headline here",
           tldr: "This is a test TLDR summary",
           bullets: ["Point 1"],
           tags: ["test"],
-          sentiment: "neutral",
+          sentiment: "neutral" as const,
           category: "test",
           score: { relevanceToUser: 0.5 },
         },
-      }),
+      })
+    );
+
+    const mockProvider: SummarizerProvider = {
+      summarize: mockSummarize,
     };
 
     const result = await summarizeContent(mockContent, undefined, mockProvider);
 
     expect(result.success).toBe(true);
-    expect(mockProvider.summarize).toHaveBeenCalledWith(mockContent, undefined);
+    expect(mockSummarize).toHaveBeenCalledWith(mockContent, undefined);
   });
 
   it("should propagate provider errors", async () => {
-    const mockProvider: SummarizerProvider = {
-      summarize: vi.fn().mockResolvedValue({
-        success: false,
+    const mockSummarize = mock(() =>
+      Promise.resolve({
+        success: false as const,
         error: {
-          type: "rate_limit",
+          type: "rate_limit" as const,
           retryAfterMs: 1000,
           message: "Rate limited",
         },
-      }),
+      })
+    );
+
+    const mockProvider: SummarizerProvider = {
+      summarize: mockSummarize,
     };
 
     const result = await summarizeContent(mockContent, undefined, mockProvider);

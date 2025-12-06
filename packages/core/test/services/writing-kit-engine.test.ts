@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, mock } from "bun:test";
 import type { ContentItem } from "../../src/domain/content";
 import type { UserProfile } from "../../src/domain/user-profile";
 import type { IdeaProvider } from "../../src/ports/idea-generator";
@@ -70,22 +70,26 @@ describe("buildWritingKit", () => {
       { heading: "Conclusion", notes: "Wrap up", estimatedWords: 200 },
     ];
 
+    const mockSummarize = mock(() =>
+      Promise.resolve({ success: true as const, data: mockSummary })
+    );
+    const mockGenerateIdeas = mock(() =>
+      Promise.resolve({ success: true as const, data: mockIdeas })
+    );
+    const mockGenerateOutline = mock(() =>
+      Promise.resolve({ success: true as const, data: mockOutline })
+    );
+
     const summarizer: SummarizerProvider = {
-      summarize: vi
-        .fn()
-        .mockResolvedValue({ success: true, data: mockSummary }),
+      summarize: mockSummarize,
     };
 
     const idea: IdeaProvider = {
-      generateIdeas: vi
-        .fn()
-        .mockResolvedValue({ success: true, data: mockIdeas }),
+      generateIdeas: mockGenerateIdeas,
     };
 
     const outline: OutlineProvider = {
-      generateOutline: vi
-        .fn()
-        .mockResolvedValue({ success: true, data: mockOutline }),
+      generateOutline: mockGenerateOutline,
     };
 
     const result = await buildWritingKit(mockContent, mockUser, {
@@ -107,23 +111,33 @@ describe("buildWritingKit", () => {
   });
 
   it("should propagate summarizer errors", async () => {
-    const summarizer: SummarizerProvider = {
-      summarize: vi.fn().mockResolvedValue({
-        success: false,
+    const mockSummarize = mock(() =>
+      Promise.resolve({
+        success: false as const,
         error: {
-          type: "rate_limit",
+          type: "rate_limit" as const,
           retryAfterMs: 1000,
           message: "Rate limited",
         },
-      }),
+      })
+    );
+    const mockGenerateIdeas = mock(() =>
+      Promise.resolve({ success: true as const, data: {} })
+    );
+    const mockGenerateOutline = mock(() =>
+      Promise.resolve({ success: true as const, data: [] })
+    );
+
+    const summarizer: SummarizerProvider = {
+      summarize: mockSummarize,
     };
 
     const idea: IdeaProvider = {
-      generateIdeas: vi.fn(),
+      generateIdeas: mockGenerateIdeas,
     };
 
     const outline: OutlineProvider = {
-      generateOutline: vi.fn(),
+      generateOutline: mockGenerateOutline,
     };
 
     const result = await buildWritingKit(mockContent, mockUser, {
@@ -136,8 +150,8 @@ describe("buildWritingKit", () => {
     if (!result.success) {
       expect(result.error.type).toBe("rate_limit");
     }
-    expect(idea.generateIdeas).not.toHaveBeenCalled();
-    expect(outline.generateOutline).not.toHaveBeenCalled();
+    expect(mockGenerateIdeas).not.toHaveBeenCalled();
+    expect(mockGenerateOutline).not.toHaveBeenCalled();
   });
 
   it("should propagate idea generator errors", async () => {
@@ -152,21 +166,29 @@ describe("buildWritingKit", () => {
       score: { relevanceToUser: 0.5 },
     };
 
+    const mockSummarize = mock(() =>
+      Promise.resolve({ success: true as const, data: mockSummary })
+    );
+    const mockGenerateIdeas = mock(() =>
+      Promise.resolve({
+        success: false as const,
+        error: { type: "network_error" as const, message: "Connection failed" },
+      })
+    );
+    const mockGenerateOutline = mock(() =>
+      Promise.resolve({ success: true as const, data: [] })
+    );
+
     const summarizer: SummarizerProvider = {
-      summarize: vi
-        .fn()
-        .mockResolvedValue({ success: true, data: mockSummary }),
+      summarize: mockSummarize,
     };
 
     const idea: IdeaProvider = {
-      generateIdeas: vi.fn().mockResolvedValue({
-        success: false,
-        error: { type: "network_error", message: "Connection failed" },
-      }),
+      generateIdeas: mockGenerateIdeas,
     };
 
     const outline: OutlineProvider = {
-      generateOutline: vi.fn(),
+      generateOutline: mockGenerateOutline,
     };
 
     const result = await buildWritingKit(mockContent, mockUser, {
@@ -179,6 +201,6 @@ describe("buildWritingKit", () => {
     if (!result.success) {
       expect(result.error.type).toBe("network_error");
     }
-    expect(outline.generateOutline).not.toHaveBeenCalled();
+    expect(mockGenerateOutline).not.toHaveBeenCalled();
   });
 });

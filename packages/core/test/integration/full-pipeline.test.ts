@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { createMockIdeaGenerator } from "../../src/adapters/mock/mock-idea-generator";
 import { createMockOutlineGenerator } from "../../src/adapters/mock/mock-outline-generator";
 import { createMockSummarizer } from "../../src/adapters/mock/mock-summarizer";

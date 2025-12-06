@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import type { UserProfile } from "../../src/domain/user-profile";
 import type { WritingKit } from "../../src/domain/writing-kit";
 import { rankKits } from "../../src/services/ranking-engine";

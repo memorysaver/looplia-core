@@ -1,21 +1,25 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { runSummarizeCommand } from "../../src/commands/summarize";
 import { createTempDir, createTestFile, readTestFile } from "../utils";
 
 // Mock process.exit to prevent test termination
-const mockExit = vi.spyOn(process, "exit").mockImplementation((() => {
+const mockExit = spyOn(process, "exit").mockImplementation((() => {
   throw new Error("process.exit called");
 }) as never);
 
 describe("runSummarizeCommand", () => {
   let tempDir: { path: string; cleanup: () => void };
-  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
-  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+  let consoleLogSpy: ReturnType<typeof spyOn>;
+  let consoleErrorSpy: ReturnType<typeof spyOn>;
 
   beforeEach(() => {
     tempDir = createTempDir();
-    consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    consoleLogSpy = spyOn(console, "log").mockImplementation(() => {
+      // no-op
+    });
+    consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {
+      // no-op
+    });
     mockExit.mockClear();
   });
 
@@ -49,7 +53,7 @@ describe("runSummarizeCommand", () => {
   it("should exit with error when --file is missing", async () => {
     await expect(async () => {
       await runSummarizeCommand([]);
-    }).rejects.toThrow("process.exit called");
+    }).toThrow("process.exit called");
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.stringContaining("--file is required")
@@ -70,8 +74,7 @@ describe("runSummarizeCommand", () => {
     expect(consoleLogSpy).toHaveBeenCalled();
 
     // Verify JSON output
-    const output =
-      consoleLogSpy.mock.calls[consoleLogSpy.mock.calls.length - 1][0];
+    const output = consoleLogSpy.mock.calls.at(-1)?.[0];
     const summary = JSON.parse(output);
     expect(summary).toHaveProperty("headline");
     expect(summary).toHaveProperty("tldr");
@@ -154,7 +157,7 @@ describe("runSummarizeCommand", () => {
   it("should handle non-existent file gracefully", async () => {
     await expect(async () => {
       await runSummarizeCommand(["--file", "/does/not/exist.txt"]);
-    }).rejects.toThrow("process.exit called");
+    }).toThrow("process.exit called");
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.stringContaining("Could not read file")
@@ -168,7 +171,7 @@ describe("runSummarizeCommand", () => {
 
     await expect(async () => {
       await runSummarizeCommand(["--file", inputFile]);
-    }).rejects.toThrow("process.exit called");
+    }).toThrow("process.exit called");
 
     expect(consoleErrorSpy).toHaveBeenCalled();
     expect(mockExit).toHaveBeenCalledWith(1);

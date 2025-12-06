@@ -1,21 +1,25 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { runKitCommand } from "../../src/commands/kit";
 import { createTempDir, createTestFile, readTestFile } from "../utils";
 
 // Mock process.exit to prevent test termination
-const mockExit = vi.spyOn(process, "exit").mockImplementation((() => {
+const mockExit = spyOn(process, "exit").mockImplementation((() => {
   throw new Error("process.exit called");
 }) as never);
 
 describe("runKitCommand", () => {
   let tempDir: { path: string; cleanup: () => void };
-  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
-  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+  let consoleLogSpy: ReturnType<typeof spyOn>;
+  let consoleErrorSpy: ReturnType<typeof spyOn>;
 
   beforeEach(() => {
     tempDir = createTempDir();
-    consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    consoleLogSpy = spyOn(console, "log").mockImplementation(() => {
+      // no-op
+    });
+    consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {
+      // no-op
+    });
     mockExit.mockClear();
   });
 
@@ -50,7 +54,7 @@ describe("runKitCommand", () => {
   it("should exit with error when --file is missing", async () => {
     await expect(async () => {
       await runKitCommand([]);
-    }).rejects.toThrow("process.exit called");
+    }).toThrow("process.exit called");
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.stringContaining("--file is required")
@@ -80,8 +84,7 @@ describe("runKitCommand", () => {
     expect(consoleLogSpy).toHaveBeenCalled();
 
     // Verify WritingKit JSON output
-    const output =
-      consoleLogSpy.mock.calls[consoleLogSpy.mock.calls.length - 1][0];
+    const output = consoleLogSpy.mock.calls.at(-1)?.[0];
     const kit = JSON.parse(output);
     expect(kit).toHaveProperty("contentId");
     expect(kit).toHaveProperty("source");
@@ -111,8 +114,7 @@ describe("runKitCommand", () => {
     expect(mockExit).not.toHaveBeenCalled();
     expect(consoleLogSpy).toHaveBeenCalled();
 
-    const output =
-      consoleLogSpy.mock.calls[consoleLogSpy.mock.calls.length - 1][0];
+    const output = consoleLogSpy.mock.calls.at(-1)?.[0];
     const kit = JSON.parse(output);
     expect(kit).toHaveProperty("summary");
     expect(kit).toHaveProperty("ideas");
@@ -258,7 +260,7 @@ describe("runKitCommand", () => {
   it("should handle non-existent file gracefully", async () => {
     await expect(async () => {
       await runKitCommand(["--file", "/does/not/exist.txt"]);
-    }).rejects.toThrow("process.exit called");
+    }).toThrow("process.exit called");
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.stringContaining("Could not read file")
@@ -271,7 +273,7 @@ describe("runKitCommand", () => {
 
     await expect(async () => {
       await runKitCommand(["--file", inputFile]);
-    }).rejects.toThrow("process.exit called");
+    }).toThrow("process.exit called");
 
     expect(consoleErrorSpy).toHaveBeenCalled();
     expect(mockExit).toHaveBeenCalledWith(1);

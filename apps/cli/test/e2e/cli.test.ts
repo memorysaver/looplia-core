@@ -1,7 +1,10 @@
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createTempDir, createTestFile, execCLI, readTestFile } from "../utils";
+
+// Regex patterns at top level for performance
+const SENTIMENT_PATTERN = /positive|neutral|negative/;
 
 describe("CLI E2E Tests", () => {
   let tempDir: { path: string; cleanup: () => void };
@@ -87,7 +90,7 @@ describe("CLI E2E Tests", () => {
       expect(summary).toHaveProperty("score");
       expect(Array.isArray(summary.bullets)).toBe(true);
       expect(Array.isArray(summary.tags)).toBe(true);
-      expect(summary.sentiment).toMatch(/positive|neutral|negative/);
+      expect(summary.sentiment).toMatch(SENTIMENT_PATTERN);
     });
 
     it("should use short flag -f for file input", async () => {
