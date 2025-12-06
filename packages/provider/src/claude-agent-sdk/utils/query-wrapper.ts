@@ -86,13 +86,18 @@ function processResultMessage<T>(
         : "SDK returned error despite success subtype";
     return {
       success: false,
-      error: { type: "sdk_error", message: errorMessage },
+      error: { type: "unknown", message: errorMessage },
       usage,
     };
   }
 
-  // Handle error results
-  return { ...mapSdkError(resultMessage), usage };
+  // Handle error results - cast to SDK type for error mapper
+  return {
+    ...mapSdkError(
+      sdkResult as import("@anthropic-ai/claude-agent-sdk").SDKResultMessage
+    ),
+    usage,
+  };
 }
 
 /**
