@@ -19,6 +19,7 @@
       },
       "dependencies": {
         "@looplia-core/core": "workspace:*",
+        "@looplia-core/provider": "workspace:*",
       },
       "devDependencies": {
         "@looplia-core/config": "workspace:*",

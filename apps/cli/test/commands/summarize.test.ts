@@ -68,7 +68,7 @@ describe("runSummarizeCommand", () => {
       "This is test content with enough text to summarize properly. It has multiple sentences to ensure validation passes."
     );
 
-    await runSummarizeCommand(["--file", inputFile]);
+    await runSummarizeCommand(["--file", inputFile, "--mock"]);
 
     expect(mockExit).not.toHaveBeenCalled();
     expect(consoleLogSpy).toHaveBeenCalled();
@@ -92,7 +92,7 @@ describe("runSummarizeCommand", () => {
       "Test content for short flag. Multiple sentences here. And more content."
     );
 
-    await runSummarizeCommand(["-f", inputFile]);
+    await runSummarizeCommand(["-f", inputFile, "--mock"]);
 
     expect(mockExit).not.toHaveBeenCalled();
     expect(consoleLogSpy).toHaveBeenCalled();
@@ -105,7 +105,13 @@ describe("runSummarizeCommand", () => {
       "Content for markdown test. This has multiple sentences. Here is more text."
     );
 
-    await runSummarizeCommand(["--file", inputFile, "--format", "markdown"]);
+    await runSummarizeCommand([
+      "--file",
+      inputFile,
+      "--format",
+      "markdown",
+      "--mock",
+    ]);
 
     expect(mockExit).not.toHaveBeenCalled();
     expect(consoleLogSpy).toHaveBeenCalled();
@@ -124,7 +130,13 @@ describe("runSummarizeCommand", () => {
     );
     const outputFile = `${tempDir.path}/output.json`;
 
-    await runSummarizeCommand(["--file", inputFile, "--output", outputFile]);
+    await runSummarizeCommand([
+      "--file",
+      inputFile,
+      "--output",
+      outputFile,
+      "--mock",
+    ]);
 
     expect(mockExit).not.toHaveBeenCalled();
     expect(consoleLogSpy).toHaveBeenCalledWith(
@@ -145,7 +157,7 @@ describe("runSummarizeCommand", () => {
     );
     const outputFile = `${tempDir.path}/output.json`;
 
-    await runSummarizeCommand(["-f", inputFile, "-o", outputFile]);
+    await runSummarizeCommand(["-f", inputFile, "-o", outputFile, "--mock"]);
 
     expect(mockExit).not.toHaveBeenCalled();
 
@@ -156,7 +168,7 @@ describe("runSummarizeCommand", () => {
 
   it("should handle non-existent file gracefully", async () => {
     await expect(async () => {
-      await runSummarizeCommand(["--file", "/does/not/exist.txt"]);
+      await runSummarizeCommand(["--file", "/does/not/exist.txt", "--mock"]);
     }).toThrow("process.exit called");
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
@@ -170,7 +182,7 @@ describe("runSummarizeCommand", () => {
     const inputFile = createTestFile(tempDir.path, "test.txt", "");
 
     await expect(async () => {
-      await runSummarizeCommand(["--file", inputFile]);
+      await runSummarizeCommand(["--file", inputFile, "--mock"]);
     }).toThrow("process.exit called");
 
     expect(consoleErrorSpy).toHaveBeenCalled();

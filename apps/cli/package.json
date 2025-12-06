@@ -16,7 +16,8 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@looplia-core/core": "workspace:*"
+    "@looplia-core/core": "workspace:*",
+    "@looplia-core/provider": "workspace:*"
   },
   "devDependencies": {
     "@looplia-core/config": "workspace:*",
