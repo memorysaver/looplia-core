@@ -1,0 +1,9 @@
+Testing Special Characters & Unicode ✨
+
+This article tests various special characters: @#$%^&*()_+-={}[]|:";'<>?,./
+
+It also includes Unicode characters: emoji 🚀 🎯 💡 and accents café naïve résumé.
+
+"Smart quotes" versus 'regular quotes' and em-dashes — like this — are also included.
+
+The purpose is to ensure the CLI handles all text encodings correctly without breaking parsing or validation logic.

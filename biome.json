@@ -22,5 +22,17 @@
       "!**/.source"
     ]
   },
-  "extends": ["ultracite/core"]
+  "extends": ["ultracite/core"],
+  "overrides": [
+    {
+      "includes": ["**/index.ts"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noBarrelFile": "off"
+          }
+        }
+      }
+    }
+  ]
 }
