@@ -1,6 +1,6 @@
 {
-  "name": "@looplia-core/core",
-  "version": "0.1.0",
+  "name": "@looplia-core/provider",
+  "version": "0.2.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -8,6 +8,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./claude-agent-sdk": {
+      "types": "./dist/claude-agent-sdk/index.d.ts",
+      "import": "./dist/claude-agent-sdk/index.js"
     }
   },
   "scripts": {
@@ -18,11 +22,13 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "zod": "^3.23.0"
+    "@anthropic-ai/claude-agent-sdk": "^0.1.60",
+    "@looplia-core/core": "workspace:*",
+    "zod-to-json-schema": "^3.23.0"
   },
   "devDependencies": {
     "@looplia-core/config": "workspace:*",
-    "@types/node": "^22.0.0",
+    "@types/bun": "^1.0.0",
     "tsup": "^8.5.1",
     "typescript": "^5.0.0"
   }

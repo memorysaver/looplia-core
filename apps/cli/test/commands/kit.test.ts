@@ -78,6 +78,7 @@ describe("runKitCommand", () => {
       "expert",
       "--word-count",
       "1500",
+      "--mock",
     ]);
 
     expect(mockExit).not.toHaveBeenCalled();
@@ -109,7 +110,7 @@ describe("runKitCommand", () => {
       "Default configuration test. This content will use default tone and word count. More sentences to ensure validation passes."
     );
 
-    await runKitCommand(["--file", inputFile]);
+    await runKitCommand(["--file", inputFile, "--mock"]);
 
     expect(mockExit).not.toHaveBeenCalled();
     expect(consoleLogSpy).toHaveBeenCalled();
@@ -132,6 +133,7 @@ describe("runKitCommand", () => {
       inputFile,
       "--topics",
       "ai,productivity,software",
+      "--mock",
     ]);
 
     expect(mockExit).not.toHaveBeenCalled();
@@ -151,6 +153,7 @@ describe("runKitCommand", () => {
       inputFile,
       "--topics",
       " ai , productivity , software ",
+      "--mock",
     ]);
 
     expect(mockExit).not.toHaveBeenCalled();
@@ -164,7 +167,7 @@ describe("runKitCommand", () => {
       "Empty topics test content. This should work with no topics specified. More sentences here."
     );
 
-    await runKitCommand(["--file", inputFile, "--topics", ""]);
+    await runKitCommand(["--file", inputFile, "--topics", "", "--mock"]);
 
     expect(mockExit).not.toHaveBeenCalled();
     expect(consoleLogSpy).toHaveBeenCalled();
@@ -183,7 +186,7 @@ describe("runKitCommand", () => {
       mockExit.mockClear();
       consoleLogSpy.mockClear();
 
-      await runKitCommand(["--file", inputFile, "--tone", tone]);
+      await runKitCommand(["--file", inputFile, "--tone", tone, "--mock"]);
 
       expect(mockExit).not.toHaveBeenCalled();
       expect(consoleLogSpy).toHaveBeenCalled();
@@ -197,7 +200,13 @@ describe("runKitCommand", () => {
       "Invalid tone test. Should use intermediate as default fallback. Additional content here."
     );
 
-    await runKitCommand(["--file", inputFile, "--tone", "invalid-tone"]);
+    await runKitCommand([
+      "--file",
+      inputFile,
+      "--tone",
+      "invalid-tone",
+      "--mock",
+    ]);
 
     expect(mockExit).not.toHaveBeenCalled();
     expect(consoleLogSpy).toHaveBeenCalled();
@@ -210,7 +219,13 @@ describe("runKitCommand", () => {
       "Word count test content. Multiple sentences for validation. More text follows."
     );
 
-    await runKitCommand(["--file", inputFile, "--word-count", "2000"]);
+    await runKitCommand([
+      "--file",
+      inputFile,
+      "--word-count",
+      "2000",
+      "--mock",
+    ]);
 
     expect(mockExit).not.toHaveBeenCalled();
     expect(consoleLogSpy).toHaveBeenCalled();
@@ -223,7 +238,13 @@ describe("runKitCommand", () => {
       "Markdown format test. This will be output as markdown. Additional sentences included."
     );
 
-    await runKitCommand(["--file", inputFile, "--format", "markdown"]);
+    await runKitCommand([
+      "--file",
+      inputFile,
+      "--format",
+      "markdown",
+      "--mock",
+    ]);
 
     expect(mockExit).not.toHaveBeenCalled();
     expect(consoleLogSpy).toHaveBeenCalled();
@@ -243,7 +264,13 @@ describe("runKitCommand", () => {
     );
     const outputFile = `${tempDir.path}/kit-output.json`;
 
-    await runKitCommand(["--file", inputFile, "--output", outputFile]);
+    await runKitCommand([
+      "--file",
+      inputFile,
+      "--output",
+      outputFile,
+      "--mock",
+    ]);
 
     expect(mockExit).not.toHaveBeenCalled();
     expect(consoleLogSpy).toHaveBeenCalledWith(
@@ -259,7 +286,7 @@ describe("runKitCommand", () => {
 
   it("should handle non-existent file gracefully", async () => {
     await expect(async () => {
-      await runKitCommand(["--file", "/does/not/exist.txt"]);
+      await runKitCommand(["--file", "/does/not/exist.txt", "--mock"]);
     }).toThrow("process.exit called");
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
@@ -272,7 +299,7 @@ describe("runKitCommand", () => {
     const inputFile = createTestFile(tempDir.path, "test.txt", "");
 
     await expect(async () => {
-      await runKitCommand(["--file", inputFile]);
+      await runKitCommand(["--file", inputFile, "--mock"]);
     }).toThrow("process.exit called");
 
     expect(consoleErrorSpy).toHaveBeenCalled();

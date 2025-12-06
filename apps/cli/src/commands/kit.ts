@@ -9,6 +9,7 @@ import {
   validateContentItem,
   validateUserProfile,
 } from "@looplia-core/core";
+import { createClaudeProviders } from "@looplia-core/provider/claude-agent-sdk";
 import {
   createContentItemFromFile,
   formatKitAsMarkdown,
@@ -39,7 +40,11 @@ Options:
   --topics           Comma-separated topics of interest
   --tone             Writing tone: beginner, intermediate, expert, mixed (default: intermediate)
   --word-count       Target word count (default: 1000, range: 100-10000)
+  --mock, -m         Use mock providers (no API key required)
   --help, -h         Show this help
+
+Environment:
+  ANTHROPIC_API_KEY  Required unless --mock is specified
 
 Example:
   looplia kit --file ./article.txt --topics "ai,productivity" --tone expert
@@ -122,6 +127,15 @@ export async function runKitCommand(args: string[]): Promise<void> {
   const topics = parseTopics(getArg(parsed, "topics"));
   const tone = parseTone(getArg(parsed, "tone") ?? "intermediate");
   const targetWordCount = parseWordCount(getArg(parsed, "word-count"));
+  const useMock = hasFlag(parsed, "mock", "m");
+
+  // Check for API key unless using mock provider
+  if (!(useMock || process.env.ANTHROPIC_API_KEY)) {
+    console.error("Error: ANTHROPIC_API_KEY environment variable is required");
+    console.error("Get your API key from: https://console.anthropic.com");
+    console.error("Or use --mock flag to run without API key");
+    process.exit(1);
+  }
 
   const rawText = readContentFile(filePath);
   const content = createContentItemFromFile(filePath, rawText);
@@ -143,11 +157,14 @@ export async function runKitCommand(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  const providers = {
-    summarizer: createMockSummarizer(),
-    idea: createMockIdeaGenerator(),
-    outline: createMockOutlineGenerator(),
-  };
+  // Create providers based on --mock flag
+  const providers = useMock
+    ? {
+        summarizer: createMockSummarizer(),
+        idea: createMockIdeaGenerator(),
+        outline: createMockOutlineGenerator(),
+      }
+    : createClaudeProviders();
 
   const result = await buildWritingKit(
     contentValidation.data,

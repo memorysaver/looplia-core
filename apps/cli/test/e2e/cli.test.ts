@@ -73,7 +73,12 @@ describe("CLI E2E Tests", () => {
       );
       const inputFile = createTestFile(tempDir.path, "input.txt", content);
 
-      const result = await execCLI(["summarize", "--file", inputFile]);
+      const result = await execCLI([
+        "summarize",
+        "--file",
+        inputFile,
+        "--mock",
+      ]);
 
       expect(result.exitCode).toBe(0);
       expect(result.stderr).toBe("");
@@ -100,7 +105,7 @@ describe("CLI E2E Tests", () => {
       );
       const inputFile = createTestFile(tempDir.path, "input.txt", content);
 
-      const result = await execCLI(["summarize", "-f", inputFile]);
+      const result = await execCLI(["summarize", "-f", inputFile, "--mock"]);
 
       expect(result.exitCode).toBe(0);
       const summary = JSON.parse(result.stdout);
@@ -120,6 +125,7 @@ describe("CLI E2E Tests", () => {
         inputFile,
         "--format",
         "markdown",
+        "--mock",
       ]);
 
       expect(result.exitCode).toBe(0);
@@ -144,6 +150,7 @@ describe("CLI E2E Tests", () => {
         inputFile,
         "--output",
         outputFile,
+        "--mock",
       ]);
 
       expect(result.exitCode).toBe(0);
@@ -172,6 +179,7 @@ describe("CLI E2E Tests", () => {
         "markdown",
         "-o",
         outputFile,
+        "--mock",
       ]);
 
       expect(result.exitCode).toBe(0);
@@ -194,6 +202,7 @@ describe("CLI E2E Tests", () => {
         "summarize",
         "--file",
         "/non/existent/file.txt",
+        "--mock",
       ]);
 
       expect(result.exitCode).toBe(1);
@@ -217,7 +226,12 @@ describe("CLI E2E Tests", () => {
       );
       const inputFile = createTestFile(tempDir.path, "input.txt", content);
 
-      const result = await execCLI(["summarize", "--file", inputFile]);
+      const result = await execCLI([
+        "summarize",
+        "--file",
+        inputFile,
+        "--mock",
+      ]);
 
       expect(result.exitCode).toBe(0);
       const summary = JSON.parse(result.stdout);
@@ -243,6 +257,7 @@ describe("CLI E2E Tests", () => {
         "expert",
         "--word-count",
         "1500",
+        "--mock",
       ]);
 
       expect(result.exitCode).toBe(0);
@@ -277,7 +292,7 @@ describe("CLI E2E Tests", () => {
       );
       const inputFile = createTestFile(tempDir.path, "input.txt", content);
 
-      const result = await execCLI(["kit", "--file", inputFile]);
+      const result = await execCLI(["kit", "--file", inputFile, "--mock"]);
 
       expect(result.exitCode).toBe(0);
       const kit = JSON.parse(result.stdout);
@@ -299,6 +314,7 @@ describe("CLI E2E Tests", () => {
         inputFile,
         "--format",
         "markdown",
+        "--mock",
       ]);
 
       expect(result.exitCode).toBe(0);
@@ -325,6 +341,7 @@ describe("CLI E2E Tests", () => {
         inputFile,
         "--output",
         outputFile,
+        "--mock",
       ]);
 
       expect(result.exitCode).toBe(0);
@@ -349,6 +366,7 @@ describe("CLI E2E Tests", () => {
         inputFile,
         "--topics",
         "ai,productivity,startup",
+        "--mock",
       ]);
 
       expect(result.exitCode).toBe(0);
@@ -369,6 +387,7 @@ describe("CLI E2E Tests", () => {
         inputFile,
         "--topics",
         " ai , productivity , startup ",
+        "--mock",
       ]);
 
       expect(result.exitCode).toBe(0);
@@ -392,6 +411,7 @@ describe("CLI E2E Tests", () => {
           inputFile,
           "--tone",
           tone,
+          "--mock",
         ]);
 
         expect(result.exitCode).toBe(0);
@@ -413,6 +433,7 @@ describe("CLI E2E Tests", () => {
         inputFile,
         "--tone",
         "invalid-tone",
+        "--mock",
       ]);
 
       expect(result.exitCode).toBe(0);
@@ -433,6 +454,7 @@ describe("CLI E2E Tests", () => {
         inputFile,
         "--word-count",
         "2000",
+        "--mock",
       ]);
 
       expect(result.exitCode).toBe(0);
@@ -448,7 +470,12 @@ describe("CLI E2E Tests", () => {
     });
 
     it("should error when file does not exist", async () => {
-      const result = await execCLI(["kit", "--file", "/non/existent/file.txt"]);
+      const result = await execCLI([
+        "kit",
+        "--file",
+        "/non/existent/file.txt",
+        "--mock",
+      ]);
 
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain("Could not read file");
