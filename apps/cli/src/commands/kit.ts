@@ -198,11 +198,11 @@ export async function runKitCommand(args: string[]): Promise<void> {
 
   checkApiKey(useMock);
 
-  // When using mock providers, skip plugin bootstrap (for testing)
+  // When using mock providers, skip plugin bootstrap requirement
+  // but don't force refresh (preserve existing workspace)
   const workspace = await ensureWorkspace({
     requireFiles: !useMock,
     skipPluginBootstrap: useMock,
-    force: useMock,
   });
   const user = await loadUserProfile(
     workspace,
