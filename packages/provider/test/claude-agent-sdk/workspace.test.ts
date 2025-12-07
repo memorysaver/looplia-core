@@ -40,67 +40,78 @@ describe("workspace", () => {
     it("should create workspace directory structure", async () => {
       const workspacePath = await ensureWorkspace({
         baseDir: tempWorkspace.path,
-        installDefaults: false,
+        skipPluginBootstrap: true,
+        force: true,
       });
 
       expect(workspacePath).toBe(tempWorkspace.path);
 
-      // Check directories were created
+      // Check v0.3 directory structure: .claude/ subdirectory with agents/skills
       const entries = await readdir(workspacePath);
-      expect(entries).toContain("agents");
-      expect(entries).toContain("skills");
-      expect(entries).toContain("plugins");
+      expect(entries).toContain(".claude");
+      expect(entries).toContain("contentItem");
+      expect(entries).toContain("CLAUDE.md");
+      expect(entries).toContain("user-profile.json");
+
+      // Check .claude/ subdirectory
+      const claudeEntries = await readdir(join(workspacePath, ".claude"));
+      expect(claudeEntries).toContain("agents");
+      expect(claudeEntries).toContain("skills");
     });
 
-    it("should create agents directory", async () => {
+    it("should create agents directory under .claude/", async () => {
       const workspacePath = await ensureWorkspace({
         baseDir: tempWorkspace.path,
-        installDefaults: false,
+        skipPluginBootstrap: true,
+        force: true,
       });
 
-      const agentsDir = join(workspacePath, "agents");
+      const agentsDir = join(workspacePath, ".claude", "agents");
       const stats = await stat(agentsDir);
       expect(stats.isDirectory()).toBe(true);
     });
 
-    it("should create skills directory", async () => {
+    it("should create skills directory under .claude/", async () => {
       const workspacePath = await ensureWorkspace({
         baseDir: tempWorkspace.path,
-        installDefaults: false,
+        skipPluginBootstrap: true,
+        force: true,
       });
 
-      const skillsDir = join(workspacePath, "skills");
+      const skillsDir = join(workspacePath, ".claude", "skills");
       const stats = await stat(skillsDir);
       expect(stats.isDirectory()).toBe(true);
     });
 
-    it("should create plugins directory", async () => {
+    it("should create contentItem directory", async () => {
       const workspacePath = await ensureWorkspace({
         baseDir: tempWorkspace.path,
-        installDefaults: false,
+        skipPluginBootstrap: true,
+        force: true,
       });
 
-      const pluginsDir = join(workspacePath, "plugins");
-      const stats = await stat(pluginsDir);
+      const contentDir = join(workspacePath, "contentItem");
+      const stats = await stat(contentDir);
       expect(stats.isDirectory()).toBe(true);
     });
 
     it("should be idempotent (safe to call multiple times)", async () => {
       const path1 = await ensureWorkspace({
         baseDir: tempWorkspace.path,
-        installDefaults: false,
+        skipPluginBootstrap: true,
+        force: true,
       });
 
       const path2 = await ensureWorkspace({
         baseDir: tempWorkspace.path,
-        installDefaults: false,
+        skipPluginBootstrap: true,
       });
 
       expect(path1).toBe(path2);
 
       // Directories should still exist
-      const entries = await readdir(tempWorkspace.path);
-      expect(entries).toContain("agents");
+      const claudeEntries = await readdir(join(tempWorkspace.path, ".claude"));
+      expect(claudeEntries).toContain("agents");
     });
 
     it("should handle ~ path expansion", () => {

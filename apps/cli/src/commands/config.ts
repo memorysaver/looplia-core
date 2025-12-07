@@ -1,8 +1,8 @@
 import {
   type UserProfile,
   type UserTopic,
-  type WritingStyle,
   validateUserProfile,
+  type WritingStyle,
 } from "@looplia-core/core";
 import {
   ensureWorkspace,
@@ -137,7 +137,9 @@ async function showProfile(): Promise<void> {
     profile = (await readUserProfile(workspace)) as UserProfile;
   } catch {
     console.log("No user profile configured yet.");
-    console.log('Use "looplia config topics" and "looplia config style" to set up your profile.');
+    console.log(
+      'Use "looplia config topics" and "looplia config style" to set up your profile.'
+    );
     return;
   }
 

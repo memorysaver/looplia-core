@@ -1,6 +1,6 @@
-import type { ContentItem } from "@looplia-core/core";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import type { ContentItem } from "@looplia-core/core";
 
 /**
  * Write ContentItem to workspace as markdown file with frontmatter
@@ -37,7 +37,9 @@ export async function writeContentItem(
     metadataLines.push(`  author: "${content.metadata.author}"`);
   }
   if (content.metadata.durationSeconds) {
-    metadataLines.push(`  durationSeconds: ${content.metadata.durationSeconds}`);
+    metadataLines.push(
+      `  durationSeconds: ${content.metadata.durationSeconds}`
+    );
   }
   if (content.metadata.wordCount) {
     metadataLines.push(`  wordCount: ${content.metadata.wordCount}`);

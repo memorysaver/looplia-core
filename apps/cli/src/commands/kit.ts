@@ -112,6 +112,68 @@ function writeOutput(output: string, outputPath: string | undefined): void {
   }
 }
 
+function checkApiKey(useMock: boolean): void {
+  if (useMock || process.env.ANTHROPIC_API_KEY) {
+    return;
+  }
+  console.error("Error: ANTHROPIC_API_KEY environment variable is required");
+  console.error("Get your API key from: https://console.anthropic.com");
+  console.error("Or use --mock flag to run without API key");
+  process.exit(1);
+}
+
+function applyCliOverrides(
+  user: UserProfile,
+  topicsArg: string | undefined,
+  toneArg: string | undefined,
+  wordCountArg: string | undefined
+): void {
+  if (topicsArg) {
+    user.topics = parseTopics(topicsArg);
+  }
+  if (toneArg) {
+    user.style.tone = parseTone(toneArg);
+  }
+  if (wordCountArg) {
+    user.style.targetWordCount = parseWordCount(wordCountArg);
+  }
+}
+
+async function loadUserProfile(
+  workspace: string,
+  topicsArg: string | undefined,
+  toneArg: string | undefined,
+  wordCountArg: string | undefined
+): Promise<UserProfile> {
+  try {
+    const profileData = await readUserProfile(workspace);
+    const validation = validateUserProfile(profileData);
+    if (validation.success) {
+      applyCliOverrides(validation.data, topicsArg, toneArg, wordCountArg);
+      return validation.data;
+    }
+    console.error("Warning: Invalid user-profile.json, using CLI args");
+  } catch {
+    // No user profile found, fall through to create from CLI args
+  }
+  return createUserProfile(
+    parseTopics(topicsArg),
+    parseTone(toneArg ?? "intermediate"),
+    parseWordCount(wordCountArg)
+  );
+}
+
+function createProviders(useMock: boolean) {
+  if (useMock) {
+    return {
+      summarizer: createMockSummarizer(),
+      idea: createMockIdeaGenerator(),
+      outline: createMockOutlineGenerator(),
+    };
+  }
+  return createClaudeProviders();
+}
+
 export async function runKitCommand(args: string[]): Promise<void> {
   const parsed = parseArgs(args);
 
@@ -134,50 +196,20 @@ export async function runKitCommand(args: string[]): Promise<void> {
   const wordCountArg = getArg(parsed, "word-count");
   const useMock = hasFlag(parsed, "mock", "m");
 
-  // Check for API key unless using mock provider
-  if (!(useMock || process.env.ANTHROPIC_API_KEY)) {
-    console.error("Error: ANTHROPIC_API_KEY environment variable is required");
-    console.error("Get your API key from: https://console.anthropic.com");
-    console.error("Or use --mock flag to run without API key");
-    process.exit(1);
-  }
+  checkApiKey(useMock);
 
-  // Ensure workspace exists and is initialized
-  const workspace = await ensureWorkspace({ requireFiles: true });
-
-  // Read user profile from workspace (or create from CLI args)
-  let user: UserProfile;
-  try {
-    const profileData = await readUserProfile(workspace);
-    const validation = validateUserProfile(profileData);
-    if (!validation.success) {
-      console.error("Warning: Invalid user-profile.json, using CLI args");
-      user = createUserProfile(
-        parseTopics(topicsArg),
-        parseTone(toneArg ?? "intermediate"),
-        parseWordCount(wordCountArg)
-      );
-    } else {
-      user = validation.data;
-      // Override with CLI args if provided
-      if (topicsArg) {
-        user.topics = parseTopics(topicsArg);
-      }
-      if (toneArg) {
-        user.style.tone = parseTone(toneArg);
-      }
-      if (wordCountArg) {
-        user.style.targetWordCount = parseWordCount(wordCountArg);
-      }
-    }
-  } catch {
-    // No user profile, use CLI args
-    user = createUserProfile(
-      parseTopics(topicsArg),
-      parseTone(toneArg ?? "intermediate"),
-      parseWordCount(wordCountArg)
-    );
-  }
+  // When using mock providers, skip plugin bootstrap (for testing)
+  const workspace = await ensureWorkspace({
+    requireFiles: !useMock,
+    skipPluginBootstrap: useMock,
+    force: useMock,
+  });
+  const user = await loadUserProfile(
+    workspace,
+    topicsArg,
+    toneArg,
+    wordCountArg
+  );
 
   const rawText = readContentFile(filePath);
   const content = createContentItemFromFile(filePath, rawText);
@@ -190,18 +222,10 @@ export async function runKitCommand(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  // Write content to workspace
   const contentId = await writeContentItem(contentValidation.data, workspace);
   console.error(`✓ Content written to workspace: ${contentId}`);
 
-  // Create providers based on --mock flag
-  const providers = useMock
-    ? {
-        summarizer: createMockSummarizer(),
-        idea: createMockIdeaGenerator(),
-        outline: createMockOutlineGenerator(),
-      }
-    : createClaudeProviders();
+  const providers = createProviders(useMock);
 
   console.error("⏳ Processing content...");
   const result = await buildWritingKit(contentValidation.data, user, providers);

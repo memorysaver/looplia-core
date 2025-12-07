@@ -14,6 +14,9 @@ export type WorkspaceOptions = {
 
   /** Check for required files (agents, skills, CLAUDE.md) */
   requireFiles?: boolean;
+
+  /** Skip plugin bootstrap - creates empty structure (for testing) */
+  skipPluginBootstrap?: boolean;
 };
 
 /**
@@ -81,6 +84,88 @@ async function checkRequiredFiles(workspaceDir: string): Promise<boolean> {
 }
 
 /**
+ * Create default user profile JSON
+ */
+function createDefaultProfile(): object {
+  return {
+    userId: "default",
+    topics: [],
+    style: {
+      tone: "intermediate",
+      targetWordCount: 1000,
+      voice: "first-person",
+    },
+  };
+}
+
+/**
+ * Create empty workspace structure for testing (without plugin bootstrap)
+ */
+async function createTestWorkspace(
+  workspaceDir: string,
+  force: boolean
+): Promise<void> {
+  const workspaceExists = await pathExists(workspaceDir);
+  if (workspaceExists && !force) {
+    return;
+  }
+
+  if (workspaceExists) {
+    await rm(workspaceDir, { recursive: true, force: true });
+  }
+
+  await mkdir(workspaceDir, { recursive: true });
+  await mkdir(join(workspaceDir, ".claude", "agents"), { recursive: true });
+  await mkdir(join(workspaceDir, ".claude", "skills"), { recursive: true });
+  await mkdir(join(workspaceDir, "contentItem"), { recursive: true });
+
+  await writeFile(
+    join(workspaceDir, "CLAUDE.md"),
+    "# Test Workspace\n",
+    "utf-8"
+  );
+
+  await writeFile(
+    join(workspaceDir, "user-profile.json"),
+    JSON.stringify(createDefaultProfile(), null, 2),
+    "utf-8"
+  );
+}
+
+/**
+ * Bootstrap workspace from plugin directory
+ */
+async function bootstrapFromPlugin(
+  workspaceDir: string,
+  pluginDir: string
+): Promise<void> {
+  const workspaceExists = await pathExists(workspaceDir);
+  if (workspaceExists) {
+    await rm(workspaceDir, { recursive: true, force: true });
+  }
+
+  await mkdir(workspaceDir, { recursive: true });
+  await mkdir(join(workspaceDir, ".claude"), { recursive: true });
+  await mkdir(join(workspaceDir, "contentItem"), { recursive: true });
+
+  await cp(join(pluginDir, "agents"), join(workspaceDir, ".claude", "agents"), {
+    recursive: true,
+  });
+
+  await cp(join(pluginDir, "skills"), join(workspaceDir, ".claude", "skills"), {
+    recursive: true,
+  });
+
+  await cp(join(pluginDir, "README.md"), join(workspaceDir, "CLAUDE.md"));
+
+  await writeFile(
+    join(workspaceDir, "user-profile.json"),
+    JSON.stringify(createDefaultProfile(), null, 2),
+    "utf-8"
+  );
+}
+
+/**
  * Ensure the Looplia workspace exists and is properly initialized
  *
  * Creates ~/.looplia/ with .claude/ structure and copies from looplia-writer plugin.
@@ -109,8 +194,16 @@ export async function ensureWorkspace(
   const baseDir = options?.baseDir ?? "~/.looplia";
   const force = options?.force ?? false;
   const requireFiles = options?.requireFiles ?? false;
+  const skipPluginBootstrap = options?.skipPluginBootstrap ?? false;
 
   const workspaceDir = expandPath(baseDir);
+
+  // For testing: create empty structure without plugin bootstrap
+  if (skipPluginBootstrap) {
+    await createTestWorkspace(workspaceDir, force);
+    return workspaceDir;
+  }
+
   const pluginDir = getPluginPath();
 
   // Check if plugin directory exists
@@ -130,50 +223,7 @@ export async function ensureWorkspace(
     force || !workspaceExists || (requireFiles && !requiredFilesPresent);
 
   if (needsBootstrap) {
-    // Destructive refresh when forced or when required files are missing
-    if (workspaceExists) {
-      await rm(workspaceDir, { recursive: true, force: true });
-    }
-
-    // Create workspace directory structure
-    await mkdir(workspaceDir, { recursive: true });
-    await mkdir(join(workspaceDir, ".claude"), { recursive: true });
-    await mkdir(join(workspaceDir, "contentItem"), { recursive: true });
-
-    // Copy agents and skills from plugin to .claude/
-    await cp(
-      join(pluginDir, "agents"),
-      join(workspaceDir, ".claude", "agents"),
-      { recursive: true }
-    );
-
-    await cp(
-      join(pluginDir, "skills"),
-      join(workspaceDir, ".claude", "skills"),
-      { recursive: true }
-    );
-
-    // Copy README.md → CLAUDE.md (rename!)
-    const readmePath = join(pluginDir, "README.md");
-    const claudeMdPath = join(workspaceDir, "CLAUDE.md");
-    await cp(readmePath, claudeMdPath);
-
-    // Create default user-profile.json
-    const defaultProfile = {
-      userId: "default",
-      topics: [],
-      style: {
-        tone: "intermediate",
-        targetWordCount: 1000,
-        voice: "first-person",
-      },
-    };
-
-    await writeFile(
-      join(workspaceDir, "user-profile.json"),
-      JSON.stringify(defaultProfile, null, 2),
-      "utf-8"
-    );
+    await bootstrapFromPlugin(workspaceDir, pluginDir);
   }
 
   return workspaceDir;

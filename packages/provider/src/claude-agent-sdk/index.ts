@@ -13,6 +13,8 @@ export type {
   ProviderUsage,
 } from "./config";
 export { validateConfig } from "./config";
+// Re-export content I/O utilities
+export { writeContentItem } from "./content-io";
 export type { ClaudeIdeaProvider } from "./idea-generator";
 export { createClaudeIdeaGenerator } from "./idea-generator";
 export type { ClaudeOutlineProvider } from "./outline-generator";
@@ -43,8 +45,6 @@ export {
   readUserProfile,
   writeUserProfile,
 } from "./workspace";
-// Re-export content I/O utilities
-export { writeContentItem } from "./content-io";
 
 /**
  * Claude-powered providers bundle with usage tracking

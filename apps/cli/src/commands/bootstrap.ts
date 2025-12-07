@@ -1,5 +1,5 @@
+import { createInterface } from "node:readline";
 import { ensureWorkspace } from "@looplia-core/provider/claude-agent-sdk";
-import * as readline from "node:readline";
 
 function printBootstrapHelp(): void {
   console.log(`
@@ -28,9 +28,9 @@ Examples:
 `);
 }
 
-async function promptConfirmation(message: string): Promise<boolean> {
+function promptConfirmation(message: string): Promise<boolean> {
   return new Promise((resolve) => {
-    const rl = readline.createInterface({
+    const rl = createInterface({
       input: process.stdin,
       output: process.stdout,
     });
@@ -48,7 +48,9 @@ export async function runBootstrapCommand(args: string[]): Promise<void> {
     process.exit(0);
   }
 
-  console.log("⚠️  Bootstrap will DELETE ~/.looplia/ and recreate it from plugin.");
+  console.log(
+    "⚠️  Bootstrap will DELETE ~/.looplia/ and recreate it from plugin."
+  );
   console.log("   All customizations will be lost.");
   console.log("");
 
@@ -62,7 +64,9 @@ export async function runBootstrapCommand(args: string[]): Promise<void> {
   try {
     await ensureWorkspace({ force: true });
     console.log("✓ Workspace bootstrapped from looplia-writer plugin");
-    console.log("✓ Fresh agents, skills, CLAUDE.md, and user-profile.json created");
+    console.log(
+      "✓ Fresh agents, skills, CLAUDE.md, and user-profile.json created"
+    );
     console.log("");
     console.log('Next steps: Configure your profile with "looplia config"');
   } catch (error) {

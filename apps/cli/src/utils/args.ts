@@ -75,3 +75,20 @@ export function hasFlag(
   }
   return false;
 }
+
+/**
+ * Parse flags from arguments into a string-only record
+ * Used when all flag values are expected to be strings
+ */
+export function parseFlags(args: string[]): Record<string, string> {
+  const parsed = parseArgs(args);
+  const result: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(parsed)) {
+    if (typeof value === "string") {
+      result[key] = value;
+    }
+  }
+
+  return result;
+}

@@ -47,14 +47,14 @@ describe("CLI E2E Tests", () => {
       const result = await execCLI(["--version"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia 0.1.0");
+      expect(result.stdout).toContain("looplia 0.3.0");
     });
 
     it("should show version with -v flag", async () => {
       const result = await execCLI(["-v"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia 0.1.0");
+      expect(result.stdout).toContain("looplia 0.3.0");
     });
 
     it("should error on unknown command", async () => {
@@ -261,7 +261,8 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stderr).toBe("");
+      // stderr may contain status messages like "✓ Content written" and "⏳ Processing"
+      expect(result.stderr).not.toContain("Error");
 
       // Parse and validate WritingKit JSON
       const kit = JSON.parse(result.stdout);
