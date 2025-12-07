@@ -23,16 +23,19 @@ const workspaceCache = new Map<string, string>();
  */
 async function getOrInitWorkspace(
   baseDir: string,
-  installDefaults: boolean
+  useFilesystemExtensions: boolean
 ): Promise<string> {
-  const cacheKey = `${baseDir}:${installDefaults}`;
+  const cacheKey = `${baseDir}:${useFilesystemExtensions}`;
 
   const cached = workspaceCache.get(cacheKey);
   if (cached) {
     return cached;
   }
 
-  const workspace = await ensureWorkspace({ baseDir, installDefaults });
+  const workspace = await ensureWorkspace({
+    baseDir,
+    skipPluginBootstrap: !useFilesystemExtensions
+  });
   workspaceCache.set(cacheKey, workspace);
   return workspace;
 }
