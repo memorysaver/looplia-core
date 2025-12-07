@@ -34,7 +34,7 @@ async function getOrInitWorkspace(
 
   const workspace = await ensureWorkspace({
     baseDir,
-    skipPluginBootstrap: !useFilesystemExtensions
+    skipPluginBootstrap: !useFilesystemExtensions,
   });
   workspaceCache.set(cacheKey, workspace);
   return workspace;
