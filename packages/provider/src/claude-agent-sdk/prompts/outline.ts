@@ -6,6 +6,9 @@ import type {
 
 /**
  * System prompt for outline generation
+ *
+ * @deprecated v0.3.1 uses agentic approach with CLAUDE.md + skills.
+ * This system prompt is only used for backward compatibility.
  */
 export const OUTLINE_SYSTEM_PROMPT = `You are an expert content strategist specializing in article structure and flow.
 
@@ -27,6 +30,14 @@ Ensure the outline is practical and actionable for the writer.`;
 
 /**
  * Build user prompt for outline generation
+ *
+ * @deprecated v0.3.1 uses single-call agentic approach for writing kit.
+ * Use createClaudeWritingKitProvider for the new architecture.
+ *
+ * The v0.3.1 architecture uses:
+ * - Single prompt: "Build writing kit for: contentItem/{id}.md"
+ * - Agent reads CLAUDE.md for full instructions
+ * - Outline generated as part of the complete WritingKit
  */
 export function buildOutlinePrompt(
   summary: ContentSummary,

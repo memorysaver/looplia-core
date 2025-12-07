@@ -6,12 +6,20 @@ import type {
 } from "@looplia-core/core";
 
 import type { ClaudeAgentConfig, ProviderResultWithUsage } from "./config";
-import {
-  buildSummarizePrompt,
-  SUMMARIZE_SYSTEM_PROMPT,
-} from "./prompts/summarize";
-import { executeQueryWithRetry } from "./utils/query-wrapper";
+import { writeContentItem } from "./content-io";
+import { executeAgenticQuery } from "./utils/query-wrapper";
 import { SUMMARY_OUTPUT_SCHEMA } from "./utils/schema-converter";
+import { ensureWorkspace, writeUserProfile } from "./workspace";
+
+/**
+ * Build minimal prompt for summarization (v0.3.1 agentic approach)
+ *
+ * The agent reads CLAUDE.md for full instructions and uses skills
+ * to perform deep analysis.
+ */
+function buildMinimalSummarizePrompt(contentId: string): string {
+  return `Summarize content: contentItem/${contentId}.md`;
+}
 
 /**
  * Claude-powered summarizer provider
@@ -56,18 +64,31 @@ export function createClaudeSummarizer(
       return this.summarizeWithUsage(content, user);
     },
 
-    summarizeWithUsage(content, user) {
-      const prompt = config?.promptBuilder
-        ? config.promptBuilder(content)
-        : buildSummarizePrompt(content, user);
+    async summarizeWithUsage(content, user) {
+      // Ensure workspace exists and get path
+      const workspace = await ensureWorkspace({
+        baseDir: config?.workspace,
+      });
 
-      const systemPrompt = config?.systemPrompt ?? SUMMARIZE_SYSTEM_PROMPT;
+      // Write content item to workspace
+      await writeContentItem(content, workspace);
 
-      return executeQueryWithRetry<ContentSummary>(
+      // Write user profile if provided
+      if (user) {
+        await writeUserProfile(workspace, user);
+      }
+
+      // Build minimal prompt - agent reads CLAUDE.md for full instructions
+      const prompt = buildMinimalSummarizePrompt(content.id);
+
+      // Execute agentic query with workspace context
+      return executeAgenticQuery<ContentSummary>(
         prompt,
-        systemPrompt,
         SUMMARY_OUTPUT_SCHEMA,
-        config
+        {
+          ...config,
+          workspace,
+        }
       );
     },
   };

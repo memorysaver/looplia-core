@@ -106,6 +106,7 @@ function processResultMessage<T>(
 /**
  * Execute a query against the Claude Agent SDK with structured output
  *
+ * @deprecated Use executeAgenticQuery for v0.3.1 agentic architecture
  * @param prompt - User prompt to send
  * @param systemPrompt - System prompt for context
  * @param jsonSchema - JSON Schema for structured output
@@ -184,6 +185,7 @@ export async function executeQuery<T>(
 /**
  * Execute a query with retry logic for transient errors
  *
+ * @deprecated Use executeAgenticQueryWithRetry for v0.3.1 agentic architecture
  * @param prompt - User prompt to send
  * @param systemPrompt - System prompt for context
  * @param jsonSchema - JSON Schema for structured output
@@ -208,6 +210,143 @@ export async function executeQueryWithRetry<T>(
       jsonSchema,
       config
     );
+
+    // Return immediately on success
+    if (result.success) {
+      return result;
+    }
+
+    lastResult = result;
+
+    // Check if error is retryable
+    const isRetryable =
+      result.error.type === "network_error" ||
+      result.error.type === "rate_limit";
+
+    if (!isRetryable || attempt === maxRetries) {
+      return result;
+    }
+
+    // Wait before retry (exponential backoff)
+    const delay = Math.min(
+      RETRY_BASE_DELAY_MS * 2 ** attempt,
+      RETRY_MAX_DELAY_MS
+    );
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
+
+  return (
+    lastResult ?? {
+      success: false,
+      error: {
+        type: "unknown",
+        message: "Max retries exceeded",
+      },
+    }
+  );
+}
+
+/**
+ * Execute a true agentic query (v0.3.1 architecture)
+ *
+ * Uses minimal prompt with Read and Skill tools enabled.
+ * The agent reads CLAUDE.md for full instructions and uses skills autonomously.
+ *
+ * @param prompt - Minimal prompt (e.g., "Summarize content: contentItem/{id}.md")
+ * @param jsonSchema - JSON Schema for structured output
+ * @param config - Provider configuration (must include workspace)
+ * @returns Provider result with usage metrics
+ */
+export async function executeAgenticQuery<T>(
+  prompt: string,
+  jsonSchema: Record<string, unknown>,
+  config?: ClaudeAgentConfig
+): Promise<ProviderResultWithUsage<T>> {
+  try {
+    const resolvedConfig = resolveConfig(config);
+
+    // Validate API key before making request
+    const apiKey = config?.apiKey ?? process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      return {
+        success: false,
+        error: {
+          type: "validation_error",
+          field: "apiKey",
+          message:
+            "API key is required. Set ANTHROPIC_API_KEY environment variable or provide apiKey in config",
+        },
+      };
+    }
+
+    // Use provided workspace or get/init one
+    const workspace =
+      config?.workspace ??
+      (await getOrInitWorkspace(
+        resolvedConfig.workspace,
+        resolvedConfig.useFilesystemExtensions
+      ));
+
+    // Execute SDK query with agentic tools (Read + Skill)
+    const result = query({
+      prompt,
+      options: {
+        model: resolvedConfig.model,
+        cwd: workspace,
+        permissionMode: "bypassPermissions",
+        allowDangerouslySkipPermissions: true,
+        // v0.3.1: Enable Read and Skill tools for true agentic behavior
+        allowedTools: ["Read", "Skill"],
+        outputFormat: {
+          type: "json_schema",
+          schema: jsonSchema,
+        },
+      },
+    });
+
+    // Process async generator - query() returns AsyncGenerator<SDKMessage, void>
+    for await (const message of result) {
+      if (message.type !== "result") {
+        continue;
+      }
+
+      const usage = extractUsage(message);
+      return processResultMessage<T>(message, usage);
+    }
+
+    // No result received
+    return {
+      success: false,
+      error: {
+        type: "unknown",
+        message: "No result received from SDK",
+      },
+    };
+  } catch (error) {
+    return mapException(error);
+  }
+}
+
+/**
+ * Execute an agentic query with retry logic for transient errors
+ *
+ * @param prompt - Minimal prompt for agentic query
+ * @param jsonSchema - JSON Schema for structured output
+ * @param config - Provider configuration
+ * @returns Provider result with usage metrics
+ */
+export async function executeAgenticQueryWithRetry<T>(
+  prompt: string,
+  jsonSchema: Record<string, unknown>,
+  config?: ClaudeAgentConfig
+): Promise<ProviderResultWithUsage<T>> {
+  const resolvedConfig = resolveConfig(config);
+  const maxRetries = resolvedConfig.maxRetries;
+
+  let lastResult: ProviderResultWithUsage<T> | undefined;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const result = await executeAgenticQuery<T>(prompt, jsonSchema, config);
 
     // Return immediately on success
     if (result.success) {

@@ -2,6 +2,9 @@ import type { ContentSummary, UserProfile } from "@looplia-core/core";
 
 /**
  * System prompt for idea generation
+ *
+ * @deprecated v0.3.1 uses agentic approach with CLAUDE.md + skills.
+ * This system prompt is only used for backward compatibility.
  */
 export const IDEAS_SYSTEM_PROMPT = `You are a creative writing consultant specializing in content ideation and storytelling.
 
@@ -23,6 +26,14 @@ Ensure ideas are creative, relevant, and actionable.`;
 
 /**
  * Build user prompt for idea generation
+ *
+ * @deprecated v0.3.1 uses single-call agentic approach for writing kit.
+ * Use createClaudeWritingKitProvider for the new architecture.
+ *
+ * The v0.3.1 architecture uses:
+ * - Single prompt: "Build writing kit for: contentItem/{id}.md"
+ * - Agent reads CLAUDE.md for full instructions
+ * - Ideas generated as part of the complete WritingKit
  */
 export function buildIdeasPrompt(
   summary: ContentSummary,
