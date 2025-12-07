@@ -1,7 +1,9 @@
+import { runBootstrapCommand } from "./commands/bootstrap";
+import { runConfigCommand } from "./commands/config";
 import { runKitCommand } from "./commands/kit";
 import { runSummarizeCommand } from "./commands/summarize";
 
-const VERSION = "0.1.0";
+const VERSION = "0.3.0";
 
 function printHelp(): void {
   console.log(`
@@ -11,16 +13,20 @@ Usage:
   looplia <command> [options]
 
 Commands:
-  summarize    Summarize content from a file
+  config       Manage user profile settings
+  bootstrap    Initialize or refresh workspace
   kit          Build a complete writing kit
+  summarize    Summarize content from a file
 
 Options:
   --help, -h     Show this help
   --version, -v  Show version
 
 Examples:
-  looplia summarize --file ./article.txt
-  looplia kit --file ./article.txt --topics "ai,startup"
+  looplia config topics "ai,productivity,writing"
+  looplia config style --tone expert --word-count 1500
+  looplia bootstrap
+  looplia kit --file ./article.txt
 
 For command-specific help:
   looplia <command> --help
@@ -46,11 +52,17 @@ async function main(): Promise<void> {
   }
 
   switch (command) {
-    case "summarize":
-      await runSummarizeCommand(rest);
+    case "config":
+      await runConfigCommand(rest);
+      break;
+    case "bootstrap":
+      await runBootstrapCommand(rest);
       break;
     case "kit":
       await runKitCommand(rest);
+      break;
+    case "summarize":
+      await runSummarizeCommand(rest);
       break;
     default:
       console.error(`Unknown command: ${command}`);

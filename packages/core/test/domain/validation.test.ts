@@ -17,6 +17,30 @@ describe("ContentSummary validation", () => {
       sentiment: "neutral",
       category: "article",
       score: { relevanceToUser: 0.75 },
+      // v0.3 enhanced fields
+      overview:
+        "This is a comprehensive overview of the content that spans multiple paragraphs and provides rich context.",
+      keyThemes: ["theme1", "theme2", "theme3"],
+      detailedAnalysis:
+        "This is a detailed documentary-style analysis of the content that breaks down the key points and structure.",
+      narrativeFlow:
+        "The content progresses from introduction to key points to conclusion in a logical manner.",
+      coreIdeas: [
+        {
+          concept: "Main Concept",
+          explanation: "This is the primary focus of the content.",
+          examples: ["Example 1", "Example 2"],
+        },
+      ],
+      importantQuotes: [
+        {
+          text: "This is an important verbatim quote from the content.",
+          context: "Said during the introduction",
+        },
+      ],
+      context:
+        "This content requires understanding of the background topic and related concepts.",
+      relatedConcepts: ["related1", "related2"],
     };
 
     const result = validateContentSummary(valid);
@@ -33,6 +57,18 @@ describe("ContentSummary validation", () => {
       sentiment: "neutral",
       category: "article",
       score: { relevanceToUser: 1.5 }, // Invalid: > 1
+      // v0.3 enhanced fields
+      overview: "This is a comprehensive overview of the content.",
+      keyThemes: ["theme1", "theme2", "theme3"],
+      detailedAnalysis:
+        "This is a detailed documentary-style analysis of the content.",
+      narrativeFlow: "The content progresses logically from start to finish.",
+      coreIdeas: [
+        { concept: "Main Concept", explanation: "The primary focus." },
+      ],
+      importantQuotes: [],
+      context: "Background context for the content.",
+      relatedConcepts: [],
     };
 
     const result = validateContentSummary(invalid);
@@ -49,6 +85,18 @@ describe("ContentSummary validation", () => {
       sentiment: "neutral",
       category: "article",
       score: { relevanceToUser: 0.5 },
+      // v0.3 enhanced fields
+      overview: "This is a comprehensive overview of the content.",
+      keyThemes: ["theme1", "theme2", "theme3"],
+      detailedAnalysis:
+        "This is a detailed documentary-style analysis of the content.",
+      narrativeFlow: "The content progresses logically from start to finish.",
+      coreIdeas: [
+        { concept: "Main Concept", explanation: "The primary focus." },
+      ],
+      importantQuotes: [],
+      context: "Background context for the content.",
+      relatedConcepts: [],
     };
 
     const result = validateContentSummary(invalid);

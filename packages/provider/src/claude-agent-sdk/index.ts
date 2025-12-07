@@ -13,6 +13,8 @@ export type {
   ProviderUsage,
 } from "./config";
 export { validateConfig } from "./config";
+// Re-export content I/O utilities
+export { writeContentItem } from "./content-io";
 export type { ClaudeIdeaProvider } from "./idea-generator";
 export { createClaudeIdeaGenerator } from "./idea-generator";
 export type { ClaudeOutlineProvider } from "./outline-generator";
@@ -35,7 +37,14 @@ export {
 } from "./utils/schema-converter";
 export type { WorkspaceOptions } from "./workspace";
 // Re-export workspace utilities
-export { ensureWorkspace, getWorkspacePath } from "./workspace";
+export {
+  ensureWorkspace,
+  expandPath,
+  getPluginPath,
+  getWorkspacePath,
+  readUserProfile,
+  writeUserProfile,
+} from "./workspace";
 
 /**
  * Claude-powered providers bundle with usage tracking
