@@ -46,6 +46,9 @@ export type ClaudeOutlineProvider = OutlineProvider & {
  * }
  * ```
  */
+/** Wrapper type for outline response (Claude requires top-level object) */
+type OutlineResponse = { sections: OutlineSection[] };
+
 export function createClaudeOutlineGenerator(
   config?: ClaudeAgentConfig
 ): ClaudeOutlineProvider {
@@ -54,19 +57,31 @@ export function createClaudeOutlineGenerator(
       return this.generateOutlineWithUsage(summary, ideas, user);
     },
 
-    generateOutlineWithUsage(summary, ideas, user) {
+    async generateOutlineWithUsage(summary, ideas, user) {
       const prompt = config?.promptBuilder
         ? config.promptBuilder({ summary, ideas, user })
         : buildOutlinePrompt(summary, ideas, user);
 
       const systemPrompt = config?.systemPrompt ?? OUTLINE_SYSTEM_PROMPT;
 
-      return executeQueryWithRetry<OutlineSection[]>(
+      // Execute query expecting wrapped response
+      const result = await executeQueryWithRetry<OutlineResponse>(
         prompt,
         systemPrompt,
         OUTLINE_OUTPUT_SCHEMA,
         config
       );
+
+      // Unwrap the sections array from the response object
+      if (result.success) {
+        return {
+          success: true,
+          data: result.data.sections,
+          usage: result.usage,
+        };
+      }
+
+      return result as ProviderResultWithUsage<OutlineSection[]>;
     },
   };
 }

@@ -35,29 +35,33 @@ describe("schema-converter", () => {
   });
 
   describe("OUTLINE_OUTPUT_SCHEMA", () => {
-    it("should be an array schema", () => {
-      expect(OUTLINE_OUTPUT_SCHEMA.type).toBe("array");
+    it("should be an object schema (Claude API requirement)", () => {
+      expect(OUTLINE_OUTPUT_SCHEMA.type).toBe("object");
+    });
+
+    it("should have sections array property", () => {
+      expect(OUTLINE_OUTPUT_SCHEMA.properties).toHaveProperty("sections");
+      expect(OUTLINE_OUTPUT_SCHEMA.properties.sections.type).toBe("array");
     });
 
     it("should have items with required properties", () => {
-      expect(OUTLINE_OUTPUT_SCHEMA.items).toBeDefined();
-      expect(OUTLINE_OUTPUT_SCHEMA.items.type).toBe("object");
-      expect(OUTLINE_OUTPUT_SCHEMA.items.properties).toHaveProperty("heading");
-      expect(OUTLINE_OUTPUT_SCHEMA.items.properties).toHaveProperty("notes");
-      expect(OUTLINE_OUTPUT_SCHEMA.items.properties).toHaveProperty(
-        "estimatedWords"
-      );
+      const items = OUTLINE_OUTPUT_SCHEMA.properties.sections.items;
+      expect(items).toBeDefined();
+      expect(items.type).toBe("object");
+      expect(items.properties).toHaveProperty("heading");
+      expect(items.properties).toHaveProperty("notes");
+      expect(items.properties).toHaveProperty("estimatedWords");
     });
 
     it("should require heading and notes", () => {
-      expect(OUTLINE_OUTPUT_SCHEMA.items.required).toContain("heading");
-      expect(OUTLINE_OUTPUT_SCHEMA.items.required).toContain("notes");
+      const items = OUTLINE_OUTPUT_SCHEMA.properties.sections.items;
+      expect(items.required).toContain("heading");
+      expect(items.required).toContain("notes");
     });
 
     it("should not require estimatedWords", () => {
-      expect(OUTLINE_OUTPUT_SCHEMA.items.required).not.toContain(
-        "estimatedWords"
-      );
+      const items = OUTLINE_OUTPUT_SCHEMA.properties.sections.items;
+      expect(items.required).not.toContain("estimatedWords");
     });
   });
 });

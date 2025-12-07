@@ -21,26 +21,34 @@ export const IDEAS_OUTPUT_SCHEMA = zodToJsonSchema(WritingIdeasSchema, {
 
 /**
  * JSON Schema for OutlineSection[] output
+ * Wrapped in object because Claude API requires top-level type: "object"
  */
 export const OUTLINE_OUTPUT_SCHEMA = {
-  type: "array",
-  items: {
-    type: "object",
-    properties: {
-      heading: {
-        type: "string",
-        description: "Clear, descriptive section title",
-      },
-      notes: {
-        type: "string",
-        description: "Key points to cover in this section",
-      },
-      estimatedWords: {
-        type: "number",
-        description: "Approximate word count for this section",
+  type: "object",
+  properties: {
+    sections: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          heading: {
+            type: "string",
+            description: "Clear, descriptive section title",
+          },
+          notes: {
+            type: "string",
+            description: "Key points to cover in this section",
+          },
+          estimatedWords: {
+            type: "number",
+            description: "Approximate word count for this section",
+          },
+        },
+        required: ["heading", "notes"],
+        additionalProperties: false,
       },
     },
-    required: ["heading", "notes"],
-    additionalProperties: false,
   },
+  required: ["sections"],
+  additionalProperties: false,
 } as const;
