@@ -41,8 +41,17 @@ export function buildSummarizePrompt(
   content: ContentItem,
   _user?: UserProfile
 ): string {
-  // Return minimal prompt for agentic approach
-  // Content is now in folder structure: contentItem/{id}/content.md
-  // Agent can store results in: contentItem/{id}/results/
-  return `Summarize content: contentItem/${content.id}/content.md`;
+  // Invoke content-analyzer subagent for deep content analysis
+  // Content is in folder structure: contentItem/{id}/content.md
+  // Results stored in: contentItem/{id}/results/summary.json
+  return `Invoke \`content-analyzer\` subagent to analyze and document content.
+
+Content location: contentItem/${content.id}/content.md
+Content ID: ${content.id}
+
+The content-analyzer agent will:
+1. Read the content file and metadata
+2. Use media-reviewer skill for deep analysis
+3. Use content-documenter skill for structured documentation
+4. Write results to contentItem/${content.id}/results/summary.json`;
 }

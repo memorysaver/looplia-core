@@ -28,8 +28,8 @@ describe("prompts", () => {
     it("should build prompt with content details", () => {
       const prompt = buildSummarizePrompt(testContent);
 
-      // v0.3.1 uses minimal prompt with agentic approach
-      expect(prompt).toContain("Summarize content");
+      // v0.3.1 uses minimal agentic prompt with subagent invocation
+      expect(prompt).toContain("content-analyzer");
       expect(prompt).toContain(testContent.id);
       expect(prompt).toContain("contentItem");
     });
@@ -38,7 +38,7 @@ describe("prompts", () => {
       const prompt = buildSummarizePrompt(testContent, testUser);
 
       // v0.3.1 uses minimal prompt; user context is handled by agent reading CLAUDE.md
-      expect(prompt).toContain("Summarize content");
+      expect(prompt).toContain("content-analyzer");
       expect(prompt).toContain(testContent.id);
     });
 
@@ -56,9 +56,10 @@ describe("prompts", () => {
 
       const prompt = buildSummarizePrompt(longContent);
 
-      // v0.3.1 uses minimal prompt; content truncation is handled by agent tools
-      expect(prompt).toContain("Summarize content");
+      // v0.3.1 uses minimal prompt; content is stored in file, not embedded in prompt
+      expect(prompt).toContain("content-analyzer");
       expect(prompt).toContain(longContent.id);
+      expect(prompt).toContain("contentItem");
     });
   });
 
@@ -71,10 +72,10 @@ describe("prompts", () => {
     it("should build prompt with summary details", () => {
       const prompt = buildIdeasPrompt(testSummary, testUser);
 
-      expect(prompt).toContain(testSummary.headline);
-      expect(prompt).toContain(testSummary.tldr);
+      // v0.3.1 uses minimal prompt; full details come from CLAUDE.md
       expect(prompt).toContain(testSummary.contentId);
-      expect(prompt).toContain("WritingIdeas");
+      expect(prompt).toContain("idea-generator");
+      expect(prompt).toContain("contentItem");
     });
 
     it("should include user profile details", () => {

@@ -1,3 +1,5 @@
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import type {
   ContentItem,
   ProviderResult,
@@ -12,18 +14,42 @@ import { WRITING_KIT_OUTPUT_SCHEMA } from "./utils/schema-converter";
 import { ensureWorkspace, writeUserProfile } from "./workspace";
 
 /**
- * Build minimal prompt for writing kit (v0.3.1 agentic approach)
+ * Build sequential delegation prompt for writing kit (v0.3.1 agentic approach)
  *
- * The agent reads CLAUDE.md for full instructions and uses skills
- * to perform deep analysis, generate ideas, and create outline.
+ * Coordinates sequential subagent workflow:
+ * 1. `content-analyzer` - for deep content analysis → summary.json
+ * 2. `idea-generator` - reads summary, generates ideas → ideas.json
+ * 3. Outline generation - reads summary & ideas → outline.json
+ * 4. Assembly - combines all outputs into WritingKit
  *
- * Content is stored in folder structure:
- * contentItem/{id}/content.md - the original content
- * contentItem/{id}/notes/ - agent notes and analysis
- * contentItem/{id}/results/ - generated outputs (summary, ideas, outline)
+ * Content structure (flat folder):
+ * contentItem/{id}/content.md - original content
+ * contentItem/{id}/summary.json - analyzer output
+ * contentItem/{id}/ideas.json - generator output
+ * contentItem/{id}/outline.json - outline output
+ * contentItem/{id}/writing-kit.json - final assembled output
  */
 function buildMinimalKitPrompt(contentId: string): string {
-  return `Build writing kit for: contentItem/${contentId}/content.md`;
+  return `Task: Build complete WritingKit with full workflow.
+
+Execute these sequential steps:
+
+1. Invoke content-analyzer subagent for: contentItem/${contentId}/content.md
+   - Output saved to: contentItem/${contentId}/summary.json
+
+2. Invoke idea-generator subagent with content analysis
+   - Input: contentItem/${contentId}/summary.json
+   - Output saved to: contentItem/${contentId}/ideas.json
+
+3. Generate article outline
+   - Input: contentItem/${contentId}/summary.json and ideas.json
+   - Output saved to: contentItem/${contentId}/outline.json
+
+4. Assemble WritingKit
+   - Read all outputs: summary.json, ideas.json, outline.json
+   - Combine into complete WritingKit structure
+   - Save to: contentItem/${contentId}/writing-kit.json
+   - Return the assembled WritingKit JSON as structured output`;
 }
 
 /**
@@ -101,7 +127,7 @@ export function createClaudeWritingKitProvider(
       const prompt = buildMinimalKitPrompt(content.id);
 
       // Execute single agentic query for entire kit
-      return executeAgenticQuery<WritingKit>(
+      const result = await executeAgenticQuery<WritingKit>(
         prompt,
         WRITING_KIT_OUTPUT_SCHEMA,
         {
@@ -109,6 +135,17 @@ export function createClaudeWritingKitProvider(
           workspace,
         }
       );
+
+      // Persist WritingKit to flat folder structure if successful
+      if (result.success) {
+        const contentDir = join(workspace, "contentItem", content.id);
+        const kitPath = join(contentDir, "writing-kit.json");
+
+        // Persist complete WritingKit (subagents write individual files, we persist the assembled kit)
+        writeFileSync(kitPath, JSON.stringify(result.data, null, 2), "utf-8");
+      }
+
+      return result;
     },
   };
 }

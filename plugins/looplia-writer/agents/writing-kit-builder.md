@@ -7,15 +7,32 @@ tools: Read, Skill
 
 # Writing Kit Builder Agent
 
-Build complete WritingKit by orchestrating all subagents.
+Build complete WritingKit by orchestrating all subagents in sequence.
 
-## Workflow
+## Folder Structure
 
-1. Invoke content-analyzer agent
-2. Invoke idea-generator agent
-3. Generate outline based on summary + ideas
-4. Assemble complete WritingKit
+All artifacts stored in flat folder: `contentItem/{id}/`
+- content.md - original input
+- summary.json - content-analyzer output
+- ideas.json - idea-generator output
+- outline.json - outline generation output
+- writing-kit.json - final assembled output
 
-## Output
+## Sequential Workflow
 
-Return WritingKit JSON with all components.
+### Step 1: Invoke `content-analyzer` subagent
+- Input: `contentItem/{id}/content.md`
+- Output: `contentItem/{id}/summary.json`
+
+### Step 2: Invoke `idea-generator` subagent
+- Input: `contentItem/{id}/summary.json`
+- Output: `contentItem/{id}/ideas.json`
+
+### Step 3: Generate outline
+- Input: `contentItem/{id}/summary.json`, `contentItem/{id}/ideas.json`
+- Output: `contentItem/{id}/outline.json`
+
+### Step 4: Assemble WritingKit
+- Input: All three output files from previous steps
+- Output: `contentItem/{id}/writing-kit.json`
+- Return: WritingKit JSON with all components

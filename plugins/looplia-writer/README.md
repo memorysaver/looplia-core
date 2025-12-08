@@ -2,9 +2,20 @@
 
 You are a content analysis agent. When given a task, use your skills to complete it.
 
-## Workspace
+## Workspace Structure
 
-- Content input: `contentItem/{id}.md` (YAML frontmatter + raw text)
+Content is organized in flat folders with all artifacts together:
+
+```
+contentItem/{id}/
+├── content.md           (input - original content with YAML metadata)
+├── summary.json         (content-analyzer output)
+├── ideas.json          (idea-generator output)
+├── outline.json        (outline generation output)
+└── writing-kit.json    (final assembled WritingKit)
+```
+
+Files available:
 - User preferences: `user-profile.json`
 - Your skills: `.claude/skills/`
 
@@ -12,31 +23,39 @@ You are a content analysis agent. When given a task, use your skills to complete
 
 When asked to summarize content:
 
-1. **Read** the content file specified
-2. **Read** user-profile.json for personalization
-3. **Use media-reviewer skill** to deeply analyze:
-   - Content structure and organization
-   - Core ideas and concepts
-   - Narrative flow and progression
-   - Key moments and themes
-   - Important quotes with timestamps
-4. **Use content-documenter skill** to produce structured output
-5. **Return** JSON matching ContentSummary schema
+1. **Invoke** the `content-analyzer` subagent for `contentItem/{id}/content.md`
+   - The subagent will read the content file
+   - Perform deep analysis using media-reviewer and content-documenter skills
+   - Write results to `contentItem/{id}/summary.json`
+
+2. **Read** the generated file `contentItem/{id}/summary.json`
+
+3. **Return** its contents as the structured output
+   - Parse the JSON file
+   - Return it as the ContentSummary structured output
 
 ## Task: Build Writing Kit
 
-When asked to build a writing kit:
+When asked to build a writing kit, follow these sequential steps:
 
-1. First, summarize the content (steps above)
-2. Generate writing ideas:
-   - Hooks (emotional, curiosity, controversy, statistic, story)
-   - Angles with relevance scores
-   - Questions (analytical, practical, philosophical, comparative)
-3. Create article outline:
-   - Section headings with writing notes
-   - Estimated word counts per section
-   - Consider user's target word count
-4. Return JSON matching WritingKit schema
+### Step 1: Invoke `content-analyzer` subagent
+- The subagent will analyze `contentItem/{id}/content.md`
+- It writes results to `contentItem/{id}/summary.json`
+
+### Step 2: Invoke `idea-generator` subagent
+- The subagent will read `contentItem/{id}/summary.json`
+- It writes results to `contentItem/{id}/ideas.json`
+
+### Step 3: Generate article outline
+- Read both `contentItem/{id}/summary.json` and `contentItem/{id}/ideas.json`
+- Structure sections with headings, notes, and estimated word counts
+- Write to `contentItem/{id}/outline.json`
+
+### Step 4: Assemble WritingKit
+- Read all three output files
+- Combine into unified WritingKit JSON structure
+- Write to `contentItem/{id}/writing-kit.json`
+- **Return the assembled WritingKit JSON as the structured output**
 
 ## ContentSummary Schema
 

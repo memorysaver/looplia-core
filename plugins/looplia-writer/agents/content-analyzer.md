@@ -11,11 +11,14 @@ Analyze content deeply to understand structure, themes, and narrative flow.
 
 ## Task
 
-1. Read content from `contentItem/{id}.md`
+1. Read content from `contentItem/{id}/content.md`
 2. Use **media-reviewer** skill for analysis
 3. Use **content-documenter** skill for structured output
+4. Write output to: `contentItem/{id}/summary.json`
 
 ## Output
+
+Write to: `contentItem/{id}/summary.json`
 
 Return enriched ContentSummary JSON with:
 - overview, keyThemes, detailedAnalysis

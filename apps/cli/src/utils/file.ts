@@ -2,6 +2,12 @@ import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import type { ContentItem } from "@looplia-core/core";
 
+/** Regex to extract YAML frontmatter from content */
+const FRONTMATTER_REGEX = /^---\n([\s\S]*?)\n---\n/;
+
+/** Regex to parse YAML key-value pairs */
+const YAML_KEYVALUE_REGEX = /^(\w+):\s*"?([^"]*)"?$/;
+
 /**
  * Read content from a file path with proper error handling
  */
@@ -17,16 +23,43 @@ export function readContentFile(filePath: string): string {
 }
 
 /**
+ * Extract YAML frontmatter from content
+ */
+function extractFrontmatter(content: string): Record<string, string> {
+  const match = content.match(FRONTMATTER_REGEX);
+  if (!match) {
+    return {};
+  }
+
+  const yaml = match[1];
+  const frontmatter: Record<string, string> = {};
+
+  // Parse simple YAML fields (key: "value" or key: value)
+  const lines = yaml.split("\n");
+  for (const line of lines) {
+    const keyValueMatch = line.match(YAML_KEYVALUE_REGEX);
+    if (keyValueMatch) {
+      frontmatter[keyValueMatch[1]] = keyValueMatch[2];
+    }
+  }
+
+  return frontmatter;
+}
+
+/**
  * Create a ContentItem from a file path and its contents
- * Uses platform-agnostic path handling with path.basename()
+ * Extracts ID and title from YAML frontmatter if available,
+ * otherwise generates them from file path and timestamp
  */
 export function createContentItemFromFile(
   filePath: string,
   rawText: string
 ): ContentItem {
+  const frontmatter = extractFrontmatter(rawText);
+
   return {
-    id: `cli-${Date.now()}`,
-    title: basename(filePath) || "Untitled",
+    id: frontmatter.id || `cli-${Date.now()}`,
+    title: frontmatter.title || basename(filePath) || "Untitled",
     url: `file://${filePath}`,
     rawText,
     source: {
