@@ -16,9 +16,14 @@ import { ensureWorkspace, writeUserProfile } from "./workspace";
  *
  * The agent reads CLAUDE.md for full instructions and uses skills
  * to perform deep analysis, generate ideas, and create outline.
+ *
+ * Content is stored in folder structure:
+ * contentItem/{id}/content.md - the original content
+ * contentItem/{id}/notes/ - agent notes and analysis
+ * contentItem/{id}/results/ - generated outputs (summary, ideas, outline)
  */
 function buildMinimalKitPrompt(contentId: string): string {
-  return `Build writing kit for: contentItem/${contentId}.md`;
+  return `Build writing kit for: contentItem/${contentId}/content.md`;
 }
 
 /**

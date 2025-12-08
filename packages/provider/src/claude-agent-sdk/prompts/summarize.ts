@@ -32,14 +32,17 @@ Ensure all fields are populated with accurate, concise information.`;
  * Use the summarizer with workspace setup instead.
  *
  * The v0.3.1 architecture uses:
- * - Minimal prompt: "Summarize content: contentItem/{id}.md"
+ * - Minimal prompt: "Summarize content: contentItem/{id}/content.md"
  * - Agent reads CLAUDE.md for full instructions
  * - Agent uses skills (media-reviewer, content-documenter) autonomously
+ * - Results stored in contentItem/{id}/results/
  */
 export function buildSummarizePrompt(
   content: ContentItem,
   _user?: UserProfile
 ): string {
   // Return minimal prompt for agentic approach
-  return `Summarize content: contentItem/${content.id}.md`;
+  // Content is now in folder structure: contentItem/{id}/content.md
+  // Agent can store results in: contentItem/{id}/results/
+  return `Summarize content: contentItem/${content.id}/content.md`;
 }

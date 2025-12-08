@@ -35,9 +35,10 @@ Ensure the outline is practical and actionable for the writer.`;
  * Use createClaudeWritingKitProvider for the new architecture.
  *
  * The v0.3.1 architecture uses:
- * - Single prompt: "Build writing kit for: contentItem/{id}.md"
+ * - Single prompt: "Build writing kit for: contentItem/{id}/content.md"
  * - Agent reads CLAUDE.md for full instructions
  * - Outline generated as part of the complete WritingKit
+ * - Results stored in contentItem/{id}/results/
  */
 export function buildOutlinePrompt(
   summary: ContentSummary,

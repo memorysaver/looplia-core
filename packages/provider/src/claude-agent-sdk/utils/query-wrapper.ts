@@ -265,7 +265,12 @@ export async function executeQueryWithRetry<T>(
  * Uses minimal prompt with Read and Skill tools enabled.
  * The agent reads CLAUDE.md for full instructions and uses skills autonomously.
  *
- * @param prompt - Minimal prompt (e.g., "Summarize content: contentItem/{id}.md")
+ * Content is organized in folder structure:
+ * - contentItem/{id}/content.md - the original content to process
+ * - contentItem/{id}/notes/ - agent notes during analysis
+ * - contentItem/{id}/results/ - generated outputs and results
+ *
+ * @param prompt - Minimal prompt (e.g., "Summarize content: contentItem/{id}/content.md")
  * @param jsonSchema - JSON Schema for structured output
  * @param config - Provider configuration (must include workspace)
  * @returns Provider result with usage metrics

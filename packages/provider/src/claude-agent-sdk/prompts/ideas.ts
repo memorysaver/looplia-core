@@ -31,9 +31,10 @@ Ensure ideas are creative, relevant, and actionable.`;
  * Use createClaudeWritingKitProvider for the new architecture.
  *
  * The v0.3.1 architecture uses:
- * - Single prompt: "Build writing kit for: contentItem/{id}.md"
+ * - Single prompt: "Build writing kit for: contentItem/{id}/content.md"
  * - Agent reads CLAUDE.md for full instructions
  * - Ideas generated as part of the complete WritingKit
+ * - Results stored in contentItem/{id}/results/
  */
 export function buildIdeasPrompt(
   summary: ContentSummary,

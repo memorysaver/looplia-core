@@ -16,9 +16,14 @@ import { ensureWorkspace, writeUserProfile } from "./workspace";
  *
  * The agent reads CLAUDE.md for full instructions and uses skills
  * to perform deep analysis.
+ *
+ * Content is stored in folder structure:
+ * contentItem/{id}/content.md - the original content
+ * contentItem/{id}/notes/ - agent notes and analysis
+ * contentItem/{id}/results/ - generated outputs
  */
 function buildMinimalSummarizePrompt(contentId: string): string {
-  return `Summarize content: contentItem/${contentId}.md`;
+  return `Summarize content: contentItem/${contentId}/content.md`;
 }
 
 /**
