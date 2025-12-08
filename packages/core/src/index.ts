@@ -5,6 +5,7 @@ export {
   createMockIdeaGenerator,
   createMockOutlineGenerator,
   createMockSummarizer,
+  createMockWritingKitProvider,
 } from "./adapters/mock";
 export type {
   ContentItem,

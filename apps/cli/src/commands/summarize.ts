@@ -88,7 +88,7 @@ export async function runSummarizeCommand(args: string[]): Promise<void> {
   // Display summary metadata
   console.log("\n✓ Content summarized successfully\n");
   if (result.data.contentId) {
-    console.log(`Content ID: ${result.data.contentId}`);
+    console.log(`Session ID: ${result.data.contentId}`);
   }
   if (result.data.detectedSource) {
     console.log(`Source Type: ${result.data.detectedSource}`);
@@ -98,7 +98,7 @@ export async function runSummarizeCommand(args: string[]): Promise<void> {
   // Display next steps
   if (result.data.contentId) {
     console.log(
-      `Next step: looplia kit --content-id ${result.data.contentId}\n`
+      `Next step: looplia kit --session-id ${result.data.contentId}\n`
     );
   }
 

@@ -279,22 +279,22 @@ describe("CLI E2E Tests", () => {
       expect(summary).toHaveProperty("bullets");
       expect(summary).toHaveProperty("tags");
 
-      // Verify contentId is displayed in output
-      expect(result.stdout).toContain(`Content ID: ${contentId}`);
+      // Verify sessionId is displayed in output
+      expect(result.stdout).toContain(`Session ID: ${contentId}`);
     });
 
-    it("should accept --content-id flag for kit command", async () => {
+    it("should accept --session-id flag for kit command", async () => {
       const result = await execCLI([
         "kit",
-        "--content-id",
+        "--session-id",
         "nonexistent-id",
         "--mock",
       ]);
 
-      // Should fail because content doesn't exist, but --content-id should be recognized
+      // Should fail because session doesn't exist, but --session-id should be recognized
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain(
-        'Error: Could not load content with ID "nonexistent-id"'
+        'Error: Session "nonexistent-id" not found'
       );
     });
   });
@@ -528,7 +528,7 @@ describe("CLI E2E Tests", () => {
 
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain(
-        "Error: Either --file or --content-id is required"
+        "Error: Either --file or --session-id is required"
       );
     });
 

@@ -1,19 +1,15 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  buildWritingKit,
   type ContentItem,
-  type ContentSummary,
-  createMockIdeaGenerator,
-  createMockOutlineGenerator,
-  createMockSummarizer,
+  createMockWritingKitProvider,
   type UserProfile,
   type UserTopic,
   validateContentItem,
   validateUserProfile,
 } from "@looplia-core/core";
 import {
-  createClaudeProviders,
+  createClaudeWritingKitProvider,
   ensureWorkspace,
   readUserProfile,
   writeContentItem,
@@ -30,6 +26,9 @@ import {
 const VALID_TONES = ["beginner", "intermediate", "expert", "mixed"] as const;
 type Tone = (typeof VALID_TONES)[number];
 
+const FRONTMATTER_REGEX = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/;
+const TITLE_REGEX = /title:\s*"?([^"\n]+)"?/;
+
 const MIN_WORD_COUNT = 100;
 const MAX_WORD_COUNT = 10_000;
 const DEFAULT_WORD_COUNT = 1000;
@@ -40,11 +39,11 @@ looplia kit - Build a complete writing kit from content
 
 Usage:
   looplia kit --file <path> [options]
-  looplia kit --content-id <id> [options]
+  looplia kit --session-id <id> [options]
 
 Options:
-  --file, -f         Path to content file
-  --content-id       Content ID from previous summarize (reuse existing content)
+  --file, -f         Path to content file (creates new session)
+  --session-id       Session ID to continue (resumes existing session)
   --format           Output format: json, markdown (default: json)
   --output, -o       Output file path (default: stdout)
   --topics           Comma-separated topics of interest
@@ -53,14 +52,16 @@ Options:
   --mock, -m         Use mock providers (no API key required)
   --help, -h         Show this help
 
-Note: Either --file or --content-id is required (but not both)
+Note: Either --file or --session-id is required (but not both)
+      --file always creates a new session
+      --session-id continues from existing session (smart continuation)
 
 Environment:
   ANTHROPIC_API_KEY  Required unless --mock is specified
 
 Example:
   looplia kit --file ./article.txt --topics "ai,productivity" --tone expert
-  looplia kit --content-id podcast-2024-12-08-ai-healthcare --tone expert
+  looplia kit --session-id article-2025-12-08-abc123 --tone expert
 `);
 }
 
@@ -130,38 +131,50 @@ function checkApiKey(useMock: boolean): void {
   process.exit(1);
 }
 
-function loadContentFromId(
+function loadContentFromSessionId(
   workspace: string,
-  contentId: string
-): { content: ContentItem; summary: ContentSummary } {
-  const contentDir = join(workspace, "contentItem", contentId);
-  const summaryPath = join(contentDir, "summary.json");
+  sessionId: string
+): ContentItem {
+  const contentDir = join(workspace, "contentItem", sessionId);
+  const contentPath = join(contentDir, "content.md");
 
-  try {
-    const summaryData = JSON.parse(
-      readFileSync(summaryPath, "utf-8")
-    ) as ContentSummary;
-
-    // Reconstruct ContentItem from summary data
-    const content: ContentItem = {
-      id: contentId,
-      title: summaryData.headline || "Untitled",
-      rawText: "", // We don't need the raw text for kit generation
-      url: "",
-      source: {
-        id: contentId,
-        type: "custom",
-        url: "",
-      },
-      metadata: {},
-    };
-
-    return { content, summary: summaryData };
-  } catch (_error) {
-    console.error(`Error: Could not load content with ID "${contentId}"`);
-    console.error("Make sure you've run 'looplia summarize' first");
+  if (!existsSync(contentPath)) {
+    console.error(`Error: Session "${sessionId}" not found`);
+    console.error(`Expected content at: ${contentPath}`);
+    console.error("Use --file to create a new session");
     process.exit(1);
   }
+
+  // Read content.md and extract metadata from frontmatter
+  const contentMd = readFileSync(contentPath, "utf-8");
+  const frontmatterMatch = contentMd.match(FRONTMATTER_REGEX);
+
+  let title = "Untitled";
+  let rawText = contentMd;
+
+  if (frontmatterMatch?.[1] && frontmatterMatch[2]) {
+    const frontmatter = frontmatterMatch[1];
+    rawText = frontmatterMatch[2].trim();
+
+    // Extract title from frontmatter
+    const titleMatch = frontmatter.match(TITLE_REGEX);
+    if (titleMatch?.[1]) {
+      title = titleMatch[1].trim();
+    }
+  }
+
+  return {
+    id: sessionId,
+    title,
+    rawText,
+    url: "",
+    source: {
+      id: sessionId,
+      type: "custom",
+      url: "",
+    },
+    metadata: {},
+  };
 }
 
 function applyCliOverrides(
@@ -181,7 +194,7 @@ function applyCliOverrides(
   }
 }
 
-async function loadUserProfile(
+async function loadUserProfileWithOverrides(
   workspace: string,
   topicsArg: string | undefined,
   toneArg: string | undefined,
@@ -205,15 +218,11 @@ async function loadUserProfile(
   );
 }
 
-function createProviders(useMock: boolean) {
+function createProvider(useMock: boolean, workspace: string) {
   if (useMock) {
-    return {
-      summarizer: createMockSummarizer(),
-      idea: createMockIdeaGenerator(),
-      outline: createMockOutlineGenerator(),
-    };
+    return createMockWritingKitProvider();
   }
-  return createClaudeProviders();
+  return createClaudeWritingKitProvider({ workspace });
 }
 
 export async function runKitCommand(args: string[]): Promise<void> {
@@ -225,17 +234,17 @@ export async function runKitCommand(args: string[]): Promise<void> {
   }
 
   const filePath = getArg(parsed, "file", "f");
-  const contentId = getArg(parsed, "content-id");
+  const sessionId = getArg(parsed, "session-id");
 
-  // Validate that either --file or --content-id is provided, but not both
-  if (!(filePath || contentId)) {
-    console.error("Error: Either --file or --content-id is required");
+  // Validate that either --file or --session-id is provided, but not both
+  if (!(filePath || sessionId)) {
+    console.error("Error: Either --file or --session-id is required");
     printKitHelp();
     process.exit(1);
   }
 
-  if (filePath && contentId) {
-    console.error("Error: Cannot use both --file and --content-id together");
+  if (filePath && sessionId) {
+    console.error("Error: Cannot use both --file and --session-id together");
     printKitHelp();
     process.exit(1);
   }
@@ -250,21 +259,23 @@ export async function runKitCommand(args: string[]): Promise<void> {
   checkApiKey(useMock);
 
   // When using mock providers, skip plugin bootstrap requirement
-  // but don't force refresh (preserve existing workspace)
   const workspace = await ensureWorkspace({
     requireFiles: !useMock,
     skipPluginBootstrap: useMock,
   });
-  const user = await loadUserProfile(
+
+  const user = await loadUserProfileWithOverrides(
     workspace,
     topicsArg,
     toneArg,
     wordCountArg
   );
 
-  // Load content either from file or from content ID
+  // Load or create content based on input mode
   let content: ContentItem;
+
   if (filePath) {
+    // --file: Create new session
     const rawText = readContentFile(filePath);
     content = createContentItemFromFile(filePath, rawText);
 
@@ -276,26 +287,22 @@ export async function runKitCommand(args: string[]): Promise<void> {
       process.exit(1);
     }
 
-    const newContentId = await writeContentItem(
+    const newSessionId = await writeContentItem(
       contentValidation.data,
       workspace
     );
-    console.error(`✓ Content written to workspace: ${newContentId}`);
+    console.error(`✓ New session created: ${newSessionId}`);
     content = contentValidation.data;
   } else {
-    // Load from existing content ID
-    const { content: loadedContent } = loadContentFromId(
-      workspace,
-      contentId ?? ""
-    );
-    console.error(`✓ Loaded content: ${contentId}`);
-    content = loadedContent;
+    // --session-id: Continue existing session (agent will detect progress)
+    content = loadContentFromSessionId(workspace, sessionId ?? "");
+    console.error(`✓ Resuming session: ${sessionId}`);
   }
 
-  const providers = createProviders(useMock);
+  const provider = createProvider(useMock, workspace);
 
-  console.error("⏳ Processing content...");
-  const result = await buildWritingKit(content, user, providers);
+  console.error("⏳ Building writing kit...");
+  const result = await provider.buildKit(content, user);
 
   if (!result.success) {
     console.error(`Error: ${result.error.message}`);
