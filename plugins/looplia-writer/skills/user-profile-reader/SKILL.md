@@ -68,9 +68,9 @@ User profile:
 Content tags: ["AI", "safety", "alignment"]
 
 Calculation:
-- AI: matched, weight = 5/5 = 1.0
-- productivity: not matched, weight = 0
-- cooking: not matched, weight = 0
+- AI: matched, weight = 5/5 = 1.0 (contributes to matchedWeight)
+- productivity: not matched, weight = 3/5 = 0.6 (contributes to totalWeight only)
+- cooking: not matched, weight = 2/5 = 0.4 (contributes to totalWeight only)
 - matchedWeight = 1.0
 - totalWeight = 1.0 + 0.6 + 0.4 = 2.0
 - score = 1.0 / 2.0 = 0.5

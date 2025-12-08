@@ -40,7 +40,7 @@ When asked to build a writing kit:
 
 ## ContentSummary Schema
 
-All 15 fields required:
+All 16 fields required:
 
 ### Core Fields
 - contentId: string (from input)

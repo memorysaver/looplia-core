@@ -1,7 +1,7 @@
 ---
 name: content-documenter
 description: Generate structured ContentSummary JSON from analyzed content.
-Use after media-reviewer to produce final output with all 15 fields.
+Use after media-reviewer to produce final output with all 16 fields.
 ---
 
 # Content Documenter Skill
@@ -11,7 +11,7 @@ Transforms media-reviewer analysis into structured JSON documentation.
 ## What This Skill Does
 
 Takes your media-reviewer analysis and produces ContentSummary JSON
-with all 15 required fields.
+with all 16 required fields.
 
 ## Input
 
@@ -165,7 +165,7 @@ For video/audio content:
 ## Quality Checklist
 
 Before outputting, verify:
-- All 15 fields are present
+- All 16 fields are present
 - All minimum lengths are met
 - Quotes are exact (verbatim)
 - Timestamps are included for video/audio
@@ -175,7 +175,7 @@ Before outputting, verify:
 
 ## Important Rules
 
-- Include ALL 15 fields - never omit any
+- Include ALL 16 fields - never omit any
 - Use exact verbatim quotes - never paraphrase
 - Include timestamps when source has them
 - Meet all minimum character requirements
