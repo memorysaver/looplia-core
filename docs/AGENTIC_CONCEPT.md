@@ -1,27 +1,97 @@
-# Looplia-Core: Agentic Architecture & Design (v0.3.1)
+# Looplia-Core: Agentic Architecture & Design (v0.3.2)
 
 ## Executive Summary
 
-Looplia-core implements a **true agentic architecture** where autonomous agents read natural-language instructions from markdown files and invoke skills to solve complex tasks. Unlike traditional service-oriented architectures where multiple provider calls orchestrate a workflow, looplia uses **single agent sessions** with file-based workspace state management.
+Looplia-core implements a **true agentic architecture** where:
 
-**Core Innovation:** The entire application logic is defined in markdown files (`CLAUDE.md`, `SKILL.md`, agent definitions) that are deployed to a workspace filesystem. The CLI merely triggers initial prompts; the agent autonomously reads instructions, invokes skills, and manages state through files.
+1. **One CLI command = One prompt = One agent session**
+2. **Main agent is a simple orchestrator** - it reads instructions and invokes subagents
+3. **Subagents are autonomous specialists** - they make their own decisions using skills
+4. **All behavior is defined in markdown** - edit `/plugins` to tune results without coding
+
+**Core Innovation:** The CLI sends a minimal prompt to the Claude Agent SDK. The main agent reads `CLAUDE.md` for instructions, checks workspace state, and autonomously orchestrates subagents to complete the task. Each subagent invokes skills as needed and writes outputs to the workspace. The system is **fully autonomous** - humans only provide the initial trigger and tune the plugin files.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  THE AGENTIC FLOW                                                           │
+│                                                                             │
+│  CLI Command ──► ONE Prompt ──► Main Agent ──► Subagents (autonomous)       │
+│       │                             │                │                      │
+│       │                             │                └──► Skills (invoke)   │
+│       │                             │                                       │
+│       │                             └──► Reads CLAUDE.md for instructions   │
+│       │                                  Checks session state (files)       │
+│       │                                  Decides which subagents to call    │
+│       │                                                                     │
+│       └──► User provides: content file, preferences                         │
+│            System handles: analysis, ideas, outline, assembly               │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Table of Contents
 
-1. [Architecture Overview](#architecture-overview)
-2. [The Agentic Workflow](#the-agentic-workflow)
-3. [CLI Command Triggering](#cli-command-triggering)
-4. [Agent SDK & Execution](#agent-sdk--execution)
-5. [Plugin System: CLAUDE.md & SKILL.md](#plugin-system-claudemd--skillmd)
-6. [Subagents & Multi-Step Orchestration](#subagents--multi-step-orchestration)
-7. [Workspace: File-Based State Management](#workspace-file-based-state-management)
-8. [End-to-End Data Flow: Summarize Command](#end-to-end-data-flow-summarize-command)
-9. [End-to-End Data Flow: Kit Command](#end-to-end-data-flow-kit-command)
-10. [Responsibility Mapping: Agent ↔ Subagent ↔ Skill](#responsibility-mapping-agent--subagent--skill)
-11. [Design Rationale: Why This Architecture](#design-rationale-why-this-architecture)
-12. [Implementation Details](#implementation-details)
+1. [The Core Concept](#the-core-concept)
+2. [Architecture Overview](#architecture-overview)
+3. [CLI Command → One Prompt](#cli-command--one-prompt)
+4. [Main Agent as Orchestrator](#main-agent-as-orchestrator)
+5. [Subagents: Autonomous Specialists](#subagents-autonomous-specialists)
+6. [Skills: Reusable Expertise](#skills-reusable-expertise)
+7. [Smart Continuation: Agent-Controlled Flow](#smart-continuation-agent-controlled-flow)
+8. [Workspace: File-Based State](#workspace-file-based-state)
+9. [Plugin System: Tune Without Coding](#plugin-system-tune-without-coding)
+10. [End-to-End: Kit Command Flow](#end-to-end-kit-command-flow)
+11. [End-to-End: Summarize Command Flow](#end-to-end-summarize-command-flow)
+12. [Design Rationale](#design-rationale)
+13. [Implementation Reference](#implementation-reference)
+
+---
+
+## The Core Concept
+
+### The Problem with Traditional Approaches
+
+**Traditional (v0.2):** Multiple SDK calls, each independent:
+```typescript
+// Three separate API calls - context lost between each
+const summary = await summarizer.summarize(content);    // Call 1
+const ideas = await ideaGenerator.generate(summary);    // Call 2
+const outline = await outlineGenerator.generate(summary, ideas); // Call 3
+const kit = assemble(summary, ideas, outline);
+```
+
+**Problems:**
+- Context lost between calls
+- Hardcoded prompts in TypeScript (200+ lines each)
+- Agent cannot reason about the workflow
+- Plugin files exist but are never read
+- Changes require code rebuild
+
+### The Agentic Solution (v0.3.2)
+
+**One command = One prompt = One session:**
+
+```
+looplia kit --file article.md
+       │
+       └──► ONE prompt to SDK: "Build WritingKit for session: contentItem/{id}"
+                    │
+                    └──► Main agent autonomously:
+                         ├─ Reads CLAUDE.md (full instructions)
+                         ├─ Checks session state (what files exist?)
+                         ├─ Invokes content-analyzer subagent (if needed)
+                         ├─ Invokes idea-generator subagent (if needed)
+                         ├─ Invokes writing-kit-builder subagent (if needed)
+                         └─ Returns complete WritingKit JSON
+```
+
+**Benefits:**
+- Single session maintains full context
+- Agent reasons about what work is needed
+- Instructions in markdown (editable without code)
+- Plugin files actively read and used
+- Autonomous decision-making
 
 ---
 
@@ -30,1406 +100,797 @@ Looplia-core implements a **true agentic architecture** where autonomous agents 
 ### Conceptual Layers
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│ COMMAND LAYER (TypeScript CLI)                              │
-│ ├─ looplia summarize --file article.txt                     │
-│ ├─ looplia kit --file article.txt --topics "ai,safety"      │
-│ └─ looplia config topics --add "machine-learning"           │
-└──────────────────────┬──────────────────────────────────────┘
-                       │ Write to workspace
-┌──────────────────────┴──────────────────────────────────────┐
-│ WORKSPACE LAYER (Persistent Filesystem)                     │
-│ ~/.looplia/                                                 │
-│ ├─ CLAUDE.md (agent brain from plugin README.md)            │
-│ ├─ user-profile.json (personalization)                      │
-│ ├─ contentItem/{id}/ (content + outputs)                    │
-│ └─ .claude/ (agents & skills from plugin)                   │
-└──────────────────────┬──────────────────────────────────────┘
-                       │ Minimal prompt
-┌──────────────────────┴──────────────────────────────────────┐
-│ AGENT SDK LAYER (Single Session)                            │
-│ ├─ Main Agent reads CLAUDE.md                               │
-│ ├─ Agent reads workspace files                              │
-│ ├─ Agent invokes skills autonomously                        │
-│ ├─ Agent optionally spawns subagents                        │
-│ └─ Agent writes results to workspace                        │
-└──────────────────────┬──────────────────────────────────────┘
-                       │ Structured JSON
-┌──────────────────────┴──────────────────────────────────────┐
-│ OUTPUT LAYER (CLI Display)                                  │
-│ ├─ JSON formatted for structured processing                 │
-│ ├─ Markdown formatted for human reading                     │
-│ └─ Written to stdout or file                                │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CLI LAYER (TypeScript - Minimal Logic)                                      │
+│ ├─ looplia kit --file article.md                                            │
+│ ├─ looplia kit --session-id abc123                                          │
+│ └─ looplia summarize --file article.md                                      │
+│                                                                             │
+│ Responsibility: Parse args, write content to workspace, send ONE prompt     │
+└──────────────────────────────┬──────────────────────────────────────────────┘
+                               │ Minimal prompt + workspace path
+                               ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ AGENT SDK LAYER (Single Session)                                            │
+│ ├─ Main Agent reads CLAUDE.md                                               │
+│ ├─ Main Agent checks session state (existing files)                         │
+│ ├─ Main Agent invokes subagents via Task tool                               │
+│ ├─ Subagents invoke skills as needed                                        │
+│ └─ Main Agent returns structured JSON output                                │
+│                                                                             │
+│ Responsibility: Orchestrate autonomous work, make decisions, produce output │
+└──────────────────────────────┬──────────────────────────────────────────────┘
+                               │ Read/Write files
+                               ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ WORKSPACE LAYER (Persistent Filesystem)                                     │
+│ ~/.looplia/                                                                 │
+│ ├─ CLAUDE.md (main agent instructions from plugin)                          │
+│ ├─ user-profile.json (personalization preferences)                          │
+│ ├─ contentItem/{session-id}/ (all session files - flat structure)           │
+│ │   ├─ content.md (input)                                                   │
+│ │   ├─ summary.json (from content-analyzer)                                 │
+│ │   ├─ ideas.json (from idea-generator)                                     │
+│ │   ├─ outline.json (from writing-kit-builder)                              │
+│ │   └─ writing-kit.json (final output)                                      │
+│ └─ .claude/                                                                 │
+│     ├─ agents/ (subagent definitions)                                       │
+│     └─ skills/ (specialized capabilities)                                   │
+│                                                                             │
+│ Responsibility: Persist state, enable continuation, provide auditability    │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Key Characteristics
 
-| Aspect | Traditional | Looplia v0.3.1 |
-|--------|------------|-----------------|
-| Logic location | TypeScript code | Markdown files (CLAUDE.md, SKILL.md) |
-| Orchestration | SDK provider calls (3+) | Single agent session |
-| Context | Lost between calls | Maintained in single session |
+| Aspect | Traditional (v0.2) | Agentic (v0.3.2) |
+|--------|-------------------|------------------|
+| SDK calls per command | 3+ separate calls | 1 single session |
+| Logic location | TypeScript code | Markdown files (CLAUDE.md, agents/*.md) |
+| Context | Lost between calls | Maintained in session |
+| Orchestration | Hardcoded in TypeScript | Agent decides autonomously |
 | Customization | Code rebuild needed | Edit markdown, restart |
 | State management | In-memory transfer | Filesystem (workspace) |
-| Plugin role | Templates only | Active runtime (agent reads files) |
+| Flow control | Hardcoded sequence | Agent-controlled (smart continuation) |
 
 ---
 
-## The Agentic Workflow
+## CLI Command → One Prompt
 
-### From Imperative to Declarative
+### The Mapping Principle
 
-**Pre-Agentic (v0.2):**
-```typescript
-// TypeScript imperative workflow
-const summary = await summarizer.summarize(content, user);
-const ideas = await ideaGenerator.generateIdeas(summary, user);
-const outline = await outlineGenerator.generateOutline(summary, ideas, user);
-const kit = assemble(summary, ideas, outline);
+**Every CLI command maps to exactly ONE prompt.** The prompt is minimal - it tells the agent what to accomplish, not how to do it.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  CLI COMMAND                    │  PROMPT TO SDK                            │
+├─────────────────────────────────┼───────────────────────────────────────────┤
+│ looplia kit --file article.md   │ "Build WritingKit for session:            │
+│                                 │  contentItem/{session-id}"                │
+├─────────────────────────────────┼───────────────────────────────────────────┤
+│ looplia kit --session-id abc123 │ "Build WritingKit for session:            │
+│                                 │  contentItem/abc123"                      │
+├─────────────────────────────────┼───────────────────────────────────────────┤
+│ looplia summarize --file x.md   │ "Summarize content:                       │
+│                                 │  contentItem/{session-id}"                │
+└─────────────────────────────────┴───────────────────────────────────────────┘
 ```
 
-Problems:
-- Each call is independent (context lost)
-- Agent cannot reason about workflow
-- Hardcoded English prompts in TypeScript (200+ lines)
-- Plugin files exist but are never read
-- Only 7 of 15 summary fields are populated
-
-**Agentic (v0.3.1):**
-```
-CLI: looplia kit --file article.txt --topics "ai,safety"
-  ↓
-Write to workspace
-  ↓
-Single SDK call:
-  ├─ Minimal prompt: "Build writing kit from contentItem/{id}"
-  ├─ cwd: ~/.looplia (workspace as runtime)
-  ├─ allowedTools: ["Read", "Skill"]
-  └─ agent_version: "v0.3.1"
-  ↓
-Agent session:
-  ├─ Read CLAUDE.md (full instructions)
-  ├─ Read contentItem/{id}/content.md (input)
-  ├─ Read user-profile.json (preferences)
-  ├─ Invoke media-reviewer skill (9-step analysis)
-  ├─ Invoke content-documenter skill (all 15 fields)
-  ├─ Invoke writing-enhancer skill (personalization)
-  ├─ Reason about task decomposition
-  ├─ Write intermediate results to workspace
-  └─ Return complete WritingKit JSON
-  ↓
-CLI: Display to user
-```
-
-Benefits:
-- Single session maintains full context
-- Markdown is the source of truth for instructions
-- Agent can reason about workflow structure
-- All 15 summary fields populated
-- Skills invoked in optimal sequence
-- Subagents spawned for complex subtasks
-
----
-
-## CLI Command Triggering
-
-### The Four Commands
-
-#### 1. `looplia summarize --file <path>`
-
-**File:** `apps/cli/src/commands/summarize.ts`
+### What the CLI Does (Minimal)
 
 ```typescript
-export async function runSummarizeCommand(args: string[]): Promise<void> {
-  // 1. Parse arguments
-  const filePath = getArg(parsed, "file", "f");
-  const format = getArg(parsed, "format") ?? "json";
-  const outputPath = getArg(parsed, "output", "o");
+// apps/cli/src/commands/kit.ts - Simplified view
 
-  // 2. Validate & prepare
-  const workspace = await ensureWorkspace();
-  const rawText = readContentFile(filePath);
-  const content = createContentItemFromFile(filePath, rawText);
-  validateContentItem(content); // Schema validation
-
-  // 3. Write to workspace
-  const newContentId = await writeContentItem(content, workspace);
-
-  // 4. Create provider & execute
-  const providers = createClaudeProviders();
-  const result = await providers.summarizer.summarize(content);
-
-  // 5. Format & output
-  const output = format === "markdown"
-    ? formatKitAsMarkdown(result.data)
-    : JSON.stringify(result.data, null, 2);
-  writeOutput(output, outputPath);
-}
-```
-
-**What happens next:**
-- Provider's `summarize()` method (see [Agent SDK](#agent-sdk--execution))
-- Minimal prompt sent to SDK
-- Agent autonomously handles all analysis
-- Returns `ContentSummary` (15 fields)
-
-#### 2. `looplia kit --file <path> [--topics X] [--tone Y] [--word-count Z]`
-
-**File:** `apps/cli/src/commands/kit.ts`
-
-```typescript
 export async function runKitCommand(args: string[]): Promise<void> {
   // 1. Parse arguments
   const filePath = getArg(parsed, "file", "f");
-  const contentId = getArg(parsed, "content-id");
-  const topicsArg = getArg(parsed, "topics");
-  const toneArg = getArg(parsed, "tone");
-  const wordCountArg = getArg(parsed, "word-count");
+  const sessionId = getArg(parsed, "session-id");
 
-  // 2. Load content from file OR content ID
+  // 2. Ensure workspace exists
+  const workspace = await ensureWorkspace();
+
+  // 3. If --file: Create new session with content.md
   if (filePath) {
-    const rawText = readContentFile(filePath);
-    content = createContentItemFromFile(filePath, rawText);
-    await writeContentItem(content, workspace);
-  } else {
-    const { content: loaded } = loadContentFromId(workspace, contentId);
-    content = loaded;
+    const content = createContentItemFromFile(filePath, rawText);
+    const newSessionId = await writeContentItem(content, workspace);
   }
 
-  // 3. Load or create user profile
-  const user = await loadUserProfile(
-    workspace,
-    topicsArg,    // CLI args override workspace defaults
-    toneArg,
-    wordCountArg
-  );
+  // 4. Create provider and send ONE prompt
+  const provider = createClaudeWritingKitProvider({ workspace });
+  const result = await provider.buildKit(content, user);
+  //                    ↑
+  //                    ONE SDK call with minimal prompt
+  //                    Agent handles everything else autonomously
 
-  // 4. Build complete writing kit
-  const providers = createClaudeProviders();
-  const result = await buildWritingKit(content, user, providers);
-  // (see buildWritingKit in packages/core)
+  // 5. Output result
+  console.log(JSON.stringify(result.data, null, 2));
 }
 ```
 
-#### 3. `looplia config [topics|style] [args]`
+### What the CLI Does NOT Do
 
-**File:** `apps/cli/src/commands/config.ts`
+- ❌ No workflow orchestration logic
+- ❌ No "if summary exists, skip to ideas"
+- ❌ No hardcoded prompts (200+ lines)
+- ❌ No multiple SDK calls
+- ❌ No business logic decisions
 
-Manages persistent user preferences stored in `~/.looplia/user-profile.json`
-
-```typescript
-// Add a topic of interest
-looplia config topics --add "machine-learning" --interest 4
-
-// Update writing style
-looplia config style --tone intermediate --word-count 1500
-```
-
-#### 4. `looplia bootstrap`
-
-**File:** `apps/cli/src/commands/bootstrap.ts`
-
-Destructively refreshes workspace by copying plugin files:
-
-```bash
-looplia bootstrap
-# Recreates:
-# - ~/.looplia/CLAUDE.md (from README.md)
-# - ~/.looplia/.claude/agents/
-# - ~/.looplia/.claude/skills/
-```
-
-### Input Validation Layer
-
-All commands validate input against schemas before proceeding:
-
-```typescript
-// ContentItem validation
-const validation = validateContentItem(content);
-if (!validation.success) {
-  console.error(`Validation error: ${validation.error.message}`);
-  process.exit(1);
-}
-
-// ContentSummary validation (on agent output)
-const summaryValidation = validateContentSummary(result.data);
-if (!summaryValidation.success) {
-  throw new Error(`Invalid summary structure: ${summaryValidation.error.message}`);
-}
-```
-
-Schemas are defined in `packages/core/src/validation/schemas.ts` using Zod.
+**The agent makes all decisions.** The CLI just triggers and displays.
 
 ---
 
-## Agent SDK & Execution
+## Main Agent as Orchestrator
 
-### The Query Execution Layer
+### The Simple Orchestrator Pattern
 
-**Location:** `packages/provider/src/claude-agent-sdk/utils/query-wrapper.ts`
+The main agent's job is simple:
+1. Read instructions from CLAUDE.md
+2. Check what work is already done (session state)
+3. Invoke subagents for remaining work
+4. Return the final result
 
-Three execution modes evolved across versions:
-
-#### Mode 1: `executeQuery()` (v0.2 - Basic)
-
-```typescript
-const result = await executeQuery<ContentSummary>({
-  model: "claude-haiku-4-5-20251001",
-  systemPrompt: "You are a content analyst...", // 200 lines hardcoded
-  userPrompt: "Summarize this content:\n\n" + content.rawText,
-  outputFormat: {
-    type: "json_schema",
-    schema: SUMMARY_OUTPUT_SCHEMA
-  }
-});
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  MAIN AGENT - Simple Orchestrator                                           │
+│                                                                             │
+│  Prompt: "Build WritingKit for session: contentItem/{session-id}"           │
+│                                                                             │
+│  1. Read CLAUDE.md → Understand full task instructions                      │
+│                                                                             │
+│  2. Check session folder for existing files:                                │
+│     ├─ Glob contentItem/{id}/*.json                                         │
+│     └─ Decide which subagents to invoke                                     │
+│                                                                             │
+│  3. IF summary.json missing:                                                │
+│     ├─ Invoke content-analyzer subagent (Task tool)                         │
+│     └─ Wait for completion (AgentOutputTool)                                │
+│                                                                             │
+│  4. IF ideas.json missing:                                                  │
+│     ├─ Invoke idea-generator subagent (Task tool)                           │
+│     └─ Wait for completion (AgentOutputTool)                                │
+│                                                                             │
+│  5. IF writing-kit.json missing:                                            │
+│     ├─ Invoke writing-kit-builder subagent (Task tool)                      │
+│     └─ Wait for completion (AgentOutputTool)                                │
+│                                                                             │
+│  6. Return:                                                                 │
+│     ├─ Read writing-kit.json                                                │
+│     └─ Return via StructuredOutput tool                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Problems:**
-- Hardcoded 200+ line prompts in TypeScript
-- Cannot access workspace files
-- Cannot invoke skills
-- Context lost between calls
+### Why Simple is Better
 
-#### Mode 2: `executeQueryWithRetry()` (v0.3 - Workflow)
+The main agent has **no business logic**:
+- It doesn't know how to analyze content (content-analyzer does)
+- It doesn't know how to generate ideas (idea-generator does)
+- It doesn't know how to create outlines (writing-kit-builder does)
 
-```typescript
-const result = await executeQueryWithRetry<ContentSummary>({
-  query: async () => executeQuery({...}),
-  maxRetries: 3,
-  backoffMs: 1000
-});
-```
+It only knows:
+- What the task is (from prompt)
+- How to check progress (read files)
+- Which subagent to call next (from CLAUDE.md instructions)
+- When to stop (all files exist)
 
-**Still problems:**
-- Each call is independent
-- Hardcoded prompts
-- No workspace integration
-
-#### Mode 3: `executeAgenticQuery()` (v0.3.1 - True Agentic)
-
-```typescript
-const result = await executeAgenticQuery<ContentSummary>(
-  prompt,  // Minimal: "Summarize content: contentItem/{id}.md"
-  SUMMARY_OUTPUT_SCHEMA,
-  {
-    workspace: "~/.looplia",
-    model: "claude-haiku-4-5-20251001",
-    allowedTools: ["Read", "Skill"],
-    timeout: 300000
-  }
-);
-```
-
-**What this enables:**
-- Agent reads workspace files (via `Read` tool)
-- Agent invokes skills from `.claude/skills/` (via `Skill` tool)
-- Single session maintains context
-- No hardcoded prompts (uses CLAUDE.md)
-- Full agentic reasoning
-
-### The Summarizer Provider
-
-**File:** `packages/provider/src/claude-agent-sdk/summarizer.ts`
-
-```typescript
-export function createClaudeSummarizer(config?: ClaudeAgentConfig): ClaudeSummarizerProvider {
-  return {
-    async summarizeWithUsage(content, user) {
-      // Step 1: Ensure workspace exists
-      const workspace = await ensureWorkspace({ baseDir: config?.workspace });
-
-      // Step 2: Write content item to workspace
-      await writeContentItem(content, workspace);
-      // Creates: ~/.looplia/contentItem/{id}/content.md
-
-      // Step 3: Write user profile if provided
-      if (user) {
-        await writeUserProfile(workspace, user);
-      }
-
-      // Step 4: Build minimal prompt (agent reads CLAUDE.md for full instructions)
-      const prompt = buildMinimalSummarizePrompt(content.id);
-      // Result: "Task: Analyze and summarize content. Use the content-analyzer
-      //          subagent to process: contentItem/{id}/content.md"
-
-      // Step 5: Execute agentic query (single session, full context)
-      const result = await executeAgenticQuery<ContentSummary>(
-        prompt,
-        SUMMARY_OUTPUT_SCHEMA,
-        {
-          workspace,
-          ...config,
-        }
-      );
-
-      // Step 6: Persist summary and handle ID generation
-      if (result.success) {
-        const summaryPath = join(workspace, "contentItem", content.id, "summary.json");
-        writeFileSync(summaryPath, JSON.stringify(result.data, null, 2), "utf-8");
-
-        // Generate meaningful ID from detected source
-        const meaningfulId = generateMeaningfulId(result.data);
-
-        // If ID changed, relocate folder (semantic naming)
-        if (meaningfulId !== content.id) {
-          const newDir = join(workspace, "contentItem", meaningfulId);
-          renameSync(oldDir, newDir);
-          result.data.contentId = meaningfulId;
-        }
-      }
-
-      return result;
-    }
-  };
-}
-```
-
-### Meaningful ID Generation
-
-**Function:** `generateMeaningfulId(summary: ContentSummary): string`
-
-After summarization, the agent output includes `detectedSource` field (from content-analyzer skill). The summarizer generates a semantic ID:
-
-```typescript
-function generateMeaningfulId(summary: ContentSummary): string {
-  const source = summary.detectedSource || "text"; // podcast, article, transcript, etc.
-  const date = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-
-  // Extract topic from headline (first 2-3 words, hyphenated)
-  let topic = "content";
-  if (summary.headline) {
-    const words = summary.headline
-      .toLowerCase()
-      .split(/\s+/)
-      .slice(0, 2);
-    topic = words.join("-").replace(/[^a-z0-9-]/g, "");
-  }
-
-  // Generate: source-date-topic
-  return `${source}-${date}-${topic}`
-    .replace(/--+/g, "-")
-    .slice(0, 60);
-}
-```
-
-**Example IDs:**
-- `podcast-2024-12-08-healthcare-ai`
-- `article-2024-12-08-climate-change`
-- `transcript-2024-12-08-interview-with-expert`
-
-### Usage Tracking
-
-The provider tracks API usage:
-
-```typescript
-export type ProviderResultWithUsage<T> = ProviderResult<T> & {
-  usage?: {
-    inputTokens: number;
-    outputTokens: number;
-    totalTokens: number;
-    estimatedCostUsd: number;
-  };
-};
-```
-
-Aggregated across all providers via `createClaudeProviders().getUsage()`
+**This separation makes the system:**
+- Easier to debug (each component isolated)
+- Easier to test (subagents testable independently)
+- Easier to customize (edit subagent markdown)
+- More reliable (simple orchestrator = fewer bugs)
 
 ---
 
-## Plugin System: CLAUDE.md & SKILL.md
+## Subagents: Autonomous Specialists
 
-### Plugin Directory Structure
+### The Three Subagents
 
-**Location:** `plugins/looplia-writer/`
+Each subagent is an **autonomous specialist** with its own expertise:
 
 ```
-plugins/looplia-writer/
-├── README.md                          # Agent brain (→ deployed as CLAUDE.md)
-├── SKILL.md                           # Plugin overview
-├── agents/
-│   ├── content-analyzer.md           # Detects source, analyzes content
-│   ├── idea-generator.md             # Generates writing ideas
-│   └── writing-kit-builder.md        # Orchestrates full pipeline
-└── skills/
-    ├── media-reviewer/
-    │   └── SKILL.md                  # 9-step deep content analysis
-    ├── content-documenter/
-    │   └── SKILL.md                  # Produces 15 summary fields
-    ├── user-profile-reader/
-    │   └── SKILL.md                  # Calculates relevance scores
-    └── writing-enhancer/
-        └── SKILL.md                  # Style-aware enhancements
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SUBAGENT: content-analyzer                                                 │
+│  File: .claude/agents/content-analyzer.md                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  EXPERTISE: Deep content analysis                                           │
+│                                                                             │
+│  READS:                                                                     │
+│    • contentItem/{id}/content.md (source content)                           │
+│                                                                             │
+│  INVOKES SKILLS:                                                            │
+│    • media-reviewer (9-step deep analysis)                                  │
+│    • content-documenter (structure all 15 fields)                           │
+│                                                                             │
+│  WRITES:                                                                    │
+│    • contentItem/{id}/summary.json                                          │
+│                                                                             │
+│  AUTONOMOUS DECISIONS:                                                      │
+│    • Detects source type (podcast, article, transcript, etc.)               │
+│    • Identifies narrative structure                                         │
+│    • Extracts quotes with timestamps                                        │
+│    • Calculates relevance score                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SUBAGENT: idea-generator                                                   │
+│  File: .claude/agents/idea-generator.md                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  EXPERTISE: Creative writing ideation                                       │
+│                                                                             │
+│  READS:                                                                     │
+│    • contentItem/{id}/summary.json (from content-analyzer)                  │
+│    • user-profile.json (personalization)                                    │
+│                                                                             │
+│  WRITES:                                                                    │
+│    • contentItem/{id}/ideas.json                                            │
+│                                                                             │
+│  AUTONOMOUS DECISIONS:                                                      │
+│    • Generates 5 hooks (emotional, curiosity, controversy, statistic, story)│
+│    • Develops 5 unique angles with relevance scores                         │
+│    • Creates 5 thought-provoking questions                                  │
+│    • Personalizes based on user's tone preference                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SUBAGENT: writing-kit-builder                                              │
+│  File: .claude/agents/writing-kit-builder.md                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  EXPERTISE: Outline creation and kit assembly                               │
+│                                                                             │
+│  READS:                                                                     │
+│    • contentItem/{id}/summary.json                                          │
+│    • contentItem/{id}/ideas.json                                            │
+│    • user-profile.json (target word count)                                  │
+│                                                                             │
+│  WRITES:                                                                    │
+│    • contentItem/{id}/outline.json                                          │
+│    • contentItem/{id}/writing-kit.json (final assembled output)             │
+│                                                                             │
+│  AUTONOMOUS DECISIONS:                                                      │
+│    • Creates section structure based on content themes                      │
+│    • Distributes word count across sections                                 │
+│    • Selects best hooks and angles for outline                              │
+│    • Calculates reading time estimate                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Deployment Process
+### Subagent Definition Format
 
-When `ensureWorkspace()` is called:
-
-```typescript
-export async function ensureWorkspace(options?: WorkspaceOptions): Promise<string> {
-  const workspace = expandPath(options?.baseDir ?? "~/.looplia");
-
-  if (options?.force) {
-    // Destructive: remove existing workspace
-    removeSync(workspace);
-  }
-
-  // Create directory structure
-  mkdirSync(join(workspace, "contentItem"), { recursive: true });
-  mkdirSync(join(workspace, ".claude", "agents"), { recursive: true });
-  mkdirSync(join(workspace, ".claude", "skills"), { recursive: true });
-
-  // Copy plugin files (ONLY if bootstrap needed)
-  if (!existsSync(join(workspace, "CLAUDE.md"))) {
-    const pluginPath = path.resolve(process.cwd(), "plugins/looplia-writer");
-
-    // Copy README.md → CLAUDE.md
-    copyFileSync(
-      join(pluginPath, "README.md"),
-      join(workspace, "CLAUDE.md")
-    );
-
-    // Copy agents/
-    copySync(
-      join(pluginPath, "agents"),
-      join(workspace, ".claude", "agents")
-    );
-
-    // Copy skills/
-    copySync(
-      join(pluginPath, "skills"),
-      join(workspace, ".claude", "skills")
-    );
-  }
-
-  return workspace;
-}
-```
-
-**Key insight:** Plugin files are not templates—they're deployed to workspace and actively read by agent at runtime.
-
-### CLAUDE.md: Agent Brain
-
-**Source:** `plugins/looplia-writer/README.md` (renamed to CLAUDE.md on deployment)
-
-This is the **primary instruction document** that the agent reads and follows. It defines:
-
-1. **Mission Statement**
-   ```markdown
-   # Content Transformation Agent
-
-   Your mission: Transform diverse content into complete writing kits
-   that help writers develop their ideas effectively.
-   ```
-
-2. **Workspace Architecture**
-   ```markdown
-   ## Workspace Structure
-
-   ~/.looplia/
-   ├── CLAUDE.md (these instructions)
-   ├── user-profile.json (personalization)
-   ├── contentItem/{id}/
-   │   ├── content.md (input)
-   │   ├── summary.json (your output)
-   │   ├── ideas.json (your output)
-   │   └── outline.json (your output)
-   └── .claude/
-       ├── agents/ (subagent definitions)
-       └── skills/ (specialized capabilities)
-   ```
-
-3. **Task Definitions** - When asked to summarize, generate ideas, or build kit:
-   ```markdown
-   ## Task: Summarize Content
-
-   When asked to summarize content:
-   1. Use content-analyzer subagent to analyze contentItem/{id}/content.md
-   2. The subagent will:
-      - Detect source type (podcast, article, transcript, etc.)
-      - Use media-reviewer skill (9-step analysis)
-      - Use content-documenter skill (structure all 15 fields)
-      - Write output to contentItem/{id}/summary.json
-   3. Read the generated summary.json
-   4. Return JSON matching ContentSummary schema
-   ```
-
-4. **Schema References** - Complete JSON schemas for all output types
-
-5. **Quality Rules** - Constraints and requirements:
-   ```markdown
-   ## Quality Requirements
-
-   - Headlines: 10-200 characters, compelling hooks
-   - TL;DR: 20-500 characters, captures essence
-   - Bullets: 1-10 items, each under 100 characters
-   - Core Ideas: Include real examples from source
-   - Quotes: Verbatim with [timestamps] if available
-   - All fields must be non-empty
-   ```
-
-### SKILL.md: Specialized Capabilities
-
-**Format:** Frontmatter metadata + markdown instructions
-
-```markdown
----
-name: media-reviewer
-description: Deep content analysis using 9-step methodology
-model: claude-3-5-sonnet-20241022
----
-
-# Media Reviewer Skill
-
-Expertise in analyzing content structure, narrative flow, and core ideas.
-
-## What This Skill Does
-
-- Reads content completely and understands context
-- Identifies narrative structure and key moments
-- Extracts important quotes with timestamps
-- Identifies themes and core concepts
-- Analyzes documentary/analytical angle
-
-## 9-Step Process
-
-1. **Read Everything**: Ingest all content completely
-2. **Understand Context**: What type of content? Who made it? For whom?
-3. **Identify Structure**: Sections, segments, flow patterns
-4. **Extract Core Ideas**: Main concepts, arguments, principles
-5. **Track Narrative Flow**: How does content build over time?
-6. **Find Key Moments**: Turning points, climaxes, important quotes
-7. **Extract Quotes**: Verbatim text with [HH:MM:SS] timestamps
-8. **Identify Themes**: Recurring patterns, topics, ideas
-9. **Documentary Angle**: What's the analytical/structural perspective?
-
-## Important Rules
-
-- All steps are conducted in thinking space (not written output)
-- Analysis feeds into content-documenter skill
-- Output is implicit (used by next skill)
-```
-
-#### Key Skills in looplia
-
-| Skill | Purpose | Used By | Output |
-|-------|---------|---------|--------|
-| **media-reviewer** | 9-step deep analysis | content-analyzer | Implicit (thinking) |
-| **content-documenter** | Structure all 15 fields | content-analyzer | summary.json (15 fields) |
-| **user-profile-reader** | Calculate relevance score | content-analyzer | Implicit (feeds score) |
-| **writing-enhancer** | Personalize for user style | idea-generator | Implicit (shapes output) |
-
----
-
-## Subagents & Multi-Step Orchestration
-
-### What is a Subagent?
-
-A subagent is an autonomous agent spawned by parent agent to handle a specific subtask. Unlike skills (which are invoked inline), subagents run in their own session with their own instructions.
-
-**When to use:**
-- Complex multi-step task (5+ steps)
-- Task requires specialized expertise
-- Task produces significant intermediate output
-- Parent agent needs result before proceeding
-
-**When NOT to use:**
-- Simple single-step operation → use skill
-- Result feeds into another skill → use skill
-- Need to maintain tight context → use skill
-
-### Subagent Definitions
-
-Located in `plugins/looplia-writer/agents/`
-
-#### content-analyzer.md
+Each subagent is defined in a markdown file with frontmatter:
 
 ```markdown
 ---
 name: content-analyzer
-description: Deep content analysis using media-reviewer skill
+description: Deep content analysis using media-reviewer and content-documenter skills
 model: haiku
-tools: Read, Skill
+tools: Read, Write, Skill
 ---
 
 # Content Analyzer Agent
 
-Analyze content deeply to understand structure, themes, narrative flow,
-AND detect source type.
+Analyze content deeply to understand structure, themes, and narrative flow.
+
+## Input
+
+Read content from: `contentItem/{id}/content.md`
 
 ## Task
 
-1. Read content from `contentItem/{id}/content.md`
-2. **Detect source type** - Analyze characteristics:
-   - Podcast/Transcript: Timestamps, speaker markers, dialogue
-   - Article: Headline, sections, byline, date published
-   - YouTube: Video description, timestamps, channel
-   - Twitter: Tweet format, hashtags, engagement metrics
-   - Raw Text: Unstructured, no clear formatting
-   - Academic: Citations, references, methodology
-3. Use **media-reviewer** skill for 9-step analysis
-4. Use **content-documenter** skill for structured output
-5. Write output to: `contentItem/{id}/summary.json`
+1. **Detect Source Type** - Analyze content characteristics:
+   - Podcast: Timestamps, speaker markers, dialogue format
+   - Article: Headline, sections, byline
+   - Transcript: Speaker labels, time codes
+   - etc.
+
+2. **Use media-reviewer skill** for 9-step deep analysis
+
+3. **Use content-documenter skill** to structure all 15 summary fields
 
 ## Output
 
-Return enriched ContentSummary JSON with:
-- All 15 fields (core + documentary)
-- **detectedSource**: podcast, transcript, article, youtube, twitter, text, or other
+Write to: `contentItem/{id}/summary.json`
+
+Return the complete ContentSummary JSON.
 ```
 
-**Key feature:** Subagent's job is to detect source type (via analysis) and populate `detectedSource` field, which CLI then uses to generate meaningful ID.
+### Subagent Autonomy
 
-#### idea-generator.md
+Subagents make their own decisions:
+- **What skills to invoke** (based on content type)
+- **How to interpret content** (using their expertise)
+- **What to emphasize** (based on user profile)
+- **How to structure output** (following their training)
 
-```markdown
----
-name: idea-generator
-description: Generate writing hooks, angles, and questions
-model: haiku
-tools: Read, Skill
----
-
-# Idea Generator Agent
-
-Transform content summary into writing ideas that engage your audience.
-
-## Task
-
-1. Read `contentItem/{id}/summary.json` (output from content-analyzer)
-2. Read `user-profile.json` (personalization)
-3. Generate:
-   - Hooks: 5 opening strategies (emotional, curiosity, controversy, statistic, story)
-   - Angles: 5 unique perspectives (with relevance scores)
-   - Questions: 5 provocative questions (analytical, practical, philosophical, comparative)
-4. Write to `contentItem/{id}/ideas.json`
-```
-
-#### writing-kit-builder.md (Future)
-
-Will orchestrate full pipeline:
-```
-Parent: Summarize → Get summary
-       ↓ Invoke idea-generator subagent
-       ├─ Generate ideas
-       ├─ Calculate outline
-       └─ Return WritingKit
-```
-
-### Invoking Subagents
-
-In CLAUDE.md, subagents are invoked via instructions:
-
-```markdown
-## Task: Summarize Content
-
-When asked to summarize:
-1. Use content-analyzer subagent to analyze contentItem/{id}/content.md
-2. The subagent will:
-   - Read content
-   - Detect source type
-   - Apply media-reviewer skill
-   - Apply content-documenter skill
-   - Write summary.json
-3. Read contentItem/{id}/summary.json
-4. Return the JSON as structured output
-```
-
-**Mechanism:** Agent SDK's `Skill` tool spawns subagent when invoked:
-
-```
-Agent reads: "Use content-analyzer subagent..."
-             ↓
-SDK invokes Skill tool with subagent definition
-             ↓
-Subagent runs in separate session
-             ↓
-Subagent produces contentItem/{id}/summary.json
-             ↓
-Parent agent reads summary.json
-             ↓
-Parent returns result
-```
+The main agent doesn't tell them HOW to do their job - only WHAT to produce.
 
 ---
 
-## Workspace: File-Based State Management
+## Skills: Reusable Expertise
 
-### Principle: Filesystem as Source of Truth
+### What is a Skill?
 
-Unlike traditional architectures that pass context through memory, looplia persists all state in workspace files. This enables:
+A skill is a **focused capability** that subagents invoke for specific expertise:
 
-1. **Between-command continuity**: Kit command can read summary from previous summarize
-2. **Debugging**: All intermediate outputs available in `~/.looplia/`
-3. **Audit trail**: Complete history of agent decisions
-4. **Portability**: Workspace can be backed up, shared, archived
-5. **Agent reasoning**: Agent can read previous results and reason about them
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SKILL: media-reviewer                                                      │
+│  File: .claude/skills/media-reviewer/SKILL.md                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  PURPOSE: Deep 9-step content analysis                                      │
+│                                                                             │
+│  9-STEP PROCESS:                                                            │
+│    1. Read Everything - Ingest all content completely                       │
+│    2. Understand Context - Type, creator, audience                          │
+│    3. Identify Structure - Sections, flow patterns                          │
+│    4. Extract Core Ideas - Main concepts, arguments                         │
+│    5. Track Narrative Flow - How content builds over time                   │
+│    6. Find Key Moments - Turning points, climaxes                           │
+│    7. Extract Quotes - Verbatim with [HH:MM:SS] timestamps                  │
+│    8. Identify Themes - Recurring patterns                                  │
+│    9. Documentary Angle - Analytical perspective                            │
+│                                                                             │
+│  OUTPUT: Implicit (feeds into content-documenter)                           │
+└─────────────────────────────────────────────────────────────────────────────┘
 
-### Workspace Structure
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SKILL: content-documenter                                                  │
+│  File: .claude/skills/content-documenter/SKILL.md                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  PURPOSE: Structure analysis into 15 summary fields                         │
+│                                                                             │
+│  PRODUCES:                                                                  │
+│    • headline, tldr, bullets, tags                                          │
+│    • sentiment, category, score                                             │
+│    • overview, keyThemes, detailedAnalysis                                  │
+│    • narrativeFlow, coreIdeas, importantQuotes                              │
+│    • context, relatedConcepts, detectedSource                               │
+│                                                                             │
+│  QUALITY RULES:                                                             │
+│    • Headlines: 10-200 chars, compelling hooks                              │
+│    • Quotes: Verbatim with timestamps if available                          │
+│    • All fields must be non-empty                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Skill vs Subagent
+
+| Aspect | Skill | Subagent |
+|--------|-------|----------|
+| Invoked by | Subagent | Main agent |
+| Scope | Single focused task | Multi-step workflow |
+| Output | Implicit or single file | Multiple files |
+| Session | Runs within subagent | Separate session |
+| Example | media-reviewer (analyze) | content-analyzer (coordinate) |
+
+---
+
+## Smart Continuation: Agent-Controlled Flow
+
+### The Key Innovation
+
+**The agent decides what work is needed** - not hardcoded TypeScript logic.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SMART CONTINUATION - Agent Checks Session State                            │
+│                                                                             │
+│  Prompt: "Build WritingKit for session: contentItem/abc123"                 │
+│                                                                             │
+│  Agent's First Action:                                                      │
+│    "Let me check which files already exist in contentItem/abc123/"          │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │ Session: contentItem/abc123/                                        │    │
+│  │                                                                     │    │
+│  │ Files Found:          Agent's Decision:                             │    │
+│  │ ─────────────────────────────────────────────────────────────────── │    │
+│  │ content.md only       → Run full workflow (3 subagents)             │    │
+│  │ + summary.json        → Skip content-analyzer, run 2 subagents      │    │
+│  │ + ideas.json          → Skip content-analyzer + idea-generator      │    │
+│  │ + writing-kit.json    → Return existing kit directly                │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                                                             │
+│  Agent Response (from debug log):                                           │
+│    "Perfect! All the necessary files already exist.                         │
+│     Let me read the writing-kit.json file and return it as structured       │
+│     output."                                                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Why Agent-Controlled?
+
+**Traditional approach (hardcoded):**
+```typescript
+// BAD: Logic in TypeScript
+if (!existsSync('summary.json')) {
+  await runSummarizer();
+}
+if (!existsSync('ideas.json')) {
+  await runIdeaGenerator();
+}
+// ... more hardcoded logic
+```
+
+**Agentic approach (v0.3.2):**
+```
+Prompt includes instructions:
+  "Check which files already exist in contentItem/{id}/
+   - summary.json → If exists, skip content-analyzer
+   - ideas.json → If exists, skip idea-generator
+   - writing-kit.json → If exists, return it directly"
+
+Agent makes the decision at runtime.
+```
+
+**Benefits of agent-controlled flow:**
+- Flexible: Agent can adapt to unexpected situations
+- Debuggable: Agent explains its decisions in logs
+- Tunable: Change behavior by editing CLAUDE.md
+- Consistent: Same logic regardless of entry point
+
+### --file vs --session-id
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  --file behavior (Fresh Session)                                            │
+│                                                                             │
+│  looplia kit --file article.md                                              │
+│       │                                                                     │
+│       └──► CLI creates NEW session with NEW session-id                      │
+│            └──► Starts from scratch (even if same file processed before)    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  --session-id behavior (Continue Session)                                   │
+│                                                                             │
+│  looplia kit --session-id abc123                                            │
+│       │                                                                     │
+│       └──► Agent reads contentItem/abc123/ and detects existing files       │
+│            ├─► Skips already-completed steps                                │
+│            └──► Continues from where it left off                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Workspace: File-Based State
+
+### Flat Folder Structure
+
+All files for a session live at the same level (no subfolders):
 
 ```
 ~/.looplia/
-│
-├── CLAUDE.md
-│   └─ Agent brain (markdown)
-│      Source: plugins/looplia-writer/README.md
-│      Deployed on first ensureWorkspace()
-│      Contains: tasks, schemas, rules, responsibilities
-│
-├── user-profile.json
-│   └─ Persistent user preferences
-│      Schema: { userId, topics: [{topic, interestLevel}], style: {tone, targetWordCount, voice} }
-│      Created by: looplia config commands
-│      Read by: agents (via user-profile-reader skill)
-│      Updated by: kit/summarize CLI args (if provided)
-│
-├── contentItem/
-│   └── {id}/
-│       ├── content.md
-│       │   └─ Input content with YAML frontmatter
-│       │      Frontmatter: id, title, source_type, source_url, published_at, metadata
-│       │      Body: raw content text
-│       │      Written by: summarizeCommand or kitCommand
-│       │      Read by: content-analyzer subagent
-│       │
-│       ├── summary.json
-│       │   └─ ContentSummary output (15 fields)
-│       │      Generated by: content-analyzer subagent (via media-reviewer + content-documenter skills)
-│       │      Schema enforced by: SUMMARY_OUTPUT_SCHEMA
-│       │      Contains: headline, tldr, bullets, tags, sentiment, category, score,
-│       │               overview, keyThemes, detailedAnalysis, narrativeFlow,
-│       │               coreIdeas, importantQuotes, context, relatedConcepts, detectedSource
-│       │      Read by: idea-generator subagent, kit command
-│       │
-│       ├── ideas.json
-│       │   └─ WritingIdeas output
-│       │      Generated by: idea-generator subagent
-│       │      Contains: hooks[], angles[], questions[]
-│       │      Read by: outline generator, kit command
-│       │
-│       ├── outline.json
-│       │   └─ Suggested outline structure
-│       │      Generated by: outline-generator subagent
-│       │      Contains: sections[], narrative flow
-│       │      Read by: kit command
-│       │
-│       └── sdk-debug.log
-│           └─ Execution trace for debugging
-│              Contains: all SDK messages, tool invocations, skills called
-│
-└── .claude/
-    ├── agents/
-    │   ├── content-analyzer.md
-    │   │   └─ Subagent definition
-    │   │      Source: plugins/looplia-writer/agents/content-analyzer.md
-    │   │      Deployed on first ensureWorkspace()
-    │   │      Invoked by: parent agent via Skill tool
-    │   │      Responsible for: source detection, media analysis
-    │   │
-    │   ├── idea-generator.md
-    │   │   └─ Subagent definition
-    │   │      Invoked by: parent agent (future)
-    │   │      Responsible for: generating hooks, angles, questions
-    │   │
-    │   └── writing-kit-builder.md (future)
-    │       └─ Orchestrates full kit workflow
-    │
-    └── skills/
-        ├── media-reviewer/
-        │   └── SKILL.md
-        │      Provides: 9-step content analysis
-        │      Invoked by: content-analyzer subagent
-        │
-        ├── content-documenter/
-        │   └── SKILL.md
-        │      Provides: structured output (15 fields)
-        │      Invoked by: content-analyzer subagent
-        │
-        ├── user-profile-reader/
-        │   └── SKILL.md
-        │      Provides: relevance scoring
-        │      Invoked by: analyzers and generators
-        │
-        └── writing-enhancer/
-            └── SKILL.md
-               Provides: style-aware personalization
-               Invoked by: idea-generator, outline-generator
+├── CLAUDE.md                    # Main agent instructions (from plugin)
+├── user-profile.json            # User preferences
+└── contentItem/
+    └── {session-id}/
+        ├── content.md           # Source content (input)
+        ├── summary.json         # From content-analyzer subagent
+        ├── ideas.json           # From idea-generator subagent
+        ├── outline.json         # From writing-kit-builder subagent
+        ├── writing-kit.json     # Final assembled output
+        └── sdk-debug.log        # Execution trace for debugging
 ```
 
-### File I/O Operations
+### File I/O Sequence
 
-**Writing Content:**
-```typescript
-await writeContentItem(content: ContentItem, workspace: string): Promise<string>
+| Step | Agent | Reads | Writes |
+|------|-------|-------|--------|
+| 1 | Main | CLAUDE.md, session folder (check state) | - |
+| 2 | content-analyzer | content.md | summary.json |
+| 3 | idea-generator | summary.json, user-profile.json | ideas.json |
+| 4 | writing-kit-builder | summary.json, ideas.json | outline.json, writing-kit.json |
+| 5 | Main | writing-kit.json | - (returns via StructuredOutput) |
 
-// Creates:
-// ~/.looplia/contentItem/{id}/content.md
-//
-// Format: YAML frontmatter + raw text
-//
-// ---
-// id: article-2024-12-08-climate-change
-// title: "Climate Change: What We Know"
-// source:
-//   id: source-1
-//   type: custom
-//   url: https://example.com/article
-// publishedAt: 2024-12-08
-// metadata:
-//   author: Jane Doe
-//   language: en
-//   wordCount: 1500
-// ---
-//
-// [raw text content here]
-```
+### Why File-Based?
 
-**Reading Profile:**
-```typescript
-const profile = await readUserProfile(workspace: string): Promise<unknown>
-
-// Reads: ~/.looplia/user-profile.json
-// Returns: { userId: string, topics: [{topic, interestLevel}], style: {...} }
-```
-
-**Persisting Results:**
-```typescript
-// In summarizer.ts
-writeFileSync(
-  join(workspace, "contentItem", content.id, "summary.json"),
-  JSON.stringify(result.data, null, 2),
-  "utf-8"
-);
-
-// Makes available to:
-// - Kit command (reads for ideas generation)
-// - Idea generator subagent
-// - User for inspection
-```
+- **Auditability**: All intermediate outputs visible in `~/.looplia/`
+- **Debugging**: Can inspect what each subagent produced
+- **Continuation**: Resume interrupted sessions
+- **Portability**: Backup/share entire sessions
+- **Agent reasoning**: Agent can read and reason about previous results
 
 ---
 
-## End-to-End Data Flow: Summarize Command
+## Plugin System: Tune Without Coding
 
-### Full Sequence Diagram
+### The Plugin = The Brain
+
+The plugin directory contains all behavior definitions:
+
+```
+plugins/looplia-writer/
+├── README.md                    # → Deployed as CLAUDE.md (main agent brain)
+├── agents/
+│   ├── content-analyzer.md      # Subagent: content analysis
+│   ├── idea-generator.md        # Subagent: writing ideas
+│   └── writing-kit-builder.md   # Subagent: outline + assembly
+└── skills/
+    ├── media-reviewer/SKILL.md  # Skill: 9-step deep analysis
+    ├── content-documenter/SKILL.md # Skill: structure 15 fields
+    ├── user-profile-reader/SKILL.md # Skill: relevance scoring
+    └── writing-enhancer/SKILL.md # Skill: style personalization
+```
+
+### Customization Without Code
+
+**Want better headlines?**
+→ Edit `skills/content-documenter/SKILL.md`:
+```markdown
+## Headline Requirements
+- Must be 10-100 characters (was 10-200)
+- Must include a number or surprising fact
+- Must create curiosity gap
+```
+
+**Want different hook types?**
+→ Edit `agents/idea-generator.md`:
+```markdown
+## Hook Types
+Generate 5 hooks of these types:
+- Contrarian (challenge conventional wisdom)
+- Personal story (relatable experience)
+- Future prediction (what's coming)
+- Expert quote (authority backing)
+- Question (engage reader)
+```
+
+**Want different outline structure?**
+→ Edit `agents/writing-kit-builder.md`:
+```markdown
+## Outline Structure
+Create outline with these sections:
+- Hook (10% of word count)
+- Problem (20%)
+- Solution (40%)
+- Proof (20%)
+- Call to Action (10%)
+```
+
+### No Code Rebuild Needed
+
+1. Edit markdown files in `plugins/looplia-writer/`
+2. Run `looplia bootstrap` to deploy changes
+3. Run `looplia kit --file ...` with new behavior
+
+**This is the agentic advantage**: Behavior is defined in natural language, not code.
+
+---
+
+## End-to-End: Kit Command Flow
+
+### Complete Sequence Diagram
 
 ```
 User Terminal
      │
-     │ looplia summarize --file article.txt
+     │ looplia kit --file article.md --topics "ai,safety" --tone expert
      │
      ▼
-┌─────────────────────────────────────────────────────┐
-│ runSummarizeCommand (CLI)                           │
-├─────────────────────────────────────────────────────┤
-│ 1. Parse: file="article.txt", format="json", ...    │
-│ 2. Validate file exists & is readable               │
-└─────────────────────┬───────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────┐
-│ createContentItemFromFile()                         │
-├─────────────────────────────────────────────────────┤
-│ 1. Read file: article.txt                           │
-│ 2. Create ContentItem {                             │
-│      id: "cli-1733660400000",                       │
-│      title: "Article",                              │
-│      rawText: "[file contents]",                    │
-│      source: {...},                                 │
-│      metadata: {...}                                │
-│    }                                                │
-│ 3. Validate against ContentItemSchema (Zod)         │
-└─────────────────────┬───────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────┐
-│ ensureWorkspace()                                   │
-├─────────────────────────────────────────────────────┤
-│ 1. Expand ~/ → /Users/user/.looplia                 │
-│ 2. Create directories (if first run):               │
-│    - ~/.looplia/                                    │
-│    - ~/.looplia/contentItem/                        │
-│    - ~/.looplia/.claude/agents/                     │
-│    - ~/.looplia/.claude/skills/                     │
-│ 3. Bootstrap from plugin (if first run):            │
-│    - Copy plugins/looplia-writer/README.md          │
-│      → ~/.looplia/CLAUDE.md                         │
-│    - Copy plugins/looplia-writer/agents/            │
-│      → ~/.looplia/.claude/agents/                   │
-│    - Copy plugins/looplia-writer/skills/            │
-│      → ~/.looplia/.claude/skills/                   │
-│ 4. Return workspace path                            │
-└─────────────────────┬───────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────┐
-│ writeContentItem()                                  │
-├─────────────────────────────────────────────────────┤
-│ 1. Create: ~/.looplia/contentItem/cli-1733660400000/│
-│ 2. Write: content.md with YAML frontmatter          │
-│ 3. Return: "cli-1733660400000"                      │
-└─────────────────────┬───────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────┐
-│ createClaudeProviders()                             │
-├─────────────────────────────────────────────────────┤
-│ 1. Instantiate: summarizer, ideaGenerator, etc.     │
-│ 2. Wrap with usage tracking                         │
-│ 3. Return: { summarizer, idea, outline, ... }       │
-└─────────────────────┬───────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────┐
-│ providers.summarizer.summarizeWithUsage()           │
-├─────────────────────────────────────────────────────┤
-│ 1. ensureWorkspace() ← already done, confirm        │
-│ 2. writeContentItem(content, workspace)             │
-│    → ~/.looplia/contentItem/cli-1733660400000/      │
-│ 3. Build minimal prompt:                            │
-│    "Summarize content: contentItem/cli-1733.../... " │
-│ 4. Call: executeAgenticQuery<ContentSummary>()      │
-└─────────────────────┬───────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────┐
-│ Agent SDK Query Execution                           │
-│ (cwd = ~/.looplia/)                                 │
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│ AGENT SESSION STARTS                                │
-│ ├─ Model: claude-haiku-4-5-20251001                │
-│ ├─ Tools available: Read, Skill                     │
-│ ├─ Working directory: ~/.looplia/                   │
-│ └─ Output schema: SUMMARY_OUTPUT_SCHEMA (15 fields) │
-│                                                     │
-│ 1. Agent receives prompt:                           │
-│    "Summarize content: contentItem/cli-.../content.md"│
-│                                                     │
-│ 2. Agent reads CLAUDE.md (full instructions)        │
-│    └─ "When asked to summarize, use content-..."   │
-│                                                     │
-│ 3. Agent reads contentItem/cli-.../content.md       │
-│    └─ [full article text]                           │
-│                                                     │
-│ 4. Agent invokes content-analyzer subagent:         │
-│    └─ SDK spawns subagent with content-analyzer.md │
-│                                                     │
-│    ┌─ SUBAGENT SESSION ──────────────────────────┐  │
-│    │                                              │  │
-│    │ 1. Subagent reads: contentItem/cli-.../     │  │
-│    │    content.md                               │  │
-│    │                                              │  │
-│    │ 2. Subagent invokes media-reviewer skill:   │  │
-│    │    • 9-step analysis (implicit thinking)    │  │
-│    │      1. Read everything                     │  │
-│    │      2. Understand context                  │  │
-│    │      3. Identify structure                  │  │
-│    │      4. Extract core ideas                  │  │
-│    │      5. Track narrative flow                │  │
-│    │      6. Find key moments                    │  │
-│    │      7. Extract quotes + timestamps         │  │
-│    │      8. Identify themes                     │  │
-│    │      9. Documentary angle                   │  │
-│    │                                              │  │
-│    │ 3. Subagent invokes content-documenter:     │  │
-│    │    • Produces all 15 fields:                │  │
-│    │      headline, tldr, bullets, tags,         │  │
-│    │      sentiment, category, score,            │  │
-│    │      overview, keyThemes, detailed...,      │  │
-│    │      narrativeFlow, coreIdeas,              │  │
-│    │      importantQuotes, context,              │  │
-│    │      relatedConcepts, detectedSource        │  │
-│    │                                              │  │
-│    │ 4. Subagent returns ContentSummary JSON     │  │
-│    └──────────────────────────────────────────────┘  │
-│                                                     │
-│ 5. Parent agent receives summary JSON               │
-│    ├─ Validates against SUMMARY_OUTPUT_SCHEMA      │
-│    └─ Returns to provider                          │
-│                                                     │
-│ AGENT SESSION ENDS                                  │
-│                                                     │
-└─────────────────────┬───────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────┐
-│ Post-Processing in summarizeWithUsage()             │
-├─────────────────────────────────────────────────────┤
-│ 1. Persist summary to disk:                         │
-│    writeFileSync(                                   │
-│      ~/.looplia/contentItem/cli-.../summary.json,   │
-│      JSON.stringify(result.data)                    │
-│    )                                                │
-│                                                     │
-│ 2. Generate meaningful ID from detected source:     │
-│    source = result.data.detectedSource              │
-│             (e.g., "article")                       │
-│    date = "2024-12-08"                              │
-│    topic = extract from headline (e.g., "climate")  │
-│    meaningfulId = "article-2024-12-08-climate-..."  │
-│                                                     │
-│ 3. If ID changed, relocate folder:                  │
-│    renameSync(                                      │
-│      ~/.looplia/contentItem/cli-.../,               │
-│      ~/.looplia/contentItem/article-2024-12-08-.../ │
-│    )                                                │
-│                                                     │
-│ 4. Update contentId in summary.json                 │
-│                                                     │
-│ 5. Return {                                         │
-│      success: true,                                 │
-│      data: ContentSummary (with meaningful contentId),│
-│      usage: { inputTokens, outputTokens, costUsd }  │
-│    }                                                │
-└─────────────────────┬───────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────┐
-│ CLI Output Formatting                               │
-├─────────────────────────────────────────────────────┤
-│ 1. Check format arg (default: "json")               │
-│                                                     │
-│ 2. If format="json":                                │
-│    output = JSON.stringify(result.data, null, 2)   │
-│                                                     │
-│ 3. If format="markdown":                            │
-│    output = formatKitAsMarkdown(result.data)        │
-│    (transforms JSON to readable markdown)           │
-│                                                     │
-│ 4. Check output arg                                 │
-│                                                     │
-│ 5. If outputPath:                                   │
-│    writeFileSync(outputPath, output)                │
-│    Display: "Summary written to: {outputPath}"      │
-│                                                     │
-│ 6. Else (default):                                  │
-│    console.log(output)                              │
-│    (display to stdout)                              │
-└─────────────────────┬───────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────┐
-│ User sees output                                    │
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│ {                                                   │
-│   "contentId": "article-2024-12-08-climate-...",   │
-│   "headline": "Climate Change: What We Know",       │
-│   "tldr": "Recent research shows...",               │
-│   "bullets": ["Point 1", "Point 2", ...],          │
-│   ...                                               │
-│   "detectedSource": "article"                       │
-│ }                                                   │
-│                                                     │
-│ (Plus filesystem state in ~/.looplia/)              │
-│                                                     │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CLI: runKitCommand()                                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ 1. Parse arguments                                                          │
+│ 2. ensureWorkspace() → ~/.looplia/                                          │
+│ 3. writeContentItem() → contentItem/{session-id}/content.md                 │
+│ 4. Load/merge user profile with CLI args                                    │
+│ 5. createClaudeWritingKitProvider()                                         │
+│ 6. provider.buildKit(content, user) ← ONE SDK CALL                          │
+└──────────────────────────────┬──────────────────────────────────────────────┘
+                               │
+                               │ Minimal prompt:
+                               │ "Build WritingKit for session: contentItem/{id}"
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ MAIN AGENT SESSION                                                          │
+│ cwd: ~/.looplia/                                                            │
+│ tools: Read, Write, Glob, Task, AgentOutputTool, StructuredOutput           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│ Agent: "I'll help you build the WritingKit for the session.                 │
+│         Let me start by checking which files already exist."                │
+│                                                                             │
+│ → Glob contentItem/{id}/*.json                                              │
+│ → Result: ["content.md"] (only content exists)                              │
+│                                                                             │
+│ Agent: "Only content.md exists. I need to run all three subagents."         │
+│                                                                             │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ SUBAGENT: content-analyzer                                              │ │
+│ │ Invoked via: Task tool                                                  │ │
+│ ├─────────────────────────────────────────────────────────────────────────┤ │
+│ │ 1. Reads contentItem/{id}/content.md                                    │ │
+│ │ 2. Detects source type: "article"                                       │ │
+│ │ 3. Invokes media-reviewer skill (9-step analysis)                       │ │
+│ │ 4. Invokes content-documenter skill (15 fields)                         │ │
+│ │ 5. Writes contentItem/{id}/summary.json                                 │ │
+│ │ 6. Returns: "Summary created successfully"                              │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│ Agent: "Content analysis complete. Now generating ideas."                   │
+│                                                                             │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ SUBAGENT: idea-generator                                                │ │
+│ │ Invoked via: Task tool                                                  │ │
+│ ├─────────────────────────────────────────────────────────────────────────┤ │
+│ │ 1. Reads contentItem/{id}/summary.json                                  │ │
+│ │ 2. Reads user-profile.json (tone: expert, topics: ai, safety)           │ │
+│ │ 3. Generates 5 hooks (emotional, curiosity, controversy, stat, story)   │ │
+│ │ 4. Develops 5 angles with relevance scores                              │ │
+│ │ 5. Creates 5 thought-provoking questions                                │ │
+│ │ 6. Writes contentItem/{id}/ideas.json                                   │ │
+│ │ 7. Returns: "Ideas generated successfully"                              │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│ Agent: "Ideas generated. Now creating outline and assembling kit."          │
+│                                                                             │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ SUBAGENT: writing-kit-builder                                           │ │
+│ │ Invoked via: Task tool                                                  │ │
+│ ├─────────────────────────────────────────────────────────────────────────┤ │
+│ │ 1. Reads contentItem/{id}/summary.json                                  │ │
+│ │ 2. Reads contentItem/{id}/ideas.json                                    │ │
+│ │ 3. Reads user-profile.json (targetWordCount: 1000)                      │ │
+│ │ 4. Creates outline with word count distribution                         │ │
+│ │ 5. Assembles complete WritingKit                                        │ │
+│ │ 6. Writes contentItem/{id}/outline.json                                 │ │
+│ │ 7. Writes contentItem/{id}/writing-kit.json                             │ │
+│ │ 8. Returns: "WritingKit assembled successfully"                         │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│ Agent: "All subagents complete. Returning the WritingKit."                  │
+│                                                                             │
+│ → Read contentItem/{id}/writing-kit.json                                    │
+│ → Return via StructuredOutput tool                                          │
+│                                                                             │
+└──────────────────────────────┬──────────────────────────────────────────────┘
+                               │
+                               │ WritingKit JSON
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CLI: Output to user                                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ {                                                                           │
+│   "contentId": "test-ai-healthcare",                                        │
+│   "source": { "id": "...", "label": "...", "url": "..." },                  │
+│   "summary": {                                                              │
+│     "headline": "AI is Revolutionizing Healthcare...",                      │
+│     "tldr": "Artificial intelligence is transforming...",                   │
+│     "bullets": [...],                                                       │
+│     "tags": ["artificial intelligence", "healthcare", ...],                 │
+│     ...15 fields total                                                      │
+│   },                                                                        │
+│   "ideas": {                                                                │
+│     "hooks": [5 hooks],                                                     │
+│     "angles": [5 angles with relevance scores],                             │
+│     "questions": [5 questions]                                              │
+│   },                                                                        │
+│   "suggestedOutline": [7 sections with word estimates],                     │
+│   "meta": { "relevanceToUser": 0.85, "estimatedReadingTimeMinutes": 8 }     │
+│ }                                                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Key Transitions
 
-1. **CLI → Workspace**: Content written to filesystem
-2. **Workspace → SDK**: Agent reads files via `Read` tool
-3. **SDK → Subagent**: Skill tool spawns content-analyzer
-4. **Subagent → Skills**: Invokes media-reviewer and content-documenter
-5. **Skills → JSON**: Produces structured output
-6. **JSON → Workspace**: Summary persisted to summary.json
-7. **Workspace → CLI**: Provider returns result
-8. **CLI → User**: Formatted output
+1. **CLI → SDK**: One prompt triggers entire workflow
+2. **Main Agent → CLAUDE.md**: Agent reads instructions
+3. **Main Agent → Session**: Agent checks existing files
+4. **Main Agent → Subagents**: Task tool spawns specialists
+5. **Subagents → Skills**: Invoke for specific expertise
+6. **Subagents → Workspace**: Write outputs as files
+7. **Main Agent → Output**: Return via StructuredOutput
 
 ---
 
-## End-to-End Data Flow: Kit Command
+## End-to-End: Summarize Command Flow
 
-### Complete Writing Kit Generation
+### Simplified Flow (Single Subagent)
 
 ```
-looplia kit --file article.txt --topics "ai,safety" --tone expert
+looplia summarize --file article.md
      │
-     ├─ Phase 1: Prepare Workspace (same as summarize)
-     │  ├─ Parse args
-     │  ├─ Create ContentItem from file
-     │  ├─ ensureWorkspace()
-     │  └─ writeContentItem()
-     │
-     ├─ Phase 2: Load/Prepare User Profile
-     │  ├─ Try reading ~/.looplia/user-profile.json
-     │  ├─ Override with CLI args:
-     │  │  - --topics "ai,safety" → user.topics = [{topic: "ai", interestLevel: 3}, ...]
-     │  │  - --tone expert → user.style.tone = "expert"
-     │  │  - --word-count 2000 → user.style.targetWordCount = 2000
-     │  └─ Write to ~/.looplia/user-profile.json
-     │
-     └─ Phase 3: Build Writing Kit (sequential SDK calls)
-        ├─ Step 1: Summarize Content
-        │  └─ (Same as summarize command)
-        │     → ContentSummary (15 fields)
-        │
-        ├─ Step 2: Generate Ideas
-        │  ├─ Provider: createClaudeProviders().idea
-        │  ├─ Input: ContentSummary + UserProfile
-        │  ├─ SDK call (v0.3 approach - not yet agentic):
-        │  │   Sends full hardcoded prompt with summary details
-        │  └─ Output: WritingIdeas {
-        │       hooks: [{text, type}, ...],
-        │       angles: [{title, description, relevanceScore}, ...],
-        │       questions: [{question, type}, ...]
-        │     }
-        │
-        ├─ Step 3: Generate Outline
-        │  ├─ Provider: createClaudeProviders().outline
-        │  ├─ Input: ContentSummary + WritingIdeas + UserProfile
-        │  ├─ SDK call:
-        │  │   Sends full prompt with summary & ideas details
-        │  └─ Output: OutlineSection[] {
-        │       heading, notes, estimatedWords
-        │     }
-        │
-        └─ Step 4: Assemble WritingKit
-           └─ Combine: ContentSummary + WritingIdeas + Outline
-              → WritingKit {
-                  contentId, source, summary, ideas, suggestedOutline, meta
-                }
-
-Output: JSON or Markdown format
+     └──► ONE prompt: "Summarize content: contentItem/{id}"
+               │
+               └──► Main Agent:
+                    ├─ Read CLAUDE.md
+                    ├─ Invoke content-analyzer subagent
+                    │   ├─ Read content.md
+                    │   ├─ Use media-reviewer skill
+                    │   ├─ Use content-documenter skill
+                    │   └─ Write summary.json
+                    ├─ Read summary.json
+                    └─ Return ContentSummary JSON
 ```
 
-**Note:** v0.3.1 enhances step 1 (summarize) with full agentic flow. Steps 2-3 will be enhanced in v0.4 to use CLAUDE.md-based instruction sets.
+The summarize command uses the same pattern but only needs one subagent.
 
 ---
 
-## Responsibility Mapping: Agent ↔ Subagent ↔ Skill
+## Design Rationale
 
-### For Summarize Command
+### Why One Prompt Per Command?
 
+**Problem**: Multiple SDK calls lose context
 ```
-┌─────────────────────────────────────────────────────────────┐
-│ MAIN AGENT (via minimal prompt)                             │
-│ ────────────────────────────────────────────────────────────│
-│ RESPONSIBILITY:                                             │
-│  • Read CLAUDE.md instructions                              │
-│  • Route to appropriate subagent (content-analyzer)         │
-│  • Wait for subagent result                                 │
-│  • Return ContentSummary JSON                               │
-│                                                             │
-│ ACTIONS:                                                    │
-│  • Read: contentItem/{id}/content.md                        │
-│  • Invoke: content-analyzer subagent via Skill tool        │
-│  • Read: contentItem/{id}/summary.json (result)             │
-│  • Return: JSON matching SUMMARY_OUTPUT_SCHEMA              │
-│                                                             │
-│ INPUT: Minimal prompt                                       │
-│        "Summarize content: contentItem/{id}"               │
-│                                                             │
-│ OUTPUT: ContentSummary (15 fields)                          │
-└──────────────────┬───────────────────────────────────────────┘
-                   │ Invokes
-         ┌─────────┴───────────┐
-         │                     │
-         ▼                     │
-┌──────────────────────┐       │
-│ SUBAGENT:            │       │
-│ content-analyzer     │       │
-├──────────────────────┤       │
-│ RESPONSIBILITY:      │       │
-│  • Detect source type │      │
-│  • Analyze content   │       │
-│  • Invoke skills     │       │
-│  • Produce summary   │       │
-│                      │       │
-│ ACTIONS:             │       │
-│  • Read content.md   │       │
-│  • Analyze to detect:│       │
-│    - Podcast signals?│       │
-│    - Article format? │       │
-│    - Transcript marks│       │
-│  • Invoke skills:    │       │
-│    - media-reviewer  │       │
-│    - content-doc     │       │
-│  • Write summary.json│       │
-│                      │       │
-│ INPUT: content.md    │       │
-│ OUTPUT: summary.json │       │
-│ (15 fields +         │       │
-│  detectedSource)     │       │
-└──────┬───────────┬───┘       │
-       │           │           │
-       ▼           ▼           │
-┌────────────┐  ┌──────────────┐
-│ SKILL:     │  │ SKILL:       │
-│ media-     │  │ content-     │
-│ reviewer   │  │ documenter   │
-├────────────┤  ├──────────────┤
-│ RESPONSI.. │  │ RESPONSI...  │
-│  • 9-step  │  │  • Format    │
-│    analysis│  │    all 15    │
-│           │  │    fields    │
-│ ACTION:   │  │             │
-│  • Think  │  │ ACTION:     │
-│    deeply │  │  • Produce  │
-│  • (not   │  │    JSON     │
-│    output)│  │  • Validate │
-│           │  │    min len  │
-│ INPUT: n/a│  │  • Include  │
-│ OUTPUT:   │  │    quotes   │
-│ (implicit)│  │    with [t] │
-└────────────┘  │             │
-                │ INPUT: (from│
-                │ media-re..) │
-                │             │
-                │ OUTPUT:     │
-                │ 15-field    │
-                │ JSON        │
-                └──────────────┘
+Call 1: "Summarize this" → Summary
+Call 2: "Generate ideas from [summary text pasted]" → Ideas
+Call 3: "Create outline from [summary + ideas pasted]" → Outline
+```
+Each call is independent. Agent can't reason about the workflow.
+
+**Solution**: One call, agent orchestrates
+```
+Call 1: "Build WritingKit for session X"
+        Agent reads files, invokes subagents, maintains context
 ```
 
-### For Kit Command (Full Pipeline)
+### Why Main Agent as Simple Orchestrator?
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│ MAIN AGENT (via CLI trigger)                                 │
-│ ───────────────────────────────────────────────────────────── │
-│ RESPONSIBILITY:                                              │
-│  • Read user profile                                         │
-│  • Orchestrate pipeline:                                     │
-│    1. Summarize content                                      │
-│    2. Generate ideas (future: agentic)                       │
-│    3. Create outline (future: agentic)                       │
-│    4. Assemble WritingKit                                    │
-│                                                              │
-│ IMPLEMENTED AS: buildWritingKit() in core service layer      │
-│                 (not yet via agentic agent)                  │
-│                                                              │
-│ INPUT: ContentItem + UserProfile                             │
-│ OUTPUT: WritingKit (summary + ideas + outline)               │
-└───────────────────────────────────────────────────────────────┘
-         │           │           │
-         ▼           ▼           ▼
-      ┌────────┐ ┌────────┐ ┌────────┐
-      │Summary │ │Ideas   │ │Outline │
-      │Provider│ │Provider│ │Provider│
-      └────────┘ └────────┘ └────────┘
-         │           │           │
-      (See above) (v0.3 - not yet agentic)
-```
-
-**Key insight:** v0.3.1 enhances summarization to be fully agentic. Steps 2-3 will be enhanced in v0.4 to follow same agent-reads-CLAUDE.md pattern.
-
-### Responsibility by Component
-
-| Component | Summarize | Ideas | Outline |
-|-----------|-----------|-------|---------|
-| **Main Agent** | Routes to content-analyzer subagent | Direct SDK call (hardcoded prompt) | Direct SDK call (hardcoded prompt) |
-| **Subagent** | Analyzes content, invokes skills | (None yet) | (None yet) |
-| **Skill** | media-reviewer (9-step), content-documenter (15 fields) | (None) | (None) |
-| **Provider** | Returns ContentSummary | Returns WritingIdeas | Returns OutlineSection[] |
-| **CLI** | Displays summary JSON/Markdown | Embedded in kit | Embedded in kit |
-
----
-
-## Design Rationale: Why This Architecture
-
-### Problem: v0.3 Lost Context
-
-Version 0.3 called three separate SDK sessions:
-
+**Problem**: Complex orchestrator = complex bugs
 ```typescript
-// v0.3 - Three independent calls
-const summary = await summarizer.summarize(content);    // Call 1
-const ideas = await ideaGenerator.generateIdeas(summary); // Call 2
-const outline = await outlineGenerator.generateOutline(summary, ideas); // Call 3
+// BAD: Business logic in orchestrator
+if (contentType === 'podcast') {
+  summary = await podcastAnalyzer.analyze(content);
+} else if (contentType === 'article') {
+  summary = await articleAnalyzer.analyze(content);
+}
+// More conditions, more bugs
 ```
 
-**Issues:**
-1. **Lost Context**: Each call is independent; agent can't reason about previous results
-2. **Hardcoded Prompts**: 200+ lines of English prompts in TypeScript
-3. **Plugin Files Unused**: README.md, SKILL.md files deployed but never read
-4. **Limited Output**: Only requested 7 of 15 summary fields
-5. **No Source Detection**: No way to generate meaningful IDs
-6. **Workflow Fixed**: No flexibility to change task flow without code
-
-### Solution: Single Agent Session (v0.3.1)
-
-**New approach:**
+**Solution**: Simple orchestrator, smart subagents
 ```
-CLI prompt: "Summarize content: contentItem/{id}"
-        ↓
-Agent reads: CLAUDE.md (full instructions)
-        ↓
-Agent reads: contentItem/{id}/content.md (content)
-        ↓
-Agent thinks: "According to CLAUDE.md, I should use content-analyzer"
-        ↓
-Agent invokes: content-analyzer subagent
-        ↓
-Subagent invokes: media-reviewer skill + content-documenter skill
-        ↓
-Skills produce: All 15 summary fields
-        ↓
-Agent returns: Complete ContentSummary JSON
+Main Agent: "Invoke content-analyzer for contentItem/{id}"
+content-analyzer: (autonomously detects type and handles appropriately)
 ```
 
-**Benefits:**
-1. ✅ **Maintained Context**: Single session preserves all analysis
-2. ✅ **Markdown as Source of Truth**: CLAUDE.md defines behavior
-3. ✅ **Plugin Files Active**: Agent reads and uses markdown files
-4. ✅ **Complete Output**: All 15 fields populated
-5. ✅ **Source Detection**: Generates meaningful IDs (podcast-2024-12-08-...)
-6. ✅ **Flexible Workflow**: Edit CLAUDE.md to change task sequence
-7. ✅ **Customizable**: No code rebuild needed for instruction changes
+### Why Agent-Controlled Flow?
 
-### Architectural Decisions
+**Problem**: Hardcoded flow is inflexible
+```typescript
+// BAD: Can't change order without code change
+await summarize();
+await generateIdeas();
+await createOutline();
+```
 
-#### Decision 1: File-Based State Management
+**Solution**: Agent reads instructions and decides
+```markdown
+# CLAUDE.md
+Check existing files. Only run what's needed.
+If summary exists, skip to ideas.
+If ideas exist, skip to outline.
+```
 
-**Why not in-memory context transfer?**
-- ✅ Workspace is auditable (can inspect all outputs)
-- ✅ Between-command continuity (kit reads summary from previous run)
-- ✅ Portable (backup ~/.looplia/ to preserve analysis)
-- ✅ Debuggable (sdk-debug.log shows full execution)
-- ✅ Shareable (can pass contentItem/{id}/ to others)
+### Why File-Based State?
 
-#### Decision 2: Plugin Files as Active Runtime
+**Problem**: In-memory state is invisible
+- Can't debug what happened
+- Can't resume after failure
+- Can't audit agent decisions
 
-**Why deploy CLAUDE.md instead of hardcoding prompts?**
-- ✅ Customizable without code rebuild
-- ✅ Version-controlled (plugin updates tracked in git)
-- ✅ Readable (markdown is human-friendly)
-- ✅ Collaborative (non-engineers can edit instructions)
-- ✅ Plugin ecosystem ready (future: plugins for different use cases)
+**Solution**: Everything in files
+- `summary.json` shows exactly what analyzer produced
+- `sdk-debug.log` shows agent's reasoning
+- Can resume with `--session-id` after any failure
 
-#### Decision 3: Subagents vs. Inline Processing
+### Why Plugin-Based Customization?
 
-**Why spawn content-analyzer instead of inline analysis?**
-- ✅ Semantic separation (content analysis is distinct task)
-- ✅ Reusable (content-analyzer can be used by multiple parents)
-- ✅ Testable (subagent can be tested independently)
-- ✅ Scalable (future: multiple subagents in parallel)
-- ✅ Debuggable (subagent gets own session, own logs)
+**Problem**: Code changes are expensive
+- Requires developer
+- Requires rebuild
+- Requires deployment
 
-#### Decision 4: Skills for Specific Expertise
-
-**Why break media-reviewer and content-documenter into separate skills?**
-- ✅ **Separation of concerns**: Analysis (implicit) vs. Structure (explicit)
-- ✅ **Reusable**: Other agents can use media-reviewer
-- ✅ **Composable**: Can mix/match skills in different workflows
-- ✅ **Testable**: Each skill can be validated independently
-- ✅ **Versionable**: Can have media-reviewer v1, v2, etc.
-
-#### Decision 5: Minimal Prompts
-
-**Why not send full instructions in prompt?**
-- ✅ Keeps prompt concise (5 words vs. 200 lines)
-- ✅ Instructions in CLAUDE.md can be lengthy & detailed
-- ✅ Agent can reason about instructions (read & adapt)
-- ✅ Reduces token usage (instructions cached in workspace)
-- ✅ Makes flow visible (can see what prompt was sent)
+**Solution**: Markdown changes are cheap
+- Anyone can edit
+- No rebuild needed
+- Just run `looplia bootstrap`
 
 ---
 
-## Implementation Details
+## Implementation Reference
 
 ### Code Organization
 
@@ -1438,187 +899,100 @@ packages/
 ├── core/
 │   ├── src/
 │   │   ├── domain/           # TypeScript types
-│   │   ├── services/         # buildWritingKit orchestration
-│   │   ├── adapters/         # Mock providers for testing
+│   │   ├── services/         # buildWritingKit (deprecated path)
+│   │   ├── adapters/mock/    # Mock providers for testing
 │   │   └── validation/       # Zod schemas
-│   └── test/                 # Domain tests
+│   └── test/
 │
-└── provider/
-    └── src/
-        └── claude-agent-sdk/
-            ├── index.ts      # createClaudeProviders()
-            ├── summarizer.ts # (v0.3.1 - agentic)
-            ├── idea-generator.ts # (v0.3 - workflow)
-            ├── outline-generator.ts # (v0.3 - workflow)
-            ├── workspace.ts  # File management
-            ├── content-io.ts # Content serialization
-            ├── utils/
-            │   ├── query-wrapper.ts # executeAgenticQuery()
-            │   ├── error-mapper.ts
-            │   ├── schema-converter.ts
-            │   └── prompts.ts (deprecated)
-            └── config.ts     # SDK configuration
+├── provider/
+│   └── src/claude-agent-sdk/
+│       ├── writing-kit-provider.ts  # NEW: Single-call kit builder
+│       ├── summarizer.ts            # Single-call summarizer
+│       ├── workspace.ts             # File management
+│       ├── content-io.ts            # Content serialization
+│       └── config.ts
+│
+└── apps/cli/
+    └── src/commands/
+        ├── kit.ts           # Uses WritingKitProvider
+        ├── summarize.ts     # Uses ClaudeSummarizer
+        └── bootstrap.ts     # Deploys plugin to workspace
+
+plugins/looplia-writer/
+├── README.md                # → CLAUDE.md
+├── agents/
+│   ├── content-analyzer.md
+│   ├── idea-generator.md
+│   └── writing-kit-builder.md
+└── skills/
+    ├── media-reviewer/SKILL.md
+    ├── content-documenter/SKILL.md
+    ├── user-profile-reader/SKILL.md
+    └── writing-enhancer/SKILL.md
 ```
 
-### Type Safety
-
-All operations use TypeScript types from `packages/core`:
+### Key Types
 
 ```typescript
-// ContentItem (input)
-export type ContentItem = {
-  id: string;
-  title: string;
-  rawText: string;
-  source: Source;
-  url: string;
-  publishedAt?: string;
-  metadata: ContentMetadata;
-};
-
-// ContentSummary (output from summarize)
-export type ContentSummary = {
+// WritingKit (final output)
+type WritingKit = {
   contentId: string;
-  headline: string;
-  tldr: string;
-  bullets: string[];
-  tags: string[];
-  sentiment: "positive" | "neutral" | "negative";
-  category: string;
-  score: SummaryScore;
-  overview: string;
-  keyThemes: string[];
-  detailedAnalysis: string;
-  narrativeFlow: string;
-  coreIdeas: CoreIdea[];
-  importantQuotes: Quote[];
-  context: string;
-  relatedConcepts: string[];
-  detectedSource?: "podcast" | "transcript" | "article" | "youtube" | "twitter" | "text" | "other";
-};
-
-// WritingKit (output from kit command)
-export type WritingKit = {
-  contentId: string;
-  source: Source;
-  summary: ContentSummary;
-  ideas: WritingIdeas;
+  source: { id: string; label: string; url: string };
+  summary: ContentSummary;      // 15 fields
+  ideas: WritingIdeas;          // hooks, angles, questions
   suggestedOutline: OutlineSection[];
   meta: {
     relevanceToUser: number;
     estimatedReadingTimeMinutes: number;
   };
 };
-```
 
-### Error Handling
-
-**Validation errors** (fail fast):
-```typescript
-const validation = validateContentItem(content);
-if (!validation.success) {
-  console.error(`Error: ${validation.error.message}`);
-  process.exit(1);
-}
-```
-
-**SDK execution errors** (map & retry):
-```typescript
-const result = await executeAgenticQuery<ContentSummary>(...);
-if (!result.success) {
-  // Mapped error types: validation_error, network_error, rate_limit, unknown
-  console.error(`Error: ${result.error.message}`);
-  process.exit(1);
-}
-```
-
-**File system errors** (graceful fallback):
-```typescript
-try {
-  const profile = await readUserProfile(workspace);
-  // Use profile
-} catch {
-  // No profile found, create from CLI args
-  profile = createUserProfile(parseTopics(topicsArg), ...);
-}
+// Provider interface
+type WritingKitProvider = {
+  buildKit(content: ContentItem, user: UserProfile): Promise<ProviderResult<WritingKit>>;
+};
 ```
 
 ### Testing
 
-**Unit tests:** Individual components
-```typescript
-// test/domain/validation.test.ts
-test("ContentSummary validation accepts valid summary", () => {
-  const summary = { /* valid data */ };
-  const result = validateContentSummary(summary);
-  expect(result.success).toBe(true);
-});
-```
-
-**E2E tests:** Full CLI flow
-```typescript
-// test/e2e/cli.test.ts
-test("should generate meaningful content ID with detected source", async () => {
-  const { stdout } = await executeCommand("summarize", "--file", testFile);
-  const match = stdout.match(/^[a-z]+-/);
-  expect(match).toBeTruthy(); // ID starts with source type
-});
-```
-
-**Mock providers:** For testing without API key
-```typescript
-const summarizer = createMockSummarizer();
-const result = await summarizer.summarize(content);
-// Returns hardcoded mock summary
-```
-
----
-
-## Future Roadmap
-
-### v0.4: Complete Agentic Architecture
-
-**Goal:** Make ideas and outline generation fully agentic (like summarization)
-
-**Changes:**
-1. Update `CLAUDE.md` with ideas and outline task definitions
-2. Create `idea-generator` subagent (agentic) to replace workflow provider
-3. Create `outline-generator` subagent (agentic)
-4. Single SDK call for complete pipeline (summarize → ideas → outline)
-5. Ideas and outline steps read CLAUDE.md and invoke skills
-
-**Benefit:** Zero TypeScript code changes to alter workflow; edit markdown only
-
-### v0.5+: Plugin Ecosystem
-
-**Goal:** Support multiple plugins (looplia-coder, looplia-researcher, etc.)
-
-**Vision:**
-```
-plugins/
-├── looplia-writer/      # Content → writing kit (current)
-├── looplia-coder/       # Spec → code
-├── looplia-researcher/  # Topic → research report
-└── [community plugins]
-```
-
-**CLI:**
+**With mock provider (no API key):**
 ```bash
-looplia --plugin looplia-coder init-workspace
-looplia --plugin looplia-coder spec-to-code --file spec.md
+looplia kit --file article.md --mock
+```
+
+**With real API:**
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+looplia kit --file article.md
+```
+
+**Smart continuation test:**
+```bash
+# First run (creates all files)
+looplia kit --file article.md
+# Output: ✓ New session created: test-article
+
+# Second run (skips completed steps)
+looplia kit --session-id test-article
+# Agent: "All necessary files already exist. Returning existing kit."
 ```
 
 ---
 
 ## Conclusion
 
-Looplia-core v0.3.1 represents a paradigm shift from **provider-centric** (multiple SDK calls with hardcoded prompts) to **agent-centric** (single session with agent reading markdown instructions).
+Looplia-core v0.3.2 implements a **true agentic architecture** where:
 
-**The innovation:** By making workspace files the runtime environment and markdown the source of truth for behavior, looplia enables:
-- Customization without code changes
-- Complex agentic workflows with full context
-- Plugin-based extensibility
-- File-based auditability and reproducibility
+1. **One CLI command = One prompt = One agent session**
+2. **Main agent is a simple orchestrator** that reads CLAUDE.md and invokes subagents
+3. **Subagents are autonomous specialists** that make their own decisions
+4. **Smart continuation** is agent-controlled, not hardcoded
+5. **All behavior is defined in markdown** - edit plugins to tune without coding
 
-This architecture demonstrates how AI agents can orchestrate their own tasks, invoke specialized tools (skills), and coordinate multi-step workflows—all driven by natural language instructions in markdown files.
+**The key insight**: By making the agent responsible for workflow decisions (not TypeScript code), looplia enables:
+- Customization through natural language (edit markdown)
+- Autonomous problem-solving (agent adapts to situations)
+- Debuggable reasoning (agent explains decisions in logs)
+- Resumable workflows (file-based state)
 
+This architecture demonstrates how AI agents can orchestrate complex tasks autonomously, with humans providing only the initial trigger and tuning the instructions.

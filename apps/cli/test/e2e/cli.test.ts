@@ -1,7 +1,20 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { createTempDir, createTestFile, execCLI, readTestFile } from "../utils";
+import {
+  cleanupTestContentItems,
+  createTempDir,
+  createTestFile,
+  execCLI,
+  readTestFile,
+} from "../utils";
 
 // Regex patterns at top level for performance
 const SENTIMENT_PATTERN = /positive|neutral|negative/;
@@ -10,6 +23,11 @@ const CONTENT_ID_PATTERN = /^[a-z]+-/;
 
 describe("CLI E2E Tests", () => {
   let tempDir: { path: string; cleanup: () => void };
+
+  afterAll(() => {
+    // Clean up test-generated content items from ~/.looplia/contentItem/cli-*
+    cleanupTestContentItems();
+  });
 
   beforeEach(() => {
     tempDir = createTempDir();
@@ -49,14 +67,14 @@ describe("CLI E2E Tests", () => {
       const result = await execCLI(["--version"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia 0.3.1");
+      expect(result.stdout).toContain("looplia 0.3.2");
     });
 
     it("should show version with -v flag", async () => {
       const result = await execCLI(["-v"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia 0.3.1");
+      expect(result.stdout).toContain("looplia 0.3.2");
     });
 
     it("should error on unknown command", async () => {
@@ -279,22 +297,22 @@ describe("CLI E2E Tests", () => {
       expect(summary).toHaveProperty("bullets");
       expect(summary).toHaveProperty("tags");
 
-      // Verify contentId is displayed in output
-      expect(result.stdout).toContain(`Content ID: ${contentId}`);
+      // Verify sessionId is displayed in output
+      expect(result.stdout).toContain(`Session ID: ${contentId}`);
     });
 
-    it("should accept --content-id flag for kit command", async () => {
+    it("should accept --session-id flag for kit command", async () => {
       const result = await execCLI([
         "kit",
-        "--content-id",
+        "--session-id",
         "nonexistent-id",
         "--mock",
       ]);
 
-      // Should fail because content doesn't exist, but --content-id should be recognized
+      // Should fail because session doesn't exist, but --session-id should be recognized
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain(
-        'Error: Could not load content with ID "nonexistent-id"'
+        'Error: Session "nonexistent-id" not found'
       );
     });
   });
@@ -528,7 +546,7 @@ describe("CLI E2E Tests", () => {
 
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain(
-        "Error: Either --file or --content-id is required"
+        "Error: Either --file or --session-id is required"
       );
     });
 
