@@ -94,7 +94,10 @@ export const WRITING_KIT_OUTPUT_SCHEMA = {
           minItems: 1,
           maxItems: 20,
         },
-        sentiment: { type: "string", enum: ["positive", "neutral", "negative"] },
+        sentiment: {
+          type: "string",
+          enum: ["positive", "neutral", "negative"],
+        },
         category: { type: "string" },
         score: {
           type: "object",
@@ -183,7 +186,13 @@ export const WRITING_KIT_OUTPUT_SCHEMA = {
               text: { type: "string", minLength: 5 },
               type: {
                 type: "string",
-                enum: ["emotional", "curiosity", "controversy", "statistic", "story"],
+                enum: [
+                  "emotional",
+                  "curiosity",
+                  "controversy",
+                  "statistic",
+                  "story",
+                ],
               },
             },
             required: ["text", "type"],
@@ -215,7 +224,12 @@ export const WRITING_KIT_OUTPUT_SCHEMA = {
               question: { type: "string", minLength: 10 },
               type: {
                 type: "string",
-                enum: ["analytical", "practical", "philosophical", "comparative"],
+                enum: [
+                  "analytical",
+                  "practical",
+                  "philosophical",
+                  "comparative",
+                ],
               },
             },
             required: ["question", "type"],
@@ -251,6 +265,13 @@ export const WRITING_KIT_OUTPUT_SCHEMA = {
       additionalProperties: false,
     },
   },
-  required: ["contentId", "source", "summary", "ideas", "suggestedOutline", "meta"],
+  required: [
+    "contentId",
+    "source",
+    "summary",
+    "ideas",
+    "suggestedOutline",
+    "meta",
+  ],
   additionalProperties: false,
 } as const;

@@ -96,10 +96,14 @@ export function createClaudeWritingKitProvider(
       const prompt = buildMinimalKitPrompt(content.id);
 
       // Execute single agentic query for entire kit
-      return executeAgenticQuery<WritingKit>(prompt, WRITING_KIT_OUTPUT_SCHEMA, {
-        ...config,
-        workspace,
-      });
+      return executeAgenticQuery<WritingKit>(
+        prompt,
+        WRITING_KIT_OUTPUT_SCHEMA,
+        {
+          ...config,
+          workspace,
+        }
+      );
     },
   };
 }
