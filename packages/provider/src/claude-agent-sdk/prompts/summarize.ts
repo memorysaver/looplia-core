@@ -1,10 +1,10 @@
 import type { ContentItem, UserProfile } from "@looplia-core/core";
 
-/** Maximum content length before truncation (characters) */
-const MAX_CONTENT_LENGTH = 5000;
-
 /**
  * System prompt for content summarization
+ *
+ * @deprecated v0.3.1 uses agentic approach with CLAUDE.md + skills.
+ * This system prompt is only used for backward compatibility.
  */
 export const SUMMARIZE_SYSTEM_PROMPT = `You are an expert content analyst specializing in summarization and content intelligence.
 
@@ -27,50 +27,31 @@ Ensure all fields are populated with accurate, concise information.`;
 
 /**
  * Build user prompt for summarization
+ *
+ * @deprecated v0.3.1 uses minimal prompts with agentic approach.
+ * Use the summarizer with workspace setup instead.
+ *
+ * The v0.3.1 architecture uses:
+ * - Minimal prompt: "Summarize content: contentItem/{id}/content.md"
+ * - Agent reads CLAUDE.md for full instructions
+ * - Agent uses skills (media-reviewer, content-documenter) autonomously
+ * - Results stored in contentItem/{id}/results/
  */
 export function buildSummarizePrompt(
   content: ContentItem,
-  user?: UserProfile
+  _user?: UserProfile
 ): string {
-  const userContext = user
-    ? `
+  // Invoke content-analyzer subagent for deep content analysis
+  // Content is in folder structure: contentItem/{id}/content.md
+  // Results stored in: contentItem/{id}/results/summary.json
+  return `Invoke \`content-analyzer\` subagent to analyze and document content.
 
-User Context:
-- Topics: ${user.topics.map((t) => t.topic).join(", ")}
-- Tone: ${user.style.tone}
-- Word Count Target: ${user.style.targetWordCount}`
-    : "";
+Content location: contentItem/${content.id}/content.md
+Content ID: ${content.id}
 
-  const languageInfo = content.metadata?.language
-    ? `Language: ${content.metadata.language}`
-    : "";
-
-  const truncatedText =
-    content.rawText.length > MAX_CONTENT_LENGTH
-      ? `${content.rawText.substring(0, MAX_CONTENT_LENGTH)}...[truncated]`
-      : content.rawText;
-
-  return `Analyze and summarize the following content:
-
-Title: ${content.title}
-URL: ${content.url}
-Source: ${content.source.label ?? content.source.type}
-${languageInfo}
-
-Content:
-${truncatedText}
-${userContext}
-
-Provide a comprehensive summary with:
-1. A compelling headline (10-200 chars)
-2. A concise TL;DR (3-5 sentences, 20-500 chars)
-3. Key bullet points (1-10 items)
-4. Relevant topic tags (1-20 tags)
-5. Sentiment assessment (positive/neutral/negative)
-6. Content category (e.g., article, video, podcast)
-7. Relevance score to user interests (0-1)
-
-The contentId should be: ${content.id}
-
-Ensure output matches the ContentSummary JSON schema exactly.`;
+The content-analyzer agent will:
+1. Read the content file and metadata
+2. Use media-reviewer skill for deep analysis
+3. Use content-documenter skill for structured documentation
+4. Write results to contentItem/${content.id}/results/summary.json`;
 }

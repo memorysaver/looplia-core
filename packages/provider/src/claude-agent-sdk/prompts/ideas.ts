@@ -2,6 +2,9 @@ import type { ContentSummary, UserProfile } from "@looplia-core/core";
 
 /**
  * System prompt for idea generation
+ *
+ * @deprecated v0.3.1 uses agentic approach with CLAUDE.md + skills.
+ * This system prompt is only used for backward compatibility.
  */
 export const IDEAS_SYSTEM_PROMPT = `You are a creative writing consultant specializing in content ideation and storytelling.
 
@@ -23,38 +26,42 @@ Ensure ideas are creative, relevant, and actionable.`;
 
 /**
  * Build user prompt for idea generation
+ *
+ * @deprecated v0.3.1 uses single-call agentic approach for writing kit.
+ * Use createClaudeWritingKitProvider for the new architecture.
+ *
+ * The v0.3.1 architecture uses:
+ * - Single prompt: "Build writing kit for: contentItem/{id}/content.md"
+ * - Agent reads CLAUDE.md for full instructions
+ * - Ideas generated as part of the complete WritingKit
+ * - Results stored in contentItem/{id}/results/
  */
 export function buildIdeasPrompt(
   summary: ContentSummary,
   user: UserProfile
 ): string {
-  return `Generate writing ideas based on this content summary:
+  // Invoke idea-generator subagent for personalized writing ideas
+  // Uses content summary and user profile to generate hooks, angles, questions
+  return `Invoke \`idea-generator\` subagent to generate personalized writing ideas.
 
-Summary:
-- Headline: ${summary.headline}
-- TL;DR: ${summary.tldr}
-- Key Points: ${summary.bullets.join("; ")}
-- Tags: ${summary.tags.join(", ")}
-- Sentiment: ${summary.sentiment}
-- Category: ${summary.category}
+Content ID: ${summary.contentId}
+Summary Location: contentItem/${summary.contentId}/results/summary.json
+User Profile: ~/.looplia/user-profile.json
 
-User Profile:
+The idea-generator agent will:
+1. Read the ContentSummary from the results folder
+2. Read the user profile for personalization
+3. Generate 5 types of hooks: emotional, curiosity, controversy, statistic, story
+4. Suggest narrative angles with relevance scores (0-1 scale)
+5. Formulate exploratory questions: analytical, practical, philosophical, comparative
+6. Score all ideas based on user topics and interests
+7. Write results to contentItem/${summary.contentId}/results/ideas.json
+
+User Context:
 - Topics of Interest: ${user.topics.map((t) => `${t.topic} (level ${t.interestLevel})`).join(", ")}
-- Writing Tone: ${user.style.tone}
+- Preferred Tone: ${user.style.tone}
 - Target Word Count: ${user.style.targetWordCount}
-- Voice: ${user.style.voice}
+- Voice Style: ${user.style.voice}
 
-Generate:
-1. Hooks (1-5 items) - Attention-grabbing opening statements
-   - Types: emotional, curiosity, controversy, statistic, story
-
-2. Angles (1-5 items) - Unique narrative perspectives
-   - Include: title, description, relevanceScore (0-1)
-
-3. Questions (1-5 items) - Exploratory questions for deeper content
-   - Types: analytical, practical, philosophical, comparative
-
-The contentId should be: ${summary.contentId}
-
-Ensure output matches the WritingIdeas JSON schema exactly.`;
+Ensure output matches WritingIdeas JSON schema with relevance-scored angles.`;
 }

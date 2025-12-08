@@ -85,6 +85,23 @@ export async function runSummarizeCommand(args: string[]): Promise<void> {
     process.exit(1);
   }
 
+  // Display summary metadata
+  console.log("\n✓ Content summarized successfully\n");
+  if (result.data.contentId) {
+    console.log(`Content ID: ${result.data.contentId}`);
+  }
+  if (result.data.detectedSource) {
+    console.log(`Source Type: ${result.data.detectedSource}`);
+  }
+  console.log(`Saved to: ~/.looplia/contentItem/${result.data.contentId}/\n`);
+
+  // Display next steps
+  if (result.data.contentId) {
+    console.log(
+      `Next step: looplia kit --content-id ${result.data.contentId}\n`
+    );
+  }
+
   // Format output
   let output: string;
   if (format === "markdown") {

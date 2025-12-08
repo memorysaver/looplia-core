@@ -5,8 +5,15 @@ import type { ContentItem } from "@looplia-core/core";
 /**
  * Write ContentItem to workspace as markdown file with frontmatter
  *
- * Creates a markdown file in contentItem/ directory with YAML frontmatter
- * containing metadata and the raw content text.
+ * Creates a flat folder structure for each content item:
+ * ```
+ * contentItem/{id}/
+ * ├── content.md          (original content with metadata)
+ * ├── summary.json        (content-analyzer output)
+ * ├── ideas.json          (idea-generator output)
+ * ├── outline.json        (outline generation output)
+ * └── writing-kit.json    (final assembled WritingKit)
+ * ```
  *
  * @param content - ContentItem to write
  * @param workspace - Workspace directory path
@@ -23,10 +30,12 @@ export async function writeContentItem(
   content: ContentItem,
   workspace: string
 ): Promise<string> {
-  const contentDir = join(workspace, "contentItem");
-  await mkdir(contentDir, { recursive: true });
+  const itemDir = join(workspace, "contentItem", content.id);
 
-  const filePath = join(contentDir, `${content.id}.md`);
+  // Create flat folder structure: contentItem/{id}/
+  await mkdir(itemDir, { recursive: true });
+
+  const filePath = join(itemDir, "content.md");
 
   // Build metadata section
   const metadataLines: string[] = [];

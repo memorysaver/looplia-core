@@ -1,6 +1,7 @@
 ---
 name: user-profile-reader
-description: Read user profile from workspace and provide personalization context for content analysis and idea generation.
+description: Read user profile from workspace and calculate content relevance.
+Use to personalize output based on user interests.
 ---
 
 # User Profile Reader Skill
@@ -9,32 +10,83 @@ Read and interpret user preferences for content personalization.
 
 ## What This Skill Does
 
-- Reads `user-profile.json` from workspace
-- Scores content relevance to user topics
-- Provides personalization context to other skills
+- Reads `user-profile.json` from workspace root
+- Provides user context to other processing
+- Calculates relevance scores for content
 
-## Input
+## User Profile Location
 
-- Path to user-profile.json (default: ~/.looplia/user-profile.json)
+`~/.looplia/user-profile.json`
 
-## Output
+## User Profile Schema
 
-UserProfile object with:
-- userId
-- topics: Array of { topic, interestLevel (1-5) }
-- style: { tone, targetWordCount, voice }
+```json
+{
+  "userId": "string",
+  "topics": [
+    { "topic": "string", "interestLevel": 1-5 }
+  ],
+  "style": {
+    "tone": "beginner" | "intermediate" | "expert" | "mixed",
+    "targetWordCount": 100-10000,
+    "voice": "first-person" | "third-person" | "instructional"
+  }
+}
+```
 
-## Relevance Scoring
+## Relevance Scoring Algorithm
 
-Calculate relevance score (0-1) by:
-1. For each user topic, assign weight = interestLevel / 5
-2. Check if content tags/themes match topic (case-insensitive)
-3. Sum matched weights / sum total weights
-4. Return score between 0 and 1
+Calculate `score.relevanceToUser` (0-1):
 
-## Usage
+```
+1. For each user topic:
+   - weight = interestLevel / 5
+   - matched = content tags/themes contain topic (case-insensitive)
 
-Other skills can invoke this skill to:
-- Score content relevance
-- Tailor narrative angles to user tone
-- Match writing style preferences
+2. Calculate score:
+   - matchedWeight = sum of weights for matched topics
+   - totalWeight = sum of all topic weights
+   - score = matchedWeight / totalWeight
+
+3. If no user topics defined:
+   - score = 0.5 (neutral)
+```
+
+## Example Calculation
+
+User profile:
+```json
+{
+  "topics": [
+    { "topic": "AI", "interestLevel": 5 },
+    { "topic": "productivity", "interestLevel": 3 },
+    { "topic": "cooking", "interestLevel": 2 }
+  ]
+}
+```
+
+Content tags: ["AI", "safety", "alignment"]
+
+Calculation:
+- AI: matched, weight = 5/5 = 1.0 (contributes to matchedWeight)
+- productivity: not matched, weight = 3/5 = 0.6 (contributes to totalWeight only)
+- cooking: not matched, weight = 2/5 = 0.4 (contributes to totalWeight only)
+- matchedWeight = 1.0
+- totalWeight = 1.0 + 0.6 + 0.4 = 2.0
+- score = 1.0 / 2.0 = 0.5
+
+## Usage in Other Skills
+
+When content-documenter needs relevance score:
+1. Read user-profile.json
+2. Compare content tags/themes to user topics
+3. Apply algorithm above
+4. Return score in `score.relevanceToUser` field
+
+## Handling Edge Cases
+
+- **No user profile file:** Use score = 0.5
+- **Empty topics array:** Use score = 0.5
+- **Invalid JSON:** Use score = 0.5, log warning
+- **All topics matched:** score = 1.0
+- **No topics matched:** score = 0.0

@@ -57,7 +57,7 @@ describe("runKitCommand", () => {
     }).toThrow("process.exit called");
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("--file is required")
+      expect.stringContaining("Either --file or --content-id is required")
     );
     expect(mockExit).toHaveBeenCalledWith(1);
   });

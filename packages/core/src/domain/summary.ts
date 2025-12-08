@@ -64,4 +64,16 @@ export type ContentSummary = {
 
   /** Related topics and concepts mentioned */
   relatedConcepts: string[];
+
+  // ─── Detection Fields (source detection) ───
+
+  /** Auto-detected source type for intelligent ID generation */
+  detectedSource?:
+    | "podcast"
+    | "transcript"
+    | "article"
+    | "youtube"
+    | "twitter"
+    | "text"
+    | "other";
 };

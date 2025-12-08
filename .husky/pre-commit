@@ -1,8 +1,14 @@
-bun test
-
 #!/bin/sh
 # Exit on any error
 set -e
+
+# Check types first (fastest to fail)
+echo "🔍 Checking types..."
+bun run check-types
+
+# Run tests
+echo "🧪 Running tests..."
+bun test
 
 # Check if there are any staged files
 if [ -z "$(git diff --cached --name-only)" ]; then

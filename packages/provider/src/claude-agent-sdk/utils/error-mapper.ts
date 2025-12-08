@@ -105,7 +105,7 @@ export function mapSdkError(message: SDKResultMessage): {
         success: false,
         error: {
           type: "unknown",
-          message: "Unknown SDK error",
+          message: `Unknown SDK error (subtype: ${(message as Record<string, unknown>).subtype}, errors: ${getErrorMessages(message)})`,
         },
       };
   }

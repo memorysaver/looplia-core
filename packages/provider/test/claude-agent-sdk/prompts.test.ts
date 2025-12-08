@@ -28,19 +28,18 @@ describe("prompts", () => {
     it("should build prompt with content details", () => {
       const prompt = buildSummarizePrompt(testContent);
 
-      expect(prompt).toContain(testContent.title);
-      expect(prompt).toContain(testContent.url);
+      // v0.3.1 uses minimal agentic prompt with subagent invocation
+      expect(prompt).toContain("content-analyzer");
       expect(prompt).toContain(testContent.id);
-      expect(prompt).toContain("ContentSummary");
+      expect(prompt).toContain("contentItem");
     });
 
     it("should include user context when provided", () => {
       const prompt = buildSummarizePrompt(testContent, testUser);
 
-      expect(prompt).toContain("User Context");
-      expect(prompt).toContain("artificial intelligence");
-      expect(prompt).toContain(testUser.style.tone);
-      expect(prompt).toContain(String(testUser.style.targetWordCount));
+      // v0.3.1 uses minimal prompt; user context is handled by agent reading CLAUDE.md
+      expect(prompt).toContain("content-analyzer");
+      expect(prompt).toContain(testContent.id);
     });
 
     it("should not include user context when not provided", () => {
@@ -57,8 +56,10 @@ describe("prompts", () => {
 
       const prompt = buildSummarizePrompt(longContent);
 
-      expect(prompt).toContain("[truncated]");
-      expect(prompt.length).toBeLessThan(longContent.rawText.length);
+      // v0.3.1 uses minimal prompt; content is stored in file, not embedded in prompt
+      expect(prompt).toContain("content-analyzer");
+      expect(prompt).toContain(longContent.id);
+      expect(prompt).toContain("contentItem");
     });
   });
 
@@ -71,10 +72,10 @@ describe("prompts", () => {
     it("should build prompt with summary details", () => {
       const prompt = buildIdeasPrompt(testSummary, testUser);
 
-      expect(prompt).toContain(testSummary.headline);
-      expect(prompt).toContain(testSummary.tldr);
+      // v0.3.1 uses minimal prompt; full details come from CLAUDE.md
       expect(prompt).toContain(testSummary.contentId);
-      expect(prompt).toContain("WritingIdeas");
+      expect(prompt).toContain("idea-generator");
+      expect(prompt).toContain("contentItem");
     });
 
     it("should include user profile details", () => {

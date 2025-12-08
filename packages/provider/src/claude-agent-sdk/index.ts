@@ -34,6 +34,7 @@ export {
   IDEAS_OUTPUT_SCHEMA,
   OUTLINE_OUTPUT_SCHEMA,
   SUMMARY_OUTPUT_SCHEMA,
+  WRITING_KIT_OUTPUT_SCHEMA,
 } from "./utils/schema-converter";
 export type { WorkspaceOptions } from "./workspace";
 // Re-export workspace utilities
@@ -45,6 +46,9 @@ export {
   readUserProfile,
   writeUserProfile,
 } from "./workspace";
+// Re-export v0.3.1 writing kit provider
+export type { WritingKitProvider } from "./writing-kit-provider";
+export { createClaudeWritingKitProvider } from "./writing-kit-provider";
 
 /**
  * Claude-powered providers bundle with usage tracking
