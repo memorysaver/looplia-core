@@ -1,3 +1,5 @@
+import { appendFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
 import type {
@@ -17,6 +19,9 @@ const RETRY_MAX_DELAY_MS = 30_000;
 
 /** Cached workspace paths to avoid repeated filesystem checks */
 const workspaceCache = new Map<string, string>();
+
+/** Regex to extract content ID from prompt */
+const CONTENT_ID_REGEX = /contentItem\/([^\s/]+)/;
 
 /**
  * Get or initialize workspace with caching
@@ -260,6 +265,37 @@ export async function executeQueryWithRetry<T>(
 }
 
 /**
+ * Extract content ID from agentic prompt
+ */
+function extractContentIdFromPrompt(prompt: string): string | null {
+  const match = prompt.match(CONTENT_ID_REGEX);
+  return match ? match[1] : null;
+}
+
+/**
+ * Initialize debug log file for SDK execution
+ */
+function initDebugLog(logPath: string): void {
+  const timestamp = new Date().toISOString();
+  writeFileSync(
+    logPath,
+    `Agent SDK Execution Log - ${timestamp}\n${"=".repeat(60)}\n\n`
+  );
+}
+
+/**
+ * Append message to debug log
+ */
+function logSdkMessage(
+  logPath: string,
+  message: Record<string, unknown>
+): void {
+  const timestamp = new Date().toISOString();
+  const logEntry = `[${timestamp}] ${JSON.stringify(message, null, 2)}\n\n`;
+  appendFileSync(logPath, logEntry);
+}
+
+/**
  * Execute a true agentic query (v0.3.1 architecture)
  *
  * Uses minimal prompt with Read and Skill tools enabled.
@@ -305,6 +341,15 @@ export async function executeAgenticQuery<T>(
         resolvedConfig.useFilesystemExtensions
       ));
 
+    // Initialize debug logging for SDK execution
+    const contentId = extractContentIdFromPrompt(prompt);
+    let debugLogPath: string | null = null;
+    if (contentId) {
+      debugLogPath = join(workspace, "contentItem", contentId, "sdk-debug.log");
+      initDebugLog(debugLogPath);
+      logSdkMessage(debugLogPath, { type: "prompt", content: prompt });
+    }
+
     // Execute SDK query with agentic tools (Read + Skill)
     const result = query({
       prompt,
@@ -324,6 +369,11 @@ export async function executeAgenticQuery<T>(
 
     // Process async generator - query() returns AsyncGenerator<SDKMessage, void>
     for await (const message of result) {
+      // Log all messages for debugging
+      if (debugLogPath) {
+        logSdkMessage(debugLogPath, message as Record<string, unknown>);
+      }
+
       if (message.type !== "result") {
         continue;
       }
