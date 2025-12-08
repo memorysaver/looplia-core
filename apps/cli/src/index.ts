@@ -3,7 +3,7 @@ import { runConfigCommand } from "./commands/config";
 import { runKitCommand } from "./commands/kit";
 import { runSummarizeCommand } from "./commands/summarize";
 
-const VERSION = "0.3.1";
+const VERSION = "0.3.2";
 
 function printHelp(): void {
   console.log(`

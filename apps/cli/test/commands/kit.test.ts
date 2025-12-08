@@ -1,6 +1,19 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  spyOn,
+} from "bun:test";
 import { runKitCommand } from "../../src/commands/kit";
-import { createTempDir, createTestFile, readTestFile } from "../utils";
+import {
+  cleanupTestContentItems,
+  createTempDir,
+  createTestFile,
+  readTestFile,
+} from "../utils";
 
 // Mock process.exit to prevent test termination
 const mockExit = spyOn(process, "exit").mockImplementation((() => {
@@ -11,6 +24,11 @@ describe("runKitCommand", () => {
   let tempDir: { path: string; cleanup: () => void };
   let consoleLogSpy: ReturnType<typeof spyOn>;
   let consoleErrorSpy: ReturnType<typeof spyOn>;
+
+  afterAll(() => {
+    // Clean up test-generated content items from ~/.looplia/contentItem/cli-*
+    cleanupTestContentItems();
+  });
 
   beforeEach(() => {
     tempDir = createTempDir();

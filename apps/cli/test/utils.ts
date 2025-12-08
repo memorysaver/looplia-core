@@ -1,6 +1,12 @@
 import { spawn } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import {
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -83,4 +89,22 @@ export function createTestFile(
  */
 export function readTestFile(filepath: string): string {
   return readFileSync(filepath, "utf-8");
+}
+
+/**
+ * Clean up test-generated content items from ~/.looplia/contentItem/
+ * Removes folders matching the cli-{timestamp} pattern created during tests
+ */
+export function cleanupTestContentItems(): void {
+  const contentItemPath = join(homedir(), ".looplia", "contentItem");
+  try {
+    const entries = readdirSync(contentItemPath);
+    for (const entry of entries) {
+      if (entry.startsWith("cli-")) {
+        rmSync(join(contentItemPath, entry), { recursive: true, force: true });
+      }
+    }
+  } catch {
+    // Ignore if directory doesn't exist
+  }
 }
