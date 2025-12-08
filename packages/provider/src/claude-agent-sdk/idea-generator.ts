@@ -6,9 +6,18 @@ import type {
 } from "@looplia-core/core";
 
 import type { ClaudeAgentConfig, ProviderResultWithUsage } from "./config";
-import { buildIdeasPrompt, IDEAS_SYSTEM_PROMPT } from "./prompts/ideas";
 import { executeQueryWithRetry } from "./utils/query-wrapper";
 import { IDEAS_OUTPUT_SCHEMA } from "./utils/schema-converter";
+import { ensureWorkspace, writeUserProfile } from "./workspace";
+
+/**
+ * Build minimal prompt for idea generation (v0.3.1 agentic architecture)
+ *
+ * The agent reads CLAUDE.md for full instructions.
+ */
+function buildMinimalIdeasPrompt(contentId: string): string {
+  return `Generate writing ideas for content: ${contentId}`;
+}
 
 /**
  * Claude-powered idea generator provider
@@ -52,18 +61,26 @@ export function createClaudeIdeaGenerator(
       return this.generateIdeasWithUsage(summary, user);
     },
 
-    generateIdeasWithUsage(summary, user) {
+    async generateIdeasWithUsage(summary, user) {
+      // Ensure workspace exists
+      const workspace = await ensureWorkspace({
+        baseDir: config?.workspace,
+      });
+      await writeUserProfile(workspace, user);
+
+      // Use minimal prompt - agent reads CLAUDE.md for full instructions
       const prompt = config?.promptBuilder
         ? config.promptBuilder({ summary, user })
-        : buildIdeasPrompt(summary, user);
-
-      const systemPrompt = config?.systemPrompt ?? IDEAS_SYSTEM_PROMPT;
+        : buildMinimalIdeasPrompt(summary.contentId);
 
       return executeQueryWithRetry<WritingIdeas>(
         prompt,
-        systemPrompt,
+        undefined, // No system prompt - agent uses CLAUDE.md
         IDEAS_OUTPUT_SCHEMA,
-        config
+        {
+          ...config,
+          workspace,
+        }
       );
     },
   };

@@ -10,7 +10,7 @@ import {
   validateUserProfile,
 } from "@looplia-core/core";
 import {
-  createClaudeProviders,
+  buildWritingKitAgentic,
   ensureWorkspace,
   readUserProfile,
   writeContentItem,
@@ -163,15 +163,15 @@ async function loadUserProfile(
   );
 }
 
-function createProviders(useMock: boolean) {
-  if (useMock) {
-    return {
-      summarizer: createMockSummarizer(),
-      idea: createMockIdeaGenerator(),
-      outline: createMockOutlineGenerator(),
-    };
-  }
-  return createClaudeProviders();
+/**
+ * Create mock providers for testing (uses 3-call flow)
+ */
+function createMockProviders() {
+  return {
+    summarizer: createMockSummarizer(),
+    idea: createMockIdeaGenerator(),
+    outline: createMockOutlineGenerator(),
+  };
 }
 
 export async function runKitCommand(args: string[]): Promise<void> {
@@ -222,13 +222,14 @@ export async function runKitCommand(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  const contentId = await writeContentItem(contentValidation.data, workspace);
-  console.error(`✓ Content written to workspace: ${contentId}`);
-
-  const providers = createProviders(useMock);
-
   console.error("⏳ Processing content...");
-  const result = await buildWritingKit(contentValidation.data, user, providers);
+
+  // Use different flow based on mock/real mode
+  // Mock: 3-provider flow (for testing without API)
+  // Real: Single agentic call (v0.3.1 architecture)
+  const result = useMock
+    ? await buildWritingKit(contentValidation.data, user, createMockProviders())
+    : await buildWritingKitAgentic(contentValidation.data, user, { workspace });
 
   if (!result.success) {
     console.error(`Error: ${result.error.message}`);

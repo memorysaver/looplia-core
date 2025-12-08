@@ -17,15 +17,10 @@ export { validateConfig } from "./config";
 export { writeContentItem } from "./content-io";
 export type { ClaudeIdeaProvider } from "./idea-generator";
 export { createClaudeIdeaGenerator } from "./idea-generator";
+// Re-export kit builder for single-call agentic flow (v0.3.1)
+export { buildWritingKitAgentic } from "./kit-builder";
 export type { ClaudeOutlineProvider } from "./outline-generator";
 export { createClaudeOutlineGenerator } from "./outline-generator";
-export { buildIdeasPrompt, IDEAS_SYSTEM_PROMPT } from "./prompts/ideas";
-export { buildOutlinePrompt, OUTLINE_SYSTEM_PROMPT } from "./prompts/outline";
-// Re-export prompt builders for customization
-export {
-  buildSummarizePrompt,
-  SUMMARIZE_SYSTEM_PROMPT,
-} from "./prompts/summarize";
 export type { ClaudeSummarizerProvider } from "./summarizer";
 // Re-export factory functions
 export { createClaudeSummarizer } from "./summarizer";
@@ -34,6 +29,7 @@ export {
   IDEAS_OUTPUT_SCHEMA,
   OUTLINE_OUTPUT_SCHEMA,
   SUMMARY_OUTPUT_SCHEMA,
+  WRITING_KIT_SCHEMA,
 } from "./utils/schema-converter";
 export type { WorkspaceOptions } from "./workspace";
 // Re-export workspace utilities

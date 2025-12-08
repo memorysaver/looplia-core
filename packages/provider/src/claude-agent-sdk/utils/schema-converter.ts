@@ -52,3 +52,41 @@ export const OUTLINE_OUTPUT_SCHEMA = {
   required: ["sections"],
   additionalProperties: false,
 } as const;
+
+/**
+ * JSON Schema for complete WritingKit response (v0.3.1 agentic architecture)
+ *
+ * This schema is for the SDK response containing summary, ideas, and outline.
+ * The contentId, source, and meta fields are added by the kit-builder after the call.
+ */
+export const WRITING_KIT_SCHEMA = {
+  type: "object",
+  properties: {
+    summary: SUMMARY_OUTPUT_SCHEMA,
+    ideas: IDEAS_OUTPUT_SCHEMA,
+    suggestedOutline: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          heading: {
+            type: "string",
+            description: "Clear, descriptive section title",
+          },
+          notes: {
+            type: "string",
+            description: "Key points to cover in this section",
+          },
+          estimatedWords: {
+            type: "number",
+            description: "Approximate word count for this section",
+          },
+        },
+        required: ["heading", "notes"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["summary", "ideas", "suggestedOutline"],
+  additionalProperties: false,
+} as const;

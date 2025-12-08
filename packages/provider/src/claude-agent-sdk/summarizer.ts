@@ -6,12 +6,19 @@ import type {
 } from "@looplia-core/core";
 
 import type { ClaudeAgentConfig, ProviderResultWithUsage } from "./config";
-import {
-  buildSummarizePrompt,
-  SUMMARIZE_SYSTEM_PROMPT,
-} from "./prompts/summarize";
+import { writeContentItem } from "./content-io";
 import { executeQueryWithRetry } from "./utils/query-wrapper";
 import { SUMMARY_OUTPUT_SCHEMA } from "./utils/schema-converter";
+import { ensureWorkspace, writeUserProfile } from "./workspace";
+
+/**
+ * Build minimal prompt for summarization (v0.3.1 agentic architecture)
+ *
+ * The agent reads CLAUDE.md for full instructions and uses skills autonomously.
+ */
+function buildMinimalSummarizePrompt(contentId: string): string {
+  return `Summarize content: contentItem/${contentId}.md`;
+}
 
 /**
  * Claude-powered summarizer provider
@@ -56,18 +63,29 @@ export function createClaudeSummarizer(
       return this.summarizeWithUsage(content, user);
     },
 
-    summarizeWithUsage(content, user) {
+    async summarizeWithUsage(content, user) {
+      // Ensure workspace exists and write content
+      const workspace = await ensureWorkspace({
+        baseDir: config?.workspace,
+      });
+      await writeContentItem(content, workspace);
+      if (user) {
+        await writeUserProfile(workspace, user);
+      }
+
+      // Use minimal prompt - agent reads CLAUDE.md for full instructions
       const prompt = config?.promptBuilder
         ? config.promptBuilder(content)
-        : buildSummarizePrompt(content, user);
-
-      const systemPrompt = config?.systemPrompt ?? SUMMARIZE_SYSTEM_PROMPT;
+        : buildMinimalSummarizePrompt(content.id);
 
       return executeQueryWithRetry<ContentSummary>(
         prompt,
-        systemPrompt,
+        undefined, // No system prompt - agent uses CLAUDE.md
         SUMMARY_OUTPUT_SCHEMA,
-        config
+        {
+          ...config,
+          workspace,
+        }
       );
     },
   };

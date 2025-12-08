@@ -107,14 +107,14 @@ function processResultMessage<T>(
  * Execute a query against the Claude Agent SDK with structured output
  *
  * @param prompt - User prompt to send
- * @param systemPrompt - System prompt for context
+ * @param systemPrompt - System prompt for context (undefined = agent uses CLAUDE.md)
  * @param jsonSchema - JSON Schema for structured output
  * @param config - Provider configuration
  * @returns Provider result with usage metrics
  */
 export async function executeQuery<T>(
   prompt: string,
-  systemPrompt: string,
+  systemPrompt: string | undefined,
   jsonSchema: Record<string, unknown>,
   config?: ClaudeAgentConfig
 ): Promise<ProviderResultWithUsage<T>> {
@@ -141,21 +141,32 @@ export async function executeQuery<T>(
       resolvedConfig.useFilesystemExtensions
     );
 
+    // Build query options - allow Read and Skill tools for agentic flow
+    type QueryOptions = Parameters<typeof query>[0]["options"];
+    const queryOptions: QueryOptions = {
+      model: resolvedConfig.model,
+      cwd: workspace,
+      permissionMode: "bypassPermissions",
+      allowDangerouslySkipPermissions: true,
+      allowedTools: resolvedConfig.useFilesystemExtensions
+        ? ["Read", "Skill"]
+        : [],
+      outputFormat: {
+        type: "json_schema",
+        schema: jsonSchema,
+      },
+    };
+
+    // Only add systemPrompt if provided (for agentic flow, we omit it so agent uses CLAUDE.md)
+    const effectiveSystemPrompt = config?.systemPrompt ?? systemPrompt;
+    if (effectiveSystemPrompt) {
+      queryOptions.systemPrompt = effectiveSystemPrompt;
+    }
+
     // Execute SDK query
     const result = query({
       prompt,
-      options: {
-        model: resolvedConfig.model,
-        cwd: workspace,
-        systemPrompt: config?.systemPrompt ?? systemPrompt,
-        permissionMode: "bypassPermissions",
-        allowDangerouslySkipPermissions: true,
-        allowedTools: resolvedConfig.useFilesystemExtensions ? ["Skill"] : [],
-        outputFormat: {
-          type: "json_schema",
-          schema: jsonSchema,
-        },
-      },
+      options: queryOptions,
     });
 
     // Process async generator - query() returns AsyncGenerator<SDKMessage, void>
@@ -185,14 +196,14 @@ export async function executeQuery<T>(
  * Execute a query with retry logic for transient errors
  *
  * @param prompt - User prompt to send
- * @param systemPrompt - System prompt for context
+ * @param systemPrompt - System prompt for context (undefined = agent uses CLAUDE.md)
  * @param jsonSchema - JSON Schema for structured output
  * @param config - Provider configuration
  * @returns Provider result with usage metrics
  */
 export async function executeQueryWithRetry<T>(
   prompt: string,
-  systemPrompt: string,
+  systemPrompt: string | undefined,
   jsonSchema: Record<string, unknown>,
   config?: ClaudeAgentConfig
 ): Promise<ProviderResultWithUsage<T>> {

@@ -7,9 +7,18 @@ import type {
 } from "@looplia-core/core";
 
 import type { ClaudeAgentConfig, ProviderResultWithUsage } from "./config";
-import { buildOutlinePrompt, OUTLINE_SYSTEM_PROMPT } from "./prompts/outline";
 import { executeQueryWithRetry } from "./utils/query-wrapper";
 import { OUTLINE_OUTPUT_SCHEMA } from "./utils/schema-converter";
+import { ensureWorkspace, writeUserProfile } from "./workspace";
+
+/**
+ * Build minimal prompt for outline generation (v0.3.1 agentic architecture)
+ *
+ * The agent reads CLAUDE.md for full instructions.
+ */
+function buildMinimalOutlinePrompt(contentId: string): string {
+  return `Generate article outline for content: ${contentId}`;
+}
 
 /**
  * Claude-powered outline generator provider
@@ -58,18 +67,26 @@ export function createClaudeOutlineGenerator(
     },
 
     async generateOutlineWithUsage(summary, ideas, user) {
+      // Ensure workspace exists
+      const workspace = await ensureWorkspace({
+        baseDir: config?.workspace,
+      });
+      await writeUserProfile(workspace, user);
+
+      // Use minimal prompt - agent reads CLAUDE.md for full instructions
       const prompt = config?.promptBuilder
         ? config.promptBuilder({ summary, ideas, user })
-        : buildOutlinePrompt(summary, ideas, user);
-
-      const systemPrompt = config?.systemPrompt ?? OUTLINE_SYSTEM_PROMPT;
+        : buildMinimalOutlinePrompt(summary.contentId);
 
       // Execute query expecting wrapped response
       const result = await executeQueryWithRetry<OutlineResponse>(
         prompt,
-        systemPrompt,
+        undefined, // No system prompt - agent uses CLAUDE.md
         OUTLINE_OUTPUT_SCHEMA,
-        config
+        {
+          ...config,
+          workspace,
+        }
       );
 
       // Unwrap the sections array from the response object
