@@ -86,6 +86,19 @@ export const ContentSummarySchema = z.object({
   importantQuotes: z.array(QuoteSchema).min(0).max(20),
   context: z.string().min(20),
   relatedConcepts: z.array(z.string()).min(0).max(15),
+
+  // Detection fields (source type detection)
+  detectedSource: z
+    .enum([
+      "podcast",
+      "transcript",
+      "article",
+      "youtube",
+      "twitter",
+      "text",
+      "other",
+    ])
+    .optional(),
 });
 
 // ─────────────────────────────────────────────────────────────

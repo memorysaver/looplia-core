@@ -1,6 +1,9 @@
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   buildWritingKit,
+  type ContentItem,
+  type ContentSummary,
   createMockIdeaGenerator,
   createMockOutlineGenerator,
   createMockSummarizer,
@@ -37,9 +40,11 @@ looplia kit - Build a complete writing kit from content
 
 Usage:
   looplia kit --file <path> [options]
+  looplia kit --content-id <id> [options]
 
 Options:
-  --file, -f         Path to content file (required)
+  --file, -f         Path to content file
+  --content-id       Content ID from previous summarize (reuse existing content)
   --format           Output format: json, markdown (default: json)
   --output, -o       Output file path (default: stdout)
   --topics           Comma-separated topics of interest
@@ -48,11 +53,14 @@ Options:
   --mock, -m         Use mock providers (no API key required)
   --help, -h         Show this help
 
+Note: Either --file or --content-id is required (but not both)
+
 Environment:
   ANTHROPIC_API_KEY  Required unless --mock is specified
 
 Example:
   looplia kit --file ./article.txt --topics "ai,productivity" --tone expert
+  looplia kit --content-id podcast-2024-12-08-ai-healthcare --tone expert
 `);
 }
 
@@ -122,6 +130,33 @@ function checkApiKey(useMock: boolean): void {
   process.exit(1);
 }
 
+function loadContentFromId(
+  workspace: string,
+  contentId: string
+): { content: ContentItem; summary: ContentSummary } {
+  const contentDir = join(workspace, "contentItem", contentId);
+  const summaryPath = join(contentDir, "summary.json");
+
+  try {
+    const summaryData = JSON.parse(
+      readFileSync(summaryPath, "utf-8")
+    ) as ContentSummary;
+
+    // Reconstruct ContentItem from summary data
+    const content: ContentItem = {
+      id: contentId,
+      title: summaryData.headline || "Untitled",
+      rawText: "", // We don't need the raw text for kit generation
+    };
+
+    return { content, summary: summaryData };
+  } catch (_error) {
+    console.error(`Error: Could not load content with ID "${contentId}"`);
+    console.error("Make sure you've run 'looplia summarize' first");
+    process.exit(1);
+  }
+}
+
 function applyCliOverrides(
   user: UserProfile,
   topicsArg: string | undefined,
@@ -183,8 +218,17 @@ export async function runKitCommand(args: string[]): Promise<void> {
   }
 
   const filePath = getArg(parsed, "file", "f");
-  if (!filePath) {
-    console.error("Error: --file is required");
+  const contentId = getArg(parsed, "content-id");
+
+  // Validate that either --file or --content-id is provided, but not both
+  if (!(filePath || contentId)) {
+    console.error("Error: Either --file or --content-id is required");
+    printKitHelp();
+    process.exit(1);
+  }
+
+  if (filePath && contentId) {
+    console.error("Error: Cannot use both --file and --content-id together");
     printKitHelp();
     process.exit(1);
   }
@@ -211,24 +255,40 @@ export async function runKitCommand(args: string[]): Promise<void> {
     wordCountArg
   );
 
-  const rawText = readContentFile(filePath);
-  const content = createContentItemFromFile(filePath, rawText);
+  // Load content either from file or from content ID
+  let content: ContentItem;
+  if (filePath) {
+    const rawText = readContentFile(filePath);
+    content = createContentItemFromFile(filePath, rawText);
 
-  const contentValidation = validateContentItem(content);
-  if (!contentValidation.success) {
-    console.error(
-      `Content validation error: ${contentValidation.error.message}`
+    const contentValidation = validateContentItem(content);
+    if (!contentValidation.success) {
+      console.error(
+        `Content validation error: ${contentValidation.error.message}`
+      );
+      process.exit(1);
+    }
+
+    const newContentId = await writeContentItem(
+      contentValidation.data,
+      workspace
     );
-    process.exit(1);
+    console.error(`✓ Content written to workspace: ${newContentId}`);
+    content = contentValidation.data;
+  } else {
+    // Load from existing content ID
+    const { content: loadedContent } = loadContentFromId(
+      workspace,
+      contentId ?? ""
+    );
+    console.error(`✓ Loaded content: ${contentId}`);
+    content = loadedContent;
   }
-
-  const contentId = await writeContentItem(contentValidation.data, workspace);
-  console.error(`✓ Content written to workspace: ${contentId}`);
 
   const providers = createProviders(useMock);
 
   console.error("⏳ Processing content...");
-  const result = await buildWritingKit(contentValidation.data, user, providers);
+  const result = await buildWritingKit(content, user, providers);
 
   if (!result.success) {
     console.error(`Error: ${result.error.message}`);

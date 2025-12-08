@@ -5,6 +5,8 @@ import { createTempDir, createTestFile, execCLI, readTestFile } from "../utils";
 
 // Regex patterns at top level for performance
 const SENTIMENT_PATTERN = /positive|neutral|negative/;
+const JSON_OBJECT_PATTERN = /\{[\s\S]*\}/;
+const CONTENT_ID_PATTERN = /^[a-z]+-/;
 
 describe("CLI E2E Tests", () => {
   let tempDir: { path: string; cleanup: () => void };
@@ -83,8 +85,10 @@ describe("CLI E2E Tests", () => {
       expect(result.exitCode).toBe(0);
       expect(result.stderr).toBe("");
 
-      // Parse and validate JSON output
-      const summary = JSON.parse(result.stdout);
+      // Extract JSON from stdout (metadata is printed before JSON)
+      const jsonMatch = result.stdout.match(JSON_OBJECT_PATTERN);
+      expect(jsonMatch).not.toBe(null);
+      const summary = JSON.parse(jsonMatch?.[0] ?? "");
       expect(summary).toHaveProperty("contentId");
       expect(summary).toHaveProperty("headline");
       expect(summary).toHaveProperty("tldr");
@@ -108,7 +112,9 @@ describe("CLI E2E Tests", () => {
       const result = await execCLI(["summarize", "-f", inputFile, "--mock"]);
 
       expect(result.exitCode).toBe(0);
-      const summary = JSON.parse(result.stdout);
+      const jsonMatch = result.stdout.match(JSON_OBJECT_PATTERN);
+      expect(jsonMatch).not.toBe(null);
+      const summary = JSON.parse(jsonMatch?.[0] ?? "");
       expect(summary).toHaveProperty("headline");
     });
 
@@ -234,8 +240,62 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      const summary = JSON.parse(result.stdout);
+      const jsonMatch = result.stdout.match(JSON_OBJECT_PATTERN);
+      expect(jsonMatch).not.toBe(null);
+      const summary = JSON.parse(jsonMatch?.[0] ?? "");
       expect(summary).toHaveProperty("headline");
+    });
+
+    it("should generate meaningful content ID with detected source", async () => {
+      const content = readFileSync(
+        join(__dirname, "../fixtures/sample-article.txt"),
+        "utf-8"
+      );
+      const inputFile = createTestFile(tempDir.path, "input.txt", content);
+
+      // Summarize content to generate ID
+      const result = await execCLI([
+        "summarize",
+        "--file",
+        inputFile,
+        "--mock",
+      ]);
+
+      expect(result.exitCode).toBe(0);
+
+      // Extract summary JSON
+      const jsonMatch = result.stdout.match(JSON_OBJECT_PATTERN);
+      expect(jsonMatch).not.toBe(null);
+      const summary = JSON.parse(jsonMatch?.[0] ?? "");
+
+      // Verify contentId is generated and returned
+      expect(summary).toHaveProperty("contentId");
+      const contentId = summary.contentId;
+      expect(contentId).toMatch(CONTENT_ID_PATTERN);
+
+      // Verify summary has all required fields
+      expect(summary).toHaveProperty("headline");
+      expect(summary).toHaveProperty("tldr");
+      expect(summary).toHaveProperty("bullets");
+      expect(summary).toHaveProperty("tags");
+
+      // Verify contentId is displayed in output
+      expect(result.stdout).toContain(`Content ID: ${contentId}`);
+    });
+
+    it("should accept --content-id flag for kit command", async () => {
+      const result = await execCLI([
+        "kit",
+        "--content-id",
+        "nonexistent-id",
+        "--mock",
+      ]);
+
+      // Should fail because content doesn't exist, but --content-id should be recognized
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain(
+        'Error: Could not load content with ID "nonexistent-id"'
+      );
     });
   });
 
@@ -467,7 +527,9 @@ describe("CLI E2E Tests", () => {
       const result = await execCLI(["kit"]);
 
       expect(result.exitCode).toBe(1);
-      expect(result.stderr).toContain("Error: --file is required");
+      expect(result.stderr).toContain(
+        "Error: Either --file or --content-id is required"
+      );
     });
 
     it("should error when file does not exist", async () => {

@@ -57,9 +57,27 @@ When asked to build a writing kit, follow these sequential steps:
 - Write to `contentItem/{id}/writing-kit.json`
 - **Return the assembled WritingKit JSON as the structured output**
 
+## Source Detection
+
+The content-analyzer subagent automatically detects the content source type by analyzing:
+
+### Detection Clues:
+- **Podcast/Audio Transcripts**: Timestamps (HH:MM:SS, MM:SS), speaker markers ("JOHN:", "[Speaker 1]"), conversational flow, dialogue
+- **Transcripts**: Conversational content, dialogue, timestamps, multiple speakers
+- **Articles/News**: Headline, sections with titles, structured paragraphs, byline, date published
+- **YouTube**: Video description format, timestamps, channel references
+- **Twitter/Social**: Tweet format, hashtags (#), mentions (@), engagement metrics
+- **Raw Text**: Unstructured notes, meeting notes, stream-of-consciousness, no clear formatting
+- **Academic**: Citations, references, academic language, abstract sections, methodology
+
+### Output the detected source:
+Include in summary JSON: `"detectedSource": "podcast"` (or appropriate type from: podcast, transcript, article, youtube, twitter, text, other)
+
+This enables intelligent ID generation based on content type (e.g., `podcast-2024-12-08-ai-healthcare`).
+
 ## ContentSummary Schema
 
-All 16 fields required:
+All 17 fields required (including detectedSource):
 
 ### Core Fields
 - contentId: string (from input)
@@ -86,6 +104,9 @@ All 16 fields required:
   - context?: string
 - context: string (min 20 chars) - background needed
 - relatedConcepts: string[] (0-15 items)
+
+### Detection Fields
+- detectedSource?: string (optional) - Auto-detected source type (podcast, transcript, article, youtube, twitter, text, other)
 
 ## WritingKit Schema
 
