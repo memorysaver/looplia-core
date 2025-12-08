@@ -269,7 +269,7 @@ export async function executeQueryWithRetry<T>(
  */
 function extractContentIdFromPrompt(prompt: string): string | null {
   const match = prompt.match(CONTENT_ID_REGEX);
-  return match ? match[1] : null;
+  return match ? (match[1] ?? null) : null;
 }
 
 /**

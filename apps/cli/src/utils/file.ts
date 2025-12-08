@@ -31,14 +31,14 @@ function extractFrontmatter(content: string): Record<string, string> {
     return {};
   }
 
-  const yaml = match[1];
+  const yaml = match[1] ?? "";
   const frontmatter: Record<string, string> = {};
 
   // Parse simple YAML fields (key: "value" or key: value)
   const lines = yaml.split("\n");
   for (const line of lines) {
     const keyValueMatch = line.match(YAML_KEYVALUE_REGEX);
-    if (keyValueMatch) {
+    if (keyValueMatch?.[1] && keyValueMatch[2]) {
       frontmatter[keyValueMatch[1]] = keyValueMatch[2];
     }
   }

@@ -147,6 +147,13 @@ function loadContentFromId(
       id: contentId,
       title: summaryData.headline || "Untitled",
       rawText: "", // We don't need the raw text for kit generation
+      url: "",
+      source: {
+        id: contentId,
+        type: "custom",
+        url: "",
+      },
+      metadata: {},
     };
 
     return { content, summary: summaryData };
