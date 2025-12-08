@@ -94,6 +94,19 @@ function processResultMessage<T>(
     };
   }
 
+  // Handle case where SDK reports success but structured_output is missing
+  if (
+    resultMessage.subtype === "success" &&
+    resultMessage.structured_output === undefined
+  ) {
+    const errorMsg = `Success subtype but no structured_output. Result: ${JSON.stringify(resultMessage).substring(0, 200)}`;
+    return {
+      success: false,
+      error: { type: "unknown", message: errorMsg },
+      usage,
+    };
+  }
+
   // Handle error results - cast to SDK type for error mapper
   return {
     ...mapSdkError(
