@@ -59,6 +59,13 @@ function extractUsage(resultMessage: {
 }
 
 /**
+ * Result type that includes session ID from SDK
+ */
+export type AgenticQueryResult<T> = ProviderResultWithUsage<T> & {
+  sessionId?: string;
+};
+
+/**
  * Process SDK result message and return appropriate provider result
  */
 function processResultMessage<T>(
@@ -295,7 +302,7 @@ export async function executeAgenticQuery<T>(
   prompt: string,
   jsonSchema: Record<string, unknown>,
   config?: ClaudeAgentConfig
-): Promise<ProviderResultWithUsage<T>> {
+): Promise<AgenticQueryResult<T>> {
   try {
     const resolvedConfig = resolveConfig(config);
 
@@ -350,11 +357,22 @@ export async function executeAgenticQuery<T>(
       },
     });
 
+    // Track session ID from init message
+    let sessionId: string | undefined;
+
     // Process async generator - query() returns AsyncGenerator<SDKMessage, void>
     for await (const message of result) {
       // Log all messages for debugging
       if (contentId) {
         logger.log(message as Record<string, unknown>);
+      }
+
+      // Capture session ID from init message
+      if (
+        message.type === "system" &&
+        (message as { subtype?: string }).subtype === "init"
+      ) {
+        sessionId = (message as { session_id?: string }).session_id;
       }
 
       if (message.type !== "result") {
@@ -363,7 +381,8 @@ export async function executeAgenticQuery<T>(
 
       logger.close();
       const usage = extractUsage(message);
-      return processResultMessage<T>(message, usage);
+      const providerResult = processResultMessage<T>(message, usage);
+      return { ...providerResult, sessionId };
     }
 
     logger.close();
@@ -375,6 +394,7 @@ export async function executeAgenticQuery<T>(
         type: "unknown",
         message: "No result received from SDK",
       },
+      sessionId,
     };
   } catch (error) {
     return mapException(error);
@@ -393,11 +413,11 @@ export async function executeAgenticQueryWithRetry<T>(
   prompt: string,
   jsonSchema: Record<string, unknown>,
   config?: ClaudeAgentConfig
-): Promise<ProviderResultWithUsage<T>> {
+): Promise<AgenticQueryResult<T>> {
   const resolvedConfig = resolveConfig(config);
   const maxRetries = resolvedConfig.maxRetries;
 
-  let lastResult: ProviderResultWithUsage<T> | undefined;
+  let lastResult: AgenticQueryResult<T> | undefined;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const result = await executeAgenticQuery<T>(prompt, jsonSchema, config);
