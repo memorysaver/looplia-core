@@ -63,10 +63,10 @@ jobs:
 
       - name: Run summarize command
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
           CONTAINER_ID=$(docker create \
-            -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
             -v "$(pwd)/examples:/examples:ro" \
             $IMAGE_NAME \
             summarize --file /examples/ai-healthcare.md \
@@ -100,10 +100,10 @@ jobs:
 
       - name: Run kit command
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
           CONTAINER_ID=$(docker create \
-            -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
             -v "$(pwd)/examples:/examples:ro" \
             $IMAGE_NAME \
             kit --file /examples/ai-healthcare.md \
@@ -170,10 +170,10 @@ jobs:
 
       - name: Run kit on VTT caption
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
           CONTAINER_ID=$(docker create \
-            -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
             -v "$(pwd)/examples:/examples:ro" \
             $IMAGE_NAME \
             kit --file /examples/youtube/Anthropics/captions/EvtPBaaykdo.en.vtt \
@@ -229,10 +229,10 @@ jobs:
 
       - name: Run kit on SRT transcript
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
           CONTAINER_ID=$(docker create \
-            -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
             -v "$(pwd)/examples:/examples:ro" \
             $IMAGE_NAME \
             kit --file /examples/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt \
@@ -299,7 +299,7 @@ jobs:
       - name: Evaluate pipeline outputs with Claude Code
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
             You are an evaluator for a content intelligence pipeline. Your task is to assess the quality of WritingKit outputs from 3 different source types: Markdown, VTT, and SRT.
 
