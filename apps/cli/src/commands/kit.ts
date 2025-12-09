@@ -57,7 +57,7 @@ Note: Either --file or --session-id is required (but not both)
       --session-id continues from existing session (smart continuation)
 
 Environment:
-  ANTHROPIC_API_KEY  Required unless --mock is specified
+  ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN  Required unless --mock is specified
 
 Example:
   looplia kit --file ./article.txt --topics "ai,productivity" --tone expert
@@ -122,10 +122,17 @@ function writeOutput(output: string, outputPath: string | undefined): void {
 }
 
 function checkApiKey(useMock: boolean): void {
-  if (useMock || process.env.ANTHROPIC_API_KEY) {
+  // SDK supports both ANTHROPIC_API_KEY and CLAUDE_CODE_OAUTH_TOKEN
+  if (
+    useMock ||
+    process.env.ANTHROPIC_API_KEY ||
+    process.env.CLAUDE_CODE_OAUTH_TOKEN
+  ) {
     return;
   }
-  console.error("Error: ANTHROPIC_API_KEY environment variable is required");
+  console.error(
+    "Error: ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN environment variable is required"
+  );
   console.error("Get your API key from: https://console.anthropic.com");
   console.error("Or use --mock flag to run without API key");
   process.exit(1);
