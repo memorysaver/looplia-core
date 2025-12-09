@@ -342,273 +342,603 @@ Check the session folder for existing files:
 
 ---
 
-## 6. Feature 3: yt-dlp Skill
+## 6. Feature 3: yt-dlp Skill (Script-Based Architecture)
 
-### 6.1 Skill Definition
+### 6.1 Token Efficiency: Why Pre-Programmed Scripts?
+
+**Problem:** Without scripts, the agent regenerates detection/installation logic each time (~450 tokens per operation).
+
+**Solution:** Pre-program complex logic in TypeScript scripts. The agent invokes scripts via Bash - **only script output consumes tokens**, not the source code.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  TOKEN COST COMPARISON                                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  WITHOUT SCRIPTS (per yt-dlp operation):                                    │
+│    • Agent regenerates detection logic:     ~200 tokens                     │
+│    • Agent generates install commands:      ~150 tokens                     │
+│    • Agent writes validation logic:         ~100 tokens                     │
+│    • Total per operation:                   ~450 tokens                     │
+│                                                                             │
+│  WITH SCRIPTS (per yt-dlp operation):                                       │
+│    • Script source code:                    0 tokens (never loaded!)        │
+│    • Script output (JSON result):           ~50-100 tokens                  │
+│    • Saved per operation:                   ~350 tokens                     │
+│                                                                             │
+│  For 20 media extractions:                  7,000 tokens saved              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 6.2 Skill Folder Structure
+
+```
+plugins/looplia-writer/skills/yt-dlp/
+├── SKILL.md                        # Concise instructions (~100 lines)
+├── scripts/
+│   ├── detect-ytdlp.ts            # Detection + auto-install script
+│   ├── extract-transcript.ts       # Transcript extraction wrapper
+│   └── extract-metadata.ts         # Metadata extraction wrapper
+└── references/
+    ├── supported-platforms.md      # Detailed platform list (loaded on demand)
+    ├── format-guide.md             # VTT/SRT/JSON format details
+    └── troubleshooting.md          # Common errors and solutions
+```
+
+### 6.3 SKILL.md (Concise - References Scripts)
 
 **File:** `plugins/looplia-writer/skills/yt-dlp/SKILL.md`
 
 ```markdown
 ---
 name: yt-dlp
-description: Expert knowledge for using yt-dlp to extract transcripts,
-subtitles, and metadata from YouTube, podcasts, and 1000+ video/audio sites.
-Includes dependency detection and auto-installation capability.
+description: Extract transcripts from YouTube/podcasts using pre-programmed
+scripts for detection, installation, and extraction. Token-efficient design.
 ---
 
-# yt-dlp Skill
+# yt-dlp Media Extraction Skill
 
-Expert knowledge for extracting transcripts and metadata from media URLs.
+Extract transcripts and metadata from YouTube, podcasts, and 1000+ sites.
 
-## What This Skill Does
+## How This Skill Works
 
-- **Detects if yt-dlp is installed** and installs it if missing
-- Knows yt-dlp command syntax and options
-- Selects optimal extraction strategy for each URL type
-- Handles errors and suggests fallback approaches
-- Understands output formats (VTT, SRT, JSON)
+This skill uses **pre-programmed TypeScript scripts** to handle yt-dlp operations.
+The scripts encapsulate complex logic - you just invoke them and read the JSON output.
 
-## IMPORTANT: Dependency Check (Do This First!)
+## Step 1: Detect and Install yt-dlp
 
-Before running ANY yt-dlp command, you MUST check if yt-dlp is installed.
-
-### Step 1: Check Installation
+**ALWAYS run this first** before any extraction:
 
 ```bash
-# Check if yt-dlp exists
-which yt-dlp || command -v yt-dlp
+bun run plugins/looplia-writer/skills/yt-dlp/scripts/detect-ytdlp.ts
 ```
 
-If the command returns a path (e.g., `/usr/local/bin/yt-dlp`), yt-dlp is installed.
-If it returns nothing or an error, proceed to installation.
+Output (JSON):
+- `installed: true` → Proceed to extraction
+- `installed: false` → Script auto-installs, check `installResult`
 
-### Step 2: Detect Operating System
+## Step 2: Extract Transcript
 
 ```bash
-# Detect OS for appropriate install method
-uname -s
+bun run plugins/looplia-writer/skills/yt-dlp/scripts/extract-transcript.ts "{url}" "{output_dir}"
 ```
 
-| Output | OS | Install Method |
-|--------|----|--------------|
-| `Darwin` | macOS | brew or pip |
-| `Linux` | Linux | pip (preferred) or package manager |
-| `MINGW*` / `CYGWIN*` | Windows | pip |
+Output: JSON with transcript file path and metadata.
 
-### Step 3: Auto-Install yt-dlp
-
-Choose the appropriate installation method based on OS and available tools:
-
-#### Option A: pip (Preferred - Works on all platforms)
-```bash
-# Check if pip is available
-which pip3 || which pip
-
-# Install via pip
-pip3 install yt-dlp || pip install yt-dlp
-```
-
-#### Option B: brew (macOS only)
-```bash
-# Check if brew is available
-which brew
-
-# Install via Homebrew
-brew install yt-dlp
-```
-
-#### Option C: Download Binary (Fallback)
-```bash
-# Linux/macOS - download directly
-curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
-chmod a+rx /usr/local/bin/yt-dlp
-```
-
-### Step 4: Verify Installation
+## Step 3: Extract Metadata Only (Optional)
 
 ```bash
-# Confirm yt-dlp is now available
-yt-dlp --version
+bun run plugins/looplia-writer/skills/yt-dlp/scripts/extract-metadata.ts "{url}" "{output_dir}"
 ```
 
-Expected output: Version string like `2024.12.06`
+Output: JSON with title, description, duration, chapters.
 
-### Installation Decision Flow
+## Script Output Format
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  yt-dlp Dependency Check Flow                                    │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  1. Run: which yt-dlp                                           │
-│     │                                                            │
-│     ├── Found? → Skip to extraction commands                     │
-│     │                                                            │
-│     └── Not found? → Continue to install                         │
-│                                                                  │
-│  2. Run: uname -s (detect OS)                                   │
-│     │                                                            │
-│     ├── Darwin (macOS):                                          │
-│     │   ├── Try: pip3 install yt-dlp                            │
-│     │   └── Fallback: brew install yt-dlp                       │
-│     │                                                            │
-│     ├── Linux:                                                   │
-│     │   ├── Try: pip3 install yt-dlp                            │
-│     │   └── Fallback: curl binary download                      │
-│     │                                                            │
-│     └── Windows/Other:                                           │
-│         └── Try: pip install yt-dlp                             │
-│                                                                  │
-│  3. Run: yt-dlp --version (verify)                              │
-│     │                                                            │
-│     ├── Success? → Proceed with extraction                       │
-│     │                                                            │
-│     └── Failed? → Report error, ask user to install manually    │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
-```
+All scripts output JSON for easy parsing:
 
-### Error Handling for Installation
-
-| Scenario | Action |
-|----------|--------|
-| pip not available | Try brew (macOS) or curl download |
-| brew not available | Try pip or curl download |
-| Permission denied | Suggest: `pip3 install --user yt-dlp` |
-| Network error | Report and ask user to install manually |
-| All methods fail | Provide manual install instructions in error message |
-
-## Supported Platforms
-
-yt-dlp supports 1000+ sites including:
-- **YouTube**: youtube.com, youtu.be, YouTube Music, YouTube Shorts
-- **Podcasts**: Apple Podcasts, Spotify (metadata), podcast RSS feeds
-- **Social**: Twitter/X videos, TikTok, Instagram Reels
-- **News**: CNN, BBC, NPR, various news sites
-- **Educational**: Coursera, Khan Academy, TED Talks
-- **Other**: Vimeo, Dailymotion, SoundCloud, and many more
-
-## Common Commands
-
-### Extract Subtitles (Best Quality)
-```bash
-# Auto-generated + manual subs, prefer VTT format
-yt-dlp --write-auto-sub --write-sub --sub-lang en,en-US \
-       --sub-format vtt --skip-download \
-       -o "%(id)s" "{url}"
-```
-
-### Extract Info/Metadata Only
-```bash
-# Get title, description, chapters, duration
-yt-dlp --write-info-json --skip-download \
-       -o "%(id)s" "{url}"
-```
-
-### List Available Subtitles
-```bash
-# Check what subtitle options exist
-yt-dlp --list-subs "{url}"
-```
-
-### Extract Audio (for Whisper transcription)
-```bash
-# Only if subtitles unavailable
-yt-dlp -x --audio-format mp3 --audio-quality 5 \
-       -o "%(id)s.%(ext)s" "{url}"
-```
-
-## Output File Patterns
-
-| Command | Output Files |
-|---------|--------------|
-| --write-auto-sub | `{id}.en.vtt` or `{id}.en.srt` |
-| --write-info-json | `{id}.info.json` |
-| -x --audio-format mp3 | `{id}.mp3` |
-
-## Subtitle Formats
-
-### VTT (WebVTT) - Preferred
-```
-WEBVTT
-Kind: captions
-Language: en
-
-00:00:00.000 --> 00:00:05.000
-Hello and welcome to this video.
-
-00:00:05.000 --> 00:00:10.000
-Today we're going to talk about...
-```
-
-### SRT (SubRip)
-```
-1
-00:00:00,000 --> 00:00:05,000
-Hello and welcome to this video.
-
-2
-00:00:05,000 --> 00:00:10,000
-Today we're going to talk about...
-```
-
-### Info JSON Structure
 ```json
 {
-  "id": "dQw4w9WgXcQ",
-  "title": "Video Title",
-  "description": "Full video description...",
-  "channel": "Channel Name",
-  "duration": 212,
-  "upload_date": "20091025",
-  "chapters": [
-    {"title": "Intro", "start_time": 0, "end_time": 30},
-    {"title": "Main Content", "start_time": 30, "end_time": 180}
-  ]
+  "success": true,
+  "data": { ... },
+  "error": null
 }
 ```
 
-## Error Handling
+## Reference Documentation
+
+For detailed information, see:
+- `references/supported-platforms.md` - Full list of 1000+ supported sites
+- `references/format-guide.md` - VTT/SRT/JSON format details
+- `references/troubleshooting.md` - Common errors and solutions
+```
+
+### 6.4 Script: detect-ytdlp.ts
+
+**File:** `plugins/looplia-writer/skills/yt-dlp/scripts/detect-ytdlp.ts`
+
+```typescript
+#!/usr/bin/env bun
+/**
+ * yt-dlp Detection and Auto-Installation Script
+ *
+ * This script:
+ * 1. Checks if yt-dlp is installed
+ * 2. If not, detects OS and available package managers
+ * 3. Auto-installs using the best available method
+ * 4. Verifies installation
+ *
+ * Output: JSON result for agent to parse
+ */
+
+import { $ } from "bun";
+
+interface DetectionResult {
+  success: boolean;
+  installed: boolean;
+  version: string | null;
+  path: string | null;
+  wasAutoInstalled: boolean;
+  installMethod: string | null;
+  error: string | null;
+}
+
+async function checkInstalled(): Promise<{ installed: boolean; path: string | null; version: string | null }> {
+  try {
+    const whichResult = await $`which yt-dlp`.quiet();
+    if (whichResult.exitCode !== 0) {
+      return { installed: false, path: null, version: null };
+    }
+
+    const path = whichResult.stdout.toString().trim();
+    const versionResult = await $`yt-dlp --version`.quiet();
+    const version = versionResult.stdout.toString().trim();
+
+    return { installed: true, path, version };
+  } catch {
+    return { installed: false, path: null, version: null };
+  }
+}
+
+async function detectOS(): Promise<"darwin" | "linux" | "windows"> {
+  const result = await $`uname -s`.quiet();
+  const os = result.stdout.toString().trim().toLowerCase();
+
+  if (os === "darwin") return "darwin";
+  if (os.includes("mingw") || os.includes("cygwin")) return "windows";
+  return "linux";
+}
+
+async function hasCommand(cmd: string): Promise<boolean> {
+  try {
+    const result = await $`which ${cmd}`.quiet();
+    return result.exitCode === 0;
+  } catch {
+    return false;
+  }
+}
+
+async function installYtDlp(): Promise<{ success: boolean; method: string; error: string | null }> {
+  const os = await detectOS();
+
+  // Try pip first (works on all platforms)
+  if (await hasCommand("pip3")) {
+    try {
+      await $`pip3 install --user yt-dlp`.quiet();
+      return { success: true, method: "pip3", error: null };
+    } catch (e) {
+      // Continue to next method
+    }
+  }
+
+  if (await hasCommand("pip")) {
+    try {
+      await $`pip install --user yt-dlp`.quiet();
+      return { success: true, method: "pip", error: null };
+    } catch (e) {
+      // Continue to next method
+    }
+  }
+
+  // Try brew on macOS
+  if (os === "darwin" && await hasCommand("brew")) {
+    try {
+      await $`brew install yt-dlp`.quiet();
+      return { success: true, method: "brew", error: null };
+    } catch (e) {
+      // Continue to next method
+    }
+  }
+
+  // Try curl binary download on Linux/macOS
+  if (os !== "windows" && await hasCommand("curl")) {
+    try {
+      const homeDir = process.env.HOME || "~";
+      const binPath = `${homeDir}/.local/bin/yt-dlp`;
+      await $`mkdir -p ${homeDir}/.local/bin`.quiet();
+      await $`curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o ${binPath}`.quiet();
+      await $`chmod a+rx ${binPath}`.quiet();
+
+      // Add to PATH for current session
+      process.env.PATH = `${homeDir}/.local/bin:${process.env.PATH}`;
+
+      return { success: true, method: "curl-binary", error: null };
+    } catch (e) {
+      // Continue to error
+    }
+  }
+
+  return {
+    success: false,
+    method: "none",
+    error: "No supported package manager found. Please install yt-dlp manually: https://github.com/yt-dlp/yt-dlp#installation"
+  };
+}
+
+async function main(): Promise<void> {
+  const result: DetectionResult = {
+    success: false,
+    installed: false,
+    version: null,
+    path: null,
+    wasAutoInstalled: false,
+    installMethod: null,
+    error: null
+  };
+
+  // Check if already installed
+  const check = await checkInstalled();
+
+  if (check.installed) {
+    result.success = true;
+    result.installed = true;
+    result.version = check.version;
+    result.path = check.path;
+    result.wasAutoInstalled = false;
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  // Not installed - attempt auto-install
+  console.error("yt-dlp not found. Attempting auto-installation...");
+  const installResult = await installYtDlp();
+
+  if (!installResult.success) {
+    result.success = false;
+    result.error = installResult.error;
+    console.log(JSON.stringify(result, null, 2));
+    process.exit(1);
+  }
+
+  // Verify installation
+  const verifyCheck = await checkInstalled();
+
+  if (verifyCheck.installed) {
+    result.success = true;
+    result.installed = true;
+    result.version = verifyCheck.version;
+    result.path = verifyCheck.path;
+    result.wasAutoInstalled = true;
+    result.installMethod = installResult.method;
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    result.success = false;
+    result.error = `Installation appeared to succeed via ${installResult.method} but yt-dlp not found in PATH`;
+    console.log(JSON.stringify(result, null, 2));
+    process.exit(1);
+  }
+}
+
+main();
+```
+
+### 6.5 Script: extract-transcript.ts
+
+**File:** `plugins/looplia-writer/skills/yt-dlp/scripts/extract-transcript.ts`
+
+```typescript
+#!/usr/bin/env bun
+/**
+ * yt-dlp Transcript Extraction Script
+ *
+ * Usage: bun run extract-transcript.ts <url> <output_dir>
+ *
+ * Extraction strategy:
+ * 1. Try auto-generated subtitles (most common)
+ * 2. Try manual subtitles
+ * 3. Fall back to info.json description
+ *
+ * Output: JSON with file paths and metadata
+ */
+
+import { $ } from "bun";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
+interface ExtractionResult {
+  success: boolean;
+  data: {
+    transcriptFile: string | null;
+    metadataFile: string | null;
+    extractionMethod: "subtitles" | "info-json" | null;
+    videoId: string | null;
+    title: string | null;
+    duration: number | null;
+  } | null;
+  error: string | null;
+}
+
+function extractVideoId(url: string): string | null {
+  // YouTube patterns
+  const patterns = [
+    /(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+    /(?:embed\/|v\/|shorts\/)([a-zA-Z0-9_-]{11})/
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+
+  // Fallback: generate ID from URL hash
+  const hash = url.split("").reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0);
+  return `url-${Math.abs(hash).toString(36)}`;
+}
+
+async function extractSubtitles(url: string, outputDir: string, videoId: string): Promise<boolean> {
+  try {
+    await $`yt-dlp --write-auto-sub --write-sub --sub-lang en,en-US,en-GB --sub-format vtt --skip-download -o ${join(outputDir, videoId)} ${url}`.quiet();
+
+    // Check if any subtitle file was created
+    const files = readdirSync(outputDir);
+    return files.some(f => f.includes(videoId) && (f.endsWith(".vtt") || f.endsWith(".srt")));
+  } catch {
+    return false;
+  }
+}
+
+async function extractInfoJson(url: string, outputDir: string, videoId: string): Promise<boolean> {
+  try {
+    await $`yt-dlp --write-info-json --skip-download -o ${join(outputDir, videoId)} ${url}`.quiet();
+
+    const infoFile = join(outputDir, `${videoId}.info.json`);
+    return existsSync(infoFile);
+  } catch {
+    return false;
+  }
+}
+
+function findTranscriptFile(outputDir: string, videoId: string): string | null {
+  const files = readdirSync(outputDir);
+  const subtitleFile = files.find(f =>
+    f.includes(videoId) && (f.endsWith(".vtt") || f.endsWith(".srt"))
+  );
+  return subtitleFile ? join(outputDir, subtitleFile) : null;
+}
+
+function findMetadataFile(outputDir: string, videoId: string): string | null {
+  const infoFile = join(outputDir, `${videoId}.info.json`);
+  return existsSync(infoFile) ? infoFile : null;
+}
+
+function parseMetadata(metadataFile: string | null): { title: string | null; duration: number | null } {
+  if (!metadataFile || !existsSync(metadataFile)) {
+    return { title: null, duration: null };
+  }
+
+  try {
+    const data = JSON.parse(readFileSync(metadataFile, "utf-8"));
+    return {
+      title: data.title || null,
+      duration: data.duration || null
+    };
+  } catch {
+    return { title: null, duration: null };
+  }
+}
+
+async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+
+  if (args.length < 2) {
+    console.log(JSON.stringify({
+      success: false,
+      data: null,
+      error: "Usage: bun run extract-transcript.ts <url> <output_dir>"
+    }, null, 2));
+    process.exit(1);
+  }
+
+  const [url, outputDir] = args;
+  const videoId = extractVideoId(url);
+
+  const result: ExtractionResult = {
+    success: false,
+    data: null,
+    error: null
+  };
+
+  // Ensure output directory exists
+  await $`mkdir -p ${outputDir}`.quiet();
+
+  // Strategy 1: Try subtitles first
+  const subtitlesExtracted = await extractSubtitles(url, outputDir, videoId!);
+
+  if (subtitlesExtracted) {
+    // Also get metadata
+    await extractInfoJson(url, outputDir, videoId!);
+
+    const transcriptFile = findTranscriptFile(outputDir, videoId!);
+    const metadataFile = findMetadataFile(outputDir, videoId!);
+    const { title, duration } = parseMetadata(metadataFile);
+
+    result.success = true;
+    result.data = {
+      transcriptFile,
+      metadataFile,
+      extractionMethod: "subtitles",
+      videoId,
+      title,
+      duration
+    };
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  // Strategy 2: Fall back to info.json
+  const infoExtracted = await extractInfoJson(url, outputDir, videoId!);
+
+  if (infoExtracted) {
+    const metadataFile = findMetadataFile(outputDir, videoId!);
+    const { title, duration } = parseMetadata(metadataFile);
+
+    result.success = true;
+    result.data = {
+      transcriptFile: null, // No transcript, but have metadata
+      metadataFile,
+      extractionMethod: "info-json",
+      videoId,
+      title,
+      duration
+    };
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  // All strategies failed
+  result.success = false;
+  result.error = "Failed to extract transcript or metadata. Video may be unavailable, private, or geo-restricted.";
+  console.log(JSON.stringify(result, null, 2));
+  process.exit(1);
+}
+
+main();
+```
+
+### 6.6 Script Execution Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SCRIPT-BASED EXTRACTION FLOW                                                │
+│                                                                             │
+│  media-processor subagent invokes:                                          │
+│                                                                             │
+│  Step 1: Detection                                                          │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ $ bun run scripts/detect-ytdlp.ts                                   │   │
+│  │                                                                     │   │
+│  │ Script internally:                                                  │   │
+│  │   • Runs `which yt-dlp`                                            │   │
+│  │   • If missing: detects OS, finds pip/brew/curl                    │   │
+│  │   • Auto-installs using best method                                │   │
+│  │   • Verifies with `yt-dlp --version`                               │   │
+│  │                                                                     │   │
+│  │ Output (JSON - only this consumes tokens):                         │   │
+│  │   { "success": true, "installed": true, "version": "2024.12.06" }  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  Step 2: Extraction                                                         │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ $ bun run scripts/extract-transcript.ts "{url}" "{output_dir}"      │   │
+│  │                                                                     │   │
+│  │ Script internally:                                                  │   │
+│  │   • Extracts video ID from URL                                     │   │
+│  │   • Tries --write-auto-sub first                                   │   │
+│  │   • Falls back to --write-info-json                                │   │
+│  │   • Parses metadata for title/duration                             │   │
+│  │                                                                     │   │
+│  │ Output (JSON - only this consumes tokens):                         │   │
+│  │   {                                                                 │   │
+│  │     "success": true,                                               │   │
+│  │     "data": {                                                      │   │
+│  │       "transcriptFile": "/path/to/abc123.en.vtt",                  │   │
+│  │       "extractionMethod": "subtitles",                             │   │
+│  │       "title": "Video Title",                                      │   │
+│  │       "duration": 1234                                             │   │
+│  │     }                                                              │   │
+│  │   }                                                                 │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  Agent then reads the transcript file and creates content.md                │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 6.7 Reference Files (Loaded On-Demand)
+
+These files are NOT loaded into context unless the agent explicitly reads them:
+
+**File:** `plugins/looplia-writer/skills/yt-dlp/references/supported-platforms.md`
+
+```markdown
+# Supported Platforms
+
+yt-dlp supports 1000+ sites including:
+
+## Video Platforms
+- YouTube (youtube.com, youtu.be, music.youtube.com, shorts)
+- Vimeo, Dailymotion, Twitch, TikTok
+- Facebook, Instagram, Twitter/X
+
+## Podcast Platforms
+- Apple Podcasts (metadata only)
+- Spotify (metadata only)
+- SoundCloud (audio)
+- Podcast RSS feeds (direct audio)
+
+## Educational
+- Coursera, Khan Academy, TED Talks, Udemy
+
+## News
+- CNN, BBC, NPR, and most major news sites
+
+For full list: https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md
+```
+
+**File:** `plugins/looplia-writer/skills/yt-dlp/references/troubleshooting.md`
+
+```markdown
+# Troubleshooting
+
+## Common Errors
 
 | Error | Meaning | Solution |
 |-------|---------|----------|
-| "Video unavailable" | Private/deleted | Cannot extract, report to user |
-| "No subtitles" | No captions available | Try info.json or audio extraction |
-| "Age-restricted" | Requires login | May need cookies or skip |
-| "Geo-restricted" | Region blocked | Report unavailable |
+| "Video unavailable" | Private/deleted | Cannot extract |
+| "No subtitles" | No captions | Falls back to info.json |
+| "Age-restricted" | Requires login | May need cookies |
+| "Geo-restricted" | Region blocked | Use VPN or skip |
+| "Unable to extract" | Site not supported | Check supported sites list |
 
-## Strategy Selection
+## Permission Issues
 
-Given a URL, choose strategy:
-
-1. **YouTube/Video sites**: Try --write-auto-sub first, fallback to --write-info-json
-2. **Podcasts**: Try --write-info-json for show notes, may need audio extraction
-3. **News sites**: Usually have article text in description/info.json
-4. **Unknown**: Try --list-subs to check availability, then decide
-
-## Important Rules
-
-- ALWAYS use --skip-download unless audio extraction needed
-- ALWAYS include -o pattern for predictable output names
-- Check --list-subs before assuming no captions exist
-- Use --sub-lang "en,en-US,en-GB" to catch various English variants
-- Clean up downloaded files after processing
-- Never download video files (large, unnecessary for transcription)
+If pip install fails with permission error:
+```bash
+pip3 install --user yt-dlp
 ```
 
-### 6.2 Skill vs Hardcoded Logic
+## PATH Issues
 
-**Why a skill instead of hardcoded commands?**
+If yt-dlp installs but isn't found:
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+```
+```
 
-| Approach | Pros | Cons |
-|----------|------|------|
-| **Hardcoded** | Predictable | Rigid, can't adapt to edge cases |
-| **Skill-based** | Flexible, agent adapts | Agent must learn skill |
+### 6.8 Why Script-Based Design?
 
-The skill-based approach allows:
-- Agent to reason about which strategy to use
-- Easy updates to extraction methods (edit markdown, not code)
-- Agent can handle novel situations not anticipated in code
+| Aspect | Inline Instructions | Script-Based |
+|--------|---------------------|--------------|
+| **Token cost** | ~450 tokens/operation | ~100 tokens/operation |
+| **Consistency** | Agent may vary approach | Same logic every time |
+| **Maintainability** | Edit SKILL.md | Edit TypeScript files |
+| **Testability** | Hard to test | Scripts are unit-testable |
+| **Error handling** | Agent improvises | Programmatic handling |
+| **Updates** | Re-read entire skill | Just update scripts |
 
 ---
 
@@ -783,7 +1113,12 @@ function generateSessionId(url: string): string {
 | File | Purpose |
 |------|---------|
 | `plugins/looplia-writer/agents/media-processor.md` | Media processor subagent definition |
-| `plugins/looplia-writer/skills/yt-dlp/SKILL.md` | yt-dlp expertise skill |
+| `plugins/looplia-writer/skills/yt-dlp/SKILL.md` | yt-dlp skill (concise, references scripts) |
+| `plugins/looplia-writer/skills/yt-dlp/scripts/detect-ytdlp.ts` | Detection + auto-install script |
+| `plugins/looplia-writer/skills/yt-dlp/scripts/extract-transcript.ts` | Transcript extraction script |
+| `plugins/looplia-writer/skills/yt-dlp/scripts/extract-metadata.ts` | Metadata extraction script |
+| `plugins/looplia-writer/skills/yt-dlp/references/supported-platforms.md` | Platform list (on-demand) |
+| `plugins/looplia-writer/skills/yt-dlp/references/troubleshooting.md` | Error solutions (on-demand) |
 | `docs/DESIGN-0.3.4.1.md` | This document |
 
 ### 8.2 Modified Files
@@ -814,7 +1149,15 @@ function generateSessionId(url: string): string {
 │       ├── user-profile-reader/SKILL.md
 │       ├── writing-enhancer/SKILL.md
 │       ├── id-generator/SKILL.md
-│       └── yt-dlp/SKILL.md          # NEW
+│       └── yt-dlp/                   # NEW: Script-based skill
+│           ├── SKILL.md              # Concise instructions
+│           ├── scripts/
+│           │   ├── detect-ytdlp.ts   # Detection + auto-install
+│           │   ├── extract-transcript.ts
+│           │   └── extract-metadata.ts
+│           └── references/
+│               ├── supported-platforms.md
+│               └── troubleshooting.md
 └── contentItem/
     └── yt-dQw4w9WgXcQ/              # Example YouTube session
         ├── url-request.json          # NEW: URL processing request
@@ -1047,3 +1390,4 @@ looplia kit --url "https://youtube.com/watch?v=PRIVATE_VIDEO_ID"
 |---------|------|---------|
 | 0.3.4.1 | 2025-12-09 | Initial design: --url input, media-processor subagent, yt-dlp skill |
 | 0.3.4.1 | 2025-12-09 | Added: yt-dlp auto-detection and installation capability in skill |
+| 0.3.4.1 | 2025-12-09 | Refactored: Script-based architecture for token efficiency (~350 tokens saved/operation) |
