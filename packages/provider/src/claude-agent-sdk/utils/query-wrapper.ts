@@ -274,19 +274,55 @@ export async function executeQueryWithRetry<T>(
   );
 }
 
-/**
- * Extract content ID from agentic prompt with path traversal protection
- */
-function extractContentIdFromPrompt(prompt: string): string | null {
-  const match = prompt.match(CONTENT_ID_REGEX);
-  const id = match?.[1];
+/** Whitelist pattern for valid content IDs (alphanumeric, hyphens, underscores) */
+const VALID_CONTENT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
-  // Prevent path traversal attacks
-  if (id && (id.includes("..") || id.includes("/") || id.includes("\\"))) {
+/**
+ * Extract content ID from agentic prompt with comprehensive path traversal protection
+ *
+ * Security measures:
+ * - URL decodes input to catch encoded attacks (%2e%2e = ..)
+ * - Checks for null bytes that could bypass validation
+ * - Whitelist validation (only alphanumeric, hyphens, underscores)
+ * - Rejects any path separators or traversal sequences
+ */
+export function extractContentIdFromPrompt(prompt: string): string | null {
+  const match = prompt.match(CONTENT_ID_REGEX);
+  const rawId = match?.[1];
+
+  if (!rawId) {
     return null;
   }
 
-  return id ?? null;
+  // Decode URL-encoded characters to catch bypass attempts
+  let decodedId: string;
+  try {
+    decodedId = decodeURIComponent(rawId);
+  } catch {
+    // Invalid encoding - reject
+    return null;
+  }
+
+  // Check for null bytes (can bypass string checks in some systems)
+  if (decodedId.includes("\0")) {
+    return null;
+  }
+
+  // Reject path traversal and separator characters
+  if (
+    decodedId.includes("..") ||
+    decodedId.includes("/") ||
+    decodedId.includes("\\")
+  ) {
+    return null;
+  }
+
+  // Whitelist validation - only safe characters allowed
+  if (!VALID_CONTENT_ID_PATTERN.test(decodedId)) {
+    return null;
+  }
+
+  return decodedId;
 }
 
 /**
