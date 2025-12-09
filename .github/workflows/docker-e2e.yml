@@ -36,7 +36,7 @@ jobs:
 
       - name: Run summarize command
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           # Use docker create + start + cp to avoid volume mount conflicts
           # (bootstrap deletes ~/.looplia which fails if it's a mounted volume)
@@ -76,7 +76,7 @@ jobs:
 
       - name: Run kit command
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           # Use docker create + start + cp to avoid volume mount conflicts
           CONTAINER_ID=$(docker create \
