@@ -2,9 +2,9 @@
  * Scrolling activity log showing agent actions
  */
 
-import React from "react";
-import { Box, Text, Static } from "ink";
-import { ActivityItem, type Activity } from "./ActivityItem.js";
+import { Box, Static, Text } from "ink";
+import type React from "react";
+import { type Activity, ActivityItem } from "./ActivityItem.js";
 
 type Props = {
   activities: Activity[];
@@ -41,12 +41,12 @@ export const ActivityLog: React.FC<Props> = ({
 
       {/* Completed activities (static - won't re-render) */}
       <Static items={completedActivities}>
-        {(activity) => <ActivityItem key={activity.id} activity={activity} />}
+        {(activity) => <ActivityItem activity={activity} key={activity.id} />}
       </Static>
 
       {/* In-progress activities */}
       {activeActivities.map((activity) => (
-        <ActivityItem key={activity.id} activity={activity} />
+        <ActivityItem activity={activity} key={activity.id} />
       ))}
     </Box>
   );

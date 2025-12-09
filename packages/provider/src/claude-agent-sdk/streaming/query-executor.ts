@@ -19,8 +19,8 @@ import { ensureWorkspace } from "../workspace";
 import { ProgressTracker } from "./progress-tracker";
 import {
   createTransformContext,
-  transformSdkMessage,
   type TransformContext,
+  transformSdkMessage,
 } from "./transformer";
 import type { CompleteEvent, StreamingEvent } from "./types";
 
@@ -116,15 +116,9 @@ export async function* executeAgenticQueryStreaming<T>(
     process.env.CLAUDE_CODE_OAUTH_TOKEN;
 
   if (!apiKey) {
-    return {
-      success: false,
-      error: {
-        type: "validation_error",
-        field: "apiKey",
-        message:
-          "API key is required. Set ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN environment variable",
-      },
-    };
+    throw new Error(
+      "API key is required. Set ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN environment variable"
+    );
   }
 
   try {

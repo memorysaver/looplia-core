@@ -135,10 +135,10 @@ export async function runSummarizeCommand(args: string[]): Promise<void> {
       console.log("");
       if (result.contentId) {
         console.log(`Session ID: ${result.contentId}`);
+        console.log(`Saved to: ~/.looplia/contentItem/${result.contentId}/\n`);
         console.log(
-          `Saved to: ~/.looplia/contentItem/${result.contentId}/\n`
+          `Next step: looplia kit --session-id ${result.contentId}\n`
         );
-        console.log(`Next step: looplia kit --session-id ${result.contentId}\n`);
       }
 
       writeOutput(result, format, outputPath);
@@ -150,7 +150,11 @@ export async function runSummarizeCommand(args: string[]): Promise<void> {
     const provider = useMock
       ? createMockSummarizer()
       : createClaudeSummarizer();
-    const result = await summarizeContent(validatedContent, undefined, provider);
+    const result = await summarizeContent(
+      validatedContent,
+      undefined,
+      provider
+    );
 
     if (!result.success) {
       console.error(`Error: ${result.error.message}`);
@@ -165,9 +169,7 @@ export async function runSummarizeCommand(args: string[]): Promise<void> {
     if (result.data.detectedSource) {
       console.log(`Source Type: ${result.data.detectedSource}`);
     }
-    console.log(
-      `Saved to: ~/.looplia/contentItem/${result.data.contentId}/\n`
-    );
+    console.log(`Saved to: ~/.looplia/contentItem/${result.data.contentId}/\n`);
 
     // Display next steps
     if (result.data.contentId) {

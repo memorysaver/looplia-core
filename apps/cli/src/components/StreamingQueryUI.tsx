@@ -5,16 +5,15 @@
  * Shows real-time progress, agent output, tool invocations, and usage stats.
  */
 
-import React, { useEffect, useState, useCallback } from "react";
-import { Box, Text, render } from "ink";
 import type { StreamingEvent } from "@looplia-core/provider";
-
-import { Header } from "./Header.js";
-import { ProgressSection } from "./ProgressSection.js";
+import { Box, render, Text } from "ink";
+import React, { useCallback, useEffect, useState } from "react";
+import type { Activity } from "./ActivityItem.js";
 import { ActivityLog } from "./ActivityLog.js";
 import { AgentOutput } from "./AgentOutput.js";
+import { Header } from "./Header.js";
+import { ProgressSection } from "./ProgressSection.js";
 import { UsageStats } from "./UsageStats.js";
-import type { Activity } from "./ActivityItem.js";
 
 type QueryState<T> = {
   status: "idle" | "running" | "complete" | "error";
@@ -39,7 +38,19 @@ type Props<T> = {
   /** Optional subtitle (e.g., content title) */
   subtitle?: string;
   /** The streaming generator to consume */
-  streamGenerator: () => AsyncGenerator<StreamingEvent, { success: boolean; data?: T; error?: { message: string }; usage?: { inputTokens: number; outputTokens: number; totalCostUsd: number } }>;
+  streamGenerator: () => AsyncGenerator<
+    StreamingEvent,
+    {
+      success: boolean;
+      data?: T;
+      error?: { message: string };
+      usage?: {
+        inputTokens: number;
+        outputTokens: number;
+        totalCostUsd: number;
+      };
+    }
+  >;
   /** Called when query completes successfully */
   onComplete?: (result: T) => void;
   /** Called when query fails */
@@ -244,7 +255,9 @@ function StreamingQueryUIInner<T>({
     return () => {
       mounted = false;
     };
-  }, [streamGenerator, addActivity, updateActivityById]);
+    // Run only once on mount. Parent component should memoize streamGenerator if needed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Handle completion callbacks
   useEffect(() => {
@@ -259,25 +272,26 @@ function StreamingQueryUIInner<T>({
   return (
     <Box flexDirection="column" padding={1}>
       {/* Header */}
-      <Header sessionId={state.sessionId} contentTitle={subtitle} />
+      <Header contentTitle={subtitle} sessionId={state.sessionId} />
 
       {/* Progress */}
       {state.status !== "complete" && state.status !== "error" && (
         <ProgressSection
+          isRunning={state.status === "running"}
           percent={state.progress}
           step={state.currentStep}
-          isRunning={state.status === "running"}
         />
       )}
 
       {/* Agent Output */}
-      {(state.agentText || state.agentThinking) && state.status === "running" && (
-        <AgentOutput
-          text={state.agentText}
-          thinking={state.agentThinking}
-          maxLines={2}
-        />
-      )}
+      {(state.agentText || state.agentThinking) &&
+        state.status === "running" && (
+          <AgentOutput
+            maxLines={2}
+            text={state.agentText}
+            thinking={state.agentThinking}
+          />
+        )}
 
       {/* Activity Log */}
       <ActivityLog activities={state.activities} maxVisible={8} />

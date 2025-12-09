@@ -2,17 +2,17 @@
  * Main streaming UI component for kit building
  */
 
-import React, { useEffect } from "react";
-import { Box, Text, render } from "ink";
 import type { ContentItem, UserProfile, WritingKit } from "@looplia-core/core";
 import type { WritingKitProvider } from "@looplia-core/provider";
-
+import { Box, render, Text } from "ink";
+import type React from "react";
+import { useEffect } from "react";
+import { useStreamingQuery } from "../hooks/useStreamingQuery.js";
+import { ActivityLog } from "./ActivityLog.js";
 import { Header } from "./Header.js";
 import { ProgressSection } from "./ProgressSection.js";
-import { ActivityLog } from "./ActivityLog.js";
-import { UsageStats } from "./UsageStats.js";
 import { ResultSection } from "./ResultSection.js";
-import { useStreamingQuery } from "../hooks/useStreamingQuery.js";
+import { UsageStats } from "./UsageStats.js";
 
 type Props = {
   provider: WritingKitProvider;
@@ -55,14 +55,14 @@ export const KitBuilderUI: React.FC<Props> = ({
   return (
     <Box flexDirection="column" padding={1}>
       {/* Header */}
-      <Header sessionId={sessionId} contentTitle={content.title} />
+      <Header contentTitle={content.title} sessionId={sessionId} />
 
       {/* Progress */}
       {status !== "complete" && (
         <ProgressSection
+          isRunning={status === "running"}
           percent={progress}
           step={currentStep}
-          isRunning={status === "running"}
         />
       )}
 
@@ -74,7 +74,7 @@ export const KitBuilderUI: React.FC<Props> = ({
 
       {/* Result */}
       {status === "complete" && result && (
-        <ResultSection result={result} format={format} />
+        <ResultSection format={format} result={result} />
       )}
 
       {/* Error */}

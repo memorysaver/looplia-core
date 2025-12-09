@@ -8,8 +8,8 @@ import type {
 import type { ClaudeAgentConfig, ProviderResultWithUsage } from "./config";
 import { writeContentItem } from "./content-io";
 import {
-  executeAgenticQueryStreaming,
   type AgenticQueryResult,
+  executeAgenticQueryStreaming,
   type StreamingEvent,
 } from "./streaming";
 import { executeAgenticQuery } from "./utils/query-wrapper";
@@ -171,7 +171,10 @@ export function createClaudeSummarizer(
       );
 
       // Yield all events and capture final result
-      let finalResult: AgenticQueryResult<ContentSummary>;
+      let finalResult: AgenticQueryResult<ContentSummary> = {
+        success: false,
+        error: { type: "unknown", message: "No result received" },
+      };
 
       // Use for-await to iterate through all yielded events
       let iterResult = await generator.next();

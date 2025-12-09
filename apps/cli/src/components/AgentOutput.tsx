@@ -4,8 +4,8 @@
  * Shows text and thinking output from the agent with truncation
  */
 
-import React from "react";
 import { Box, Text } from "ink";
+import type React from "react";
 
 type Props = {
   /** Main agent text output (most recent) */
@@ -28,7 +28,7 @@ export const AgentOutput: React.FC<Props> = ({
     return `${allLines.slice(0, lines).join("\n")}...`;
   };
 
-  if (!text && !thinking) {
+  if (!(text || thinking)) {
     return null;
   }
 

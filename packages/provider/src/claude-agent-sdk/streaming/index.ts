@@ -5,11 +5,11 @@
  * into UI-friendly streaming events.
  */
 
-export * from "./types";
-export * from "./transformer";
 export { ProgressTracker } from "./progress-tracker";
 export {
+  type AgenticQueryResult,
   executeAgenticQueryStreaming,
   extractContentIdFromPrompt,
-  type AgenticQueryResult,
 } from "./query-executor";
+export * from "./transformer";
+export * from "./types";

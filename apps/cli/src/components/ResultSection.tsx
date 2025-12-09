@@ -2,9 +2,9 @@
  * Final result display section
  */
 
-import React from "react";
-import { Box, Text } from "ink";
 import type { WritingKit } from "@looplia-core/core";
+import { Box, Text } from "ink";
+import type React from "react";
 
 type Props = {
   result: WritingKit;

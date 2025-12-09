@@ -6,12 +6,7 @@
  * tool_use and tool_result are inside assistant/user messages.
  */
 
-import type {
-  CompleteEvent,
-  StreamingEvent,
-  ToolEndEvent,
-  ToolStartEvent,
-} from "./types";
+import type { CompleteEvent, StreamingEvent, ToolStartEvent } from "./types";
 
 /**
  * Context maintained across message transformations

@@ -2,8 +2,8 @@
  * Single activity item in the activity log
  */
 
-import React from "react";
 import { Box, Text } from "ink";
+import type React from "react";
 import { Spinner } from "./Spinner.js";
 
 export type Activity = {

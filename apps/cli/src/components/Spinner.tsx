@@ -2,8 +2,9 @@
  * Loading spinner component for in-progress items
  */
 
-import React, { useState, useEffect } from "react";
 import { Text } from "ink";
+import type React from "react";
+import { useEffect, useState } from "react";
 
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 

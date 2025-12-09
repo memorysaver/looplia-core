@@ -16,7 +16,6 @@ export type {
   ProviderResultWithUsage,
   ProviderUsage,
 } from "./claude-agent-sdk/config";
-
 // Re-export factory functions for convenience
 // (prefer subpath import for better tree-shaking)
 export {
@@ -26,3 +25,5 @@ export {
   createClaudeSummarizer,
   ensureWorkspace,
 } from "./claude-agent-sdk/index";
+// Re-export streaming types
+export type { StreamingEvent } from "./claude-agent-sdk/streaming/types";

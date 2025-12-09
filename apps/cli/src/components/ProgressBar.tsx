@@ -2,8 +2,8 @@
  * Visual progress bar component
  */
 
-import React from "react";
 import { Box, Text } from "ink";
+import type React from "react";
 
 type Props = {
   percent: number;

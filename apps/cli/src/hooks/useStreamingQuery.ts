@@ -2,13 +2,25 @@
  * Hook for consuming streaming query events
  */
 
-import { useState, useEffect, useCallback } from "react";
 import type { ContentItem, UserProfile, WritingKit } from "@looplia-core/core";
 import type {
   StreamingEvent,
   WritingKitProvider,
 } from "@looplia-core/provider";
+import { useCallback, useEffect, useState } from "react";
 import type { Activity } from "../components/ActivityItem.js";
+
+/**
+ * Type guard to check if a value is a StreamingEvent
+ */
+function isStreamingEvent(value: unknown): value is StreamingEvent {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "type" in value &&
+    typeof (value as { type: unknown }).type === "string"
+  );
+}
 
 type QueryState = {
   status: "idle" | "running" | "complete" | "error";
@@ -51,16 +63,6 @@ export function useStreamingQuery(
 ): QueryState {
   const [state, setState] = useState<QueryState>(INITIAL_STATE);
 
-  const addActivity = useCallback((activity: Omit<Activity, "id">) => {
-    setState((prev) => ({
-      ...prev,
-      activities: [
-        ...prev.activities,
-        { ...activity, id: `activity-${prev.activities.length}` },
-      ],
-    }));
-  }, []);
-
   const updateActivityById = useCallback(
     (toolUseId: string, updates: Partial<Activity>) => {
       setState((prev) => {
@@ -85,7 +87,12 @@ export function useStreamingQuery(
 
         let iterResult = await stream.next();
         while (!iterResult.done && mounted) {
-          const event = iterResult.value as StreamingEvent;
+          const event = iterResult.value;
+          if (!isStreamingEvent(event)) {
+            console.warn("Unexpected event type:", event);
+            iterResult = await stream.next();
+            continue;
+          }
 
           switch (event.type) {
             case "session_start":
@@ -107,14 +114,22 @@ export function useStreamingQuery(
               break;
 
             case "tool_start": {
-              const activityId = `activity-${Date.now()}-${event.toolUseId}`;
+              const activityId = `activity-${Date.now()}-${Math.random().toString(36).slice(2)}`;
               toolIdMap.set(event.toolUseId, activityId);
-              addActivity({
-                id: activityId,
-                status: "running",
-                type: event.tool === "Skill" ? "skill" : "read",
-                label: formatToolStart(event),
-              });
+              setState((prev) => ({
+                ...prev,
+                activities: [
+                  ...prev.activities,
+                  {
+                    id: activityId,
+                    status: "running" as const,
+                    type: (event.tool === "Skill" ? "skill" : "read") as
+                      | "skill"
+                      | "read",
+                    label: formatToolStart(event),
+                  },
+                ],
+              }));
               break;
             }
 
@@ -192,7 +207,7 @@ export function useStreamingQuery(
     return () => {
       mounted = false;
     };
-  }, [provider, content, user, addActivity, updateActivityById]);
+  }, [provider, content, user, updateActivityById]);
 
   return state;
 }
