@@ -107,7 +107,10 @@
 - `test-data.ts` - Shared test fixtures (testContent, testUser, testSummary, testIdeas)
 
 **Docker E2E Fixtures** (`examples/`):
-- `ai-healthcare.md` - Real-world article for API testing
+- `ai-healthcare.md` - Real-world article for API testing (markdown with YAML frontmatter)
+- `youtube/Anthropics/captions/EvtPBaaykdo.en.vtt` - YouTube VTT caption file (WebVTT format)
+- `youtube/Anthropics/transcripts/CBneTpXF1CQ.srt` - YouTube SRT transcript (SubRip format)
+- `youtube/Anthropics/transcripts/CBneTpXF1CQ.json` - Whisper JSON transcript (with segments/tokens)
 
 ---
 
@@ -209,6 +212,19 @@ Docker E2E tests validate the complete system with **real Claude API calls** ins
 2. Mount test fixtures and workspace volume
 3. Execute CLI commands with real API calls
 4. Evaluate output files for quality (schema + content + semantic)
+
+#### Multi-Source Type Testing
+
+The agent autonomously detects and processes different source types. E2E tests verify this capability across:
+
+| Source Type | Format | Test File | Detection |
+|-------------|--------|-----------|-----------|
+| Markdown | `.md` with YAML frontmatter | `ai-healthcare.md` | `article` |
+| VTT Caption | WebVTT subtitle format | `EvtPBaaykdo.en.vtt` | `youtube` or `transcript` |
+| SRT Transcript | SubRip format with timing | `CBneTpXF1CQ.srt` | `youtube` or `transcript` |
+| JSON Transcript | Whisper output with segments | `CBneTpXF1CQ.json` | `youtube` or `transcript` |
+
+The `content-analyzer` subagent uses clues like timestamps, speaker markers, and format structure to detect the source type automatically (see `CLAUDE.md` for detection rules).
 
 ### 4.2 Prerequisites
 

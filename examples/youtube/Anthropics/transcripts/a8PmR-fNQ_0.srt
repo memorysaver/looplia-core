@@ -1,0 +1,1272 @@
+1
+00:00:00,000 --> 00:00:02,799
+<|startoftranscript|><|transcribe|><|0.00|> Analysts do this statically in one Excel sheet<|2.80|>
+
+2
+00:00:02,799 --> 00:00:06,199
+<|2.80|> that they refresh manually every week, every quarter.<|6.20|>
+
+3
+00:00:06,199 --> 00:00:10,599
+<|6.20|> Instead of doing that, BCI has instead used our artifact feature<|10.60|>
+
+4
+00:00:10,599 --> 00:00:14,039
+<|10.60|> to connect directly to SMP and FactSet datasets<|14.04|>
+
+5
+00:00:14,039 --> 00:00:16,799
+<|14.04|> so that the artifact is a live dashboard<|16.80|>
+
+6
+00:00:16,799 --> 00:00:21,919
+<|startoftranscript|><|transcribe|><|0.00|> of how these metrics compare against each other and with one simple problem to cloud you can easily<|5.12|>
+
+7
+00:00:21,919 --> 00:00:27,039
+<|5.12|> update it and these artifacts are also shared with their managing directors who are directly<|10.24|>
+
+8
+00:00:27,039 --> 00:00:33,040
+<|10.24|> interfacing with these platforms as well so i think we're really seeing not just acceleration<|16.24|>
+
+9
+00:00:33,040 --> 00:00:38,799
+<|16.24|> of work but way for the work to actually be transformed hey my name is alexander bricken<|22.00|>
+
+10
+00:00:38,799 --> 00:00:42,399
+<|22.00|> and i lead our applied ai engineering team for financial services<|25.60|>
+
+11
+00:00:42,400 --> 00:00:45,600
+<|startoftranscript|><|en|><|transcribe|><|0.00|> Today, we're going to be talking to you about Claude for Finance,<|3.20|>
+
+12
+00:00:45,600 --> 00:00:47,280
+<|3.20|> and I'm joined by my colleague, Nick.<|4.88|>
+
+13
+00:00:47,280 --> 00:00:49,280
+<|4.88|> NICK LYNN: Hey, my name is Nick Lyddon,<|6.88|>
+
+14
+00:00:49,280 --> 00:00:52,880
+<|6.88|> and I lead product for Claude for Financial Services.<|10.48|>
+
+15
+00:00:52,880 --> 00:00:57,120
+<|10.48|> I'm also a recovering investment banker and private equity investor.<|14.72|>
+
+16
+00:00:57,120 --> 00:00:59,120
+<|14.72|> A lot of these problems we're about to talk about<|16.72|>
+
+17
+00:00:59,120 --> 00:01:01,279
+<|16.72|> are very near and dear to my heart.<|18.88|>
+
+18
+00:01:01,279 --> 00:01:02,560
+<|18.88|> So, very excited, Alexander.<|20.16|>
+
+19
+00:01:02,560 --> 00:01:04,800
+<|20.16|> NICK LYNN: Awesome. So Nick, my first question for you is,<|22.40|>
+
+20
+00:01:04,800 --> 00:01:07,800
+<|startoftranscript|><|en|><|transcribe|><|0.00|> How do you feel about the shift in the AI landscape<|3.00|>
+
+21
+00:01:07,800 --> 00:01:09,340
+<|3.00|> for financial services these days?<|4.54|>
+
+22
+00:01:09,340 --> 00:01:11,480
+<|4.54|> You know, I've been with Anthropic<|6.68|>
+
+23
+00:01:11,480 --> 00:01:14,300
+<|6.68|> for a little bit over a year and a half now.<|9.50|>
+
+24
+00:01:14,300 --> 00:01:16,319
+<|9.50|> That was before CLOG3.<|11.52|>
+
+25
+00:01:16,319 --> 00:01:18,740
+<|11.52|> So I think the enterprise AI landscape<|13.94|>
+
+26
+00:01:18,740 --> 00:01:20,520
+<|13.94|> has changed significantly,<|15.72|>
+
+27
+00:01:20,520 --> 00:01:22,520
+<|15.72|> especially in the past few months.<|17.72|>
+
+28
+00:01:22,520 --> 00:01:24,060
+<|17.72|> What I am really noticing is that<|19.26|>
+
+29
+00:01:24,060 --> 00:01:26,200
+<|19.26|> there is a fundamental shift<|21.40|>
+
+30
+00:01:26,199 --> 00:01:30,459
+<|startoftranscript|><|en|><|transcribe|><|0.00|> from curiosity, observing from the sidelines,<|4.26|>
+
+31
+00:01:30,459 --> 00:01:34,759
+<|4.26|> to actually starting to build and deploy into production.<|8.56|>
+
+32
+00:01:34,759 --> 00:01:38,339
+<|8.56|> Now, as we all know, coding is one of the first products<|12.14|>
+
+33
+00:01:38,339 --> 00:01:42,379
+<|12.14|> and first domains within AI with really strong product market fit.<|16.18|>
+
+34
+00:01:42,379 --> 00:01:46,419
+<|16.18|> I think we're starting to see this really extend to other verticals as well,<|20.22|>
+
+35
+00:01:46,419 --> 00:01:47,479
+<|20.22|> including finance.<|21.28|>
+
+36
+00:01:47,479 --> 00:01:51,219
+<|21.28|> For example, Mbin or the Norwegian Saoan Wealth Fund,<|25.02|>
+
+37
+00:01:51,219 --> 00:01:53,299
+<|25.02|> one of our largest customers,<|27.10|>
+
+38
+00:01:53,300 --> 00:01:55,800
+<|startoftranscript|><|transcribe|><|0.00|> they have about 9,000 portfolio companies.<|2.50|>
+
+39
+00:01:56,180 --> 00:01:59,020
+<|2.88|> What they've done is they've built integrations on their own<|5.72|>
+
+40
+00:01:59,020 --> 00:02:01,260
+<|5.72|> with things like model context protocol<|7.96|>
+
+41
+00:02:01,260 --> 00:02:03,639
+<|7.96|> so that all of their portfolio managers<|10.34|>
+
+42
+00:02:03,639 --> 00:02:06,920
+<|10.34|> are querying these integrations every single day<|13.62|>
+
+43
+00:02:06,920 --> 00:02:09,400
+<|13.62|> to get insights into their portcos.<|16.10|>
+
+44
+00:02:09,399 --> 00:02:28,099
+<|startoftranscript|><|transcribe|><|0.00|> So I think we're really starting to see analysts spend a lot less time on the mundane, manual, tedious parts of the work and start to focus on what they really care about, you know, which is building relationships, meeting with their customers and actually understanding the business models of the companies they're investing in.<|18.70|><|endoftext|>
+
+45
+00:02:28,100 --> 00:02:33,139
+<|startoftranscript|><|en|><|transcribe|><|0.00|> Yeah, that really resonates from my standpoint as well as an applied AI person.<|5.04|>
+
+46
+00:02:33,139 --> 00:02:38,340
+<|5.04|> Whenever I go and interact with customers, a lot of the time, last year let's say,<|10.24|>
+
+47
+00:02:38,340 --> 00:02:41,340
+<|10.24|> they would start with building an AI chat feature.<|13.24|>
+
+48
+00:02:41,340 --> 00:02:45,059
+<|13.24|> Like they'd have a bunch of models represented and they would select one,<|16.96|>
+
+49
+00:02:45,059 --> 00:02:49,400
+<|16.96|> maybe a random business user, and they would try to work with it and just chat with it.<|21.30|>
+
+50
+00:02:49,399 --> 00:02:55,899
+<|startoftranscript|><|transcribe|><|0.00|> Eventually, now we've seen things like MCP come out, where the chat has become so much more powerful.<|6.50|>
+
+51
+00:02:56,259 --> 00:02:58,139
+<|6.86|> You can interact with the systems you care about.<|8.74|>
+
+52
+00:02:58,479 --> 00:03:05,500
+<|9.08|> And I think that's really exciting, specifically for finance, because often there are just so many product surfaces that folks have to interact with.<|16.10|>
+
+53
+00:03:05,500 --> 00:03:06,740
+<|startoftranscript|><|transcribe|><|0.00|> - 100%.<|1.24|>
+
+54
+00:03:06,740 --> 00:03:09,160
+<|1.24|> - If you give a model a tool these days,<|3.66|>
+
+55
+00:03:09,160 --> 00:03:11,300
+<|3.66|> often the model's intelligent enough to know<|5.80|>
+
+56
+00:03:11,300 --> 00:03:13,380
+<|5.80|> what that tool does given the tool description<|7.88|>
+
+57
+00:03:13,380 --> 00:03:14,520
+<|7.88|> and the tool name.<|9.02|>
+
+58
+00:03:14,520 --> 00:03:17,279
+<|9.02|> But equally, the model has certain primitives baked into it,<|11.78|>
+
+59
+00:03:17,279 --> 00:03:20,619
+<|11.78|> like the security that we try to bake into the way<|15.12|>
+
+60
+00:03:20,619 --> 00:03:22,100
+<|15.12|> the model interacts with the world.<|16.60|>
+
+61
+00:03:22,100 --> 00:03:25,279
+<|startoftranscript|><|en|><|transcribe|><|0.00|> So we train our models to be helpful, harmless, and honest.<|3.18|>
+
+62
+00:03:25,920 --> 00:03:31,360
+<|3.82|> And often that's a reflection of the data that they interpret and the output that it basically corresponds to.<|9.26|>
+
+63
+00:03:31,660 --> 00:03:35,740
+<|9.56|> I think that's probably what you're referring to as well in that like the model is generally intelligent.<|13.64|>
+
+64
+00:03:36,060 --> 00:03:39,720
+<|13.96|> And so if you give it these different layers, you can really see some cool results.<|17.62|>
+
+65
+00:03:39,960 --> 00:03:41,779
+<|17.86|> You know, safety is something that you touched upon.<|19.68|>
+
+66
+00:03:41,900 --> 00:03:42,800
+<|19.80|> That is so important.<|20.70|>
+
+67
+00:03:42,800 --> 00:03:45,800
+<|startoftranscript|><|en|><|transcribe|><|0.00|> foundational to everything we do.<|3.00|>
+
+68
+00:03:45,800 --> 00:03:48,139
+<|3.00|> It's about securely deploying these solutions<|5.34|>
+
+69
+00:03:48,139 --> 00:03:49,600
+<|5.34|> into enterprise environments.<|6.80|>
+
+70
+00:03:49,600 --> 00:03:52,300
+<|6.80|> It's about making sure that the models can accurately<|9.50|>
+
+71
+00:03:52,300 --> 00:03:55,479
+<|9.50|> answer the questions with the right level of understanding<|12.68|>
+
+72
+00:03:55,479 --> 00:03:57,639
+<|12.68|> of those problems and fidelity.<|14.84|>
+
+73
+00:03:57,639 --> 00:04:01,619
+<|14.84|> And third is actually giving our users the trust,<|18.82|>
+
+74
+00:04:01,619 --> 00:04:04,119
+<|18.82|> the verification, the auditability<|21.32|>
+
+75
+00:04:04,119 --> 00:04:05,699
+<|21.32|> to understand these results.<|22.90|>
+
+76
+00:04:05,699 --> 00:04:08,199
+<|startoftranscript|><|transcribe|><|0.00|> So I think we think about all three of those components of safety.<|2.50|>
+
+77
+00:04:08,199 --> 00:04:10,500
+<|2.50|> Yeah, I mean, speaking of, right,<|4.80|>
+
+78
+00:04:10,500 --> 00:04:14,119
+<|4.80|> Anthropic was founded on the principles of AI safety.<|8.42|>
+
+79
+00:04:14,119 --> 00:04:16,260
+<|8.42|> It was a research org from scratch.<|10.56|>
+
+80
+00:04:16,260 --> 00:04:19,799
+<|10.56|> I'm curious, how have we gone from being a research org<|14.10|>
+
+81
+00:04:19,799 --> 00:04:23,639
+<|14.10|> to releasing a distinguished product in financial services?<|17.94|>
+
+82
+00:04:23,639 --> 00:04:28,799
+<|17.94|> In my mind, Anthropic really aims at building models<|23.10|>
+
+83
+00:04:28,799 --> 00:04:32,559
+<|23.10|> that can be safely deployed to solve the most complex<|26.86|>
+
+84
+00:04:32,559 --> 00:04:35,000
+<|26.86|> and difficult problems in the world.<|29.30|>
+
+85
+00:04:35,000 --> 00:04:39,000
+<|startoftranscript|><|transcribe|><|0.00|> Right? We're state of the art when it comes to code.<|4.00|>
+
+86
+00:04:39,000 --> 00:04:44,000
+<|4.00|> 0.5% of the world's population are software engineers.<|9.00|>
+
+87
+00:04:44,000 --> 00:04:51,000
+<|9.00|> So that is just one sliver of these really complex, difficult problems we can really start solving, right?<|16.00|>
+
+88
+00:04:51,000 --> 00:04:53,000
+<|16.00|> They really exist everywhere else in the world.<|18.00|>
+
+89
+00:04:53,000 --> 00:04:57,000
+<|18.00|> Code is so foundational to every single part of a company, right?<|22.00|>
+
+90
+00:04:57,000 --> 00:04:59,000
+<|22.00|> It is how a company is run.<|24.00|>
+
+91
+00:04:59,000 --> 00:05:05,440
+<|startoftranscript|><|transcribe|><|0.00|> So that means that Cloud is really great at interacting with more complex systems,<|6.44|>
+
+92
+00:05:05,440 --> 00:05:08,559
+<|6.44|> being able to expose thinking and its logic.<|9.56|>
+
+93
+00:05:08,559 --> 00:05:10,399
+<|9.56|> And that's why it's great at finance as well.<|11.40|>
+
+94
+00:05:10,399 --> 00:05:17,200
+<|11.40|> Finance are complex problems deployed into regulated verticals that need verification, auditability,<|18.20|>
+
+95
+00:05:17,200 --> 00:05:20,200
+<|startoftranscript|><|en|><|transcribe|><|0.00|> Ultimately, accuracy really matters.<|3.00|>
+
+96
+00:05:20,200 --> 00:05:25,400
+<|3.00|> Financial analysts these days spend a lot of time getting down to like the pixel perfect level of,<|8.20|>
+
+97
+00:05:25,400 --> 00:05:29,400
+<|8.20|> let's say a PowerPoint deck or an Excel model, right? You can't get anything wrong.<|12.20|>
+
+98
+00:05:29,400 --> 00:05:34,000
+<|12.20|> And it's funny now that we're in this paradigm where models can do something similar,<|16.80|>
+
+99
+00:05:34,000 --> 00:05:38,700
+<|16.80|> but using the capabilities they have to write really structured logic.<|21.50|>
+
+100
+00:05:38,700 --> 00:05:41,800
+<|21.50|> And so that's actually what we found language models to be good at.<|24.60|>
+
+101
+00:05:41,799 --> 00:05:43,359
+<|startoftranscript|><|en|><|transcribe|><|0.00|> what we've trained them on.<|1.56|>
+
+102
+00:05:43,359 --> 00:05:45,239
+<|1.56|> And that ability to do that,<|3.44|>
+
+103
+00:05:45,239 --> 00:05:47,639
+<|3.44|> it feels like it's just being abstracted<|5.84|>
+
+104
+00:05:47,639 --> 00:05:49,339
+<|5.84|> into so many other domains,<|7.54|>
+
+105
+00:05:49,339 --> 00:05:50,979
+<|7.54|> like creating Excel spreadsheets<|9.18|>
+
+106
+00:05:50,979 --> 00:05:52,779
+<|9.18|> or like creating PowerPoints.<|10.98|>
+
+107
+00:05:53,739 --> 00:05:57,039
+<|11.94|> And so, yeah, it's just been like super kind of striking,<|15.24|>
+
+108
+00:05:57,039 --> 00:05:59,759
+<|15.24|> at least to me, to see how many domains<|17.96|>
+
+109
+00:05:59,759 --> 00:06:02,259
+<|17.96|> the logic and reasoning of these models<|20.46|>
+
+110
+00:06:02,259 --> 00:06:03,479
+<|20.46|> actually ends up touching.<|21.68|>
+
+111
+00:06:03,479 --> 00:06:05,579
+<|21.68|> - Ultimately, these are digital systems<|23.78|>
+
+112
+00:06:05,579 --> 00:06:07,699
+<|23.78|> that we interact with every single day, right?<|25.90|>
+
+113
+00:06:07,700 --> 00:06:16,340
+<|startoftranscript|><|en|><|transcribe|><|0.00|> The fact that Cloud is great at code gives it a flexible skill and a shortcut to do all of these really cool interesting things, right?<|8.64|>
+
+114
+00:06:16,340 --> 00:06:26,300
+<|8.64|> Our file creation feature that was launched a few weeks ago that enables Cloud to create Excel documents in PowerPoint is essentially Cloud accessing a virtual machine.<|18.60|>
+
+115
+00:06:26,299 --> 00:06:31,299
+<|startoftranscript|><|en|><|transcribe|><|0.00|> within which it can run Python code as scale to edit,<|5.00|>
+
+116
+00:06:31,299 --> 00:06:33,979
+<|5.00|> analyze and create Excel documents<|7.68|>
+
+117
+00:06:33,979 --> 00:06:36,359
+<|7.68|> and create these perfect DCF models,<|10.06|>
+
+118
+00:06:36,359 --> 00:06:37,940
+<|10.06|> which I think is super exciting for us.<|11.64|>
+
+119
+00:06:37,940 --> 00:06:40,720
+<|11.64|> So I think there's a lot of other domains<|14.42|>
+
+120
+00:06:40,720 --> 00:06:42,539
+<|14.42|> that code can start really unlocking.<|16.24|>
+
+121
+00:06:42,600 --> 00:06:47,800
+<|startoftranscript|><|en|><|transcribe|><|0.00|> What's different to Cloud for Finance versus other products on the market in the financial services?<|5.20|>
+
+122
+00:06:47,800 --> 00:06:54,140
+<|5.20|> You know, there are three verbs, I think, about a lot that governs what I want to build for Cloud for Finance.<|11.54|>
+
+123
+00:06:54,720 --> 00:06:58,660
+<|12.12|> And these are retrieve, analyze, and create.<|16.06|>
+
+124
+00:06:58,899 --> 00:07:02,660
+<|startoftranscript|><|en|><|transcribe|><|0.00|> Starting with retrieval, many of the research agents on the market<|3.76|>
+
+125
+00:07:02,660 --> 00:07:05,059
+<|3.76|> have seen quite a lot of maturity, right?<|6.16|>
+
+126
+00:07:05,059 --> 00:07:09,419
+<|6.16|> Large language models are fantastic at digging into large pools of data<|10.52|>
+
+127
+00:07:09,419 --> 00:07:10,500
+<|10.52|> and gathering insights.<|11.60|>
+
+128
+00:07:10,500 --> 00:07:13,459
+<|11.60|> It can read 5,000 probably times faster than humans.<|14.56|>
+
+129
+00:07:13,459 --> 00:07:17,220
+<|14.56|> But what we want to do with finance is making sure that these systems<|18.32|>
+
+130
+00:07:17,220 --> 00:07:22,019
+<|18.32|> can connect to all of the core data sources that finance analysts work in.<|23.12|>
+
+131
+00:07:22,019 --> 00:07:25,899
+<|23.12|> In finance, the ability to uncover insights<|27.00|>
+
+132
+00:07:25,899 --> 00:07:29,059
+<|startoftranscript|><|en|><|transcribe|><|0.00|> faster than your competitors and your peers,<|3.16|>
+
+133
+00:07:29,059 --> 00:07:30,739
+<|3.16|> that's really key advantage.<|4.84|>
+
+134
+00:07:30,739 --> 00:07:32,299
+<|4.84|> Now downstream from that,<|6.40|>
+
+135
+00:07:32,299 --> 00:07:34,500
+<|6.40|> it's great that we can retrieve this information<|8.60|>
+
+136
+00:07:34,500 --> 00:07:35,579
+<|8.60|> and connect to it,<|9.68|>
+
+137
+00:07:35,579 --> 00:07:38,679
+<|9.68|> but the ability to do analysis at scale,<|12.78|>
+
+138
+00:07:38,679 --> 00:07:41,600
+<|12.78|> either through code or through spreadsheets<|15.70|>
+
+139
+00:07:41,600 --> 00:07:43,079
+<|15.70|> is so foundational as well.<|17.18|>
+
+140
+00:07:43,079 --> 00:07:45,600
+<|17.18|> Financial models themselves, they're not just these<|19.70|>
+
+141
+00:07:45,600 --> 00:07:48,279
+<|startoftranscript|><|en|><|transcribe|><|0.00|> beautiful Excel sheets, right?<|2.68|>
+
+142
+00:07:48,279 --> 00:07:50,200
+<|2.68|> They're a way for finance analysts<|4.60|>
+
+143
+00:07:50,200 --> 00:07:54,279
+<|4.60|> to inject their own judgment of what the future looks like<|8.68|>
+
+144
+00:07:54,279 --> 00:07:55,959
+<|8.68|> and what the proper valuation looks like<|10.36|>
+
+145
+00:07:55,959 --> 00:07:57,300
+<|10.36|> for that company, right?<|11.70|>
+
+146
+00:07:57,300 --> 00:07:58,679
+<|11.70|> So with that in mind,<|13.08|>
+
+147
+00:07:58,679 --> 00:08:00,040
+<|13.08|> we want Claude to be really good<|14.44|>
+
+148
+00:08:00,040 --> 00:08:02,320
+<|14.44|> at understanding these core finance concepts<|16.72|>
+
+149
+00:08:02,320 --> 00:08:05,619
+<|16.72|> and manipulate systems like Excel and spreadsheets<|20.02|>
+
+150
+00:08:05,619 --> 00:08:07,380
+<|20.02|> to be able to do that calculation.<|21.78|>
+
+151
+00:08:07,380 --> 00:08:09,800
+<|21.78|> And then the third part is creation, right?<|24.20|>
+
+152
+00:08:09,799 --> 00:08:13,799
+<|startoftranscript|><|en|><|transcribe|><|0.00|> We're all social creatures within the enterprise, right?<|4.00|>
+
+153
+00:08:13,799 --> 00:08:16,299
+<|4.00|> We do our work to be shared with others.<|6.50|>
+
+154
+00:08:16,299 --> 00:08:19,799
+<|6.50|> So the outputs themselves in the form of spreadsheets,<|10.00|>
+
+155
+00:08:19,799 --> 00:08:22,299
+<|10.00|> PowerPoint documents, Word,<|12.50|>
+
+156
+00:08:22,299 --> 00:08:25,000
+<|12.50|> doing this in a way that is client ready,<|15.20|>
+
+157
+00:08:25,200 --> 00:08:28,180
+<|startoftranscript|><|transcribe|><|0.00|> boardroom ready is really important.<|2.98|>
+
+158
+00:08:28,180 --> 00:08:31,080
+<|2.98|> So we really want to start pushing Clause capabilities<|5.88|>
+
+159
+00:08:31,080 --> 00:08:32,299
+<|5.88|> to be able to do that as well,<|7.10|>
+
+160
+00:08:32,299 --> 00:08:36,940
+<|7.10|> so that it is an end-to-end agentic autonomous system.<|11.74|>
+
+161
+00:08:36,940 --> 00:08:37,780
+<|11.74|> - That makes a lot of sense.<|12.58|>
+
+162
+00:08:37,780 --> 00:08:39,780
+<|12.58|> I feel like we build these primitives<|14.58|>
+
+163
+00:08:39,780 --> 00:08:41,739
+<|14.58|> and then they almost end up snowballing.<|16.54|>
+
+164
+00:08:41,739 --> 00:08:44,059
+<|16.54|> So you have like the retrieval step, right?<|18.86|>
+
+165
+00:08:44,059 --> 00:08:46,900
+<|18.86|> You build an MCP server to connect to one system.<|21.70|>
+
+166
+00:08:46,900 --> 00:08:50,740
+<|startoftranscript|><|transcribe|><|0.00|> But then if you take the data from that system, maybe it connects to some other system in a<|3.84|>
+
+167
+00:08:50,740 --> 00:08:55,700
+<|3.84|> unique way. Like you get data from Snowflake, let's say. You find an ID in there and you<|8.80|>
+
+168
+00:08:55,700 --> 00:09:00,220
+<|8.80|> need to connect it to your Salesforce instance. You can easily do that with some of those<|13.32|>
+
+169
+00:09:00,220 --> 00:09:04,800
+<|13.32|> primitives that we've built on the retrieval side. But then it sort of continues to snowball. You get<|17.90|>
+
+170
+00:09:04,799 --> 00:09:10,419
+<|startoftranscript|><|transcribe|><|0.00|> analysis where Claude can write a bunch of code and essentially piece together some of that<|5.62|>
+
+171
+00:09:10,419 --> 00:09:15,320
+<|5.62|> information. And then finally, the creation is even take that one step further and put it into<|10.52|>
+
+172
+00:09:15,320 --> 00:09:21,119
+<|10.52|> the environment that someone cares about, sending that post request back to the API example to a<|16.32|>
+
+173
+00:09:21,119 --> 00:09:26,539
+<|16.32|> system where an analyst or an operator can see the information that Claude has reasoned through.<|21.74|>
+
+174
+00:09:26,539 --> 00:09:28,500
+<|21.74|> So let's talk a little bit more about<|23.70|>
+
+175
+00:09:28,500 --> 00:09:30,380
+<|startoftranscript|><|transcribe|><|0.00|> what is actually a cloud for finance?<|1.88|>
+
+176
+00:09:30,380 --> 00:09:31,299
+<|1.88|> How does it work?<|2.80|>
+
+177
+00:09:31,299 --> 00:09:32,460
+<|2.80|> What makes it so special?<|3.96|>
+
+178
+00:09:32,460 --> 00:09:34,460
+<|3.96|> - So there are three layers<|5.96|>
+
+179
+00:09:34,460 --> 00:09:36,940
+<|5.96|> that we think about in our solution.<|8.44|>
+
+180
+00:09:36,940 --> 00:09:40,359
+<|8.44|> The models, the agent capabilities, and the platform.<|11.86|>
+
+181
+00:09:40,359 --> 00:09:42,479
+<|11.86|> Starting with the models themselves.<|13.98|>
+
+182
+00:09:42,479 --> 00:09:45,200
+<|13.98|> Fundamentally, we are a research lab.<|16.70|>
+
+183
+00:09:45,200 --> 00:09:51,400
+<|startoftranscript|><|transcribe|><|0.00|> Everything we do really aims at making cloud the best model for financial services.<|6.20|>
+
+184
+00:09:51,400 --> 00:09:55,640
+<|6.20|> Now, finance presents some interesting challenges to us.<|10.44|>
+
+185
+00:09:55,640 --> 00:09:59,960
+<|10.44|> Code is something that we can test every single day as software engineers and product managers.<|14.76|>
+
+186
+00:09:59,960 --> 00:10:04,799
+<|14.76|> But there are very few investment bankers within these four walls of Anthropik.<|19.60|>
+
+187
+00:10:04,799 --> 00:10:09,519
+<|startoftranscript|><|en|><|transcribe|><|0.00|> Here's where we're really excited to work with early customers like BCI,<|4.72|>
+
+188
+00:10:09,519 --> 00:10:15,559
+<|4.72|> Pearl at Weinberg, and NBIM to really let us know what are the use cases they really care about,<|10.76|>
+
+189
+00:10:15,559 --> 00:10:19,719
+<|10.76|> what does good look like, and then help us, much more importantly,<|14.92|>
+
+190
+00:10:19,719 --> 00:10:23,959
+<|14.92|> uncover those gaps that we can bring back into the research process.<|19.16|>
+
+191
+00:10:23,959 --> 00:10:26,839
+<|19.16|> The second thing is on the product side, right?<|22.04|>
+
+192
+00:10:26,839 --> 00:10:30,200
+<|22.04|> Agenda capabilities are essentially the code that we write<|25.40|>
+
+193
+00:10:30,200 --> 00:10:33,500
+<|startoftranscript|><|en|><|transcribe|><|0.00|> to enable users to interact with the models.<|3.30|>
+
+194
+00:10:33,500 --> 00:10:36,040
+<|3.30|> We've built capabilities like deep research.<|5.84|>
+
+195
+00:10:36,040 --> 00:10:40,000
+<|5.84|> Now we're really investing in being able to embed Cloud<|9.80|>
+
+196
+00:10:40,000 --> 00:10:42,299
+<|9.80|> in all of the core surfaces you work in.<|12.10|>
+
+197
+00:10:42,299 --> 00:10:44,919
+<|12.10|> Not just Cloud for Enterprise, Cloud AI,<|14.72|>
+
+198
+00:10:44,919 --> 00:10:48,500
+<|14.72|> but also the browser extension, Excel,<|18.30|>
+
+199
+00:10:48,500 --> 00:10:54,179
+<|startoftranscript|><|en|><|transcribe|><|0.00|> Chrome, and other services that our analysts and enterprise customers work with every single day.<|5.68|>
+
+200
+00:10:54,179 --> 00:11:02,979
+<|5.68|> The last piece is we want to again build a really flexible platform that can be tailored and deployed very easily for our customers.<|14.48|>
+
+201
+00:11:02,979 --> 00:11:13,099
+<|14.48|> That's why we've been spending a lot of time with industry partners like S&P, FactSet, PitchBook to build these integrations so that these agents can be as powerful as possible.<|24.60|>
+
+202
+00:11:13,099 --> 00:11:15,799
+<|startoftranscript|><|en|><|transcribe|><|0.00|> So I'm curious, how has adoption been, right?<|2.70|>
+
+203
+00:11:15,799 --> 00:11:16,859
+<|2.70|> Who's using this?<|3.76|>
+
+204
+00:11:16,859 --> 00:11:18,559
+<|3.76|> Why are they excited about it?<|5.46|>
+
+205
+00:11:18,559 --> 00:11:19,399
+<|5.46|> Walk us through that.<|6.30|>
+
+206
+00:11:19,399 --> 00:11:20,339
+<|6.30|> As I mentioned before,<|7.24|>
+
+207
+00:11:20,339 --> 00:11:22,539
+<|7.24|> we're really seeing pockets of adoption<|9.44|>
+
+208
+00:11:22,539 --> 00:11:24,759
+<|9.44|> across the entire industry.<|11.66|>
+
+209
+00:11:24,759 --> 00:11:26,000
+<|11.66|> I'm often asked, you know,<|12.90|>
+
+210
+00:11:26,000 --> 00:11:29,799
+<|12.90|> which sub verticals do you see AI adoption in finance?<|16.70|>
+
+211
+00:11:29,799 --> 00:11:32,599
+<|startoftranscript|><|en|><|transcribe|><|0.00|> I think it's much less about subverticals,<|2.80|>
+
+212
+00:11:32,599 --> 00:11:34,880
+<|2.80|> but much more about the culture<|5.08|>
+
+213
+00:11:34,880 --> 00:11:37,959
+<|5.08|> that our customers have really engendered, right?<|8.16|>
+
+214
+00:11:37,959 --> 00:11:41,919
+<|8.16|> Which requires a good combination of top-down encouragement<|12.12|>
+
+215
+00:11:41,919 --> 00:11:44,559
+<|12.12|> and adoption to lower the barriers,<|14.76|>
+
+216
+00:11:44,559 --> 00:11:48,320
+<|14.76|> but also a bottoms-up experimentation culture, right?<|18.52|>
+
+217
+00:11:48,320 --> 00:11:51,599
+<|18.52|> To try all of these tools out there to figure out what makes sense.<|21.80|>
+
+218
+00:11:51,599 --> 00:11:59,000
+<|startoftranscript|><|en|><|transcribe|><|0.00|> With that in mind, I think some of the main customers that we've seen strong adoption from, BCI for example,<|7.40|>
+
+219
+00:11:59,000 --> 00:12:02,359
+<|7.40|> they've sort of fundamentally transformed the way they work.<|10.76|>
+
+220
+00:12:02,359 --> 00:12:09,399
+<|10.76|> There are these things called comps analysis that analysts do, which basically means you're comparing comps,<|17.80|>
+
+221
+00:12:09,400 --> 00:12:12,640
+<|startoftranscript|><|transcribe|><|0.00|> financial and operational metrics for all of these different companies<|3.24|>
+
+222
+00:12:12,640 --> 00:12:15,760
+<|3.24|> to figure out whether they're trading at the right value.<|6.36|>
+
+223
+00:12:15,760 --> 00:12:18,520
+<|6.36|> Analysts do this statically in one Excel sheet<|9.12|>
+
+224
+00:12:18,520 --> 00:12:22,000
+<|9.12|> that they refresh manually every week, every quarter.<|12.60|>
+
+225
+00:12:22,920 --> 00:12:27,119
+<|13.52|> Instead of doing that, BCI has instead used our artifact feature<|17.72|>
+
+226
+00:12:27,119 --> 00:12:30,600
+<|17.72|> to connect directly to S&P and FactSet datasets<|21.20|>
+
+227
+00:12:30,599 --> 00:12:33,599
+<|startoftranscript|><|en|><|transcribe|><|0.00|> so that the artifact is a live dashboard<|3.00|>
+
+228
+00:12:33,599 --> 00:12:35,979
+<|3.00|> of how these metrics compare against each other.<|5.38|>
+
+229
+00:12:35,979 --> 00:12:37,979
+<|5.38|> And with one simple prompt to Claude,<|7.38|>
+
+230
+00:12:37,979 --> 00:12:39,739
+<|7.38|> you can easily update it.<|9.14|>
+
+231
+00:12:39,739 --> 00:12:41,059
+<|9.14|> And these artifacts are also shared<|10.46|>
+
+232
+00:12:41,059 --> 00:12:42,519
+<|10.46|> with their managing directors<|11.92|>
+
+233
+00:12:42,519 --> 00:12:46,559
+<|11.92|> who are directly interfacing with these platforms as well.<|15.96|>
+
+234
+00:12:46,559 --> 00:12:50,639
+<|15.96|> So I think we're really seeing not just acceleration of work,<|20.04|>
+
+235
+00:12:50,639 --> 00:12:53,699
+<|20.04|> but way for the work to actually be transformed<|23.10|>
+
+236
+00:12:53,700 --> 00:12:58,700
+<|startoftranscript|><|en|><|transcribe|><|0.00|> Memory is such a fundamental piece of how humans basically exist in the world, right?<|5.00|>
+
+237
+00:12:58,700 --> 00:13:02,299
+<|5.00|> You have to memorize things to like know where you put your keys last, for example.<|8.60|>
+
+238
+00:13:02,299 --> 00:13:05,299
+<|8.60|> How are we building that into our models?<|11.60|>
+
+239
+00:13:05,299 --> 00:13:08,000
+<|11.60|> And why is that important for financial services?<|14.30|>
+
+240
+00:13:08,000 --> 00:13:12,299
+<|14.30|> The way that we think about how we work with our customers, as I mentioned before,<|18.60|>
+
+241
+00:13:12,299 --> 00:13:16,900
+<|18.60|> there's very little that we can internally test for these finance use cases.<|23.20|>
+
+242
+00:13:16,900 --> 00:13:20,100
+<|23.20|> It's to, again, work really closely with enterprise customers<|26.40|>
+
+243
+00:13:20,100 --> 00:13:22,799
+<|26.40|> to understand where things are working with or not, right?<|29.10|>
+
+244
+00:13:22,799 --> 00:13:25,799
+<|startoftranscript|><|en|><|transcribe|><|0.00|> And memory systems is something that's really important<|3.00|>
+
+245
+00:13:25,799 --> 00:13:28,959
+<|3.00|> to allow Claw to understand and maintain context<|6.16|>
+
+246
+00:13:28,959 --> 00:13:32,959
+<|6.16|> across all of these different tools and surfaces that it works in.<|10.16|>
+
+247
+00:13:32,959 --> 00:13:37,399
+<|10.16|> Claw is in Claw.ai, in Excel, in the browser,<|14.60|>
+
+248
+00:13:37,399 --> 00:13:40,000
+<|14.60|> interacting with facts at SMP,<|17.20|>
+
+249
+00:13:40,000 --> 00:13:42,200
+<|17.20|> the ability to understand patterns,<|19.40|>
+
+250
+00:13:42,200 --> 00:13:47,200
+<|startoftranscript|><|transcribe|><|0.00|> understand preferences for that, you know, DCF template that you want Claude to remember.<|5.00|>
+
+251
+00:13:47,200 --> 00:13:50,960
+<|5.00|> All of these things are really important to just make sure that Claude stays<|8.76|>
+
+252
+00:13:50,960 --> 00:13:54,919
+<|8.76|> and in turn that continually gets better through his interactions with you.<|12.72|>
+
+253
+00:13:54,919 --> 00:13:58,239
+<|12.72|> And so like over time, you could imagine someone prompting the model like,<|16.04|>
+
+254
+00:13:58,239 --> 00:14:00,440
+<|16.04|> "Hey, you got this formula slightly wrong."<|18.24|>
+
+255
+00:14:00,440 --> 00:14:06,000
+<|18.24|> And then Claude has some way of storing that memory, whether it be a file system or it's implicit.<|23.80|>
+
+256
+00:14:06,000 --> 00:14:08,500
+<|startoftranscript|><|en|><|transcribe|><|0.00|> et cetera, which is pretty awesome.<|2.50|>
+
+257
+00:14:08,500 --> 00:14:09,500
+<|2.50|> I'm excited for that.<|3.50|>
+
+258
+00:14:09,500 --> 00:14:14,020
+<|3.50|> Or if the user and analyst really wants to use S&P<|8.02|>
+
+259
+00:14:14,020 --> 00:14:17,320
+<|8.02|> for a specific piece of EBITDA calculation,<|11.32|>
+
+260
+00:14:17,320 --> 00:14:18,919
+<|11.32|> Cloud should remember those preferences<|12.92|>
+
+261
+00:14:18,919 --> 00:14:21,320
+<|12.92|> to just like a good intern.<|15.32|>
+
+262
+00:14:21,320 --> 00:14:23,900
+<|15.32|> Cool, so we've talked a lot about Cloud for Finance.<|17.90|>
+
+263
+00:14:23,900 --> 00:14:25,260
+<|17.90|> I'm curious, in your opinion,<|19.26|>
+
+264
+00:14:25,260 --> 00:14:27,700
+<|19.26|> what's next for our product and research orgs<|21.70|>
+
+265
+00:14:27,700 --> 00:14:30,440
+<|21.70|> in relation to making Cloud better for finance?<|24.44|>
+
+266
+00:14:30,440 --> 00:14:32,179
+<|24.44|> You know, take a step back.<|26.18|>
+
+267
+00:14:32,179 --> 00:14:35,299
+<|26.18|> Anthropic is enterprise focused, enterprise first.<|29.30|>
+
+268
+00:14:35,299 --> 00:14:41,799
+<|startoftranscript|><|en|><|transcribe|><|0.00|> The only way for us to deliver outcomes to the enterprise is to focus on specific domains.<|6.50|>
+
+269
+00:14:41,799 --> 00:14:46,940
+<|6.50|> Finance is one of the most important domains for Anthropic across the entire stack.<|11.64|>
+
+270
+00:14:47,700 --> 00:14:50,080
+<|12.40|> Research, product, and go-to-market.<|14.78|>
+
+271
+00:14:50,459 --> 00:14:58,619
+<|15.16|> Starting with research, we're finally starting to invest in both specific pre-training and post-training for finance.<|23.32|>
+
+272
+00:14:59,099 --> 00:15:02,819
+<|startoftranscript|><|en|><|transcribe|><|0.00|> On the product side, three things I'm really excited about.<|3.72|>
+
+273
+00:15:02,819 --> 00:15:07,779
+<|3.72|> One is going much deeper into specific sub verticals.<|8.68|>
+
+274
+00:15:07,779 --> 00:15:09,739
+<|8.68|> Private equity has very different needs<|10.64|>
+
+275
+00:15:09,739 --> 00:15:13,119
+<|10.64|> from hedge funds and insurance firms and investment banks.<|14.02|>
+
+276
+00:15:13,119 --> 00:15:15,319
+<|14.02|> We want to really start understanding and peeling back<|16.22|>
+
+277
+00:15:15,319 --> 00:15:17,000
+<|16.22|> the nuances of those workflows<|17.90|>
+
+278
+00:15:17,000 --> 00:15:19,399
+<|17.90|> and make sure that the components<|20.30|>
+
+279
+00:15:19,400 --> 00:15:22,160
+<|startoftranscript|><|transcribe|><|0.00|> we're building fully serve those workflows.<|2.76|>
+
+280
+00:15:22,160 --> 00:15:25,640
+<|2.76|> We're also excited about the ability to have cloud everywhere,<|6.24|>
+
+281
+00:15:25,640 --> 00:15:27,720
+<|6.24|> right? Not just in the browser,<|8.32|>
+
+282
+00:15:27,720 --> 00:15:30,360
+<|8.32|> but within Excel, within PowerPoint.<|10.96|>
+
+283
+00:15:30,360 --> 00:15:32,080
+<|10.96|> On PowerPoint and Excel,<|12.68|>
+
+284
+00:15:32,080 --> 00:15:36,000
+<|12.68|> I think we still have a lot of room to improve the quality of those outputs.<|16.60|>
+
+285
+00:15:36,000 --> 00:15:39,200
+<|startoftranscript|><|en|><|transcribe|><|0.00|> So excited to work again really closely with research<|3.20|>
+
+286
+00:15:39,200 --> 00:15:41,500
+<|3.20|> and bring these capabilities into the product.<|5.50|>
+
+287
+00:15:41,500 --> 00:15:43,200
+<|5.50|> On the partnership side,<|7.20|>
+
+288
+00:15:43,200 --> 00:15:46,700
+<|7.20|> it's really important for us to work closely with the industry.<|10.70|>
+
+289
+00:15:46,700 --> 00:15:48,700
+<|10.70|> It's been really encouraging to see<|12.70|>
+
+290
+00:15:48,700 --> 00:15:52,000
+<|12.70|> the fact that MCP servers have only been out for six months<|16.00|>
+
+291
+00:15:52,000 --> 00:16:00,080
+<|startoftranscript|><|en|><|transcribe|><|0.00|> And major industry leaders like S&P and Faxed have already published functional, great versions of their own MCP servers.<|8.08|>
+
+292
+00:16:00,479 --> 00:16:05,580
+<|8.48|> We want to keep bringing the industry together, including some of the recent announcements we've made.<|13.58|>
+
+293
+00:16:05,580 --> 00:16:09,679
+<|13.58|> The last piece is working really closely with our enterprise customers.<|17.68|>
+
+294
+00:16:11,340 --> 00:16:16,700
+<|19.34|> Fundamentally, that's how we work together to translate what their needs are.<|24.70|>
+
+295
+00:16:16,700 --> 00:16:21,200
+<|startoftranscript|><|en|><|transcribe|><|0.00|> and help us build the research and product capabilities to meet those needs.<|4.50|>
+
+296
+00:16:21,200 --> 00:16:25,700
+<|4.50|> I definitely agree with that because not everyone comes from a financial services background like you,<|9.00|>
+
+297
+00:16:25,700 --> 00:16:30,700
+<|9.00|> at Anthropic, and so I feel like we learn the most from the customers that we're going deep with.<|14.00|>
+
+298
+00:16:30,700 --> 00:16:37,700
+<|14.00|> Specifically when they're like designing evals, for example, that gives us so much signal about how the model actually works in production.<|21.00|>
+
+299
+00:16:37,700 --> 00:16:42,799
+<|21.00|> And I think that level of collaboration is what we're going after with Cloud4Finance.<|26.10|>
+
+300
+00:16:42,799 --> 00:16:47,099
+<|startoftranscript|><|en|><|transcribe|><|0.00|> I think that's the main thing I would encourage our enterprise customers to think about.<|4.30|>
+
+301
+00:16:47,099 --> 00:16:51,599
+<|4.30|> You know, evals sound like these mystical concepts, but they're really simple.<|8.80|>
+
+302
+00:16:51,599 --> 00:16:55,599
+<|8.80|> They are tasks you care about and problems you want to solve<|12.80|>
+
+303
+00:16:55,599 --> 00:17:00,099
+<|12.80|> and an articulation of what good looks like for those tasks.<|17.30|>
+
+304
+00:17:00,099 --> 00:17:05,300
+<|17.30|> It's really important for enterprise customers to be thoughtful about these problems<|22.50|>
+
+305
+00:17:05,300 --> 00:17:06,600
+<|startoftranscript|><|transcribe|><|0.00|> rather than thinking about,<|1.30|>
+
+306
+00:17:06,720 --> 00:17:09,400
+<|1.42|> oh, I need to infuse AI into every part of my business.<|4.10|>
+
+307
+00:17:09,640 --> 00:17:11,220
+<|4.34|> And that's how we can partner really closely<|5.92|>
+
+308
+00:17:11,220 --> 00:17:12,180
+<|5.92|> with enterprise customers.<|6.88|>
+
+309
+00:17:12,500 --> 00:17:15,220
+<|7.20|> We bring those evals directly into the training process,<|9.92|>
+
+310
+00:17:15,640 --> 00:17:17,020
+<|10.34|> directly into the product pipeline,<|11.72|>
+
+311
+00:17:17,200 --> 00:17:19,000
+<|11.90|> so that we can deliver these capabilities<|13.70|>
+
+312
+00:17:19,000 --> 00:17:20,080
+<|13.70|> to our customers.<|14.78|>
+
+313
+00:17:20,640 --> 00:17:21,040
+<|15.34|> 100%.<|15.74|>
+
+314
+00:17:21,040 --> 00:17:22,739
+<|15.74|> Well, thank you so much, Nick.<|17.44|>
+
+315
+00:17:22,780 --> 00:17:23,800
+<|17.48|> This was fantastic.<|18.50|>
+
+316
+00:17:24,140 --> 00:17:25,080
+<|18.84|> Appreciate you taking the time.<|19.78|>
+
+317
+00:17:25,280 --> 00:17:26,160
+<|19.98|> Thanks for having me, Alexander.<|20.86|>
+
+318
+00:17:26,160 --> 00:17:27,160
+<|startoftranscript|><|transcribe|><|0.00|> Thank you.<|1.00|><|endoftext|>
+

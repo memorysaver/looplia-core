@@ -1,0 +1,284 @@
+1
+00:00:00,000 --> 00:00:03,339
+<|startoftranscript|><|transcribe|><|0.00|> Cloud Code is now available on the web.<|3.34|>
+
+2
+00:00:03,339 --> 00:00:05,279
+<|3.34|> So instead of loading up your terminal<|5.28|>
+
+3
+00:00:05,279 --> 00:00:07,199
+<|5.28|> or having to open up your IDE<|7.20|>
+
+4
+00:00:07,199 --> 00:00:08,880
+<|7.20|> anytime you want to make a change,<|8.88|>
+
+5
+00:00:08,880 --> 00:00:10,840
+<|8.88|> you can now delegate coding tasks<|10.84|>
+
+6
+00:00:10,840 --> 00:00:13,779
+<|10.84|> directly from your browser or the Cloud Mobile app.<|13.78|>
+
+7
+00:00:13,779 --> 00:00:15,699
+<|13.78|> You simply connect your GitHub account<|15.70|>
+
+8
+00:00:15,699 --> 00:00:21,299
+<|startoftranscript|><|en|><|transcribe|><|0.00|> you select your repo describe what you need done and claude handles the rest all running on our<|5.60|>
+
+9
+00:00:21,299 --> 00:00:27,540
+<|5.60|> cloud infrastructure and the best part is you can now run multiple tasks in parallel across different<|11.84|>
+
+10
+00:00:27,540 --> 00:00:34,259
+<|11.84|> repositories so whether you have a bug backlog routine fixes or a brilliant new idea or feature<|18.56|>
+
+11
+00:00:34,259 --> 00:00:40,020
+<|18.56|> you want to add you can just spin up a session or multiple sessions and let claude handle them<|24.32|>
+
+12
+00:00:40,020 --> 00:00:44,500
+<|24.32|> simultaneously let me show you how this works so i'll open up<|28.80|>
+
+13
+00:00:44,500 --> 00:00:51,720
+<|startoftranscript|><|en|><|transcribe|><|0.00|> cloudcode on the web at claw.ai slash code. I'll select a repo. I have a repo already selected here<|7.22|>
+
+14
+00:00:51,720 --> 00:00:59,900
+<|7.22|> and then I'll give it a prompt. Let's say add input validation to the user registration endpoint<|15.40|>
+
+15
+00:00:59,900 --> 00:01:12,080
+<|startoftranscript|><|en|><|transcribe|><|0.00|> Also make sure we're using a strong password on both the front end and back end API.<|12.18|>
+
+16
+00:01:12,080 --> 00:01:15,520
+<|12.18|> We'll hit enter and we are off the races.<|15.62|>
+
+17
+00:01:15,520 --> 00:01:20,459
+<|15.62|> Claude is working in his own isolated sandbox with full git access and we can watch the<|20.56|>
+
+18
+00:01:20,459 --> 00:01:22,300
+<|20.56|> progress in real time.<|22.40|>
+
+19
+00:01:22,300 --> 00:01:23,400
+<|22.40|> But while this runs.<|23.50|>
+
+20
+00:01:23,400 --> 00:01:26,559
+<|startoftranscript|><|transcribe|><|0.00|> let me tell you about some of the other stuff that we've recently launched.<|3.16|>
+
+21
+00:01:27,580 --> 00:01:30,800
+<|4.18|> The big one is Claude Haiku 4.5.<|7.40|>
+
+22
+00:01:31,120 --> 00:01:34,580
+<|7.72|> And a few weeks ago, we launched Claude Sonnet 4.5,<|11.18|>
+
+23
+00:01:34,680 --> 00:01:36,699
+<|11.28|> which became the world's best coding model.<|13.30|>
+
+24
+00:01:36,919 --> 00:01:40,900
+<|13.52|> And just last week, we followed it up with Claude Haiku 4.5.<|17.50|>
+
+25
+00:01:40,900 --> 00:01:42,900
+<|startoftranscript|><|en|><|transcribe|><|0.00|> And here's the really remarkable thing:<|2.00|>
+
+26
+00:01:42,900 --> 00:01:46,300
+<|2.00|> 5 months ago, Sonnet 4 was state of the art.<|5.40|>
+
+27
+00:01:46,300 --> 00:01:51,300
+<|5.40|> And now, Haiku 4.5 gives you a similar coding performance<|10.40|>
+
+28
+00:01:51,300 --> 00:01:54,300
+<|10.40|> at one-third the cost and more than twice the speed.<|13.40|>
+
+29
+00:01:54,300 --> 00:01:58,800
+<|13.40|> It even surpasses Sonnet 4 at certain tasks like computer use.<|17.90|>
+
+30
+00:01:58,800 --> 00:02:03,900
+<|17.90|> Now, the benchmarks are impressive: 73.3% on SweetBench Verified,<|23.00|>
+
+31
+00:02:03,900 --> 00:02:06,300
+<|23.00|> 41% on TerminalBench,<|25.40|>
+
+32
+00:02:06,300 --> 00:02:10,300
+<|25.40|> and it achieves 90% of Sonnet 4.5's performance<|29.40|>
+
+33
+00:02:10,300 --> 00:02:12,979
+<|startoftranscript|><|transcribe|><|0.00|> in agentic coding evaluations.<|2.68|>
+
+34
+00:02:12,979 --> 00:02:15,419
+<|2.68|> But the big question you're probably having is<|5.12|>
+
+35
+00:02:15,419 --> 00:02:18,139
+<|5.12|> when should developers use Haiku 4.5?<|7.84|>
+
+36
+00:02:18,139 --> 00:02:21,119
+<|7.84|> And the big pattern that we're seeing from our community<|10.82|>
+
+37
+00:02:21,119 --> 00:02:24,040
+<|10.82|> is that Sonnet 4.5 does the high level<|13.74|>
+
+38
+00:02:24,040 --> 00:02:27,100
+<|13.74|> problem decomposition and planning and then Haiku<|16.80|>
+
+39
+00:02:27,100 --> 00:02:32,620
+<|startoftranscript|><|transcribe|><|0.00|> 4.5 is used to actually implement and write the code. Now this multi-agent<|5.52|>
+
+40
+00:02:32,620 --> 00:02:37,060
+<|5.52|> approach is becoming really popular for things like large-scale refactors or<|9.96|>
+
+41
+00:02:37,060 --> 00:02:42,639
+<|9.96|> tackling technical death. Haiku 4.5 is available wherever you get your clod and<|15.54|>
+
+42
+00:02:42,639 --> 00:02:47,880
+<|15.54|> it's available at just $1 per million input tokens and $5 per million output<|20.78|>
+
+43
+00:02:47,880 --> 00:02:49,700
+<|20.78|> tokens. Alright let's check<|22.60|>
+
+44
+00:02:49,699 --> 00:02:56,580
+<|startoftranscript|><|transcribe|><|0.00|> back on our task and see how it's doing. So if we open it up here we can see that<|6.88|>
+
+45
+00:02:56,580 --> 00:03:02,899
+<|6.88|> Claude gave us a good summary of all of the changes that it made in the service.go file,<|13.20|>
+
+46
+00:03:02,899 --> 00:03:09,699
+<|13.20|> in the TypeScript on the front end and my absolute favorite feature of Claude code on the web is this<|20.00|>
+
+47
+00:03:09,699 --> 00:03:17,699
+<|20.00|> open in CLI button and the reason that I really like it is you simply click it, you open up your terminal<|28.00|>
+
+48
+00:03:18,539 --> 00:03:20,720
+<|startoftranscript|><|transcribe|><|0.84|> paste in the command that it gave you.<|3.02|>
+
+49
+00:03:21,879 --> 00:03:26,199
+<|4.18|> And now I am working in my local development environment with all of the<|8.50|>
+
+50
+00:03:26,199 --> 00:03:29,039
+<|8.50|> context and all of my progress from the web preserve.<|11.34|>
+
+51
+00:03:29,279 --> 00:03:31,679
+<|11.58|> So I can see the messages.<|13.98|>
+
+52
+00:03:31,699 --> 00:03:34,199
+<|14.00|> I can see all of the files that have been changed.<|16.50|>
+
+53
+00:03:34,679 --> 00:03:39,660
+<|16.98|> I can go into VS code and see all of the changes that were made to the<|21.96|>
+
+54
+00:03:39,660 --> 00:03:41,099
+<|21.96|> service sign up.<|23.40|>
+
+55
+00:03:41,100 --> 00:03:46,460
+<|startoftranscript|><|en|><|transcribe|><|0.00|> the signup.type script file and much more and i can continue right from where i left off on my<|5.36|>
+
+56
+00:03:46,460 --> 00:03:52,700
+<|5.36|> mobile phone or the browser now i want to show you one final feature that we recently added to clot<|11.60|>
+
+57
+00:03:52,700 --> 00:04:01,500
+<|11.60|> code i gave it this prompt earlier talking about adding caching to my application but i gave it a<|20.40|>
+
+58
+00:04:01,500 --> 00:04:07,900
+<|20.40|> very broad prompt saying hey i would like to add caching to my application and what clot code did is<|26.80|>
+
+59
+00:04:07,899 --> 00:04:13,099
+<|startoftranscript|><|en|><|transcribe|><|0.00|> it's going to ask me a number of follow-up questions to make sure that it implements it correctly.<|5.20|>
+
+60
+00:04:13,099 --> 00:04:19,100
+<|5.20|> So it's going to ask the caching level here, should it be database query caching, API response caching,<|11.20|>
+
+61
+00:04:19,100 --> 00:04:24,100
+<|11.20|> and I can choose any of these, go to the next section and figure out what my goals are.<|16.20|>
+
+62
+00:04:24,199 --> 00:04:31,000
+<|16.30|> Is it to improve performance, reduce database load, the target area, is it for the workout data, for the user data,<|23.10|>
+
+63
+00:04:31,000 --> 00:04:39,239
+<|startoftranscript|><|en|><|transcribe|><|0.00|> analytics choose the technology redis in memory postgres and then i can hit submit and have it<|8.24|>
+
+64
+00:04:39,239 --> 00:04:43,399
+<|8.24|> go and implement based on the follow-up information that i gave it<|12.40|>
+
+65
+00:04:45,320 --> 00:04:50,200
+<|14.32|> and there you have it cloud code on the web for parallel cloud-based development at home<|19.20|>
+
+66
+00:04:50,200 --> 00:04:55,399
+<|19.20|> and on the go haiku 4.5 for lightning fast coding at a fraction of the cost<|24.40|>
+
+67
+00:04:55,399 --> 00:04:58,720
+<|startoftranscript|><|en|><|transcribe|><|0.00|> and smarter local workflows with multi-question support.<|3.32|>
+
+68
+00:04:59,399 --> 00:05:04,679
+<|4.00|> Cloud Code on the Web is available now for pro and max users at cloud.ai slash code.<|9.28|>
+
+69
+00:05:05,039 --> 00:05:07,419
+<|9.64|> Give it a try and let us know what you think.<|12.02|>
+
+70
+00:05:08,019 --> 00:05:08,679
+<|12.62|> Happy building.<|13.28|>
+
+71
+00:05:08,679 --> 00:05:09,179
+<|startoftranscript|><|transcribe|><|0.00|> you<|0.50|><|endoftext|>
+

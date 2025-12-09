@@ -94,7 +94,27 @@ check_prerequisites() {
     print_fail "Test fixture not found: $EXAMPLES_DIR/ai-healthcare.md"
     exit 1
   fi
-  print_pass "Test fixtures available"
+  print_pass "Markdown fixture available"
+
+  # Check youtube fixtures
+  print_step "Checking YouTube test fixtures..."
+  if [ ! -f "$EXAMPLES_DIR/youtube/Anthropics/captions/EvtPBaaykdo.en.vtt" ]; then
+    print_fail "VTT fixture not found: $EXAMPLES_DIR/youtube/Anthropics/captions/EvtPBaaykdo.en.vtt"
+    exit 1
+  fi
+  print_pass "VTT fixture available"
+
+  if [ ! -f "$EXAMPLES_DIR/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt" ]; then
+    print_fail "SRT fixture not found: $EXAMPLES_DIR/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt"
+    exit 1
+  fi
+  print_pass "SRT fixture available"
+
+  if [ ! -f "$EXAMPLES_DIR/youtube/Anthropics/transcripts/CBneTpXF1CQ.json" ]; then
+    print_fail "JSON fixture not found: $EXAMPLES_DIR/youtube/Anthropics/transcripts/CBneTpXF1CQ.json"
+    exit 1
+  fi
+  print_pass "JSON transcript fixture available"
 }
 
 # Clean and prepare workspace
@@ -271,6 +291,271 @@ test_kit() {
   fi
 }
 
+# Test VTT caption summarization
+test_vtt_summarize() {
+  print_header "Test 3: Summarize VTT Caption"
+
+  print_step "Running summarize on VTT file..."
+  # Run without --output to let it save to session folder naturally
+  CONTAINER_ID=$(docker create \
+    --env-file "$ENV_FILE" \
+    -v "$(pwd)/$EXAMPLES_DIR:/examples:ro" \
+    "$IMAGE_NAME" \
+    summarize --file /examples/youtube/Anthropics/captions/EvtPBaaykdo.en.vtt)
+
+  docker start -a "$CONTAINER_ID"
+
+  print_step "Extracting results from container..."
+  # Copy to a unique subfolder to preserve session data
+  mkdir -p "$WORKSPACE_DIR/vtt-test"
+  docker cp "$CONTAINER_ID:/home/looplia/.looplia/." "$WORKSPACE_DIR/vtt-test/"
+  docker rm "$CONTAINER_ID" > /dev/null
+
+  # Find the session folder (should be contentItem/{sessionId}/)
+  print_step "Checking session folder structure..."
+  SESSION_DIR=$(find "$WORKSPACE_DIR/vtt-test/contentItem" -maxdepth 1 -type d ! -name contentItem 2>/dev/null | head -1)
+  if [ -n "$SESSION_DIR" ]; then
+    SESSION_ID=$(basename "$SESSION_DIR")
+    print_pass "Session folder created: $SESSION_ID"
+  else
+    print_fail "No session folder found in contentItem/"
+    ls -la "$WORKSPACE_DIR/vtt-test/contentItem/" 2>/dev/null || echo "contentItem folder missing"
+    return 1
+  fi
+
+  # Check summary.json exists in session folder
+  SUMMARY_FILE="$SESSION_DIR/summary.json"
+  if [ -f "$SUMMARY_FILE" ]; then
+    print_pass "summary.json found in session folder"
+  else
+    print_fail "summary.json not found in session folder"
+    ls -la "$SESSION_DIR/" 2>/dev/null
+    return 1
+  fi
+
+  # Schema validation
+  print_step "Validating VTT summary schema..."
+  if jq -e '.headline and .tldr and .bullets and .tags' "$SUMMARY_FILE" > /dev/null 2>&1; then
+    print_pass "VTT schema validation passed"
+  else
+    print_fail "VTT schema validation failed - missing required fields"
+    jq '.' "$SUMMARY_FILE" 2>/dev/null || cat "$SUMMARY_FILE"
+    return 1
+  fi
+
+  # Source type detection validation
+  print_step "Checking source type detection..."
+  DETECTED_SOURCE=$(jq -r '.detectedSource // empty' "$SUMMARY_FILE")
+  if [ -n "$DETECTED_SOURCE" ]; then
+    print_pass "Source detected: $DETECTED_SOURCE"
+  else
+    print_warn "No source type detected (detectedSource field empty)"
+  fi
+
+  # Quality check
+  TLDR_WORDS=$(jq -r '.tldr' "$SUMMARY_FILE" | wc -w | tr -d ' ')
+  print_info "VTT TLDR word count: $TLDR_WORDS"
+  if [ "$TLDR_WORDS" -ge 20 ]; then
+    print_pass "VTT content extracted successfully"
+  else
+    print_warn "VTT TLDR seems short"
+  fi
+}
+
+# Test SRT transcript summarization
+test_srt_summarize() {
+  print_header "Test 4: Summarize SRT Transcript"
+
+  print_step "Running summarize on SRT file..."
+  # Run without --output to let it save to session folder naturally
+  CONTAINER_ID=$(docker create \
+    --env-file "$ENV_FILE" \
+    -v "$(pwd)/$EXAMPLES_DIR:/examples:ro" \
+    "$IMAGE_NAME" \
+    summarize --file /examples/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt)
+
+  docker start -a "$CONTAINER_ID"
+
+  print_step "Extracting results from container..."
+  # Copy to a unique subfolder to preserve session data
+  mkdir -p "$WORKSPACE_DIR/srt-test"
+  docker cp "$CONTAINER_ID:/home/looplia/.looplia/." "$WORKSPACE_DIR/srt-test/"
+  docker rm "$CONTAINER_ID" > /dev/null
+
+  # Find the session folder
+  print_step "Checking session folder structure..."
+  SESSION_DIR=$(find "$WORKSPACE_DIR/srt-test/contentItem" -maxdepth 1 -type d ! -name contentItem 2>/dev/null | head -1)
+  if [ -n "$SESSION_DIR" ]; then
+    SESSION_ID=$(basename "$SESSION_DIR")
+    print_pass "Session folder created: $SESSION_ID"
+  else
+    print_fail "No session folder found in contentItem/"
+    return 1
+  fi
+
+  # Check summary.json exists in session folder
+  SUMMARY_FILE="$SESSION_DIR/summary.json"
+  if [ -f "$SUMMARY_FILE" ]; then
+    print_pass "summary.json found in session folder"
+  else
+    print_fail "summary.json not found in session folder"
+    return 1
+  fi
+
+  # Schema validation
+  print_step "Validating SRT summary schema..."
+  if jq -e '.headline and .tldr and .bullets and .tags' "$SUMMARY_FILE" > /dev/null 2>&1; then
+    print_pass "SRT schema validation passed"
+  else
+    print_fail "SRT schema validation failed - missing required fields"
+    jq '.' "$SUMMARY_FILE" 2>/dev/null || cat "$SUMMARY_FILE"
+    return 1
+  fi
+
+  # Quality check
+  TLDR_WORDS=$(jq -r '.tldr' "$SUMMARY_FILE" | wc -w | tr -d ' ')
+  print_info "SRT TLDR word count: $TLDR_WORDS"
+  if [ "$TLDR_WORDS" -ge 20 ]; then
+    print_pass "SRT content extracted successfully"
+  else
+    print_warn "SRT TLDR seems short"
+  fi
+}
+
+# Test JSON transcript summarization (Whisper output)
+test_json_summarize() {
+  print_header "Test 5: Summarize JSON Transcript"
+
+  print_step "Running summarize on JSON transcript..."
+  # Run without --output to let it save to session folder naturally
+  CONTAINER_ID=$(docker create \
+    --env-file "$ENV_FILE" \
+    -v "$(pwd)/$EXAMPLES_DIR:/examples:ro" \
+    "$IMAGE_NAME" \
+    summarize --file /examples/youtube/Anthropics/transcripts/CBneTpXF1CQ.json)
+
+  docker start -a "$CONTAINER_ID"
+
+  print_step "Extracting results from container..."
+  # Copy to a unique subfolder to preserve session data
+  mkdir -p "$WORKSPACE_DIR/json-test"
+  docker cp "$CONTAINER_ID:/home/looplia/.looplia/." "$WORKSPACE_DIR/json-test/"
+  docker rm "$CONTAINER_ID" > /dev/null
+
+  # Find the session folder
+  print_step "Checking session folder structure..."
+  SESSION_DIR=$(find "$WORKSPACE_DIR/json-test/contentItem" -maxdepth 1 -type d ! -name contentItem 2>/dev/null | head -1)
+  if [ -n "$SESSION_DIR" ]; then
+    SESSION_ID=$(basename "$SESSION_DIR")
+    print_pass "Session folder created: $SESSION_ID"
+  else
+    print_fail "No session folder found in contentItem/"
+    return 1
+  fi
+
+  # Check summary.json exists in session folder
+  SUMMARY_FILE="$SESSION_DIR/summary.json"
+  if [ -f "$SUMMARY_FILE" ]; then
+    print_pass "summary.json found in session folder"
+  else
+    print_fail "summary.json not found in session folder"
+    return 1
+  fi
+
+  # Schema validation
+  print_step "Validating JSON transcript summary schema..."
+  if jq -e '.headline and .tldr and .bullets and .tags' "$SUMMARY_FILE" > /dev/null 2>&1; then
+    print_pass "JSON transcript schema validation passed"
+  else
+    print_fail "JSON transcript schema validation failed - missing required fields"
+    jq '.' "$SUMMARY_FILE" 2>/dev/null || cat "$SUMMARY_FILE"
+    return 1
+  fi
+
+  # Quality check
+  TLDR_WORDS=$(jq -r '.tldr' "$SUMMARY_FILE" | wc -w | tr -d ' ')
+  print_info "JSON transcript TLDR word count: $TLDR_WORDS"
+  if [ "$TLDR_WORDS" -ge 20 ]; then
+    print_pass "JSON transcript content extracted successfully"
+  else
+    print_warn "JSON transcript TLDR seems short"
+  fi
+}
+
+# Test kit command with SRT transcript
+test_kit_with_srt() {
+  print_header "Test 6: Kit Command with SRT Transcript"
+
+  print_step "Running kit on SRT file..."
+  # Run without --output to let it save to session folder naturally
+  CONTAINER_ID=$(docker create \
+    --env-file "$ENV_FILE" \
+    -v "$(pwd)/$EXAMPLES_DIR:/examples:ro" \
+    "$IMAGE_NAME" \
+    kit --file /examples/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt \
+    --topics "coding,claude,automation" \
+    --tone "expert")
+
+  docker start -a "$CONTAINER_ID"
+
+  print_step "Extracting results from container..."
+  # Copy to a unique subfolder to preserve session data
+  mkdir -p "$WORKSPACE_DIR/kit-srt-test"
+  docker cp "$CONTAINER_ID:/home/looplia/.looplia/." "$WORKSPACE_DIR/kit-srt-test/"
+  docker rm "$CONTAINER_ID" > /dev/null
+
+  # Find the session folder
+  print_step "Checking session folder structure..."
+  SESSION_DIR=$(find "$WORKSPACE_DIR/kit-srt-test/contentItem" -maxdepth 1 -type d ! -name contentItem 2>/dev/null | head -1)
+  if [ -n "$SESSION_DIR" ]; then
+    SESSION_ID=$(basename "$SESSION_DIR")
+    print_pass "Session folder created: $SESSION_ID"
+  else
+    print_fail "No session folder found in contentItem/"
+    return 1
+  fi
+
+  # Check writing-kit.json exists in session folder
+  KIT_FILE="$SESSION_DIR/writing-kit.json"
+  if [ -f "$KIT_FILE" ]; then
+    print_pass "writing-kit.json found in session folder"
+  else
+    print_fail "writing-kit.json not found in session folder"
+    ls -la "$SESSION_DIR/" 2>/dev/null
+    return 1
+  fi
+
+  # Schema validation
+  print_step "Validating SRT kit schema..."
+  if jq -e '.contentId and .summary and .ideas and .suggestedOutline' "$KIT_FILE" > /dev/null 2>&1; then
+    print_pass "SRT kit schema validation passed"
+  else
+    print_fail "SRT kit schema validation failed - missing required fields"
+    jq '.' "$KIT_FILE" 2>/dev/null || cat "$KIT_FILE"
+    return 1
+  fi
+
+  # Quality metrics
+  print_step "Checking SRT kit quality metrics..."
+  HOOK_COUNT=$(jq '.ideas.hooks | length' "$KIT_FILE")
+  SECTION_COUNT=$(jq '.suggestedOutline | length' "$KIT_FILE")
+
+  print_info "Hook count: $HOOK_COUNT (expected: >= 2)"
+  print_info "Outline sections: $SECTION_COUNT (expected: >= 3)"
+
+  if [ "$HOOK_COUNT" -ge 2 ]; then
+    print_pass "SRT kit hook count acceptable"
+  else
+    print_warn "SRT kit hook count low"
+  fi
+
+  if [ "$SECTION_COUNT" -ge 3 ]; then
+    print_pass "SRT kit outline section count acceptable"
+  else
+    print_warn "SRT kit outline section count low"
+  fi
+}
+
 # Check workspace structure
 check_workspace() {
   print_header "Workspace Validation"
@@ -319,9 +604,16 @@ print_summary() {
 
   echo ""
   echo "Test artifacts saved to: $WORKSPACE_DIR/"
-  echo "  - summary.json"
-  echo "  - kit.json"
-  echo "  - contentItem/ (session data)"
+  echo "  - contentItem/ (Test 1-2: markdown source)"
+  echo "  - vtt-test/contentItem/{sessionId}/ (Test 3: VTT caption)"
+  echo "  - srt-test/contentItem/{sessionId}/ (Test 4: SRT transcript)"
+  echo "  - json-test/contentItem/{sessionId}/ (Test 5: JSON transcript)"
+  echo "  - kit-srt-test/contentItem/{sessionId}/ (Test 6: SRT full kit)"
+  echo ""
+  echo "Each session folder contains:"
+  echo "  - content.md (raw input)"
+  echo "  - summary.json (analysis output)"
+  echo "  - writing-kit.json (full kit, if kit command)"
   echo ""
 }
 
@@ -336,6 +628,10 @@ main() {
   build_project
   test_summarize
   test_kit
+  test_vtt_summarize
+  test_srt_summarize
+  test_json_summarize
+  test_kit_with_srt
   check_workspace
   print_summary
 }

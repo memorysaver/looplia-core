@@ -11,7 +11,7 @@ env:
 jobs:
   docker-e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
@@ -116,6 +116,117 @@ jobs:
           [ "$SECTION_COUNT" -ge 3 ] || (echo "Outline section count too low" && exit 1)
 
           echo "Kit quality acceptable"
+
+      # Test 3: VTT Caption Summarization
+      - name: Run summarize on VTT caption
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          mkdir -p test-workspace/vtt-test
+          CONTAINER_ID=$(docker create \
+            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
+            -v "$(pwd)/examples:/examples:ro" \
+            $IMAGE_NAME \
+            summarize --file /examples/youtube/Anthropics/captions/EvtPBaaykdo.en.vtt)
+
+          docker start -a "$CONTAINER_ID"
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace/vtt-test/
+          docker rm "$CONTAINER_ID"
+
+      - name: Validate VTT summary
+        run: |
+          echo "Validating VTT summary..."
+          # Find session folder and validate summary.json
+          SESSION_DIR=$(find test-workspace/vtt-test/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
+          echo "Session folder: $SESSION_DIR"
+          jq -e '.headline and .tldr and .bullets and .tags' "$SESSION_DIR/summary.json"
+          DETECTED=$(jq -r '.detectedSource // "unknown"' "$SESSION_DIR/summary.json")
+          echo "Detected source type: $DETECTED"
+          echo "VTT summary valid"
+
+      # Test 4: SRT Transcript Summarization
+      - name: Run summarize on SRT transcript
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          mkdir -p test-workspace/srt-test
+          CONTAINER_ID=$(docker create \
+            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
+            -v "$(pwd)/examples:/examples:ro" \
+            $IMAGE_NAME \
+            summarize --file /examples/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt)
+
+          docker start -a "$CONTAINER_ID"
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace/srt-test/
+          docker rm "$CONTAINER_ID"
+
+      - name: Validate SRT summary
+        run: |
+          echo "Validating SRT summary..."
+          SESSION_DIR=$(find test-workspace/srt-test/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
+          echo "Session folder: $SESSION_DIR"
+          jq -e '.headline and .tldr and .bullets and .tags' "$SESSION_DIR/summary.json"
+          DETECTED=$(jq -r '.detectedSource // "unknown"' "$SESSION_DIR/summary.json")
+          echo "Detected source type: $DETECTED"
+          echo "SRT summary valid"
+
+      # Test 5: JSON Transcript Summarization
+      - name: Run summarize on JSON transcript
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          mkdir -p test-workspace/json-test
+          CONTAINER_ID=$(docker create \
+            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
+            -v "$(pwd)/examples:/examples:ro" \
+            $IMAGE_NAME \
+            summarize --file /examples/youtube/Anthropics/transcripts/CBneTpXF1CQ.json)
+
+          docker start -a "$CONTAINER_ID"
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace/json-test/
+          docker rm "$CONTAINER_ID"
+
+      - name: Validate JSON transcript summary
+        run: |
+          echo "Validating JSON transcript summary..."
+          SESSION_DIR=$(find test-workspace/json-test/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
+          echo "Session folder: $SESSION_DIR"
+          jq -e '.headline and .tldr and .bullets and .tags' "$SESSION_DIR/summary.json"
+          DETECTED=$(jq -r '.detectedSource // "unknown"' "$SESSION_DIR/summary.json")
+          echo "Detected source type: $DETECTED"
+          echo "JSON transcript summary valid"
+
+      # Test 6: Kit with SRT Transcript
+      - name: Run kit on SRT transcript
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          mkdir -p test-workspace/kit-srt-test
+          CONTAINER_ID=$(docker create \
+            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
+            -v "$(pwd)/examples:/examples:ro" \
+            $IMAGE_NAME \
+            kit --file /examples/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt \
+            --topics "coding,claude,automation" \
+            --tone "expert")
+
+          docker start -a "$CONTAINER_ID"
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace/kit-srt-test/
+          docker rm "$CONTAINER_ID"
+
+      - name: Validate SRT kit
+        run: |
+          echo "Validating SRT kit..."
+          SESSION_DIR=$(find test-workspace/kit-srt-test/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
+          echo "Session folder: $SESSION_DIR"
+          jq -e '.contentId and .summary and .ideas and .suggestedOutline' "$SESSION_DIR/writing-kit.json"
+          HOOK_COUNT=$(jq '.ideas.hooks | length' "$SESSION_DIR/writing-kit.json")
+          SECTION_COUNT=$(jq '.suggestedOutline | length' "$SESSION_DIR/writing-kit.json")
+          echo "Hook count: $HOOK_COUNT"
+          echo "Outline sections: $SECTION_COUNT"
+          [ "$HOOK_COUNT" -ge 2 ] || (echo "Hook count too low" && exit 1)
+          [ "$SECTION_COUNT" -ge 3 ] || (echo "Outline section count too low" && exit 1)
+          echo "SRT kit valid"
 
       - name: Upload test artifacts
         if: always()
