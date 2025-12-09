@@ -1,5 +1,3 @@
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
 import type {
   ContentItem,
   ProviderResult,
@@ -12,9 +10,6 @@ import { writeContentItem } from "./content-io";
 import { executeAgenticQuery } from "./utils/query-wrapper";
 import { WRITING_KIT_OUTPUT_SCHEMA } from "./utils/schema-converter";
 import { ensureWorkspace, writeUserProfile } from "./workspace";
-
-/** Pattern to detect temporary CLI-generated IDs */
-const TEMP_ID_PATTERN = /^cli-\d+$/;
 
 /**
  * Build smart continuation prompt for writing kit (v0.3.2 agentic approach)
@@ -151,37 +146,17 @@ export function createClaudeWritingKitProvider(
         }
       );
 
-      // Persist WritingKit and handle session ID
+      // Persist WritingKit and handle folder relocation
       if (result.success) {
-        const isTempId = TEMP_ID_PATTERN.test(content.id);
-        let finalSessionId = content.id;
-
-        // If using temp ID and SDK returned session ID, relocate folder
-        if (isTempId && result.sessionId) {
-          const tempDir = join(workspace, "contentItem", content.id);
-          const newDir = join(workspace, "contentItem", result.sessionId);
-
-          try {
-            const { renameSync } = await import("node:fs");
-            renameSync(tempDir, newDir);
-            finalSessionId = result.sessionId;
-          } catch (error) {
-            console.warn(
-              `Failed to relocate content from ${content.id} to ${result.sessionId}:`,
-              error
-            );
-          }
-        }
-
-        // Write kit to final location
-        const contentDir = join(workspace, "contentItem", finalSessionId);
-        const kitPath = join(contentDir, "writing-kit.json");
-        writeFileSync(kitPath, JSON.stringify(result.data, null, 2), "utf-8");
-
-        // Update contentId in result if relocated
-        if (finalSessionId !== content.id) {
-          result.data.contentId = finalSessionId;
-        }
+        const { persistResultToWorkspace } = await import(
+          "./utils/persist-result"
+        );
+        await persistResultToWorkspace(result.data, {
+          workspace,
+          contentId: content.id,
+          sessionId: result.sessionId,
+          filename: "writing-kit.json",
+        });
       }
 
       return result;

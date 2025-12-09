@@ -1,5 +1,3 @@
-import { renameSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import type {
   ContentItem,
   ContentSummary,
@@ -109,50 +107,17 @@ export function createClaudeSummarizer(
         }
       );
 
-      // Persist summary and handle ID generation using SDK session ID
-      if (result.success && result.sessionId) {
-        const tempDir = join(workspace, "contentItem", content.id);
-        const sessionId = result.sessionId;
-
-        // Use SDK session ID as folder name for guaranteed uniqueness
-        const newDir = join(workspace, "contentItem", sessionId);
-
-        try {
-          // Relocate content folder to use SDK session ID
-          renameSync(tempDir, newDir);
-
-          // Update the contentId in the returned data
-          result.data.contentId = sessionId;
-
-          // Write summary with session ID
-          const summaryPath = join(newDir, "summary.json");
-          writeFileSync(
-            summaryPath,
-            JSON.stringify(result.data, null, 2),
-            "utf-8"
-          );
-        } catch (error) {
-          // If relocation fails, write to original location
-          console.warn(
-            `Failed to relocate content from ${content.id} to ${sessionId}:`,
-            error
-          );
-          const summaryPath = join(tempDir, "summary.json");
-          writeFileSync(
-            summaryPath,
-            JSON.stringify(result.data, null, 2),
-            "utf-8"
-          );
-        }
-      } else if (result.success) {
-        // Fallback: no session ID, write to original location
-        const tempDir = join(workspace, "contentItem", content.id);
-        const summaryPath = join(tempDir, "summary.json");
-        writeFileSync(
-          summaryPath,
-          JSON.stringify(result.data, null, 2),
-          "utf-8"
+      // Persist summary and handle folder relocation
+      if (result.success) {
+        const { persistResultToWorkspace } = await import(
+          "./utils/persist-result"
         );
+        await persistResultToWorkspace(result.data, {
+          workspace,
+          contentId: content.id,
+          sessionId: result.sessionId,
+          filename: "summary.json",
+        });
       }
 
       return result;

@@ -275,11 +275,18 @@ export async function executeQueryWithRetry<T>(
 }
 
 /**
- * Extract content ID from agentic prompt
+ * Extract content ID from agentic prompt with path traversal protection
  */
 function extractContentIdFromPrompt(prompt: string): string | null {
   const match = prompt.match(CONTENT_ID_REGEX);
-  return match ? (match[1] ?? null) : null;
+  const id = match?.[1];
+
+  // Prevent path traversal attacks
+  if (id && (id.includes("..") || id.includes("/") || id.includes("\\"))) {
+    return null;
+  }
+
+  return id ?? null;
 }
 
 /**
