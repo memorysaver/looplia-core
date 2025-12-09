@@ -34,9 +34,10 @@ v0.3.4.1 adds **URL-based input** for automatic transcript extraction from YouTu
 |---------|-------------|
 | **--url Input** | New CLI option to accept YouTube/podcast URLs directly |
 | **media-processor Subagent** | Autonomous subagent for downloading and extracting media transcripts |
-| **yt-dlp Skill** | Skill that knows how to use yt-dlp for various extraction tasks |
-| **Auto-Install yt-dlp** | Skill detects missing yt-dlp and installs it automatically |
-| **Multi-Source Support** | Handle YouTube, podcasts, and other yt-dlp compatible sources |
+| **yt-dlp Skill** | Skill with scripts for subtitle extraction, audio download, source detection |
+| **Whisper Skill** | Audio transcription via Groq API (fast) or local WhisperKit (offline) |
+| **Auto-Install Tools** | Skills auto-detect and install yt-dlp, configure whisper transcription |
+| **Multi-Source Support** | YouTube, podcasts, TED, Coursera, TikTok, news sites, and 1000+ more |
 
 ### 1.3 Design Principles
 
@@ -942,7 +943,645 @@ export PATH="$HOME/.local/bin:$PATH"
 
 ---
 
-## 7. Implementation Details
+## 7. Feature 4: Whisper Transcription Skill
+
+### 7.1 Purpose
+
+When yt-dlp cannot extract subtitles (podcasts, videos without captions), the **Whisper skill** transcribes audio using:
+- **Groq API** (fast, cloud-based) - Primary
+- **Local WhisperKit** (offline, privacy) - Fallback
+
+### 7.2 Multi-Source Extraction Strategy
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  COMPLETE EXTRACTION FLOW BY SOURCE TYPE                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  URL Input                                                                  │
+│     │                                                                       │
+│     ▼                                                                       │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ Step 1: Detect Source Type (yt-dlp skill)                           │   │
+│  │                                                                     │   │
+│  │ YouTube:     youtube.com, youtu.be, shorts                          │   │
+│  │ Podcast:     podcasts.apple.com, spotify, RSS feeds, soundcloud     │   │
+│  │ Video:       vimeo, dailymotion, twitch, tiktok                     │   │
+│  │ News:        cnn, bbc, npr                                          │   │
+│  │ Educational: coursera, khan academy, ted                            │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│     │                                                                       │
+│     ▼                                                                       │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ Step 2: Try Subtitles First (yt-dlp skill)                          │   │
+│  │                                                                     │   │
+│  │ yt-dlp --write-auto-sub --write-sub --skip-download                 │   │
+│  │                                                                     │   │
+│  │ ✓ Found subtitles? → Done! Use VTT/SRT transcript                   │   │
+│  │ ✗ No subtitles? → Continue to Step 3                                │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│     │                                                                       │
+│     ▼                                                                       │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ Step 3: Extract Audio (yt-dlp skill)                                │   │
+│  │                                                                     │   │
+│  │ yt-dlp -x --audio-format mp3 --audio-quality 5                      │   │
+│  │                                                                     │   │
+│  │ Output: {id}.mp3 audio file                                         │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│     │                                                                       │
+│     ▼                                                                       │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ Step 4: Transcribe Audio (whisper skill)                            │   │
+│  │                                                                     │   │
+│  │ Primary: Groq API (whisper-large-v3-turbo)                          │   │
+│  │   - Fast: ~10x realtime                                             │   │
+│  │   - Requires: GROQ_API_KEY                                          │   │
+│  │                                                                     │   │
+│  │ Fallback: Local WhisperKit                                          │   │
+│  │   - Offline: No API key needed                                      │   │
+│  │   - Slower: ~1x realtime                                            │   │
+│  │                                                                     │   │
+│  │ Output: Transcript text with timestamps                             │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│     │                                                                       │
+│     ▼                                                                       │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ Step 5: Create content.md                                           │   │
+│  │                                                                     │   │
+│  │ Combine metadata + transcript into markdown with frontmatter        │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 7.3 Source Type Handling Matrix
+
+| Source Type | Has Subtitles? | Extraction Method | Skill Chain |
+|-------------|----------------|-------------------|-------------|
+| **YouTube** | Usually yes | Auto-captions → Manual subs | yt-dlp only |
+| **YouTube (no captions)** | No | Audio extraction + Whisper | yt-dlp → whisper |
+| **Podcast (Apple/Spotify)** | No | Audio extraction + Whisper | yt-dlp → whisper |
+| **Podcast (RSS)** | No | Direct audio + Whisper | yt-dlp → whisper |
+| **TED Talks** | Usually yes | Subtitles | yt-dlp only |
+| **Coursera** | Usually yes | Subtitles | yt-dlp only |
+| **TikTok** | Sometimes | Try subs, fallback to audio | yt-dlp → whisper |
+| **News (video)** | Sometimes | Try subs, fallback to audio | yt-dlp → whisper |
+
+### 7.4 Whisper Skill Folder Structure
+
+```
+plugins/looplia-writer/skills/whisper/
+├── SKILL.md                        # Concise instructions
+├── scripts/
+│   ├── detect-whisper.ts          # Check Groq API key or local WhisperKit
+│   ├── transcribe-groq.ts         # Groq API transcription
+│   ├── transcribe-local.ts        # Local WhisperKit transcription
+│   └── transcribe.ts              # Unified entry point (tries Groq, falls back to local)
+└── references/
+    ├── groq-setup.md              # Groq API setup instructions
+    └── whisperkit-setup.md        # Local WhisperKit installation
+```
+
+### 7.5 SKILL.md (Whisper)
+
+**File:** `plugins/looplia-writer/skills/whisper/SKILL.md`
+
+```markdown
+---
+name: whisper
+description: Transcribe audio files using Groq API (primary) or local WhisperKit (fallback).
+Token-efficient script-based design.
+---
+
+# Whisper Transcription Skill
+
+Transcribe audio files to text with timestamps.
+
+## How This Skill Works
+
+This skill uses **pre-programmed TypeScript scripts** for audio transcription.
+It automatically selects the best available method.
+
+## Step 1: Check Available Transcription Methods
+
+```bash
+bun run plugins/looplia-writer/skills/whisper/scripts/detect-whisper.ts
+```
+
+Output (JSON):
+- `groqAvailable: true` → GROQ_API_KEY found, use Groq API
+- `localAvailable: true` → WhisperKit installed locally
+- Both false → Provide setup instructions
+
+## Step 2: Transcribe Audio
+
+```bash
+bun run plugins/looplia-writer/skills/whisper/scripts/transcribe.ts "{audio_file}" "{output_dir}"
+```
+
+Output: JSON with transcript file path and method used.
+
+## Transcription Priority
+
+1. **Groq API** (if GROQ_API_KEY set) - Fastest, best quality
+2. **Local WhisperKit** (if installed) - Offline, no API costs
+3. **Error** - Provide setup instructions for either method
+
+## Script Output Format
+
+```json
+{
+  "success": true,
+  "data": {
+    "transcriptFile": "/path/to/transcript.txt",
+    "method": "groq" | "local",
+    "duration": 1234,
+    "language": "en"
+  },
+  "error": null
+}
+```
+
+## Reference Documentation
+
+- `references/groq-setup.md` - Get Groq API key (free tier available)
+- `references/whisperkit-setup.md` - Install local WhisperKit
+```
+
+### 7.6 Script: detect-whisper.ts
+
+**File:** `plugins/looplia-writer/skills/whisper/scripts/detect-whisper.ts`
+
+```typescript
+#!/usr/bin/env bun
+/**
+ * Whisper Availability Detection Script
+ *
+ * Checks for:
+ * 1. Groq API key (GROQ_API_KEY environment variable)
+ * 2. Local WhisperKit installation
+ *
+ * Output: JSON with available transcription methods
+ */
+
+import { $ } from "bun";
+
+interface DetectionResult {
+  success: boolean;
+  groqAvailable: boolean;
+  localAvailable: boolean;
+  recommendedMethod: "groq" | "local" | null;
+  setupInstructions: string | null;
+}
+
+async function checkGroqApiKey(): Promise<boolean> {
+  return !!process.env.GROQ_API_KEY;
+}
+
+async function checkLocalWhisper(): Promise<boolean> {
+  // Check for whisperkit CLI or whisper.cpp
+  try {
+    const whisperKit = await $`which whisperkit`.quiet();
+    if (whisperKit.exitCode === 0) return true;
+  } catch {}
+
+  try {
+    const whisperCpp = await $`which whisper-cpp`.quiet();
+    if (whisperCpp.exitCode === 0) return true;
+  } catch {}
+
+  try {
+    // Check for Python whisper
+    const pythonWhisper = await $`python3 -c "import whisper"`.quiet();
+    if (pythonWhisper.exitCode === 0) return true;
+  } catch {}
+
+  return false;
+}
+
+async function main(): Promise<void> {
+  const groqAvailable = await checkGroqApiKey();
+  const localAvailable = await checkLocalWhisper();
+
+  const result: DetectionResult = {
+    success: groqAvailable || localAvailable,
+    groqAvailable,
+    localAvailable,
+    recommendedMethod: groqAvailable ? "groq" : localAvailable ? "local" : null,
+    setupInstructions: null
+  };
+
+  if (!result.success) {
+    result.setupInstructions = `No transcription method available.
+
+Option 1: Groq API (Recommended - Fast & Free Tier)
+  1. Get API key at: https://console.groq.com/keys
+  2. Set environment variable: export GROQ_API_KEY="your-key"
+
+Option 2: Local WhisperKit (Offline)
+  macOS: brew install whisperkit-cli
+  Linux: pip install openai-whisper
+`;
+  }
+
+  console.log(JSON.stringify(result, null, 2));
+
+  if (!result.success) {
+    process.exit(1);
+  }
+}
+
+main();
+```
+
+### 7.7 Script: transcribe.ts (Unified Entry Point)
+
+**File:** `plugins/looplia-writer/skills/whisper/scripts/transcribe.ts`
+
+```typescript
+#!/usr/bin/env bun
+/**
+ * Unified Whisper Transcription Script
+ *
+ * Usage: bun run transcribe.ts <audio_file> <output_dir>
+ *
+ * Automatically selects best available method:
+ * 1. Groq API (if GROQ_API_KEY set)
+ * 2. Local WhisperKit (if installed)
+ */
+
+import { $ } from "bun";
+import { existsSync, writeFileSync, readFileSync } from "node:fs";
+import { join, basename } from "node:path";
+
+interface TranscriptionResult {
+  success: boolean;
+  data: {
+    transcriptFile: string | null;
+    method: "groq" | "local" | null;
+    durationSeconds: number | null;
+    language: string;
+  } | null;
+  error: string | null;
+}
+
+async function transcribeWithGroq(audioFile: string, outputDir: string): Promise<TranscriptionResult> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    return { success: false, data: null, error: "GROQ_API_KEY not set" };
+  }
+
+  try {
+    const audioBuffer = readFileSync(audioFile);
+    const audioBase64 = audioBuffer.toString("base64");
+    const fileName = basename(audioFile);
+
+    // Create form data for Groq API
+    const formData = new FormData();
+    formData.append("file", new Blob([audioBuffer]), fileName);
+    formData.append("model", "whisper-large-v3-turbo");
+    formData.append("response_format", "verbose_json");
+    formData.append("language", "en");
+
+    const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { success: false, data: null, error: `Groq API error: ${errorText}` };
+    }
+
+    const result = await response.json();
+
+    // Write transcript to file
+    const transcriptFile = join(outputDir, `${basename(audioFile, ".mp3")}.transcript.txt`);
+
+    // Format with timestamps if available
+    let transcriptContent = "";
+    if (result.segments) {
+      for (const segment of result.segments) {
+        const startTime = formatTimestamp(segment.start);
+        const endTime = formatTimestamp(segment.end);
+        transcriptContent += `[${startTime} --> ${endTime}]\n${segment.text.trim()}\n\n`;
+      }
+    } else {
+      transcriptContent = result.text;
+    }
+
+    writeFileSync(transcriptFile, transcriptContent);
+
+    return {
+      success: true,
+      data: {
+        transcriptFile,
+        method: "groq",
+        durationSeconds: result.duration || null,
+        language: result.language || "en"
+      },
+      error: null
+    };
+  } catch (e) {
+    return { success: false, data: null, error: `Groq transcription failed: ${e}` };
+  }
+}
+
+async function transcribeWithLocal(audioFile: string, outputDir: string): Promise<TranscriptionResult> {
+  const transcriptFile = join(outputDir, `${basename(audioFile, ".mp3")}.transcript.txt`);
+
+  // Try whisperkit first (macOS)
+  try {
+    await $`whisperkit transcribe --audio-path ${audioFile} --output-dir ${outputDir}`.quiet();
+    if (existsSync(transcriptFile)) {
+      return {
+        success: true,
+        data: { transcriptFile, method: "local", durationSeconds: null, language: "en" },
+        error: null
+      };
+    }
+  } catch {}
+
+  // Try Python whisper
+  try {
+    await $`python3 -m whisper ${audioFile} --output_dir ${outputDir} --output_format txt`.quiet();
+    if (existsSync(transcriptFile)) {
+      return {
+        success: true,
+        data: { transcriptFile, method: "local", durationSeconds: null, language: "en" },
+        error: null
+      };
+    }
+  } catch {}
+
+  return { success: false, data: null, error: "Local transcription failed. No whisper installation found." };
+}
+
+function formatTimestamp(seconds: number): string {
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  const ms = Math.floor((seconds % 1) * 1000);
+
+  if (hrs > 0) {
+    return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}.${ms.toString().padStart(3, "0")}`;
+  }
+  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}.${ms.toString().padStart(3, "0")}`;
+}
+
+async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+
+  if (args.length < 2) {
+    console.log(JSON.stringify({
+      success: false,
+      data: null,
+      error: "Usage: bun run transcribe.ts <audio_file> <output_dir>"
+    }, null, 2));
+    process.exit(1);
+  }
+
+  const [audioFile, outputDir] = args;
+
+  if (!existsSync(audioFile)) {
+    console.log(JSON.stringify({
+      success: false,
+      data: null,
+      error: `Audio file not found: ${audioFile}`
+    }, null, 2));
+    process.exit(1);
+  }
+
+  // Ensure output directory exists
+  await $`mkdir -p ${outputDir}`.quiet();
+
+  // Try Groq first (faster, better quality)
+  if (process.env.GROQ_API_KEY) {
+    const groqResult = await transcribeWithGroq(audioFile, outputDir);
+    if (groqResult.success) {
+      console.log(JSON.stringify(groqResult, null, 2));
+      return;
+    }
+    console.error(`Groq failed: ${groqResult.error}. Trying local...`);
+  }
+
+  // Fall back to local
+  const localResult = await transcribeWithLocal(audioFile, outputDir);
+  console.log(JSON.stringify(localResult, null, 2));
+
+  if (!localResult.success) {
+    process.exit(1);
+  }
+}
+
+main();
+```
+
+### 7.8 Updated extract-transcript.ts (with Audio Fallback)
+
+Update the yt-dlp script to include audio extraction when subtitles aren't available:
+
+**File:** `plugins/looplia-writer/skills/yt-dlp/scripts/extract-transcript.ts` (Updated)
+
+```typescript
+// Add to ExtractionResult interface:
+interface ExtractionResult {
+  success: boolean;
+  data: {
+    transcriptFile: string | null;
+    audioFile: string | null;        // NEW: For whisper transcription
+    metadataFile: string | null;
+    extractionMethod: "subtitles" | "info-json" | "audio" | null;  // NEW: audio option
+    needsTranscription: boolean;     // NEW: Flag for whisper skill
+    videoId: string | null;
+    title: string | null;
+    duration: number | null;
+    sourceType: "youtube" | "podcast" | "video" | "news" | "educational" | "unknown";  // NEW
+  } | null;
+  error: string | null;
+}
+
+// Add source type detection function:
+function detectSourceType(url: string): "youtube" | "podcast" | "video" | "news" | "educational" | "unknown" {
+  const urlLower = url.toLowerCase();
+
+  // YouTube
+  if (urlLower.includes("youtube.com") || urlLower.includes("youtu.be")) {
+    return "youtube";
+  }
+
+  // Podcasts
+  if (urlLower.includes("podcasts.apple.com") ||
+      urlLower.includes("spotify.com/episode") ||
+      urlLower.includes("soundcloud.com") ||
+      urlLower.includes("anchor.fm") ||
+      urlLower.includes("podbean.com") ||
+      urlLower.includes(".rss") ||
+      urlLower.includes("/feed")) {
+    return "podcast";
+  }
+
+  // Educational
+  if (urlLower.includes("ted.com") ||
+      urlLower.includes("coursera.org") ||
+      urlLower.includes("khanacademy.org") ||
+      urlLower.includes("udemy.com")) {
+    return "educational";
+  }
+
+  // News
+  if (urlLower.includes("cnn.com") ||
+      urlLower.includes("bbc.com") ||
+      urlLower.includes("npr.org") ||
+      urlLower.includes("nytimes.com")) {
+    return "news";
+  }
+
+  // Video platforms
+  if (urlLower.includes("vimeo.com") ||
+      urlLower.includes("dailymotion.com") ||
+      urlLower.includes("twitch.tv") ||
+      urlLower.includes("tiktok.com")) {
+    return "video";
+  }
+
+  return "unknown";
+}
+
+// Add audio extraction function:
+async function extractAudio(url: string, outputDir: string, videoId: string): Promise<string | null> {
+  try {
+    await $`yt-dlp -x --audio-format mp3 --audio-quality 5 -o ${join(outputDir, videoId + ".%(ext)s")} ${url}`.quiet();
+
+    const audioFile = join(outputDir, `${videoId}.mp3`);
+    if (existsSync(audioFile)) {
+      return audioFile;
+    }
+  } catch {}
+  return null;
+}
+
+// Update main function to include audio extraction fallback:
+async function main(): Promise<void> {
+  // ... existing code ...
+
+  const sourceType = detectSourceType(url);
+
+  // Strategy 1: Try subtitles first (skip for known podcast sources)
+  if (sourceType !== "podcast") {
+    const subtitlesExtracted = await extractSubtitles(url, outputDir, videoId!);
+
+    if (subtitlesExtracted) {
+      await extractInfoJson(url, outputDir, videoId!);
+      const transcriptFile = findTranscriptFile(outputDir, videoId!);
+      const metadataFile = findMetadataFile(outputDir, videoId!);
+      const { title, duration } = parseMetadata(metadataFile);
+
+      result.success = true;
+      result.data = {
+        transcriptFile,
+        audioFile: null,
+        metadataFile,
+        extractionMethod: "subtitles",
+        needsTranscription: false,
+        videoId,
+        title,
+        duration,
+        sourceType
+      };
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+  }
+
+  // Strategy 2: Extract audio for transcription
+  console.error("No subtitles found. Extracting audio for transcription...");
+  const audioFile = await extractAudio(url, outputDir, videoId!);
+
+  if (audioFile) {
+    await extractInfoJson(url, outputDir, videoId!);
+    const metadataFile = findMetadataFile(outputDir, videoId!);
+    const { title, duration } = parseMetadata(metadataFile);
+
+    result.success = true;
+    result.data = {
+      transcriptFile: null,
+      audioFile,
+      metadataFile,
+      extractionMethod: "audio",
+      needsTranscription: true,  // Signal to use whisper skill
+      videoId,
+      title,
+      duration,
+      sourceType
+    };
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  // Strategy 3: Info.json only (no transcript possible)
+  // ... existing fallback code ...
+}
+```
+
+### 7.9 Updated Media Processor Subagent Flow
+
+The media-processor subagent now chains yt-dlp and whisper skills:
+
+```markdown
+## Updated Task Flow
+
+1. Read URL request from `contentItem/{id}/url-request.json`
+2. Use **yt-dlp** skill to detect and install yt-dlp
+3. Use **yt-dlp** skill to extract transcript:
+   - If `needsTranscription: false` → Have subtitles, proceed to step 6
+   - If `needsTranscription: true` → Continue to step 4
+4. Use **whisper** skill to detect transcription method
+5. Use **whisper** skill to transcribe audio file
+6. Convert transcript to markdown format
+7. Write output to: `contentItem/{id}/content.md`
+8. Update url-request.json with status: "completed"
+```
+
+### 7.10 Complete Skill Chain Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  media-processor Subagent: Complete Skill Chain                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. yt-dlp skill: detect-ytdlp.ts                                          │
+│     └─► { "installed": true, "version": "2024.12.06" }                     │
+│                                                                             │
+│  2. yt-dlp skill: extract-transcript.ts                                    │
+│     │                                                                       │
+│     ├─► YouTube with captions:                                              │
+│     │   { "needsTranscription": false, "transcriptFile": "abc.vtt" }       │
+│     │   └─► DONE: Create content.md from VTT                               │
+│     │                                                                       │
+│     └─► Podcast or no captions:                                            │
+│         { "needsTranscription": true, "audioFile": "abc.mp3" }             │
+│         │                                                                   │
+│         ▼                                                                   │
+│  3. whisper skill: detect-whisper.ts                                       │
+│     └─► { "groqAvailable": true, "recommendedMethod": "groq" }             │
+│                                                                             │
+│  4. whisper skill: transcribe.ts                                           │
+│     └─► { "transcriptFile": "abc.transcript.txt", "method": "groq" }       │
+│         │                                                                   │
+│         ▼                                                                   │
+│  5. Create content.md from transcript                                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 8. Implementation Details
 
 ### 7.1 CLI Changes
 
@@ -1113,12 +1752,21 @@ function generateSessionId(url: string): string {
 | File | Purpose |
 |------|---------|
 | `plugins/looplia-writer/agents/media-processor.md` | Media processor subagent definition |
+| **yt-dlp Skill** | |
 | `plugins/looplia-writer/skills/yt-dlp/SKILL.md` | yt-dlp skill (concise, references scripts) |
 | `plugins/looplia-writer/skills/yt-dlp/scripts/detect-ytdlp.ts` | Detection + auto-install script |
-| `plugins/looplia-writer/skills/yt-dlp/scripts/extract-transcript.ts` | Transcript extraction script |
+| `plugins/looplia-writer/skills/yt-dlp/scripts/extract-transcript.ts` | Transcript/audio extraction with source detection |
 | `plugins/looplia-writer/skills/yt-dlp/scripts/extract-metadata.ts` | Metadata extraction script |
 | `plugins/looplia-writer/skills/yt-dlp/references/supported-platforms.md` | Platform list (on-demand) |
 | `plugins/looplia-writer/skills/yt-dlp/references/troubleshooting.md` | Error solutions (on-demand) |
+| **Whisper Skill** | |
+| `plugins/looplia-writer/skills/whisper/SKILL.md` | Whisper skill (Groq API + local fallback) |
+| `plugins/looplia-writer/skills/whisper/scripts/detect-whisper.ts` | Check Groq API key or local WhisperKit |
+| `plugins/looplia-writer/skills/whisper/scripts/transcribe.ts` | Unified transcription entry point |
+| `plugins/looplia-writer/skills/whisper/scripts/transcribe-groq.ts` | Groq API transcription |
+| `plugins/looplia-writer/skills/whisper/scripts/transcribe-local.ts` | Local WhisperKit transcription |
+| `plugins/looplia-writer/skills/whisper/references/groq-setup.md` | Groq API setup instructions |
+| `plugins/looplia-writer/skills/whisper/references/whisperkit-setup.md` | Local WhisperKit installation |
 | `docs/DESIGN-0.3.4.1.md` | This document |
 
 ### 8.2 Modified Files
@@ -1149,15 +1797,25 @@ function generateSessionId(url: string): string {
 │       ├── user-profile-reader/SKILL.md
 │       ├── writing-enhancer/SKILL.md
 │       ├── id-generator/SKILL.md
-│       └── yt-dlp/                   # NEW: Script-based skill
-│           ├── SKILL.md              # Concise instructions
+│       ├── yt-dlp/                   # NEW: Media extraction skill
+│       │   ├── SKILL.md              # Concise instructions
+│       │   ├── scripts/
+│       │   │   ├── detect-ytdlp.ts   # Detection + auto-install
+│       │   │   ├── extract-transcript.ts  # Subs + audio + source detection
+│       │   │   └── extract-metadata.ts
+│       │   └── references/
+│       │       ├── supported-platforms.md
+│       │       └── troubleshooting.md
+│       └── whisper/                  # NEW: Audio transcription skill
+│           ├── SKILL.md              # Groq API + local WhisperKit
 │           ├── scripts/
-│           │   ├── detect-ytdlp.ts   # Detection + auto-install
-│           │   ├── extract-transcript.ts
-│           │   └── extract-metadata.ts
+│           │   ├── detect-whisper.ts # Check available methods
+│           │   ├── transcribe.ts     # Unified entry point
+│           │   ├── transcribe-groq.ts
+│           │   └── transcribe-local.ts
 │           └── references/
-│               ├── supported-platforms.md
-│               └── troubleshooting.md
+│               ├── groq-setup.md
+│               └── whisperkit-setup.md
 └── contentItem/
     └── yt-dQw4w9WgXcQ/              # Example YouTube session
         ├── url-request.json          # NEW: URL processing request
@@ -1391,3 +2049,6 @@ looplia kit --url "https://youtube.com/watch?v=PRIVATE_VIDEO_ID"
 | 0.3.4.1 | 2025-12-09 | Initial design: --url input, media-processor subagent, yt-dlp skill |
 | 0.3.4.1 | 2025-12-09 | Added: yt-dlp auto-detection and installation capability in skill |
 | 0.3.4.1 | 2025-12-09 | Refactored: Script-based architecture for token efficiency (~350 tokens saved/operation) |
+| 0.3.4.1 | 2025-12-09 | Added: Whisper skill for audio transcription (Groq API + local WhisperKit) |
+| 0.3.4.1 | 2025-12-09 | Added: Multi-source support with source type detection (YouTube, podcasts, TED, etc.) |
+| 0.3.4.1 | 2025-12-09 | Added: Complete skill chain: yt-dlp (subs/audio) → whisper (transcription) |
