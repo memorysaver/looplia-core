@@ -1,6 +1,6 @@
-# Looplia Core – Technical Design Document v0.3.4
+# Looplia Core – Technical Design Document v0.3.4.0
 
-**Version:** 0.3.4
+**Version:** 0.3.4.0
 **Status:** Proposed
 **Last Updated:** 2025-12-09
 
@@ -2271,5 +2271,5 @@ These metrics should be displayed in the UsageStats component.
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 0.3.4-rev2 | 2025-12-09 | Design review: Corrected SDK message structure, added `includePartialMessages`, fixed transformer to handle content blocks |
-| 0.3.4 | 2025-12-09 | Initial design: Streaming CLI UI with Ink |
+| 0.3.4.0 | 2025-12-09 | Design review: Corrected SDK message structure, added `includePartialMessages`, fixed transformer to handle content blocks |
+| 0.3.4.0-draft | 2025-12-09 | Initial design: Streaming CLI UI with Ink |
