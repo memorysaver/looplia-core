@@ -107,7 +107,10 @@
 - `test-data.ts` - Shared test fixtures (testContent, testUser, testSummary, testIdeas)
 
 **Docker E2E Fixtures** (`examples/`):
-- `ai-healthcare.md` - Real-world article for API testing
+- `ai-healthcare.md` - Real-world article for API testing (markdown with YAML frontmatter)
+- `youtube/Anthropics/captions/EvtPBaaykdo.en.vtt` - YouTube VTT caption file (WebVTT format)
+- `youtube/Anthropics/transcripts/CBneTpXF1CQ.srt` - YouTube SRT transcript (SubRip format)
+- `youtube/Anthropics/transcripts/CBneTpXF1CQ.json` - Whisper JSON transcript (with segments/tokens)
 
 ---
 
@@ -209,6 +212,19 @@ Docker E2E tests validate the complete system with **real Claude API calls** ins
 2. Mount test fixtures and workspace volume
 3. Execute CLI commands with real API calls
 4. Evaluate output files for quality (schema + content + semantic)
+
+#### Multi-Source Type Testing
+
+The agent autonomously detects and processes different source types. E2E tests verify this capability across:
+
+| Source Type | Format | Test File | Detection |
+|-------------|--------|-----------|-----------|
+| Markdown | `.md` with YAML frontmatter | `ai-healthcare.md` | `article` |
+| VTT Caption | WebVTT subtitle format | `EvtPBaaykdo.en.vtt` | `youtube` or `transcript` |
+| SRT Transcript | SubRip format with timing | `CBneTpXF1CQ.srt` | `youtube` or `transcript` |
+| JSON Transcript | Whisper output with segments | `CBneTpXF1CQ.json` | `youtube` or `transcript` |
+
+The `content-analyzer` subagent uses clues like timestamps, speaker markers, and format structure to detect the source type automatically (see `CLAUDE.md` for detection rules).
 
 ### 4.2 Prerequisites
 
@@ -641,6 +657,60 @@ Run:
 
 ### 4.8 GitHub Actions Workflow
 
+The workflow uses a parallel execution strategy with 4 jobs:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        build                                 │
+│         (Build Docker image, save as artifact)              │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+        ┌─────────────┼─────────────┐
+        ▼             ▼             ▼
+┌───────────┐  ┌───────────┐  ┌───────────┐
+│test-markdown│  │ test-vtt  │  │ test-srt  │   ← Run in PARALLEL
+│(summarize  │  │  (kit)    │  │  (kit)    │
+│  + kit)    │  │           │  │           │
+└─────┬──────┘  └─────┬─────┘  └─────┬─────┘
+      │               │               │
+      └───────────────┼───────────────┘
+                      ▼
+        ┌─────────────────────────┐
+        │  semantic-evaluation    │  ← Manual trigger only
+        │  (LLM-as-Judge)         │
+        └─────────────────────────┘
+```
+
+#### Job Details
+
+| Job | Source Type | Commands | Validation |
+|-----|-------------|----------|------------|
+| `test-markdown` | `ai-healthcare.md` | `summarize` + `kit` | Schema + quality metrics |
+| `test-vtt` | `EvtPBaaykdo.en.vtt` | `kit` | WritingKit schema + hooks/outline |
+| `test-srt` | `CBneTpXF1CQ.srt` | `kit` | WritingKit schema + hooks/outline |
+| `semantic-evaluation` | All 3 sources | Claude Code Action | LLM-as-Judge (4 criteria × 3 sources) |
+
+#### Artifact Structure
+
+Each test job uploads its results to a separate artifact:
+
+```
+test-results-markdown/
+├── summary.json
+├── kit.json
+└── contentItem/{sessionId}/...
+
+test-results-vtt/
+└── contentItem/{sessionId}/
+    ├── content.md
+    └── writing-kit.json
+
+test-results-srt/
+└── contentItem/{sessionId}/
+    ├── content.md
+    └── writing-kit.json
+```
+
 Create `.github/workflows/docker-e2e.yml`:
 
 ```yaml
@@ -655,10 +725,9 @@ env:
   IMAGE_NAME: looplia:test
 
 jobs:
-  docker-e2e:
+  # Build Docker image once and share with all test jobs
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -677,70 +746,176 @@ jobs:
       - name: Build Docker image
         run: docker build -t $IMAGE_NAME .
 
-      - name: Create test workspace
-        run: mkdir -p test-workspace
+      - name: Save Docker image
+        run: docker save $IMAGE_NAME | gzip > looplia-image.tar.gz
+
+      - name: Upload Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: looplia-image.tar.gz
+          retention-days: 1
+
+  # Test 1: Markdown (summarize + kit)
+  test-markdown:
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker image
+        run: gunzip -c looplia-image.tar.gz | docker load
 
       - name: Run summarize command
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
-          docker run --rm \
-            -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
-            -v "$(pwd)/test-workspace:/home/looplia/.looplia" \
+          CONTAINER_ID=$(docker create \
+            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
             -v "$(pwd)/examples:/examples:ro" \
             $IMAGE_NAME \
             summarize --file /examples/ai-healthcare.md \
-            --output /home/looplia/.looplia/summary.json
-
-      - name: Validate summary schema
-        run: |
-          jq -e '.headline and .tldr and .bullets' test-workspace/summary.json
-
-      - name: Validate summary quality
-        run: |
-          TLDR_WORDS=$(jq -r '.tldr' test-workspace/summary.json | wc -w)
-          BULLET_COUNT=$(jq '.bullets | length' test-workspace/summary.json)
-          echo "TLDR words: $TLDR_WORDS"
-          echo "Bullet count: $BULLET_COUNT"
-          [ "$BULLET_COUNT" -ge 3 ]
+            --output /home/looplia/.looplia/summary.json)
+          docker start -a "$CONTAINER_ID"
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-markdown/
+          docker rm "$CONTAINER_ID"
 
       - name: Run kit command
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
-          docker run --rm \
-            -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
-            -v "$(pwd)/test-workspace:/home/looplia/.looplia" \
+          CONTAINER_ID=$(docker create \
+            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
             -v "$(pwd)/examples:/examples:ro" \
             $IMAGE_NAME \
             kit --file /examples/ai-healthcare.md \
-            --topics "ai,healthcare" \
-            --output /home/looplia/.looplia/kit.json
+            --topics "ai,healthcare,technology" \
+            --tone "expert" \
+            --output /home/looplia/.looplia/kit.json)
+          docker start -a "$CONTAINER_ID"
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-markdown/
+          docker rm "$CONTAINER_ID"
 
-      - name: Validate kit schema
+      - name: Validate outputs
         run: |
-          jq -e '.summary and .ideas and .suggestedOutline' test-workspace/kit.json
-
-      - name: Validate kit quality
-        run: |
-          HOOK_COUNT=$(jq '.ideas.hooks | length' test-workspace/kit.json)
-          SECTION_COUNT=$(jq '.suggestedOutline | length' test-workspace/kit.json)
-          echo "Hook count: $HOOK_COUNT"
-          echo "Outline sections: $SECTION_COUNT"
+          jq -e '.headline and .tldr and .bullets and .tags' test-workspace-markdown/summary.json
+          jq -e '.contentId and .summary and .ideas and .suggestedOutline' test-workspace-markdown/kit.json
+          HOOK_COUNT=$(jq '.ideas.hooks | length' test-workspace-markdown/kit.json)
+          SECTION_COUNT=$(jq '.suggestedOutline | length' test-workspace-markdown/kit.json)
           [ "$HOOK_COUNT" -ge 2 ] && [ "$SECTION_COUNT" -ge 3 ]
 
       - name: Upload test artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: docker-e2e-results
-          path: test-workspace/
-          retention-days: 7
+          name: test-results-markdown
+          path: test-workspace-markdown/
 
-  # LLM-based semantic evaluation using Claude Code Action (manual trigger only)
+  # Test 2: VTT Caption (kit command)
+  test-vtt:
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker image
+        run: gunzip -c looplia-image.tar.gz | docker load
+
+      - name: Run kit on VTT caption
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          CONTAINER_ID=$(docker create \
+            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
+            -v "$(pwd)/examples:/examples:ro" \
+            $IMAGE_NAME \
+            kit --file /examples/youtube/Anthropics/captions/EvtPBaaykdo.en.vtt \
+            --topics "ai,claude,developer-tools" \
+            --tone "expert")
+          docker start -a "$CONTAINER_ID"
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-vtt/
+          docker rm "$CONTAINER_ID"
+
+      - name: Validate VTT kit
+        run: |
+          SESSION_DIR=$(find test-workspace-vtt/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
+          jq -e '.contentId and .summary and .ideas and .suggestedOutline' "$SESSION_DIR/writing-kit.json"
+          HOOK_COUNT=$(jq '.ideas.hooks | length' "$SESSION_DIR/writing-kit.json")
+          SECTION_COUNT=$(jq '.suggestedOutline | length' "$SESSION_DIR/writing-kit.json")
+          [ "$HOOK_COUNT" -ge 2 ] && [ "$SECTION_COUNT" -ge 3 ]
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-vtt
+          path: test-workspace-vtt/
+
+  # Test 3: SRT Transcript (kit command)
+  test-srt:
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker image
+        run: gunzip -c looplia-image.tar.gz | docker load
+
+      - name: Run kit on SRT transcript
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          CONTAINER_ID=$(docker create \
+            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
+            -v "$(pwd)/examples:/examples:ro" \
+            $IMAGE_NAME \
+            kit --file /examples/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt \
+            --topics "coding,claude,automation" \
+            --tone "expert")
+          docker start -a "$CONTAINER_ID"
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-srt/
+          docker rm "$CONTAINER_ID"
+
+      - name: Validate SRT kit
+        run: |
+          SESSION_DIR=$(find test-workspace-srt/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
+          jq -e '.contentId and .summary and .ideas and .suggestedOutline' "$SESSION_DIR/writing-kit.json"
+          HOOK_COUNT=$(jq '.ideas.hooks | length' "$SESSION_DIR/writing-kit.json")
+          SECTION_COUNT=$(jq '.suggestedOutline | length' "$SESSION_DIR/writing-kit.json")
+          [ "$HOOK_COUNT" -ge 2 ] && [ "$SECTION_COUNT" -ge 3 ]
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-srt
+          path: test-workspace-srt/
+
+  # LLM-based semantic evaluation (manual trigger only)
   semantic-evaluation:
     runs-on: ubuntu-latest
-    needs: docker-e2e
+    needs: [test-markdown, test-vtt, test-srt]
     if: github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
@@ -750,10 +925,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download artifacts
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          name: docker-e2e-results
           path: test-workspace/
 
       - name: Evaluate pipeline outputs with Claude Code
@@ -761,38 +935,31 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
-            You are an evaluator for a content intelligence pipeline.
+            Evaluate WritingKit outputs from 3 source types.
 
-            ## Step 1: Read Source Content
-            Find and read: test-workspace/contentItem/*/content.md
+            Criteria (1 pt each): Accuracy, Completeness, Ideas Quality, Outline Quality
 
-            ## Step 2: Evaluate Summary (summary.json)
-            Score (1 pt each): Accuracy, Completeness, Clarity, Faithfulness
+            Sources:
+            - Markdown: test-workspace/test-results-markdown/
+            - VTT: test-workspace/test-results-vtt/contentItem/*/writing-kit.json
+            - SRT: test-workspace/test-results-srt/contentItem/*/writing-kit.json
 
-            ## Step 3: Evaluate Ideas (ideas.json)
-            Score (1 pt each): Hooks, Angles, Questions, Grounding
-
-            ## Step 4: Evaluate Outline (outline.json)
-            Score (1 pt each): Structure, Coverage, Actionable, Realistic
-
-            ## Output Format
-            Print scores for each step, total X/12.
-            Status: PASS if >= 9, FAIL if < 9.
-            If FAIL, exit with code 1.
+            Total: X/12. PASS if >= 9, FAIL if < 9.
 ```
 
 #### Required GitHub Secrets
 
 Configure in repository Settings > Secrets and variables > Actions:
-- `CLAUDE_CODE_OAUTH_TOKEN` - OAuth token for Claude Code Action (used for both Docker commands and LLM evaluation)
+- `CLAUDE_CODE_OAUTH_TOKEN` - OAuth token for Claude Code (used for both Docker commands and LLM evaluation via Claude Agent SDK)
 
 #### Cost Considerations
 
-- **Estimated cost per run**: ~$0.05-0.20 USD (Docker E2E) + ~$0.10-0.30 USD (semantic evaluation)
+- **Estimated cost per run**: ~$0.15-0.60 USD (3 parallel Docker E2E tests) + ~$0.10-0.30 USD (semantic evaluation)
 - **Recommended frequency**: On merge to main (basic tests) + manual trigger (with semantic evaluation)
 - **Models used**:
   - Docker commands: claude-sonnet-4-5 (via Claude Agent SDK)
   - Semantic evaluation: Claude Code Action (full model)
+- **Parallel execution**: 3 test jobs run simultaneously after build, reducing total CI time
 
 ---
 

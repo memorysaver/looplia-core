@@ -1,5 +1,3 @@
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
 import type {
   ContentItem,
   ProviderResult,
@@ -148,13 +146,17 @@ export function createClaudeWritingKitProvider(
         }
       );
 
-      // Persist WritingKit to flat folder structure if successful
+      // Persist WritingKit and handle folder relocation
       if (result.success) {
-        const contentDir = join(workspace, "contentItem", content.id);
-        const kitPath = join(contentDir, "writing-kit.json");
-
-        // Persist complete WritingKit (subagents write individual files, we persist the assembled kit)
-        writeFileSync(kitPath, JSON.stringify(result.data, null, 2), "utf-8");
+        const { persistResultToWorkspace } = await import(
+          "./utils/persist-result"
+        );
+        await persistResultToWorkspace(result.data, {
+          workspace,
+          contentId: content.id,
+          sessionId: result.sessionId,
+          filename: "writing-kit.json",
+        });
       }
 
       return result;

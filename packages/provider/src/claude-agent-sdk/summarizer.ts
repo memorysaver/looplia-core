@@ -1,5 +1,3 @@
-import { renameSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import type {
   ContentItem,
   ContentSummary,
@@ -12,37 +10,6 @@ import { writeContentItem } from "./content-io";
 import { executeAgenticQuery } from "./utils/query-wrapper";
 import { SUMMARY_OUTPUT_SCHEMA } from "./utils/schema-converter";
 import { ensureWorkspace, writeUserProfile } from "./workspace";
-
-// Regex patterns for ID generation
-const WHITESPACE_PATTERN = /\s+/;
-const INVALID_ID_CHARS_PATTERN = /[^a-z0-9-]/g;
-const MULTIPLE_DASHES_PATTERN = /--+/g;
-
-/**
- * Generate meaningful ID based on detected source and content characteristics
- */
-function generateMeaningfulId(summary: ContentSummary): string {
-  const source = summary.detectedSource || "text";
-  const date = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-
-  // Extract topic from headline or first keyTheme
-  let topic = "content";
-  if (summary.headline) {
-    // Take first 2-3 words from headline, lowercase, hyphen-separated
-    const words = summary.headline
-      .toLowerCase()
-      .split(WHITESPACE_PATTERN)
-      .slice(0, 2);
-    topic = words.join("-").replace(INVALID_ID_CHARS_PATTERN, "");
-  } else if (summary.keyThemes?.[0]) {
-    topic = summary.keyThemes[0].toLowerCase().replace(WHITESPACE_PATTERN, "-");
-  }
-
-  // Generate ID: source-date-topic
-  return `${source}-${date}-${topic}`
-    .replace(MULTIPLE_DASHES_PATTERN, "-")
-    .slice(0, 60);
-}
 
 /**
  * Build agentic prompt for summarization (v0.3.1 approach)
@@ -140,42 +107,17 @@ export function createClaudeSummarizer(
         }
       );
 
-      // Persist summary and handle ID generation
+      // Persist summary and handle folder relocation
       if (result.success) {
-        const tempDir = join(workspace, "contentItem", content.id);
-        const summaryPath = join(tempDir, "summary.json");
-        writeFileSync(
-          summaryPath,
-          JSON.stringify(result.data, null, 2),
-          "utf-8"
+        const { persistResultToWorkspace } = await import(
+          "./utils/persist-result"
         );
-
-        // Generate meaningful ID based on detected source
-        const meaningfulId = generateMeaningfulId(result.data);
-
-        // If ID changed, relocate the content folder
-        if (meaningfulId !== content.id) {
-          const newDir = join(workspace, "contentItem", meaningfulId);
-          try {
-            renameSync(tempDir, newDir);
-
-            // Update the contentId in the returned data
-            result.data.contentId = meaningfulId;
-
-            // Re-write summary with new contentId
-            writeFileSync(
-              join(newDir, "summary.json"),
-              JSON.stringify(result.data, null, 2),
-              "utf-8"
-            );
-          } catch (error) {
-            // If relocation fails, keep original ID
-            console.warn(
-              `Failed to relocate content from ${content.id} to ${meaningfulId}:`,
-              error
-            );
-          }
-        }
+        await persistResultToWorkspace(result.data, {
+          workspace,
+          contentId: content.id,
+          sessionId: result.sessionId,
+          filename: "summary.json",
+        });
       }
 
       return result;

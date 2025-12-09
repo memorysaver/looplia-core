@@ -1,0 +1,6170 @@
+WEBVTT
+Kind: captions
+Language: en
+
+00:00:00.330 --> 00:00:01.163
+- Hello everyone.
+
+00:00:01.163 --> 00:00:02.280
+My name is Mrinank.
+
+00:00:02.280 --> 00:00:03.690
+Yeah, and I'm really delighted to be here
+
+00:00:03.690 --> 00:00:05.550
+with some of my colleagues at Anthropic.
+
+00:00:05.550 --> 00:00:06.714
+- Hi, I'm Jerry.
+
+00:00:06.714 --> 00:00:09.360
+I'm on our safeguards research team
+
+00:00:09.360 --> 00:00:11.520
+and I've been at Anthropic
+for about eight months.
+
+00:00:11.520 --> 00:00:12.510
+- Hi, I am Ethan.
+
+00:00:12.510 --> 00:00:14.910
+I've been at Anthropic
+for two and a half years
+
+00:00:14.910 --> 00:00:19.910
+and I'm leading our efforts on AI control,
+
+00:00:20.100 --> 00:00:22.410
+developing various
+different monitoring methods
+
+00:00:22.410 --> 00:00:26.010
+for various different AI risks
+including aerosol robustness.
+
+00:00:26.010 --> 00:00:27.300
+And I was a part of the
+
+00:00:27.300 --> 00:00:30.660
+Safeguards research team as well before.
+
+00:00:30.660 --> 00:00:32.160
+- Hi, I'm Meg.
+
+00:00:32.160 --> 00:00:35.070
+I've been at Anthropic for
+about a year and a half now,
+
+00:00:35.070 --> 00:00:37.890
+and on the Alignment Science
+team which has been great.
+
+00:00:37.890 --> 00:00:40.470
+- Great, so yeah and we're
+just gonna be talking about
+
+00:00:40.470 --> 00:00:43.320
+constitutional classifiers
+and that's our new approach
+
+00:00:43.320 --> 00:00:45.300
+to really try to mitigate jailbreaks.
+
+00:00:45.300 --> 00:00:48.240
+So yeah, how would we define a jailbreak?
+
+00:00:48.240 --> 00:00:50.070
+- Yeah, I mean I think to me a jailbreak
+
+00:00:50.070 --> 00:00:53.070
+is kind of some way in
+which something bypass
+
+00:00:53.070 --> 00:00:54.945
+the safeguards that we
+include in our models
+
+00:00:54.945 --> 00:00:57.390
+and try to get harmful
+information out of it.
+
+00:00:57.390 --> 00:00:59.193
+- Yeah, so there are these techniques
+
+00:00:59.193 --> 00:01:01.920
+that do anything now jailbreak,
+
+00:01:01.920 --> 00:01:04.740
+it's kind similar people with
+
+00:01:04.740 --> 00:01:07.230
+jailbreak their iPhone
+and try to get around
+
+00:01:07.230 --> 00:01:09.150
+all the safeguards there.
+
+00:01:09.150 --> 00:01:11.700
+But the thing is that with iPhones
+
+00:01:11.700 --> 00:01:13.140
+and others stuff this,
+
+00:01:13.140 --> 00:01:15.330
+jailbreaks aren't really
+a thing that people,
+
+00:01:15.330 --> 00:01:16.530
+that maybe aren't that dangerous,
+
+00:01:16.530 --> 00:01:18.450
+not something that we
+care about that much.
+
+00:01:18.450 --> 00:01:21.300
+So yeah, what is it that makes,
+
+00:01:21.300 --> 00:01:22.650
+yeah, why should we care about
+
+00:01:22.650 --> 00:01:24.553
+these job breaks in the first place?
+
+00:01:25.770 --> 00:01:28.499
+- I mean I think one of the
+main reasons is for models,
+
+00:01:28.499 --> 00:01:30.930
+future models which have greater risks.
+
+00:01:30.930 --> 00:01:35.220
+So yeah, I think people are
+pretty carefully monitoring
+
+00:01:35.220 --> 00:01:36.780
+people at different companies
+
+00:01:36.780 --> 00:01:39.120
+and the academic community is
+pretty carefully monitoring
+
+00:01:39.120 --> 00:01:44.120
+if slash when models
+will be able to help with
+
+00:01:44.580 --> 00:01:49.410
+weapon development or
+large scale cyber crime
+
+00:01:49.410 --> 00:01:51.420
+or various different risks
+
+00:01:51.420 --> 00:01:53.760
+that are greater than
+what we've seen before.
+
+00:01:53.760 --> 00:01:55.590
+Also mass persuasion, things like that.
+
+00:01:55.590 --> 00:01:58.500
+And I think once models become
+
+00:01:58.500 --> 00:02:00.000
+really effective at some of those
+
+00:02:00.000 --> 00:02:03.570
+and are a significant uplift over say
+
+00:02:03.570 --> 00:02:06.600
+using Google search or
+general internet resources
+
+00:02:06.600 --> 00:02:07.890
+to do some of those things,
+
+00:02:07.890 --> 00:02:12.600
+I think then it then yeah I
+guess being able to use models
+
+00:02:12.600 --> 00:02:14.700
+to help with those kinds of things will be
+
+00:02:16.230 --> 00:02:19.470
+potentially speed up
+bad actors quite a lot.
+
+00:02:19.470 --> 00:02:21.780
+So I think a lot of this is in preparation
+
+00:02:21.780 --> 00:02:23.130
+for next generation models
+
+00:02:23.130 --> 00:02:25.290
+or next next generation models.
+
+00:02:25.290 --> 00:02:28.054
+- Yeah, great and then I'm
+also curious what the story
+
+00:02:28.054 --> 00:02:30.920
+of the work is and sort of
+why we set out to do this
+
+00:02:30.920 --> 00:02:33.063
+in the first place and the RSP.
+
+00:02:34.140 --> 00:02:35.630
+- Yeah, I guess Anthropic really cares
+
+00:02:35.630 --> 00:02:37.590
+about safety a great deal
+
+00:02:37.590 --> 00:02:39.480
+and we have the RSP which is
+
+00:02:39.480 --> 00:02:40.830
+the responsible scaling philosophy,
+
+00:02:40.830 --> 00:02:43.200
+which is really trying to outline
+
+00:02:43.200 --> 00:02:45.360
+conditions under which we're
+happy to release models
+
+00:02:45.360 --> 00:02:48.390
+and make sure we have
+different safeguards in place.
+
+00:02:48.390 --> 00:02:52.303
+And a while ago we committed to a very,
+
+00:02:52.303 --> 00:02:55.290
+a difficult standard
+for jailbreak in the RSP
+
+00:02:55.290 --> 00:02:57.090
+for what we call ASL-3 models,
+
+00:02:57.090 --> 00:03:00.000
+which are basically models which have
+
+00:03:00.000 --> 00:03:02.040
+maybe some of these dangerous capabilities
+
+00:03:02.040 --> 00:03:04.590
+being able to build dangerous weapons.
+
+00:03:04.590 --> 00:03:06.610
+And our team was kind of mandated with
+
+00:03:07.980 --> 00:03:10.860
+trying to actually solve jailbreaks
+
+00:03:10.860 --> 00:03:12.603
+for this kind of level of model.
+
+00:03:13.500 --> 00:03:15.180
+So yeah, I guess the
+motivation for the work
+
+00:03:15.180 --> 00:03:18.120
+is actually try and satisfy
+the things in the RSP
+
+00:03:18.120 --> 00:03:20.580
+such that we can feel we build
+
+00:03:20.580 --> 00:03:21.900
+future models safely
+
+00:03:21.900 --> 00:03:26.220
+and can actually deploy
+them with some sort of
+
+00:03:26.220 --> 00:03:28.320
+progression towards safety
+
+00:03:28.320 --> 00:03:30.510
+or making some progress towards that.
+
+00:03:30.510 --> 00:03:33.270
+Yeah, so I think the
+classifiers a definitely
+
+00:03:33.270 --> 00:03:35.430
+a good step in that direction.
+
+00:03:35.430 --> 00:03:38.790
+- Yeah, so there are lots of
+different types of jailbreaks
+
+00:03:38.790 --> 00:03:39.720
+that are out there
+
+00:03:39.720 --> 00:03:42.290
+and something that we've
+really did in our work
+
+00:03:42.290 --> 00:03:45.630
+is we focused on on universal job breaks.
+
+00:03:45.630 --> 00:03:47.787
+So yeah, why is this something
+that we should care about?
+
+00:03:47.787 --> 00:03:48.870
+And what does that mean?
+
+00:03:48.870 --> 00:03:50.073
+Why is it important?
+
+00:03:51.210 --> 00:03:53.100
+- Yeah, I mean I think the reason why,
+
+00:03:53.100 --> 00:03:55.230
+I'm particularly concerned
+about universal jailbreaks
+
+00:03:55.230 --> 00:03:57.300
+is just because of the
+uplift that it would give
+
+00:03:57.300 --> 00:03:59.070
+kind of a non-expert.
+
+00:03:59.070 --> 00:04:01.230
+And the way I kind of
+think about this is that
+
+00:04:01.230 --> 00:04:03.000
+if some random person on the internet
+
+00:04:03.000 --> 00:04:05.370
+is trying to do something bad,
+
+00:04:05.370 --> 00:04:07.890
+they may not actually have
+that much jailbreaking
+
+00:04:07.890 --> 00:04:09.960
+experience themselves.
+
+00:04:09.960 --> 00:04:12.090
+And so the thing they might just do
+
+00:04:12.090 --> 00:04:13.327
+is just go online and see
+
+00:04:13.327 --> 00:04:15.450
+"Oh what are some existing
+jailbreaks that I can use?
+
+00:04:15.450 --> 00:04:16.920
+What's a template where I can just put in
+
+00:04:16.920 --> 00:04:19.770
+my harmful question and
+just get an answer."
+
+00:04:19.770 --> 00:04:21.030
+And I think in that case,
+
+00:04:21.030 --> 00:04:22.620
+you're very concerned about these kind of
+
+00:04:22.620 --> 00:04:25.650
+strategies where anyone could
+just put in any question
+
+00:04:25.650 --> 00:04:28.650
+and it gets the model to
+bypass all of the safeguards.
+
+00:04:28.650 --> 00:04:30.508
+And I think that's part
+particularly concerning
+
+00:04:30.508 --> 00:04:33.030
+at the level of model capabilities
+
+00:04:33.030 --> 00:04:33.930
+that we're concerned about.
+
+00:04:33.930 --> 00:04:36.343
+- So how exactly would you to define
+
+00:04:36.343 --> 00:04:37.620
+a universal jailbreak?
+
+00:04:37.620 --> 00:04:40.325
+if you're telling someone on the street,
+
+00:04:40.325 --> 00:04:43.020
+what does a universal jailbreak mean?
+
+00:04:43.020 --> 00:04:45.900
+How would you know if your
+jailbreak is universal?
+
+00:04:45.900 --> 00:04:47.130
+- Yeah, I guess there's a little bit
+
+00:04:47.130 --> 00:04:47.970
+of ambiguity there,
+
+00:04:47.970 --> 00:04:49.440
+but I think the kind of definition
+
+00:04:49.440 --> 00:04:53.160
+that we are going for is some
+kind of prompting strategy.
+
+00:04:53.160 --> 00:04:54.060
+It could be automated,
+
+00:04:54.060 --> 00:04:56.610
+but just a singular strategy
+
+00:04:56.610 --> 00:04:58.140
+that's very easily replaceable
+
+00:04:58.140 --> 00:05:00.997
+with any wide variety
+of harmful questions.
+
+00:05:00.997 --> 00:05:04.440
+And that consistently gets a lot of detail
+
+00:05:04.440 --> 00:05:07.290
+from the model and bypasses
+the model safeguards.
+
+00:05:07.290 --> 00:05:09.450
+- And I think one way of
+quantifying the universal jailbreak
+
+00:05:09.450 --> 00:05:11.700
+is that it actually does speed up
+
+00:05:11.700 --> 00:05:14.790
+a person quite a lot because
+instead of having to jailbreak
+
+00:05:14.790 --> 00:05:16.058
+every specific query,
+
+00:05:16.058 --> 00:05:20.280
+they can just use one jailbreak
+for all of the queries
+
+00:05:20.280 --> 00:05:21.843
+which actually is a lot faster.
+
+00:05:22.800 --> 00:05:25.260
+So I guess one idea is ,
+
+00:05:25.260 --> 00:05:28.470
+if the model, if there's
+some counterfactual way of
+
+00:05:28.470 --> 00:05:30.390
+doing things that's much
+easier than using the model,
+
+00:05:30.390 --> 00:05:31.560
+there's no point in using the model.
+
+00:05:31.560 --> 00:05:34.170
+So not having universal jailbreaks
+
+00:05:34.170 --> 00:05:36.420
+might mean that they try other strategies
+
+00:05:36.420 --> 00:05:38.190
+which might be worse or something this.
+
+00:05:38.190 --> 00:05:39.150
+- Yeah.
+
+00:05:39.150 --> 00:05:40.770
+- One thing I would maybe add is that,
+
+00:05:40.770 --> 00:05:42.630
+the difference between
+a universal jailbreak
+
+00:05:42.630 --> 00:05:44.010
+and non universal ones is ,
+
+00:05:44.010 --> 00:05:46.650
+for non universal ones you might need to,
+
+00:05:46.650 --> 00:05:48.690
+for every harmful question
+you want to answer,
+
+00:05:48.690 --> 00:05:51.270
+you would need to jailbreak
+the model in particular
+
+00:05:51.270 --> 00:05:52.890
+for that particular question,
+
+00:05:52.890 --> 00:05:54.600
+then you get a new question,
+
+00:05:54.600 --> 00:05:57.033
+a new, yeah, new.
+
+00:05:57.033 --> 00:05:59.100
+Your question in the process of developing
+
+00:05:59.100 --> 00:06:00.210
+your new weapon or whatever
+
+00:06:00.210 --> 00:06:02.640
+and then you need to
+jailbreak the model again.
+
+00:06:02.640 --> 00:06:04.490
+I think basically that entire process
+
+00:06:04.490 --> 00:06:07.470
+if you need to do that
+hundreds or thousands of times
+
+00:06:07.470 --> 00:06:10.770
+is just very costly.
+
+00:06:10.770 --> 00:06:13.560
+Whereas if you just need to
+upfront find one strategy
+
+00:06:13.560 --> 00:06:16.260
+for jailbreaking your
+model a single prompt
+
+00:06:16.260 --> 00:06:19.140
+where you can just swap in a new question,
+
+00:06:19.140 --> 00:06:21.330
+that makes it so that it's,
+
+00:06:21.330 --> 00:06:24.630
+yeah, the amount of total
+effort for jailbreaking
+
+00:06:24.630 --> 00:06:26.010
+is much lower.
+
+00:06:26.010 --> 00:06:28.860
+So that to me is one of
+the primary motivations
+
+00:06:28.860 --> 00:06:31.020
+for focusing on universal attacks.
+
+00:06:31.020 --> 00:06:32.900
+- Yeah, and I'll just give an example here
+
+00:06:32.900 --> 00:06:34.740
+in a way that I think about it.
+
+00:06:34.740 --> 00:06:36.660
+So let's say I wanna make a cake
+
+00:06:36.660 --> 00:06:38.820
+and I am not able to make a cake
+
+00:06:38.820 --> 00:06:40.260
+because I've never baked in my life,
+
+00:06:40.260 --> 00:06:42.510
+I don't know anything, my ingredients,
+
+00:06:42.510 --> 00:06:43.960
+I don't know how things work.
+
+00:06:45.420 --> 00:06:48.210
+So how could a model be able to help me
+
+00:06:48.210 --> 00:06:50.640
+do something I can't do otherwise?
+
+00:06:50.640 --> 00:06:53.100
+So if I need to make a cake,
+
+00:06:53.100 --> 00:06:55.770
+I'm gonna need to ask a
+bunch of different queries.
+
+00:06:55.770 --> 00:06:56.603
+That's one thing.
+
+00:06:56.603 --> 00:06:58.560
+it's actually,
+
+00:06:58.560 --> 00:07:00.660
+put something in the oven,
+
+00:07:00.660 --> 00:07:02.370
+I need to know if the
+temperature is right,
+
+00:07:02.370 --> 00:07:03.870
+the smells right, take it out,
+
+00:07:03.870 --> 00:07:06.720
+how I would check, figure
+out all the ingredients.
+
+00:07:06.720 --> 00:07:08.370
+So one thing I think
+that's really important
+
+00:07:08.370 --> 00:07:11.100
+in the universal jailbreak
+sort of definition,
+
+00:07:11.100 --> 00:07:15.630
+is that sort of you're very
+confident that the information
+
+00:07:15.630 --> 00:07:17.910
+you're getting out the model
+is actually really helpful
+
+00:07:17.910 --> 00:07:19.590
+for the thing that you care about.
+
+00:07:19.590 --> 00:07:21.990
+So it's kind of different.
+
+00:07:21.990 --> 00:07:23.220
+There's sort of some techniques
+
+00:07:23.220 --> 00:07:25.320
+that get a little bit of information,
+
+00:07:26.280 --> 00:07:27.600
+or they get some information,
+
+00:07:27.600 --> 00:07:30.840
+but it's sort of mixed in
+with a lot of the other stuff.
+
+00:07:30.840 --> 00:07:33.090
+But for these sort of scenarios
+
+00:07:33.090 --> 00:07:37.440
+where what's happening is an
+actor that can't do a task
+
+00:07:37.440 --> 00:07:39.630
+that requires a lot of expertise,
+
+00:07:39.630 --> 00:07:42.450
+we're worried about them
+being able to do the task.
+
+00:07:42.450 --> 00:07:45.420
+We think that they all need to have access
+
+00:07:45.420 --> 00:07:47.550
+through the sort of the
+of universal jailbreak.
+
+00:07:47.550 --> 00:07:51.180
+They'll need need to be
+able to ask many queries
+
+00:07:51.180 --> 00:07:52.860
+and get really reliable information
+
+00:07:52.860 --> 00:07:54.360
+and they should just know,
+
+00:07:54.360 --> 00:07:55.950
+oh this is the correct instruction,
+
+00:07:55.950 --> 00:07:57.510
+this is the right thing to do.
+
+00:07:57.510 --> 00:07:59.980
+- I think an example of
+a non universal jailbreak
+
+00:08:01.020 --> 00:08:02.610
+that someone on the team,
+
+00:08:02.610 --> 00:08:05.130
+I think Jesse Mu found was,
+
+00:08:05.130 --> 00:08:08.130
+I think he was jailbreaking it for,
+
+00:08:08.130 --> 00:08:09.510
+asking the model how to make,
+
+00:08:09.510 --> 00:08:11.040
+asking Claude how to make meth
+
+00:08:11.040 --> 00:08:13.500
+and he found some jailbreaks where
+
+00:08:13.500 --> 00:08:15.480
+he puts the model in a scenario
+
+00:08:15.480 --> 00:08:18.357
+where it's role-playing as if
+it's part of "Breaking Bad"
+
+00:08:18.357 --> 00:08:20.370
+the the TV show where they make meth
+
+00:08:20.370 --> 00:08:24.660
+and then asks the model the
+question how do I make meth?
+
+00:08:24.660 --> 00:08:25.620
+That kind of jailbreak,
+
+00:08:25.620 --> 00:08:27.600
+you can imagine how
+that would be effective
+
+00:08:27.600 --> 00:08:29.880
+for that specific kind of question
+
+00:08:29.880 --> 00:08:30.930
+things related to meth,
+
+00:08:30.930 --> 00:08:33.030
+but is not going to generalize for things
+
+00:08:33.030 --> 00:08:34.560
+related to cyber crime.
+
+00:08:34.560 --> 00:08:37.980
+But on the other hand there's
+some other jailbreaks which,
+
+00:08:37.980 --> 00:08:39.510
+the do anything now jailbreak,
+
+00:08:39.510 --> 00:08:43.020
+which gets the model to do anything
+
+00:08:43.020 --> 00:08:45.630
+by getting it to talk in a certain mode
+
+00:08:45.630 --> 00:08:48.420
+or role play in general
+for arbitrary questions
+
+00:08:48.420 --> 00:08:52.200
+and that would be what we would
+call a universal jailbreak.
+
+00:08:52.200 --> 00:08:55.170
+There's also other
+strategies people have used
+
+00:08:55.170 --> 00:08:56.850
+to make these using language models
+
+00:08:56.850 --> 00:08:59.400
+to automatically find
+different jailbreaks,
+
+00:08:59.400 --> 00:09:01.770
+that would be a more
+kind of dynamic approach
+
+00:09:01.770 --> 00:09:03.720
+that might be able to
+discover these on the fly.
+
+00:09:03.720 --> 00:09:06.360
+But if you have a single process
+for generating a jailbreak
+
+00:09:06.360 --> 00:09:07.320
+for a new question,
+
+00:09:07.320 --> 00:09:09.660
+that would also count as universal.
+
+00:09:09.660 --> 00:09:11.910
+- So yeah and just maybe an
+even more basic question,
+
+00:09:11.910 --> 00:09:13.560
+is why does someone need
+to jailbreak the model
+
+00:09:13.560 --> 00:09:15.150
+in the first place?
+
+00:09:15.150 --> 00:09:18.153
+You know, what does that even mean?
+
+00:09:19.200 --> 00:09:21.720
+- Yeah, I mean I think
+we've done a lot of work
+
+00:09:21.720 --> 00:09:23.220
+such as our constitutional AI work
+
+00:09:23.220 --> 00:09:26.250
+on getting Claude to have
+this kind of characteristics
+
+00:09:26.250 --> 00:09:28.800
+where it doesn't actually try
+to give harmful information
+
+00:09:28.800 --> 00:09:30.870
+if it thinks the user
+
+00:09:30.870 --> 00:09:33.360
+might have some bad
+intent or something that.
+
+00:09:33.360 --> 00:09:35.190
+And so for a lot of
+these harmful questions,
+
+00:09:35.190 --> 00:09:36.420
+if you just ask the question itself,
+
+00:09:36.420 --> 00:09:40.050
+it's very obvious that
+this is bad question
+
+00:09:40.050 --> 00:09:41.940
+users trying to make some
+weapons of mass destruction.
+
+00:09:41.940 --> 00:09:43.410
+It's very clearly bad
+
+00:09:43.410 --> 00:09:46.170
+and we've trained Claude to
+not answer those questions.
+
+00:09:46.170 --> 00:09:48.030
+And so the jailbreak is needed
+
+00:09:48.030 --> 00:09:50.310
+to actually get around those safeguards
+
+00:09:50.310 --> 00:09:52.830
+in order to get Claude to
+actually answer the question.
+
+00:09:52.830 --> 00:09:55.410
+- Another thing that's relevant for the
+
+00:09:55.410 --> 00:09:57.210
+homelessness training question is that,
+
+00:09:57.210 --> 00:10:00.030
+I guess there's many different ways
+
+00:10:00.030 --> 00:10:01.890
+in which people could present
+jailbreaks to the model,
+
+00:10:01.890 --> 00:10:03.240
+and there's also many different tasks
+
+00:10:03.240 --> 00:10:04.530
+that the model needs to be able to do
+
+00:10:04.530 --> 00:10:08.340
+in its every kind of
+everyday life so to speak.
+
+00:10:08.340 --> 00:10:12.090
+And I think having an extra set
+
+00:10:12.090 --> 00:10:13.920
+of systems that are specifically
+
+00:10:13.920 --> 00:10:15.150
+trying to guard against jailbreaks
+
+00:10:15.150 --> 00:10:16.950
+can really help have , I don't know,
+
+00:10:16.950 --> 00:10:19.860
+some kind of Swiss cheese sort of method
+
+00:10:19.860 --> 00:10:23.370
+of trying to block harmful things
+
+00:10:23.370 --> 00:10:25.830
+via many different
+layers or something this.
+
+00:10:25.830 --> 00:10:27.270
+- You say more about what the,
+
+00:10:27.270 --> 00:10:30.450
+this , we talk about Swiss
+cheese a lot on the propane.
+
+00:10:30.450 --> 00:10:31.290
+- It's true.
+
+00:10:31.290 --> 00:10:33.420
+- This is not as well known everywhere,
+
+00:10:33.420 --> 00:10:34.350
+so yeah, what does that mean.
+
+00:10:34.350 --> 00:10:35.220
+- I guess, yeah.
+
+00:10:35.220 --> 00:10:37.380
+So I guess the idea of
+the Swiss cheese model
+
+00:10:37.380 --> 00:10:40.353
+for protecting against things is that,
+
+00:10:41.340 --> 00:10:44.160
+maybe if you have only one system
+
+00:10:44.160 --> 00:10:47.280
+for preventing harmful
+things from happening,
+
+00:10:47.280 --> 00:10:51.090
+there may be some specific
+problem with the system
+
+00:10:51.090 --> 00:10:54.120
+that people can exploit
+and get through every time.
+
+00:10:54.120 --> 00:10:56.130
+But then if you add kind of , yeah,
+
+00:10:56.130 --> 00:10:57.549
+kind of a layer of Swiss cheese
+
+00:10:57.549 --> 00:11:00.690
+which has a hole in a very specific place,
+
+00:11:00.690 --> 00:11:02.430
+maybe the rest of the cheese blocks
+
+00:11:02.430 --> 00:11:03.540
+all of the harmful attempts,
+
+00:11:03.540 --> 00:11:05.580
+but there's a specific hole.
+
+00:11:05.580 --> 00:11:07.650
+But if you add another
+layer of Swiss cheese,
+
+00:11:07.650 --> 00:11:09.330
+the hole might not be
+in the same position.
+
+00:11:09.330 --> 00:11:11.520
+So if you have two layers of Swiss cheese,
+
+00:11:11.520 --> 00:11:14.880
+it's actually much harder
+to get through things
+
+00:11:14.880 --> 00:11:16.800
+even though they both may have holes.
+
+00:11:16.800 --> 00:11:18.660
+- Yeah, so what are these layers of cheese
+
+00:11:18.660 --> 00:11:19.800
+for our method,
+
+00:11:19.800 --> 00:11:21.862
+we'd be talking about
+constitutional classifiers.
+
+00:11:21.862 --> 00:11:24.450
+So yeah, what are the different
+sort of layers of defense
+
+00:11:24.450 --> 00:11:26.940
+that we're going for here?
+- Yeah, I mean the first layer
+
+00:11:26.940 --> 00:11:28.710
+would kind of be our input classifier,
+
+00:11:28.710 --> 00:11:31.140
+and input classifier here is looking at
+
+00:11:31.140 --> 00:11:32.520
+basically the entire conversation
+
+00:11:32.520 --> 00:11:34.410
+that the user passes into the model
+
+00:11:34.410 --> 00:11:35.910
+and so that's the first layer.
+
+00:11:35.910 --> 00:11:37.140
+And then the second layer is,
+
+00:11:37.140 --> 00:11:39.270
+if it gets past that input classifier,
+
+00:11:39.270 --> 00:11:40.740
+Claude itself, which is the model
+
+00:11:40.740 --> 00:11:41.573
+that we're trying to guard,
+
+00:11:41.573 --> 00:11:43.710
+can actually refuse to
+answer the question.
+
+00:11:43.710 --> 00:11:45.480
+And then that's kind of another layer
+
+00:11:45.480 --> 00:11:46.650
+of Claude saying, "Okay,
+
+00:11:46.650 --> 00:11:47.970
+maybe this question's not so good,
+
+00:11:47.970 --> 00:11:49.380
+maybe I shouldn't answer it."
+
+00:11:49.380 --> 00:11:51.780
+And then finally we have
+this output classifier
+
+00:11:51.780 --> 00:11:54.930
+which kind of looks at what
+is outputting in real time
+
+00:11:54.930 --> 00:11:56.640
+and then if it ever sees something
+
+00:11:56.640 --> 00:11:58.260
+that seems it's dangerous
+
+00:11:58.260 --> 00:12:00.360
+or seems it's against some value
+
+00:12:00.360 --> 00:12:01.601
+that we're trying to block,
+
+00:12:01.601 --> 00:12:03.540
+then in that case it can also choose
+
+00:12:03.540 --> 00:12:06.540
+to stop the Claude's output
+and block the response.
+
+00:12:06.540 --> 00:12:09.360
+- And how do these classifiers,
+
+00:12:09.360 --> 00:12:10.350
+what are they looking for?
+
+00:12:10.350 --> 00:12:13.620
+And how are we specifying
+what to look for?
+
+00:12:13.620 --> 00:12:15.090
+- So I guess in our paper
+
+00:12:15.090 --> 00:12:16.530
+we call them constitutional classifiers
+
+00:12:16.530 --> 00:12:17.670
+because we have this kind of
+
+00:12:17.670 --> 00:12:19.472
+natural language set of rules
+
+00:12:19.472 --> 00:12:21.780
+and this is some set of rules
+
+00:12:21.780 --> 00:12:24.690
+where we can specify
+some categories of topics
+
+00:12:24.690 --> 00:12:26.640
+which are not okay to talk about.
+
+00:12:26.640 --> 00:12:28.650
+I guess an example could be ,
+
+00:12:28.650 --> 00:12:31.020
+creating weapons of mass
+destruction, clearly bad,
+
+00:12:31.020 --> 00:12:32.385
+and we can specify,
+
+00:12:32.385 --> 00:12:35.400
+let's not have Claude tell
+the user how to make that.
+
+00:12:35.400 --> 00:12:38.550
+And then we can also specify
+some examples of harmless stuff
+
+00:12:38.550 --> 00:12:40.620
+that Claude should be
+allowed to talk about.
+
+00:12:40.620 --> 00:12:42.690
+And then basically we
+train our classifiers
+
+00:12:42.690 --> 00:12:45.510
+to classify whether
+conversations or outputs
+
+00:12:45.510 --> 00:12:47.520
+are related to these kind of harmful
+
+00:12:47.520 --> 00:12:48.570
+or harmless categories.
+
+00:12:48.570 --> 00:12:50.220
+And then that allows us to make a decision
+
+00:12:50.220 --> 00:12:51.570
+on whether to block it.
+
+00:12:51.570 --> 00:12:53.040
+- And crucially ,
+
+00:12:53.040 --> 00:12:55.140
+I guess the input classify
+and output classify
+
+00:12:55.140 --> 00:12:57.870
+are kind of doing two different jobs.
+
+00:12:57.870 --> 00:12:59.430
+Going back to the Swiss cheese analogy,
+
+00:12:59.430 --> 00:13:01.410
+we hope that the holes of the Swiss cheese
+
+00:13:01.410 --> 00:13:02.280
+are in different places,
+
+00:13:02.280 --> 00:13:05.363
+specifically for the input
+and output classifiers.
+
+00:13:05.363 --> 00:13:07.380
+So I guess the input
+classify is kind of doing
+
+00:13:07.380 --> 00:13:09.090
+the really naive thing that you'd expect.
+
+00:13:09.090 --> 00:13:10.980
+it really looks at the user prompt
+
+00:13:10.980 --> 00:13:12.060
+and tries to work out whether there's
+
+00:13:12.060 --> 00:13:13.360
+anything harmful going on.
+
+00:13:14.520 --> 00:13:16.350
+But crucially, one of the reasons
+
+00:13:16.350 --> 00:13:17.700
+that you might need an output classify
+
+00:13:17.700 --> 00:13:19.260
+as well as input classify,
+
+00:13:19.260 --> 00:13:21.660
+is that people are trying
+really hard to jailbreak
+
+00:13:21.660 --> 00:13:24.300
+the model and the input
+classify in the prompt.
+
+00:13:24.300 --> 00:13:26.940
+And if you have a totally
+separate output classify
+
+00:13:26.940 --> 00:13:28.980
+which is only looking at the output,
+
+00:13:28.980 --> 00:13:31.500
+that only ends up looking at stuff that
+
+00:13:31.500 --> 00:13:32.760
+the model itself has produced.
+
+00:13:32.760 --> 00:13:34.500
+So it's kind of somewhat decorrelated
+
+00:13:34.500 --> 00:13:35.537
+from what the user put in.
+
+00:13:35.537 --> 00:13:38.490
+So two parts of the system
+
+00:13:38.490 --> 00:13:40.380
+are looking at things
+directly that the user put in,
+
+00:13:40.380 --> 00:13:43.350
+but we also have this
+kind of third held out
+
+00:13:43.350 --> 00:13:45.990
+part of the system that the user actually
+
+00:13:45.990 --> 00:13:47.610
+doesn't get to touch directly,
+
+00:13:47.610 --> 00:13:49.440
+which makes it a lot harder to kind of
+
+00:13:49.440 --> 00:13:51.210
+completely jail break the system.
+
+00:13:51.210 --> 00:13:53.460
+And although the input classify and Claude
+
+00:13:53.460 --> 00:13:54.900
+are doing a lot of the work,
+
+00:13:54.900 --> 00:13:57.360
+that would classify is doing,
+
+00:13:57.360 --> 00:13:59.618
+I don't know, is doing
+some important thing
+
+00:13:59.618 --> 00:14:02.700
+as kind of the last crucial component
+
+00:14:02.700 --> 00:14:07.503
+for really driving down
+harmful, harmless rates.
+
+00:14:08.430 --> 00:14:11.550
+- So this is true and
+it makes a lot of sense,
+
+00:14:11.550 --> 00:14:14.400
+but most people aren't
+using Claude for this.
+
+00:14:14.400 --> 00:14:17.790
+Most of the time that people ask queries,
+
+00:14:17.790 --> 00:14:19.740
+they're just doing
+something completely great,
+
+00:14:19.740 --> 00:14:21.930
+so benign, legitimate,
+
+00:14:21.930 --> 00:14:24.600
+a really beneficial application.
+
+00:14:24.600 --> 00:14:27.030
+So we could have guards
+that just block everything
+
+00:14:27.030 --> 00:14:28.380
+that would be completely useless.
+
+00:14:28.380 --> 00:14:32.040
+So yeah, how are we making
+sure that this sort of,
+
+00:14:32.040 --> 00:14:34.860
+we're not overzealous there.
+
+00:14:34.860 --> 00:14:36.600
+- I mean I think we really want to,
+
+00:14:36.600 --> 00:14:38.310
+part of why I think we're
+designing these techniques
+
+00:14:38.310 --> 00:14:43.310
+is to get, allow as much
+useful content to be,
+
+00:14:43.320 --> 00:14:45.570
+and useful work to be done by the models.
+
+00:14:45.570 --> 00:14:47.370
+the better techniques we have
+
+00:14:47.370 --> 00:14:50.040
+for blocking exactly precisely
+
+00:14:50.040 --> 00:14:51.690
+just the really harmful content,
+
+00:14:51.690 --> 00:14:54.000
+the better we can not have false positives
+
+00:14:54.000 --> 00:14:58.713
+for users who are using models
+for really good applications.
+
+00:15:00.600 --> 00:15:02.350
+Yeah, I think the classify approach
+
+00:15:04.350 --> 00:15:06.120
+make some progress there
+
+00:15:06.120 --> 00:15:07.800
+and might be better than other approaches
+
+00:15:07.800 --> 00:15:10.200
+directly training the model to refuse,
+
+00:15:10.200 --> 00:15:12.520
+and so yeah, I mean I think hopefully
+
+00:15:14.430 --> 00:15:18.870
+this leads us to allow
+users to talk with Claude
+
+00:15:18.870 --> 00:15:21.210
+about lots of CBR and related topics
+
+00:15:21.210 --> 00:15:22.290
+that are safe to talk about.
+
+00:15:22.290 --> 00:15:25.050
+And so yeah, I think
+our hope definitely is
+
+00:15:25.050 --> 00:15:27.120
+or , my hope is is to allow
+
+00:15:27.120 --> 00:15:28.920
+for a lot of those applications
+
+00:15:28.920 --> 00:15:31.980
+to thrive while just narrowly blocking out
+
+00:15:31.980 --> 00:15:36.300
+the things that we think
+we believe are dangerous.
+
+00:15:36.300 --> 00:15:38.070
+- Yeah, I guess crucially also,
+
+00:15:38.070 --> 00:15:40.710
+I think we often make the joke that
+
+00:15:40.710 --> 00:15:43.020
+if we had just a rock as a model,
+
+00:15:43.020 --> 00:15:45.060
+that would be extremely harmless
+
+00:15:45.060 --> 00:15:47.940
+and that it would not in fact
+answer any harmful queries,
+
+00:15:47.940 --> 00:15:51.690
+but unfortunately would
+be not very useful.
+
+00:15:51.690 --> 00:15:55.110
+So I think making sure that we don't block
+
+00:15:55.110 --> 00:15:56.640
+harmless queries is actually a thing
+
+00:15:56.640 --> 00:15:58.890
+that is actually quite important
+
+00:15:58.890 --> 00:16:00.930
+and also actually quite difficult.
+
+00:16:00.930 --> 00:16:03.270
+- Yeah, and men you mentioned before
+
+00:16:03.270 --> 00:16:04.890
+kind of solving job breaks,
+
+00:16:04.890 --> 00:16:07.590
+so making progress on
+this problem robustness.
+
+00:16:07.590 --> 00:16:09.747
+how would you even define that
+
+00:16:09.747 --> 00:16:12.720
+or what does that actually mean?
+
+00:16:12.720 --> 00:16:16.410
+- Yeah, I guess this is a
+very difficult question.
+
+00:16:16.410 --> 00:16:20.520
+I guess it involves a
+bunch of different layers.
+
+00:16:20.520 --> 00:16:24.450
+firstly, there's some
+idea of threat modeling.
+
+00:16:24.450 --> 00:16:25.860
+you have to have some idea of
+
+00:16:25.860 --> 00:16:28.050
+what it means for something to be harmful.
+
+00:16:28.050 --> 00:16:29.377
+The Frontier Red Team has
+done some amount of work
+
+00:16:29.377 --> 00:16:31.350
+in trying to specify
+
+00:16:31.350 --> 00:16:33.660
+what things we're actually worried about.
+
+00:16:33.660 --> 00:16:34.770
+This is somewhat hard
+
+00:16:34.770 --> 00:16:36.180
+because as Ethan was talking about,
+
+00:16:36.180 --> 00:16:37.890
+we're talking about a
+lot about future models
+
+00:16:37.890 --> 00:16:40.110
+and potential future model capabilities
+
+00:16:40.110 --> 00:16:41.940
+which we might be really worried about.
+
+00:16:41.940 --> 00:16:44.850
+So I think part of it is mapping out
+
+00:16:44.850 --> 00:16:45.900
+what might be harmful,
+
+00:16:45.900 --> 00:16:48.720
+but we might need to
+address so threat modeling,
+
+00:16:48.720 --> 00:16:50.400
+what is actually harmful.
+
+00:16:50.400 --> 00:16:52.110
+Then there's the job of
+
+00:16:52.110 --> 00:16:54.210
+actually measuring harmful things.
+
+00:16:54.210 --> 00:16:56.283
+So that's a lot about,
+
+00:16:57.180 --> 00:16:59.310
+I guess we're using a constitution
+
+00:16:59.310 --> 00:17:01.440
+to a kind of define the threat model
+
+00:17:01.440 --> 00:17:04.560
+and then having models
+generate various synthetic data
+
+00:17:04.560 --> 00:17:06.870
+to try and kind of enumerate
+
+00:17:06.870 --> 00:17:08.490
+various humble things that could happen.
+
+00:17:08.490 --> 00:17:10.890
+So measuring a true
+positive rate on the data,
+
+00:17:10.890 --> 00:17:12.270
+but then there's also trying to make sure
+
+00:17:12.270 --> 00:17:13.530
+that we don't refuse too much
+
+00:17:13.530 --> 00:17:17.550
+on real data from Claude AI
+
+00:17:17.550 --> 00:17:19.443
+and make sure that we actually can,
+
+00:17:20.580 --> 00:17:23.130
+I don't know, be as helpful as possible
+
+00:17:23.130 --> 00:17:24.570
+while still being safe.
+
+00:17:24.570 --> 00:17:27.090
+- So what actually is the constitution?
+
+00:17:27.090 --> 00:17:29.160
+You know, these are
+constitutional classifiers,
+
+00:17:29.160 --> 00:17:31.017
+we're talking about a constitution.
+
+00:17:31.017 --> 00:17:32.460
+What does that mean?
+
+00:17:32.460 --> 00:17:33.690
+- Yeah, I mean the constitution here
+
+00:17:33.690 --> 00:17:37.950
+just kind of means some
+enumeration of categories
+
+00:17:37.950 --> 00:17:39.900
+of requests and conversations
+
+00:17:39.900 --> 00:17:42.660
+that we kind of deem
+harmful versus not harmful.
+
+00:17:42.660 --> 00:17:44.430
+And so examples here could just be ,
+
+00:17:44.430 --> 00:17:47.730
+yeah, questions on how to make
+weapons of mass destruction
+
+00:17:47.730 --> 00:17:50.580
+or trying to source ingredients
+
+00:17:50.580 --> 00:17:52.770
+for making weapons of mass destruction.
+
+00:17:52.770 --> 00:17:54.600
+And then we basically just enumerate
+
+00:17:54.600 --> 00:17:55.860
+some of these categories,
+
+00:17:55.860 --> 00:17:57.720
+and then we also specify some categories
+
+00:17:57.720 --> 00:17:58.740
+of harmless stuff,
+
+00:17:58.740 --> 00:18:00.060
+I don't know, writing poems
+
+00:18:00.060 --> 00:18:03.000
+or writing code for normal use cases.
+
+00:18:03.000 --> 00:18:05.010
+And then we can just kind of specify these
+
+00:18:05.010 --> 00:18:06.000
+and then we, as Meg said,
+
+00:18:06.000 --> 00:18:08.190
+we generate a bunch of synthetic data
+
+00:18:08.190 --> 00:18:10.590
+that gives more specific cases of those.
+
+00:18:10.590 --> 00:18:12.060
+- What do you mean by synthetic data?
+
+00:18:12.060 --> 00:18:13.440
+- Yeah, so here in synthetic data,
+
+00:18:13.440 --> 00:18:15.150
+we kind of mean that we start from these
+
+00:18:15.150 --> 00:18:17.490
+broad categories of user requests
+
+00:18:17.490 --> 00:18:19.590
+and then we have Claude actually kind of
+
+00:18:19.590 --> 00:18:22.770
+branch out and think about
+all the specific requests
+
+00:18:22.770 --> 00:18:23.760
+that might be examples
+
+00:18:23.760 --> 00:18:25.650
+of this kind of broader category.
+
+00:18:25.650 --> 00:18:28.290
+And so yeah, the category
+might be something ,
+
+00:18:28.290 --> 00:18:31.770
+sourcing materials to build
+weapons and mass destruction
+
+00:18:31.770 --> 00:18:33.870
+and then sub requests there might be ,
+
+00:18:33.870 --> 00:18:37.170
+oh, going what specific
+stores might I go to?
+
+00:18:37.170 --> 00:18:41.460
+Or , are these specific
+materials accessible
+
+00:18:41.460 --> 00:18:43.713
+at I don't know, in X state?
+
+00:18:44.758 --> 00:18:47.610
+And so we have this process
+for automatically doing this
+
+00:18:47.610 --> 00:18:49.500
+and that allows us to kind of generate
+
+00:18:49.500 --> 00:18:51.210
+a huge amount of synthetic data
+
+00:18:51.210 --> 00:18:53.460
+from just a small amount of categories.
+
+00:18:53.460 --> 00:18:55.920
+- Yeah, and I think something
+that I find really cool
+
+00:18:55.920 --> 00:18:57.630
+about the methods is that,
+
+00:18:57.630 --> 00:19:00.930
+it is just based on natural language.
+
+00:19:00.930 --> 00:19:02.700
+We were talking about
+threat modeling before
+
+00:19:02.700 --> 00:19:05.250
+and threat modeling, at
+least in my experience,
+
+00:19:05.250 --> 00:19:07.830
+in my experience working
+with with Frontier Red Team,
+
+00:19:07.830 --> 00:19:09.930
+is that threat modeling is really hard.
+
+00:19:09.930 --> 00:19:11.950
+There's a lot of people using Claudes.
+
+00:19:11.950 --> 00:19:13.590
+It's really hard to ,
+
+00:19:13.590 --> 00:19:16.677
+what are all the possible
+things that that could happen?
+
+00:19:16.677 --> 00:19:17.994
+And we're gonna learn new things
+
+00:19:17.994 --> 00:19:19.590
+as we have monitoring
+
+00:19:19.590 --> 00:19:22.290
+and as we always learn new threats
+
+00:19:22.290 --> 00:19:24.360
+or new things that could happen.
+
+00:19:24.360 --> 00:19:25.890
+And yeah, something that I find really
+
+00:19:25.890 --> 00:19:28.140
+exciting about the method is that,
+
+00:19:28.140 --> 00:19:31.080
+basically if you wanna
+change the constitution,
+
+00:19:31.080 --> 00:19:33.120
+if you wanna change what is being blocked
+
+00:19:33.120 --> 00:19:35.460
+because you've learned something new,
+
+00:19:35.460 --> 00:19:37.020
+maybe there's something
+has come out on the news
+
+00:19:37.020 --> 00:19:39.600
+or there's some
+intelligence or monitoring.
+
+00:19:39.600 --> 00:19:41.700
+The only thing that
+you actually need to do
+
+00:19:41.700 --> 00:19:44.070
+is you just rewrite the constitution.
+
+00:19:44.070 --> 00:19:48.450
+And the sort of the standard
+approach of classifiers is,
+
+00:19:48.450 --> 00:19:50.859
+you ask humans to get a lot of data.
+
+00:19:50.859 --> 00:19:54.546
+So something could happen is that,
+
+00:19:54.546 --> 00:19:57.750
+say we're really focusing on one category
+
+00:19:57.750 --> 00:20:02.160
+one particular way of maybe cyber misuse,
+
+00:20:02.160 --> 00:20:03.690
+but we later realized that,
+
+00:20:03.690 --> 00:20:06.150
+oh actually this thing
+which is much more dangerous
+
+00:20:06.150 --> 00:20:07.980
+or something that we've
+just learned something new.
+
+00:20:07.980 --> 00:20:09.570
+If someone's informed us.
+
+00:20:09.570 --> 00:20:11.370
+Something that I'm really excited about
+
+00:20:11.370 --> 00:20:13.320
+is that this is a way that we,
+
+00:20:13.320 --> 00:20:14.910
+I think we can get good robustness,
+
+00:20:14.910 --> 00:20:17.760
+but we can maintain our flexibility
+
+00:20:17.760 --> 00:20:19.650
+and really maintain our ability to
+
+00:20:19.650 --> 00:20:21.900
+respond to novel threats
+
+00:20:21.900 --> 00:20:24.120
+and adapt to what's actually happening.
+
+00:20:24.120 --> 00:20:25.380
+'Cause yeah, I feel this is just
+
+00:20:25.380 --> 00:20:27.810
+the lesson that we learn again, again
+
+00:20:27.810 --> 00:20:29.730
+if you don't have flexibility,
+
+00:20:29.730 --> 00:20:31.797
+it's sort of gonna be a problem
+
+00:20:31.797 --> 00:20:34.200
+and it's gonna sort of limit us.
+
+00:20:34.200 --> 00:20:35.240
+- I actually do wanna make a quick point
+
+00:20:35.240 --> 00:20:37.080
+of the flexibility thing which is that,
+
+00:20:37.080 --> 00:20:39.060
+I think our approach is not just flexible
+
+00:20:39.060 --> 00:20:41.670
+and kind of switching general topics.
+
+00:20:41.670 --> 00:20:43.590
+For example, if you
+wanted to go between cyber
+
+00:20:43.590 --> 00:20:44.423
+and , I don't know,
+
+00:20:44.423 --> 00:20:46.260
+weapons and mass destruction or something,
+
+00:20:46.260 --> 00:20:47.370
+but I think it's also
+
+00:20:47.370 --> 00:20:49.020
+a lot more fine grained than that,
+
+00:20:49.020 --> 00:20:51.330
+in that during this project we saw that,
+
+00:20:51.330 --> 00:20:53.820
+there are some requests
+that our early classifiers
+
+00:20:53.820 --> 00:20:55.620
+were always very suspicious of,
+
+00:20:55.620 --> 00:20:56.970
+but they're actually benign.
+
+00:20:56.970 --> 00:20:58.740
+And what we could do is
+we could actually just
+
+00:20:58.740 --> 00:20:59.790
+modify the constitution,
+
+00:20:59.790 --> 00:21:01.200
+add one sentence that says,
+
+00:21:01.200 --> 00:21:03.510
+oh, these types of requests are okay.
+
+00:21:03.510 --> 00:21:05.940
+And then when we retrain the classifiers
+
+00:21:05.940 --> 00:21:06.840
+on that new data,
+
+00:21:06.840 --> 00:21:09.930
+the classifiers would no longer
+flag those benign prompts.
+
+00:21:09.930 --> 00:21:11.280
+And so I think that allows you a lot of
+
+00:21:11.280 --> 00:21:12.870
+fine grain control
+
+00:21:12.870 --> 00:21:16.530
+over what exactly your
+classifiers are trying to flag.
+
+00:21:16.530 --> 00:21:19.080
+Especially if you see
+a lot of over refusals
+
+00:21:19.080 --> 00:21:21.749
+or problems with missing stuff.
+
+00:21:21.749 --> 00:21:23.460
+- Yeah, I mean this might
+also be a good place
+
+00:21:23.460 --> 00:21:25.233
+to give a shout out to,
+
+00:21:26.070 --> 00:21:28.260
+we had a paper earlier on rapid response
+
+00:21:28.260 --> 00:21:32.100
+where we kind of leveraged a similar idea
+
+00:21:32.100 --> 00:21:36.705
+to improve the safeguards around models
+
+00:21:36.705 --> 00:21:37.805
+and I think basically,
+
+00:21:39.090 --> 00:21:41.310
+one nice feature about
+using synthetic data is
+
+00:21:41.310 --> 00:21:44.220
+if you notice not even just
+a new category of jailbreak,
+
+00:21:44.220 --> 00:21:46.650
+but just a new kind of
+jailbreak that maybe applies.
+
+00:21:46.650 --> 00:21:49.650
+Let's say we notice a
+new universal jailbreak,
+
+00:21:49.650 --> 00:21:51.030
+the do anything now prompt,
+
+00:21:51.030 --> 00:21:54.760
+we can take that, use an LLM
+to generate variance of that
+
+00:21:55.680 --> 00:21:58.350
+and then throw that into the data mix.
+
+00:21:58.350 --> 00:22:00.750
+And I think my understanding is this
+
+00:22:00.750 --> 00:22:02.550
+was really helpful for us in developing
+
+00:22:02.550 --> 00:22:05.280
+the classifiers to the level
+of robustness that we got.
+
+00:22:05.280 --> 00:22:09.300
+If someone reports a new
+jailbreak or vulnerability,
+
+00:22:09.300 --> 00:22:12.270
+then we can use that to really quickly
+
+00:22:12.270 --> 00:22:13.950
+update the classifiers by using
+
+00:22:13.950 --> 00:22:15.562
+some synthetic data generation pipeline
+
+00:22:15.562 --> 00:22:19.320
+and that really will
+minimize the fraction of time
+
+00:22:19.320 --> 00:22:23.340
+by at which there's an
+outstanding jailbreak
+
+00:22:23.340 --> 00:22:28.340
+which can just make it
+so that the models are ,
+
+00:22:29.400 --> 00:22:33.090
+vulnerable for as as small
+period of time as possible.
+
+00:22:33.090 --> 00:22:36.120
+- Yeah, it's the common
+wisdom I suppose that,
+
+00:22:36.120 --> 00:22:39.930
+not perfectly solving
+securities basically impossible.
+
+00:22:39.930 --> 00:22:43.110
+There is no perfectly secure system
+
+00:22:43.110 --> 00:22:45.120
+known to humanity.
+
+00:22:45.120 --> 00:22:48.562
+So I guess we need the flexibility both.
+
+00:22:48.562 --> 00:22:50.640
+For this , "Oh, we're
+blocking the wrong thing."
+
+00:22:50.640 --> 00:22:52.440
+Or, "We're blocking benign users.
+
+00:22:52.440 --> 00:22:56.340
+But when people do find things
+that get through the system,
+
+00:22:56.340 --> 00:22:59.100
+we wanna be able to fix
+those really quickly.
+
+00:22:59.100 --> 00:23:01.440
+- Yeah, I think part of our
+approach here is that we've
+
+00:23:01.440 --> 00:23:03.540
+kind of modeled jailbreaks in a way that
+
+00:23:03.540 --> 00:23:06.330
+it's very easy for us to add
+examples of new jailbreaks
+
+00:23:06.330 --> 00:23:08.490
+into our kind of training pipeline.
+
+00:23:08.490 --> 00:23:10.260
+And so if new jailbreaks are discovered,
+
+00:23:10.260 --> 00:23:13.050
+it's quite easy for us to
+just generate more examples
+
+00:23:13.050 --> 00:23:15.030
+of those jailbreaks and then train on them
+
+00:23:15.030 --> 00:23:16.380
+and then hopefully those classifiers
+
+00:23:16.380 --> 00:23:18.210
+will be more robust too.
+
+00:23:18.210 --> 00:23:19.440
+- Yeah, I think one
+other thing I would add
+
+00:23:19.440 --> 00:23:20.273
+that's nice about classifiers,
+
+00:23:20.273 --> 00:23:23.040
+is that they're decoupled from the actual
+
+00:23:23.040 --> 00:23:24.357
+text generation model.
+
+00:23:24.357 --> 00:23:25.453
+And so if you,
+
+00:23:25.453 --> 00:23:28.770
+I think often it can be
+very difficult to update
+
+00:23:28.770 --> 00:23:29.970
+the text generation model
+
+00:23:29.970 --> 00:23:32.760
+that if you train it to
+refuse in one domain,
+
+00:23:32.760 --> 00:23:35.730
+maybe that generalizes in non-obvious ways
+
+00:23:35.730 --> 00:23:40.470
+to behavior in other domains
+or refusal behavior in general.
+
+00:23:40.470 --> 00:23:42.390
+I think we definitely ran
+into some difficulties
+
+00:23:42.390 --> 00:23:44.220
+doing preliminary work on that.
+
+00:23:44.220 --> 00:23:47.160
+But I think with the
+classifiers you can just
+
+00:23:47.160 --> 00:23:48.780
+keep the text generation the same
+
+00:23:48.780 --> 00:23:52.200
+and you know it's identical
+to previously deployed model.
+
+00:23:52.200 --> 00:23:55.200
+I think that gives
+customers a lot of assurance
+
+00:23:55.200 --> 00:23:57.693
+that there are no major changes happening
+
+00:23:57.693 --> 00:23:59.610
+in general to the model.
+
+00:23:59.610 --> 00:24:01.080
+The kinds of text outputs you're getting
+
+00:24:01.080 --> 00:24:02.760
+and the only changes being made
+
+00:24:02.760 --> 00:24:05.520
+is just the block or no block decision,
+
+00:24:05.520 --> 00:24:08.760
+which you can iterate on
+separately from the model.
+
+00:24:08.760 --> 00:24:12.060
+So I think that also makes
+the rapid redeployment
+
+00:24:12.060 --> 00:24:16.440
+way easier than we would
+otherwise be able to do.
+
+00:24:16.440 --> 00:24:19.647
+- So how did we come
+up with this approach?
+
+00:24:19.647 --> 00:24:20.810
+- That's a great question.
+
+00:24:20.810 --> 00:24:24.423
+I feel we spent a lot of
+time thinking about it.
+
+00:24:25.560 --> 00:24:27.330
+I think classify as stood out.
+
+00:24:27.330 --> 00:24:29.370
+I think for the reasons that
+we've just been talking about
+
+00:24:29.370 --> 00:24:32.130
+the extremely flexible,
+
+00:24:32.130 --> 00:24:36.933
+can be easily updated to respond
+to various novel threats.
+
+00:24:38.100 --> 00:24:39.750
+Yeah, I think threat
+modeling is really hard.
+
+00:24:39.750 --> 00:24:42.210
+So having a thing that's
+super flexible is great.
+
+00:24:42.210 --> 00:24:46.050
+It's lightweight, it doesn't
+increase inference cost
+
+00:24:46.050 --> 00:24:51.050
+as much as, I guess we
+can kind of distill down
+
+00:24:51.300 --> 00:24:53.280
+something that's somewhat more complicated
+
+00:24:53.280 --> 00:24:56.313
+constitutional set of rules
+into a somewhat small thing.
+
+00:24:57.150 --> 00:25:00.180
+And yeah, I think that all these things
+
+00:25:00.180 --> 00:25:02.730
+make classify as kind of a nice way
+
+00:25:02.730 --> 00:25:04.200
+of iterating really fast
+
+00:25:04.200 --> 00:25:07.170
+on the kinds of things that
+you're hoping to achieve.
+
+00:25:07.170 --> 00:25:08.550
+And then I guess we tried it
+
+00:25:08.550 --> 00:25:11.640
+and it seemed it was
+working so we kept going.
+
+00:25:11.640 --> 00:25:13.800
+- Yeah, I think this was really due
+
+00:25:13.800 --> 00:25:16.320
+to the responsible scaling
+policy that Anthropic had
+
+00:25:16.320 --> 00:25:18.070
+and yeah, I mean I think
+
+00:25:19.020 --> 00:25:21.060
+we would've done other safety research
+
+00:25:21.060 --> 00:25:22.650
+if not for the responsible scaling policy.
+
+00:25:22.650 --> 00:25:23.790
+- What is the responsible scale policy?
+
+00:25:23.790 --> 00:25:27.180
+- So yeah, responsible
+scaling policy is basically
+
+00:25:27.180 --> 00:25:29.430
+Anthropics plan for how to ensure
+
+00:25:29.430 --> 00:25:31.360
+that our deployments are safe
+
+00:25:32.220 --> 00:25:35.970
+and basically it outlines
+different red lines
+
+00:25:35.970 --> 00:25:37.380
+for capability thresholds
+
+00:25:37.380 --> 00:25:40.240
+at which there's basically a new risk
+
+00:25:41.220 --> 00:25:44.250
+that kind of comes online
+with more capable models.
+
+00:25:44.250 --> 00:25:46.200
+Let's say models are capable of developing
+
+00:25:46.200 --> 00:25:48.270
+a very dangerous chemical weapon.
+
+00:25:48.270 --> 00:25:52.560
+The associate mitigation in the RSP
+
+00:25:52.560 --> 00:25:55.980
+is get above some sufficient level
+
+00:25:55.980 --> 00:25:57.720
+of robustness to jailbreaks
+
+00:25:57.720 --> 00:26:01.020
+so that the model is
+not actually in practice
+
+00:26:01.020 --> 00:26:03.870
+with the mitigation sufficiently helpful
+
+00:26:03.870 --> 00:26:06.177
+to an adversary who wants to do that.
+
+00:26:06.177 --> 00:26:08.430
+So yeah, I think in the original RSP,
+
+00:26:08.430 --> 00:26:11.760
+there is basically this commitment to,
+
+00:26:11.760 --> 00:26:14.580
+once models got to sufficient
+level of capability
+
+00:26:14.580 --> 00:26:19.580
+at assisting with potentially
+proliferating knowledge
+
+00:26:20.700 --> 00:26:24.603
+about known weapons of mass destruction,
+
+00:26:25.680 --> 00:26:29.550
+that we would then have the ability to...
+
+00:26:29.550 --> 00:26:30.990
+the wording was vague but basically,
+
+00:26:30.990 --> 00:26:32.910
+successfully pass Red Teaming.
+
+00:26:32.910 --> 00:26:34.260
+the RSP was already written,
+
+00:26:34.260 --> 00:26:36.600
+the company committed to this publicly
+
+00:26:36.600 --> 00:26:40.350
+and Jared Kaplan who's
+Head of Research Anthropic
+
+00:26:40.350 --> 00:26:43.440
+came to us and other people came to us and
+
+00:26:43.440 --> 00:26:45.607
+raised this line to us and we're ,
+
+00:26:45.607 --> 00:26:48.870
+"Hey, you guys should try
+to solve aerosol robustness.
+
+00:26:48.870 --> 00:26:50.250
+- We memorized the line first.
+
+00:26:50.250 --> 00:26:52.110
+- We memorized the
+line, we printed it out,
+
+00:26:52.110 --> 00:26:57.110
+we framed it and put it on the
+desk that we were working in.
+
+00:26:58.614 --> 00:27:00.830
+Yeah, and then I think that was really...
+
+00:27:02.100 --> 00:27:06.420
+I think that really thinking
+about that line in the RSP
+
+00:27:06.420 --> 00:27:10.050
+basically made us really
+reflect on our life choices
+
+00:27:10.050 --> 00:27:11.750
+about what research we were doing,
+
+00:27:12.840 --> 00:27:16.593
+both in terms of should we
+work on robustness or not?
+
+00:27:20.160 --> 00:27:21.600
+Yeah, in the sense of ,
+
+00:27:21.600 --> 00:27:22.560
+it really made it clear ,
+
+00:27:22.560 --> 00:27:26.190
+okay, there's significant
+harm that could come online
+
+00:27:26.190 --> 00:27:28.500
+in the next generation or two of models
+
+00:27:28.500 --> 00:27:30.050
+if we don't solve this problem.
+
+00:27:32.190 --> 00:27:34.560
+So the urgency is higher
+than other problems
+
+00:27:34.560 --> 00:27:35.970
+we might wanna solve.
+
+00:27:35.970 --> 00:27:37.710
+And then also in terms of
+
+00:27:37.710 --> 00:27:40.060
+what specific approaches
+we would take I think.
+
+00:27:40.920 --> 00:27:41.940
+Initially when we were ,
+
+00:27:41.940 --> 00:27:43.560
+oh, we should maybe do
+some robustness research.
+
+00:27:43.560 --> 00:27:47.730
+I think the general mode
+that I had been in research
+
+00:27:47.730 --> 00:27:49.260
+and a lot of other researchers in general,
+
+00:27:49.260 --> 00:27:52.050
+is just , okay, let's
+just take some interesting
+
+00:27:52.050 --> 00:27:54.480
+useful research problems to solve here,
+
+00:27:54.480 --> 00:27:56.733
+explore some questions, write some papers.
+
+00:27:57.910 --> 00:27:59.370
+And I think that's the thing
+that a lot of the people
+
+00:27:59.370 --> 00:28:00.420
+on the team know how to do well
+
+00:28:00.420 --> 00:28:03.390
+and we sort of explored a bunch of
+
+00:28:03.390 --> 00:28:05.190
+maybe more salient approaches.
+
+00:28:05.190 --> 00:28:06.660
+- I think there were so many things
+
+00:28:06.660 --> 00:28:08.793
+that are interesting here for me.
+
+00:28:09.930 --> 00:28:12.090
+One thing was , right when this started,
+
+00:28:12.090 --> 00:28:14.190
+I had just finished my PhD,
+
+00:28:14.190 --> 00:28:17.040
+or it was kinda a bound the
+time I was finishing my PhD
+
+00:28:17.040 --> 00:28:18.780
+and this classifiers thing.
+
+00:28:18.780 --> 00:28:20.130
+This is Anthropic slogan
+
+00:28:20.130 --> 00:28:21.150
+and the Anthropic slogan is ,
+
+00:28:21.150 --> 00:28:22.773
+do the dumb thing that works.
+
+00:28:24.090 --> 00:28:26.130
+And I kind of think this type of research,
+
+00:28:26.130 --> 00:28:29.280
+it's often the type of thing
+that maybe isn't that shiny
+
+00:28:29.280 --> 00:28:32.460
+or that kind of interesting
+for researchers.
+
+00:28:32.460 --> 00:28:37.460
+And I remember, I think
+without the RSP being okay,
+
+00:28:38.040 --> 00:28:39.930
+really pragmatically if we care about
+
+00:28:39.930 --> 00:28:42.360
+these risks and we think they're real,
+
+00:28:42.360 --> 00:28:43.560
+what is the way to get there?
+
+00:28:43.560 --> 00:28:45.030
+And kind of setting aside this ,
+
+00:28:45.030 --> 00:28:49.050
+oh, what's kinda more
+interesting or shiny,
+
+00:28:49.050 --> 00:28:52.020
+is what is the way we can
+actually make this safe.
+
+00:28:52.020 --> 00:28:55.025
+In some sense our job is,
+
+00:28:55.025 --> 00:28:57.450
+we're genuinely thinking ,
+
+00:28:57.450 --> 00:29:00.213
+wow, this isn't happening now,
+
+00:29:00.213 --> 00:29:02.100
+these are future systems.
+
+00:29:02.100 --> 00:29:04.218
+So I'm just , what has that been
+
+00:29:04.218 --> 00:29:07.020
+for each of you and sort of individually,
+
+00:29:07.020 --> 00:29:08.790
+kinda working at Anthropic
+
+00:29:08.790 --> 00:29:11.853
+and sort of being there
+in the midst of all this?
+
+00:29:12.840 --> 00:29:14.045
+- Yeah, I think they take the safety risks
+
+00:29:14.045 --> 00:29:16.110
+of future models very seriously.
+
+00:29:16.110 --> 00:29:18.071
+I think there's very real risks.
+
+00:29:18.071 --> 00:29:22.110
+There's obviously these misuse risks
+
+00:29:22.110 --> 00:29:24.510
+that you've been
+mentioning with CBRN risks
+
+00:29:24.510 --> 00:29:25.410
+which are chemical,
+
+00:29:25.410 --> 00:29:27.957
+radiological, biological, nuclear risks.
+
+00:29:27.957 --> 00:29:30.790
+But there's also very
+real misalignment risks
+
+00:29:32.340 --> 00:29:34.680
+and I think it's really hard to deal with.
+
+00:29:34.680 --> 00:29:39.180
+I think one of the things that I find good
+
+00:29:39.180 --> 00:29:41.850
+is that I do think we are as as a team,
+
+00:29:41.850 --> 00:29:44.880
+very committed to actually trying to
+
+00:29:44.880 --> 00:29:46.500
+solve really solve the problems.
+
+00:29:46.500 --> 00:29:50.310
+And I think doing the classifiers project
+
+00:29:50.310 --> 00:29:52.530
+was some evidence in favor of ,
+
+00:29:52.530 --> 00:29:55.230
+we really, really care about
+actually solving these problems
+
+00:29:55.230 --> 00:29:57.870
+and we actually want to
+find an empirical solution
+
+00:29:57.870 --> 00:30:00.031
+to doing the things rather than ,
+
+00:30:00.031 --> 00:30:02.520
+as kind of you were alluding to
+
+00:30:02.520 --> 00:30:04.620
+just doing research that looks good,
+
+00:30:04.620 --> 00:30:07.530
+but doesn't actually
+accomplish a thing in practice.
+
+00:30:07.530 --> 00:30:11.969
+I think we spent a lot
+of time doing very...
+
+00:30:11.969 --> 00:30:12.975
+I didn't know,
+
+00:30:12.975 --> 00:30:15.642
+(both laughing)
+
+00:30:16.608 --> 00:30:18.840
+I wasn't really aiming
+to get a paper out of it,
+
+00:30:18.840 --> 00:30:21.330
+but I think we actually
+managed to accomplish something
+
+00:30:21.330 --> 00:30:23.310
+that was slightly more real,
+
+00:30:23.310 --> 00:30:24.837
+which I think is good
+
+00:30:24.837 --> 00:30:27.120
+and I feel this is just,
+
+00:30:27.120 --> 00:30:28.860
+this feels one step forward,
+
+00:30:28.860 --> 00:30:30.840
+but there's a lot a long way to go for me.
+
+00:30:30.840 --> 00:30:32.717
+- I mean I guess I'm a
+slightly more optimistic,
+
+00:30:32.717 --> 00:30:33.927
+I think there risks are definitely real,
+
+00:30:33.927 --> 00:30:36.510
+but I feel we're making a decent progress
+
+00:30:36.510 --> 00:30:39.420
+and I think probably if we keep working
+
+00:30:39.420 --> 00:30:41.040
+on the problems just pragmatically,
+
+00:30:41.040 --> 00:30:42.630
+we can make a lot of progress
+
+00:30:42.630 --> 00:30:44.820
+and just reduce the risks dramatically.
+
+00:30:44.820 --> 00:30:46.350
+I don't think we'd ever reduce the risks
+
+00:30:46.350 --> 00:30:48.120
+of AI to zero,
+
+00:30:48.120 --> 00:30:50.010
+but I kind of see AI as a tool.
+
+00:30:50.010 --> 00:30:52.740
+And if we adopt the right safeguards
+
+00:30:52.740 --> 00:30:54.360
+and we do the research that matters,
+
+00:30:54.360 --> 00:30:55.804
+I think we can make a lot of progress here
+
+00:30:55.804 --> 00:30:58.560
+and that's ultimately
+the best that we can do.
+
+00:30:58.560 --> 00:30:59.550
+- Yeah, I mean I guess,
+
+00:30:59.550 --> 00:31:00.810
+I mean I think sentiment wise
+
+00:31:00.810 --> 00:31:02.760
+I'm pretty, pretty similar to to Meg
+
+00:31:02.760 --> 00:31:03.810
+in terms of being ,
+
+00:31:03.810 --> 00:31:06.870
+yeah, I think there are
+very serious risks here.
+
+00:31:06.870 --> 00:31:09.670
+I'm definitely pretty concerned about
+
+00:31:12.000 --> 00:31:12.990
+a lot of the risks
+
+00:31:12.990 --> 00:31:14.460
+and I guess I'm ,
+
+00:31:14.460 --> 00:31:16.630
+well the best I can do is help
+
+00:31:18.360 --> 00:31:21.330
+reduce the risk by some amount I think.
+
+00:31:21.330 --> 00:31:24.240
+I do think this project
+made some progress about
+
+00:31:24.240 --> 00:31:26.850
+on that and I'm pretty excited about that.
+
+00:31:26.850 --> 00:31:30.273
+- I mean, yeah, at
+times it's overwhelming.
+
+00:31:32.130 --> 00:31:35.560
+What is it to really
+internalize what might happen
+
+00:31:36.510 --> 00:31:40.380
+and then there's a desire
+in me to just show up here
+
+00:31:40.380 --> 00:31:43.620
+and do work in a trustworthy way.
+
+00:31:43.620 --> 00:31:46.800
+And that there are challenges,
+
+00:31:46.800 --> 00:31:50.470
+but we can make progress there.
+
+00:31:50.470 --> 00:31:52.740
+And I feel we've made a bunch of progress
+
+00:31:52.740 --> 00:31:55.020
+and really excited to sort of share
+
+00:31:55.020 --> 00:31:55.860
+the progress with others.
+
+00:31:55.860 --> 00:31:58.290
+And you know we could
+have not written a paper,
+
+00:31:58.290 --> 00:32:00.150
+but we did decide to write a paper
+
+00:32:00.150 --> 00:32:02.220
+and sort of try to sort
+of get it out there
+
+00:32:02.220 --> 00:32:04.890
+and sort of share the approach.
+
+00:32:04.890 --> 00:32:07.590
+Yeah, and sometimes overwhelming
+
+00:32:07.590 --> 00:32:09.900
+and other times it's more the sense of
+
+00:32:09.900 --> 00:32:12.420
+real privilege and honor, wow!
+
+00:32:12.420 --> 00:32:16.335
+It feels I'm really doing
+meaningful important work
+
+00:32:16.335 --> 00:32:19.560
+and also not to figure out
+all the beautiful things
+
+00:32:19.560 --> 00:32:22.560
+that could happen with
+really beneficial AI.
+
+00:32:22.560 --> 00:32:24.630
+Great, so something we've mentioned here
+
+00:32:24.630 --> 00:32:26.976
+is that we think we've made progress
+
+00:32:26.976 --> 00:32:28.320
+in terms of robustness.
+
+00:32:28.320 --> 00:32:30.600
+how have we tested this?
+
+00:32:30.600 --> 00:32:31.650
+How do we know?
+
+00:32:31.650 --> 00:32:34.053
+What do we think that progress means?
+
+00:32:35.370 --> 00:32:38.070
+- I guess the overall summary kind of
+
+00:32:38.070 --> 00:32:40.350
+on whether we're making
+progress is kind of ,
+
+00:32:40.350 --> 00:32:44.092
+how hard is it to find a
+universal jailbreak for a system
+
+00:32:44.092 --> 00:32:47.640
+without increasing over refusals too much
+
+00:32:47.640 --> 00:32:50.730
+or increasing the compute costs
+
+00:32:50.730 --> 00:32:52.890
+of whatever system
+you're trying to deploy.
+
+00:32:52.890 --> 00:32:54.420
+And so there's different ways
+
+00:32:54.420 --> 00:32:56.490
+you can measure each of those aspects.
+
+00:32:56.490 --> 00:32:57.750
+So in our paper,
+
+00:32:57.750 --> 00:32:59.370
+one way we're looking at how hard is it
+
+00:32:59.370 --> 00:33:01.740
+to find universal jailbreak
+is we actually just
+
+00:33:01.740 --> 00:33:02.880
+had human Red Team mirrors
+
+00:33:02.880 --> 00:33:05.340
+try to find jailbreaks for our system
+
+00:33:05.340 --> 00:33:06.480
+and then we just kind of tracked
+
+00:33:06.480 --> 00:33:07.980
+how many hours did it take for them
+
+00:33:07.980 --> 00:33:10.470
+to find a universal jailbreak
+and did they find one?
+
+00:33:10.470 --> 00:33:12.360
+- Yeah, so could you
+actually walk me through
+
+00:33:12.360 --> 00:33:15.600
+kinda where we were before
+the project sort of started?
+
+00:33:15.600 --> 00:33:17.640
+- Yeah, I mean I guess we started with.
+
+00:33:17.640 --> 00:33:19.860
+I mean first of all if you
+just have the model itself,
+
+00:33:19.860 --> 00:33:22.050
+it has some basic training
+
+00:33:22.050 --> 00:33:25.050
+to try to refuse harmful queries.
+
+00:33:25.050 --> 00:33:28.710
+But of course there are a
+lot of jailbreaks that exist
+
+00:33:28.710 --> 00:33:30.210
+that work on our models,
+
+00:33:30.210 --> 00:33:32.070
+and so those drill breaks are also
+
+00:33:32.070 --> 00:33:33.810
+just kind of available on the internet.
+
+00:33:33.810 --> 00:33:37.020
+And so in theory anyone
+could jailbreak models
+
+00:33:37.020 --> 00:33:37.853
+and that's kind of how started.
+
+00:33:37.853 --> 00:33:39.360
+- How hard would it actually be?
+
+00:33:39.360 --> 00:33:43.950
+if I would want to jailbreak a model,
+
+00:33:43.950 --> 00:33:45.600
+what would I actually
+need to do right now?
+
+00:33:45.600 --> 00:33:48.060
+- I mean you could go on Twitter
+
+00:33:48.060 --> 00:33:49.639
+and find existing jailbreaks.
+
+00:33:49.639 --> 00:33:50.472
+- Yeah.
+
+00:33:50.472 --> 00:33:54.750
+- And basically in a few minutes
+
+00:33:54.750 --> 00:33:56.400
+and just jailbreak an existing model.
+
+00:33:56.400 --> 00:34:00.420
+I think there are just examples on Twitter
+
+00:34:00.420 --> 00:34:03.990
+where while a model is being demoed live
+
+00:34:03.990 --> 00:34:04.950
+for the first time
+
+00:34:04.950 --> 00:34:07.530
+and it's just generally
+been made API available.
+
+00:34:07.530 --> 00:34:10.470
+someone jailbreak it
+and immediately post it.
+
+00:34:10.470 --> 00:34:13.620
+That was the level of robustness before,
+
+00:34:13.620 --> 00:34:15.030
+with a universal jailbreak.
+
+00:34:15.030 --> 00:34:15.930
+- Yeah.
+
+00:34:15.930 --> 00:34:17.610
+- That was the level of robustness
+
+00:34:17.610 --> 00:34:19.890
+when we started this project.
+
+00:34:19.890 --> 00:34:22.533
+And now just to give the punchline ,
+
+00:34:23.730 --> 00:34:25.410
+with the the systems,
+
+00:34:25.410 --> 00:34:26.970
+with the constitutional classifiers,
+
+00:34:26.970 --> 00:34:28.920
+we're able to get thousands of hours
+
+00:34:28.920 --> 00:34:30.570
+of robustness to Red Teaming
+
+00:34:30.570 --> 00:34:35.570
+where we do very large
+scale Red Teaming with yeah.
+
+00:34:36.030 --> 00:34:38.250
+People who are testing our
+Red Teaming our systems
+
+00:34:38.250 --> 00:34:41.070
+including expert Red Teamers
+
+00:34:41.070 --> 00:34:44.670
+and recently put put out
+for public Red Teaming
+
+00:34:44.670 --> 00:34:49.590
+and it took I think over 3,000 hours
+
+00:34:49.590 --> 00:34:51.000
+worth of Red Teaming effort
+
+00:34:51.000 --> 00:34:52.860
+for people to find a universal jailbreak.
+
+00:34:52.860 --> 00:34:55.080
+So I think in terms of ,
+
+00:34:55.080 --> 00:34:58.170
+going from sort of minutes
+to thousands of hours,
+
+00:34:58.170 --> 00:35:01.740
+it's several orders of
+magnitude more robustness.
+
+00:35:01.740 --> 00:35:05.040
+There are still some universal jailbreaks
+
+00:35:05.040 --> 00:35:08.430
+and we need to patch the class virus
+
+00:35:08.430 --> 00:35:09.263
+and stuff that.
+
+00:35:09.263 --> 00:35:14.250
+But I think It is a
+huge amount of progress.
+
+00:35:14.250 --> 00:35:17.370
+- Yeah, So I agree we had a system which
+
+00:35:17.370 --> 00:35:18.840
+you can just really easily,
+
+00:35:18.840 --> 00:35:20.610
+basically pretty easily jailbreaker.
+
+00:35:20.610 --> 00:35:22.470
+You read a paper, you go on Twitter
+
+00:35:22.470 --> 00:35:25.980
+and then you Red Team the
+system back in September
+
+00:35:25.980 --> 00:35:28.800
+and it wasn't a complete rock.
+
+00:35:28.800 --> 00:35:31.380
+but it was you ask a question to Claude
+
+00:35:31.380 --> 00:35:33.390
+half a time it gets given to a rock
+
+00:35:33.390 --> 00:35:34.740
+and you get no response.
+
+00:35:34.740 --> 00:35:37.947
+So it was , it was pretty robust,
+
+00:35:37.947 --> 00:35:40.645
+but it wasn't doing
+that well for, you know.
+
+00:35:40.645 --> 00:35:42.273
+So the most normal users right,
+
+00:35:43.230 --> 00:35:47.538
+but that also got this thousands
+of hours to jailbreaks.
+
+00:35:47.538 --> 00:35:50.038
+And then so with the demo
+system that we just put,
+
+00:35:51.000 --> 00:35:53.370
+that is doing way better
+
+00:35:53.370 --> 00:35:56.730
+in terms of normal user
+usage and inference costs
+
+00:35:56.730 --> 00:35:59.403
+and sort of getting good robustness.
+
+00:35:59.403 --> 00:36:01.140
+There's a lot of progress there.
+
+00:36:01.140 --> 00:36:05.910
+And a lot more work to be done, yeah.
+
+00:36:05.910 --> 00:36:08.610
+- Yeah, I think the
+comparison between kind of our
+
+00:36:08.610 --> 00:36:10.050
+prototype September system
+
+00:36:10.050 --> 00:36:12.750
+versus the system we
+just demoed is actually ,
+
+00:36:12.750 --> 00:36:15.240
+the difference is pretty night and day.
+
+00:36:15.240 --> 00:36:17.430
+So we did a lot of analysis here.
+
+00:36:17.430 --> 00:36:19.110
+- Jerry has the most beautiful graph
+
+00:36:19.110 --> 00:36:21.810
+of the false positive rate just dropping
+
+00:36:21.810 --> 00:36:24.330
+and dropping and dropping over time.
+
+00:36:24.330 --> 00:36:26.109
+It's really one of the
+best things I've ever seen.
+
+00:36:26.109 --> 00:36:27.030
+(all laughing)
+
+00:36:27.030 --> 00:36:29.730
+- Yeah, so we measured
+our over refusal rates
+
+00:36:29.730 --> 00:36:31.110
+on claude.ai traffic.
+
+00:36:31.110 --> 00:36:33.870
+This is real user production traffic,
+
+00:36:33.870 --> 00:36:35.550
+and we're kind of operating
+under the assumption
+
+00:36:35.550 --> 00:36:37.140
+that most people aren't asking about
+
+00:36:37.140 --> 00:36:41.460
+catastrophic weapons of mass
+destruction related stuff.
+
+00:36:41.460 --> 00:36:43.080
+And so originally we were finding
+
+00:36:43.080 --> 00:36:45.210
+that this September system was blocking
+
+00:36:45.210 --> 00:36:47.730
+40 plus percent of these benign requests,
+
+00:36:47.730 --> 00:36:48.810
+which is pretty terrible.
+
+00:36:48.810 --> 00:36:50.252
+You're approaching the rock there.
+
+00:36:50.252 --> 00:36:51.660
+(Meg laughing)
+
+00:36:51.660 --> 00:36:53.190
+But yeah, in our demo system,
+
+00:36:53.190 --> 00:36:55.980
+we got that all the way down to 0.38%
+
+00:36:55.980 --> 00:36:58.200
+and of course we still
+wanna get this down further.
+
+00:36:58.200 --> 00:37:01.080
+But between 40% and 0.38%,
+
+00:37:01.080 --> 00:37:02.610
+this is towards magnitude-
+
+00:37:02.610 --> 00:37:05.974
+- So how did you actually
+make all those improvements?
+
+00:37:05.974 --> 00:37:07.683
+it is there's,
+
+00:37:07.683 --> 00:37:09.480
+and this is something you see in a lot of,
+
+00:37:09.480 --> 00:37:11.100
+also the earlier safety work.
+
+00:37:11.100 --> 00:37:13.410
+Kind of this tension between
+
+00:37:13.410 --> 00:37:17.460
+harmfulness and helpfulness.
+
+00:37:17.460 --> 00:37:20.520
+So, I would say for me
+it's kind of surprising
+
+00:37:20.520 --> 00:37:21.900
+that we were actually able to make
+
+00:37:21.900 --> 00:37:23.370
+as much progress as we did.
+
+00:37:23.370 --> 00:37:25.650
+So how did we get there?
+
+00:37:25.650 --> 00:37:29.280
+- Yeah, I mean I think the
+two main improvements we made
+
+00:37:29.280 --> 00:37:33.480
+were first we really honed
+in on the constitution idea
+
+00:37:33.480 --> 00:37:36.570
+and we made it really
+clear how to delineate
+
+00:37:36.570 --> 00:37:37.920
+things that were harmless,
+
+00:37:37.920 --> 00:37:40.110
+and we found that adding
+this kind of harmless
+
+00:37:40.110 --> 00:37:42.870
+set of categories of
+things that the model,
+
+00:37:42.870 --> 00:37:44.580
+the classifiers should allow,
+
+00:37:44.580 --> 00:37:46.380
+actually reduced FPR by a lot.
+
+00:37:46.380 --> 00:37:48.510
+And we have some results
+in our paper for that
+
+00:37:48.510 --> 00:37:49.343
+and I think that was
+
+00:37:49.343 --> 00:37:51.300
+one of the most significant changes.
+
+00:37:51.300 --> 00:37:53.610
+Other changes include actually solidifying
+
+00:37:53.610 --> 00:37:57.090
+the kind of jailbreak
+styles that we trained on,
+
+00:37:57.090 --> 00:37:59.160
+and so that kind of
+allows model to generalize
+
+00:37:59.160 --> 00:38:01.050
+better on what exactly is a jailbreak
+
+00:38:01.050 --> 00:38:03.843
+versus just thinking
+anything is a jailbreak.
+
+00:38:04.710 --> 00:38:06.714
+And that also probably
+helped a little bit.
+
+00:38:06.714 --> 00:38:09.120
+Yeah, but I think both of these things
+
+00:38:09.120 --> 00:38:10.200
+were pretty useful here.
+
+00:38:10.200 --> 00:38:14.010
+- Yeah, there's this really
+nice plot in the paper,
+
+00:38:14.010 --> 00:38:16.170
+which is just number of data points
+
+00:38:16.170 --> 00:38:18.480
+and performance on the evals
+
+00:38:18.480 --> 00:38:20.460
+and how robust it is,
+
+00:38:20.460 --> 00:38:22.410
+and kind of in the style of
+
+00:38:22.410 --> 00:38:24.173
+doing the dumb thing that works.
+
+00:38:24.173 --> 00:38:28.920
+That is just a straight
+line going up above upward.
+
+00:38:28.920 --> 00:38:29.820
+- Yeah, I mean to be clear,
+
+00:38:29.820 --> 00:38:34.820
+I think the system that
+we released for the demo
+
+00:38:34.860 --> 00:38:36.300
+still has a lot of false positives,
+
+00:38:36.300 --> 00:38:37.133
+but I think yeah,
+
+00:38:37.133 --> 00:38:38.790
+I think we're pretty optimistic
+
+00:38:38.790 --> 00:38:40.770
+about further reducing
+the false positive rate
+
+00:38:40.770 --> 00:38:43.650
+for some kind of
+
+00:38:43.650 --> 00:38:45.480
+to make something more production ready.
+
+00:38:45.480 --> 00:38:48.450
+But yeah, I think that's
+kinda where we're at.
+
+00:38:48.450 --> 00:38:50.678
+- Yeah, so couldn't
+why did we do the demo?
+
+00:38:50.678 --> 00:38:52.219
+what was the demo?
+
+00:38:52.219 --> 00:38:53.769
+What was the point of the demo?
+
+00:38:55.020 --> 00:38:55.897
+- I think the main questions
+
+00:38:55.897 --> 00:38:57.960
+we wanted to answer from the demo were ,
+
+00:38:57.960 --> 00:39:00.870
+was our system as robust
+as we thought it was?
+
+00:39:00.870 --> 00:39:03.180
+And I think one thing here is that,
+
+00:39:03.180 --> 00:39:05.340
+from the prototype we
+did human Red Team there
+
+00:39:05.340 --> 00:39:07.560
+and we knew it was quite robust,
+
+00:39:07.560 --> 00:39:08.940
+but then after that we developed
+
+00:39:08.940 --> 00:39:11.700
+kind of our own automated evaluations
+
+00:39:11.700 --> 00:39:13.650
+and we weren't sure
+whether that generalized
+
+00:39:13.650 --> 00:39:15.450
+to actual human Red Teaming.
+
+00:39:15.450 --> 00:39:18.180
+And so one question that
+we want to answer there is,
+
+00:39:18.180 --> 00:39:19.260
+does it actually generalize
+
+00:39:19.260 --> 00:39:21.270
+and if some classifier does well
+
+00:39:21.270 --> 00:39:23.100
+on these automated evaluations,
+
+00:39:23.100 --> 00:39:25.200
+is it actually robust in practice?
+
+00:39:25.200 --> 00:39:27.300
+And so if we could get that answered,
+
+00:39:27.300 --> 00:39:28.800
+that's a main thing.
+
+00:39:28.800 --> 00:39:30.510
+And I think another thing here is just
+
+00:39:30.510 --> 00:39:31.920
+having people try out with the system
+
+00:39:31.920 --> 00:39:35.940
+and seeing if it's actually
+over refusing too much
+
+00:39:35.940 --> 00:39:37.170
+and I think people were finding that
+
+00:39:37.170 --> 00:39:41.670
+sometimes it over refused on
+specific domain questions.
+
+00:39:41.670 --> 00:39:44.190
+Of course this is still a lot less overuse
+
+00:39:44.190 --> 00:39:45.840
+than our original system which would just
+
+00:39:45.840 --> 00:39:48.870
+refuse on completely unrelated things.
+
+00:39:48.870 --> 00:39:50.850
+But I think that also helps us kind of
+
+00:39:50.850 --> 00:39:53.970
+get to know what the weaknesses still are
+
+00:39:53.970 --> 00:39:56.896
+and that helps us know what
+to improve in the future.
+
+00:39:56.896 --> 00:39:59.088
+- And so how exactly did we set this up?
+
+00:39:59.088 --> 00:40:02.520
+- Yeah, I mean I guess
+we've set it up on our,
+
+00:40:02.520 --> 00:40:04.260
+we had this public facing demo
+
+00:40:04.260 --> 00:40:05.670
+and then we tweeted about it
+
+00:40:05.670 --> 00:40:07.440
+to have people try to Red Team it.
+
+00:40:07.440 --> 00:40:08.820
+We set it up such that there were
+
+00:40:08.820 --> 00:40:11.760
+these eight sets of questions
+
+00:40:11.760 --> 00:40:14.280
+that we didn't want people to
+be able to get the answer to.
+
+00:40:14.280 --> 00:40:15.690
+- Or just eight specific questions.
+
+00:40:15.690 --> 00:40:17.370
+- Yes, eight specific questions.
+
+00:40:17.370 --> 00:40:19.077
+And the goal was to try to get people
+
+00:40:19.077 --> 00:40:21.780
+to find jailbreaks to get harmful,
+
+00:40:21.780 --> 00:40:24.570
+detailed information on
+each of these questions.
+
+00:40:24.570 --> 00:40:26.490
+And then ideally they could do this
+
+00:40:26.490 --> 00:40:29.910
+with kind of a single universal jailbreak.
+
+00:40:29.910 --> 00:40:32.370
+Yeah, so when we're talking
+about universal jailbreaks,
+
+00:40:32.370 --> 00:40:33.540
+we care a lot about making sure
+
+00:40:33.540 --> 00:40:34.680
+that the responses are detailed
+
+00:40:34.680 --> 00:40:36.360
+and not just some very vague information
+
+00:40:36.360 --> 00:40:38.400
+that we personally don't think is ,
+
+00:40:38.400 --> 00:40:40.110
+that doesn't give that much uplift
+
+00:40:40.110 --> 00:40:42.305
+to someone if they were actually trying
+
+00:40:42.305 --> 00:40:44.820
+to do the action that the
+question was trying to get at.
+
+00:40:44.820 --> 00:40:46.590
+And so the way we kind of evaluated this,
+
+00:40:46.590 --> 00:40:49.080
+is we have these helpful only models
+
+00:40:49.080 --> 00:40:51.300
+which are kind of trained
+to not refuse anything.
+
+00:40:51.300 --> 00:40:54.210
+And these kind of would be similar to
+
+00:40:54.210 --> 00:40:57.150
+what a model would be if you
+had a universal jailbreak.
+
+00:40:57.150 --> 00:40:58.950
+As in they don't have safeguards
+
+00:40:58.950 --> 00:41:01.740
+and they'll just give very
+detailed answers to questions.
+
+00:41:01.740 --> 00:41:03.540
+And so for each of these eight questions,
+
+00:41:03.540 --> 00:41:06.570
+we have a response from
+this helpful only model.
+
+00:41:06.570 --> 00:41:08.010
+And that's kind of simulating
+
+00:41:08.010 --> 00:41:10.500
+what would the response kind of be
+
+00:41:10.500 --> 00:41:12.423
+if you had a universal jailbreaks.
+
+00:41:13.350 --> 00:41:17.670
+And then because there's some
+randomness in model responses,
+
+00:41:17.670 --> 00:41:18.720
+we kind of have this greater
+
+00:41:18.720 --> 00:41:21.870
+that compares a target response
+
+00:41:21.870 --> 00:41:24.120
+with that response from
+the helpful only model.
+
+00:41:24.120 --> 00:41:25.710
+And then it kind of looks for
+
+00:41:25.710 --> 00:41:27.120
+whether there's enough detail
+
+00:41:27.120 --> 00:41:28.260
+that's shared between those two.
+
+00:41:28.260 --> 00:41:29.093
+And if there is,
+
+00:41:29.093 --> 00:41:31.920
+then we we'd consider that
+to be detailed enough.
+
+00:41:31.920 --> 00:41:33.540
+- Nice, and I think we for
+
+00:41:33.540 --> 00:41:36.690
+at least 75% overlap in the information
+
+00:41:36.690 --> 00:41:37.680
+or something that or do you?
+
+00:41:37.680 --> 00:41:40.230
+- I think the thresholds
+change per question.
+
+00:41:40.230 --> 00:41:43.230
+So I think in some of the first levels,
+
+00:41:43.230 --> 00:41:45.720
+which is the less harmful questions,
+
+00:41:45.720 --> 00:41:48.720
+we had slightly lower
+levels of overlap required.
+
+00:41:48.720 --> 00:41:50.340
+And then towards later questions,
+
+00:41:50.340 --> 00:41:53.847
+we kind of increase that
+threshold to maybe 60, 70%
+
+00:41:53.847 --> 00:41:57.990
+and yeah, it's dynamic
+through the challenge.
+
+00:41:57.990 --> 00:42:00.210
+- Yeah, I find this question of grading
+
+00:42:00.210 --> 00:42:03.630
+just really, really interesting in general
+
+00:42:03.630 --> 00:42:06.570
+and also kind of just challenging to do.
+
+00:42:06.570 --> 00:42:09.426
+Well, I think we made a
+really good effortI think
+
+00:42:09.426 --> 00:42:11.190
+on the demo system,
+
+00:42:11.190 --> 00:42:13.503
+but it definitely wasn't perfect.
+
+00:42:15.690 --> 00:42:17.970
+So the way the system
+works right now is it's ,
+
+00:42:17.970 --> 00:42:21.240
+it's looking for sort of
+overlapping bits of detail
+
+00:42:21.240 --> 00:42:23.460
+between two answers.
+
+00:42:23.460 --> 00:42:25.980
+But we had this thing in our sort of
+
+00:42:25.980 --> 00:42:28.050
+external Red Teaming that we did,
+
+00:42:28.050 --> 00:42:31.920
+where people would just sort of merge
+
+00:42:31.920 --> 00:42:33.690
+five, six, seven, eight, night, 10
+
+00:42:33.690 --> 00:42:35.430
+different model responses
+
+00:42:35.430 --> 00:42:37.470
+that cover loads and
+loads and loads of details
+
+00:42:37.470 --> 00:42:38.870
+just 'cause they're so long.
+
+00:42:39.930 --> 00:42:42.478
+And by this metric of
+whether it includes details
+
+00:42:42.478 --> 00:42:43.980
+or doesn't include details,
+
+00:42:43.980 --> 00:42:46.650
+it would be considered so harmful.
+
+00:42:46.650 --> 00:42:49.890
+Even though if someone's
+given me instructions
+
+00:42:49.890 --> 00:42:50.850
+to make a cake,
+
+00:42:50.850 --> 00:42:53.640
+and instead of having this really nice
+
+00:42:53.640 --> 00:42:55.680
+step by step, a bullet point list,
+
+00:42:55.680 --> 00:42:56.700
+you first do this,
+
+00:42:56.700 --> 00:42:59.400
+you it's kind of completely
+scattered and random
+
+00:42:59.400 --> 00:43:03.210
+and you know, the
+everything is out of order.
+
+00:43:03.210 --> 00:43:05.730
+It's actually a lot less helpful than the,
+
+00:43:05.730 --> 00:43:09.720
+the helpful only model, the
+helpful only model sort of
+
+00:43:09.720 --> 00:43:12.360
+by design has has no safeguard.
+
+00:43:12.360 --> 00:43:15.780
+It's designed to give you
+the information in a way
+
+00:43:15.780 --> 00:43:18.360
+that's gonna be maximally helpful to you.
+
+00:43:18.360 --> 00:43:21.270
+So I think this question of yeah
+
+00:43:21.270 --> 00:43:24.060
+what is harmful, what isn't harmful,
+
+00:43:24.060 --> 00:43:25.950
+what is an appropriate threshold?
+
+00:43:25.950 --> 00:43:27.360
+It's quite a subtle
+
+00:43:27.360 --> 00:43:31.290
+and yeah just generally
+quite a difficult one.
+
+00:43:31.290 --> 00:43:34.350
+And I think yeah there
+was the sort of reaction
+
+00:43:34.350 --> 00:43:38.580
+to the grading system in
+demo was quite interesting.
+
+00:43:38.580 --> 00:43:41.850
+I think a lot of people
+found responses that
+
+00:43:41.850 --> 00:43:43.320
+sort of looked harmful.
+
+00:43:43.320 --> 00:43:45.340
+They had some amount of information
+
+00:43:46.440 --> 00:43:49.710
+and then our grader would say
+there's not enough detail,
+
+00:43:49.710 --> 00:43:51.390
+there needs to be more detail
+
+00:43:51.390 --> 00:43:54.900
+and this would be I think
+frustrating for people
+
+00:43:54.900 --> 00:43:57.030
+'cause they're , well what's
+the detail that's missing?
+
+00:43:57.030 --> 00:43:59.040
+I don't what the information is.
+
+00:43:59.040 --> 00:44:02.130
+And in a way I think
+that's partially by design.
+
+00:44:02.130 --> 00:44:03.510
+if I'm making a cake
+
+00:44:03.510 --> 00:44:07.530
+and there's an essential bit
+missing in the ingredient list,
+
+00:44:07.530 --> 00:44:10.440
+or an essential thing
+missing in the instructions,
+
+00:44:10.440 --> 00:44:13.170
+I actually have no idea what that is,
+
+00:44:13.170 --> 00:44:14.220
+because of the fremo,
+
+00:44:14.220 --> 00:44:17.070
+because I'm not an expert in this.
+
+00:44:17.070 --> 00:44:19.500
+Another thing that I think is interesting,
+
+00:44:19.500 --> 00:44:22.560
+why is the helpful only response?
+
+00:44:22.560 --> 00:44:24.720
+Why is that the baseline response?
+
+00:44:24.720 --> 00:44:27.555
+Why is that the thing that we're
+actually comparing against?
+
+00:44:27.555 --> 00:44:30.900
+And I think sudden care is that
+
+00:44:30.900 --> 00:44:33.900
+we have a team at Anthropic
+called Frontier Red Team
+
+00:44:33.900 --> 00:44:36.960
+and Frontier Red Team's job is
+
+00:44:36.960 --> 00:44:39.840
+to basically take advanced models
+
+00:44:39.840 --> 00:44:41.400
+and see what could
+happen with these models,
+
+00:44:41.400 --> 00:44:44.820
+do the front modeling work
+that we were mentioning before.
+
+00:44:44.820 --> 00:44:49.350
+And what they do is they
+evaluate this helpful only model
+
+00:44:49.350 --> 00:44:51.480
+and they say, oh, this helpful
+only model we think this is
+
+00:44:51.480 --> 00:44:53.610
+, this is potentially dangerous.
+
+00:44:53.610 --> 00:44:54.930
+it could be used
+
+00:44:54.930 --> 00:44:57.663
+to carry out some complicated process.
+
+00:44:58.530 --> 00:45:03.330
+So actually, so a fronter
+team are measuring
+
+00:45:03.330 --> 00:45:04.980
+, oh, what is the risk
+
+00:45:04.980 --> 00:45:07.680
+of a helpful only model, you know?
+
+00:45:07.680 --> 00:45:09.750
+And if the risk of a helpful only model
+
+00:45:09.750 --> 00:45:13.230
+or a model without safeguards is too high,
+
+00:45:13.230 --> 00:45:15.330
+we're trying to measure or
+the way I think about it's
+
+00:45:15.330 --> 00:45:16.920
+we're trying to measure
+what's the gap between
+
+00:45:16.920 --> 00:45:21.480
+the model with safeguards
+and the helpful only model.
+
+00:45:21.480 --> 00:45:24.150
+So doing this relative comparison,
+
+00:45:24.150 --> 00:45:26.850
+while is imperfect and certainly
+
+00:45:26.850 --> 00:45:31.380
+bits of information that
+is harmful can get through.
+
+00:45:31.380 --> 00:45:32.683
+It allows us to sort of
+
+00:45:32.683 --> 00:45:35.730
+do this estimation and do this comparison.
+
+00:45:35.730 --> 00:45:37.980
+But yeah, I just found the reaction
+
+00:45:37.980 --> 00:45:40.200
+to this really, really
+interesting on the demo.
+
+00:45:40.200 --> 00:45:42.900
+I think it's quite a subtle point
+
+00:45:42.900 --> 00:45:46.290
+and I think also, yeah, I'm
+excited for us to sort of
+
+00:45:46.290 --> 00:45:48.030
+develop better grading techniques
+
+00:45:48.030 --> 00:45:50.160
+and better things to
+actually measure okay,
+
+00:45:50.160 --> 00:45:54.510
+genuinely how helpful is this completion
+
+00:45:54.510 --> 00:45:57.420
+for the task that we care about.
+
+00:45:57.420 --> 00:45:59.610
+- Yeah, the other thing I
+would wanna just say quickly
+
+00:45:59.610 --> 00:46:02.670
+is that it's also just it very unrealistic
+
+00:46:02.670 --> 00:46:05.490
+to get this kind of
+feedback on how detailed
+
+00:46:05.490 --> 00:46:07.830
+and correct the information
+you're getting is
+
+00:46:07.830 --> 00:46:10.050
+that's actually a huge
+advantage as a Red Teamer
+
+00:46:10.050 --> 00:46:14.700
+and yeah I think that actually the fact
+
+00:46:14.700 --> 00:46:17.280
+that we gave that feedback I
+think is gives you very clear
+
+00:46:17.280 --> 00:46:19.580
+feedback loop that you
+normally wouldn't have.
+
+00:46:20.700 --> 00:46:21.720
+But yeah, I think maybe we should just
+
+00:46:21.720 --> 00:46:23.790
+talk about the results.
+
+00:46:23.790 --> 00:46:27.630
+- So someone did find a way
+to pass all eight levels,
+
+00:46:27.630 --> 00:46:30.120
+but before that our system was holding out
+
+00:46:30.120 --> 00:46:32.250
+for at least five days
+
+00:46:32.250 --> 00:46:34.860
+and we kind of did this filtration of
+
+00:46:34.860 --> 00:46:36.630
+we tried to find what kind of users
+
+00:46:36.630 --> 00:46:38.670
+we consider active Red Teamers
+
+00:46:38.670 --> 00:46:40.410
+and for that we were just
+kind of doing this very
+
+00:46:40.410 --> 00:46:42.420
+conservative estimate as someone
+
+00:46:42.420 --> 00:46:44.190
+who at least passed one question.
+
+00:46:44.190 --> 00:46:45.810
+We're kind of saying if
+you can pass one question,
+
+00:46:45.810 --> 00:46:46.860
+we're we're considering you
+
+00:46:46.860 --> 00:46:48.240
+to be an experienced Red Teamer
+
+00:46:48.240 --> 00:46:50.239
+and you're trying to break the system.
+
+00:46:50.239 --> 00:46:51.743
+- I think that's pretty consent.
+
+00:46:51.743 --> 00:46:54.097
+I'm not the best Red Teamer out there,
+
+00:46:54.097 --> 00:46:56.605
+but I'm gonna struggle
+with the first question.
+
+00:46:56.605 --> 00:46:57.438
+- Yeah.
+
+00:46:57.438 --> 00:46:58.271
+- So yeah.
+
+00:46:58.271 --> 00:47:00.090
+- But yeah, by this
+conservative criteria we had
+
+00:47:00.090 --> 00:47:05.090
+308 users and these users
+had over 300,000 chats
+
+00:47:05.610 --> 00:47:09.720
+and we estimated that
+they had over 3,750 hours
+
+00:47:09.720 --> 00:47:12.210
+of Red Teaming and that was before
+
+00:47:12.210 --> 00:47:14.790
+someone passed all eight levels.
+
+00:47:14.790 --> 00:47:18.420
+And after that there's
+kind of the question
+
+00:47:18.420 --> 00:47:19.800
+of did they pass all eight levels
+
+00:47:19.800 --> 00:47:21.330
+with a universal jobb break?
+
+00:47:21.330 --> 00:47:22.590
+And so that's actually harder
+
+00:47:22.590 --> 00:47:23.940
+than just passing all eight levels
+
+00:47:23.940 --> 00:47:25.860
+with just any random jailbreak for each
+
+00:47:25.860 --> 00:47:27.720
+a question individually, right?
+
+00:47:27.720 --> 00:47:30.720
+And so for that, that took an 50,000 chats
+
+00:47:30.720 --> 00:47:33.540
+and additional 600 ish
+hours of Red Teaming
+
+00:47:33.540 --> 00:47:35.430
+for someone to find universal one.
+
+00:47:35.430 --> 00:47:38.103
+- So something I find kind
+of interesting is that,
+
+00:47:39.150 --> 00:47:42.390
+in some sense we've spent a lot of time
+
+00:47:42.390 --> 00:47:44.850
+trying to make a system that's more robust
+
+00:47:44.850 --> 00:47:46.650
+and it's true the baseline has been,
+
+00:47:46.650 --> 00:47:48.450
+it gets broken in hours
+
+00:47:48.450 --> 00:47:51.180
+and we're now on days
+
+00:47:51.180 --> 00:47:53.310
+which is a definitely lot of progress,
+
+00:47:53.310 --> 00:47:57.660
+but how would we know this is safe enough
+
+00:47:57.660 --> 00:48:00.386
+or how would we know this is high enough?
+
+00:48:00.386 --> 00:48:01.980
+What makes us think this is
+
+00:48:01.980 --> 00:48:04.470
+actually sufficiently safe in practice
+
+00:48:04.470 --> 00:48:06.510
+and what else would we need?
+
+00:48:06.510 --> 00:48:10.470
+- I mean I think the the real
+gold standard we want to hit.
+
+00:48:10.470 --> 00:48:13.740
+Yeah driven by the
+responsible scaling policy
+
+00:48:13.740 --> 00:48:15.870
+is to be able to make a safety case,
+
+00:48:15.870 --> 00:48:18.330
+a really clear argument that
+
+00:48:18.330 --> 00:48:21.150
+even though the model has a
+certain changes capability,
+
+00:48:21.150 --> 00:48:23.500
+we don't actually think
+that the model will
+
+00:48:25.290 --> 00:48:27.000
+with our safeguards be
+able to pose the risks
+
+00:48:27.000 --> 00:48:28.950
+associated with that dangerous capability.
+
+00:48:28.950 --> 00:48:33.270
+And I roughly think based on this result
+
+00:48:33.270 --> 00:48:35.370
+and the rapid response
+paper that we had earlier,
+
+00:48:35.370 --> 00:48:38.970
+I think one approach that
+seems quite promising
+
+00:48:38.970 --> 00:48:42.000
+for how we would go about
+making the safety case
+
+00:48:42.000 --> 00:48:44.380
+once the models do become capable of
+
+00:48:45.900 --> 00:48:48.310
+more serious misuse risk is basically to
+
+00:48:49.980 --> 00:48:52.470
+build a very good sort of
+
+00:48:52.470 --> 00:48:54.780
+constitutional classifier based system
+
+00:48:54.780 --> 00:48:57.820
+which takes thousands
+of hours to jailbreak
+
+00:48:58.920 --> 00:49:03.020
+then have some kind of...
+
+00:49:05.160 --> 00:49:09.060
+So that will hopefully
+that will mitigate lots
+
+00:49:09.060 --> 00:49:11.460
+of jailbreak attempt vast majority,
+
+00:49:11.460 --> 00:49:13.210
+but some will still go through
+
+00:49:14.760 --> 00:49:17.220
+and then we need some other mechanisms
+
+00:49:17.220 --> 00:49:18.330
+to basically detect
+
+00:49:18.330 --> 00:49:20.160
+and then respond to those
+additional jailbreaks.
+
+00:49:20.160 --> 00:49:22.230
+So those mechanisms would be
+
+00:49:22.230 --> 00:49:24.240
+A, some kind of bug bounty program
+
+00:49:24.240 --> 00:49:26.610
+where people can report jailbreaks
+
+00:49:26.610 --> 00:49:30.507
+and B given yeah, monetary
+rewards for reporting jailbreaks
+
+00:49:32.370 --> 00:49:37.230
+and B, probably some kind
+of incident detection
+
+00:49:37.230 --> 00:49:40.020
+or offline monitoring to after the fact
+
+00:49:40.020 --> 00:49:42.430
+detect that some of the traffic
+
+00:49:43.830 --> 00:49:44.663
+involves some jailbreaks.
+
+00:49:44.663 --> 00:49:47.640
+So we didn't notice with
+our immediate classifiers
+
+00:49:47.640 --> 00:49:50.220
+that are deployed online
+immediately blocking
+
+00:49:50.220 --> 00:49:51.303
+the harmful outputs.
+
+00:49:52.140 --> 00:49:53.760
+And yeah, I mean you can
+imagine various things
+
+00:49:53.760 --> 00:49:54.990
+that could work there,
+
+00:49:54.990 --> 00:49:58.470
+but yeah, for the online system
+the classifiers need to be
+
+00:49:58.470 --> 00:50:00.630
+pretty efficient and small
+
+00:50:00.630 --> 00:50:02.550
+and have lots of different constraints.
+
+00:50:02.550 --> 00:50:04.350
+they also need to support
+
+00:50:04.350 --> 00:50:05.610
+token by token streaming
+
+00:50:05.610 --> 00:50:08.070
+since that's important
+for reducing latency
+
+00:50:08.070 --> 00:50:10.170
+to immediately get a response
+from the first token.
+
+00:50:10.170 --> 00:50:12.907
+So you know that that definitely ,
+
+00:50:12.907 --> 00:50:14.580
+there are a lot of constraints there
+
+00:50:14.580 --> 00:50:16.140
+which make those classifiers less,
+
+00:50:16.140 --> 00:50:17.850
+less effective than you
+otherwise could get.
+
+00:50:17.850 --> 00:50:19.800
+But then you could serve the response
+
+00:50:19.800 --> 00:50:20.670
+and then after the fact
+
+00:50:20.670 --> 00:50:22.710
+use a much more expensive classifier,
+
+00:50:22.710 --> 00:50:25.140
+your largest, most capable model,
+
+00:50:25.140 --> 00:50:28.260
+maybe with a lot of test
+time compute and reasoning
+
+00:50:28.260 --> 00:50:30.402
+through whether or not
+this response is harmful,
+
+00:50:30.402 --> 00:50:32.940
+maybe flag the most dangerous responses,
+
+00:50:32.940 --> 00:50:34.560
+maybe flag a number of those.
+
+00:50:34.560 --> 00:50:36.210
+And then even have the humans look at,
+
+00:50:36.210 --> 00:50:39.025
+have human reviewers look at the most,
+
+00:50:39.025 --> 00:50:41.310
+yeah, those top few ones to see
+
+00:50:41.310 --> 00:50:42.870
+are any of these real jailbreaks you can
+
+00:50:42.870 --> 00:50:46.770
+imagine a really heavy duty system that
+
+00:50:46.770 --> 00:50:48.660
+to detect additional jailbreaks.
+
+00:50:48.660 --> 00:50:50.310
+Then if you do notice
+
+00:50:50.310 --> 00:50:52.080
+there are some additional jailbreaks here,
+
+00:50:52.080 --> 00:50:54.060
+use the rapid response
+approach we described
+
+00:50:54.060 --> 00:50:56.160
+where you take those examples,
+
+00:50:56.160 --> 00:50:59.130
+proliferate them to get more automatically
+
+00:50:59.130 --> 00:51:02.280
+with LLMs to get more
+examples of jailbreaks,
+
+00:51:02.280 --> 00:51:05.173
+then retrain your class fires,
+redeploy the classifiers.
+
+00:51:06.260 --> 00:51:09.593
+So yeah, that system overall, yeah,
+
+00:51:10.890 --> 00:51:14.100
+basically the hope would be
+that this gets the fraction
+
+00:51:14.100 --> 00:51:18.210
+of time at which there's an open universal
+
+00:51:18.210 --> 00:51:20.820
+or an open universal jailbreak down
+
+00:51:20.820 --> 00:51:23.910
+to a reasonable amount such that
+
+00:51:23.910 --> 00:51:24.900
+if you're trying to follow
+
+00:51:24.900 --> 00:51:26.640
+some complex scientific process
+
+00:51:26.640 --> 00:51:28.710
+to make some CBRN weapon
+
+00:51:28.710 --> 00:51:31.830
+or do a lot of cyber crime,
+
+00:51:31.830 --> 00:51:35.940
+there actually is just
+only a small window of time
+
+00:51:35.940 --> 00:51:39.873
+to use the model for the
+steps that you're gonna take.
+
+00:51:40.898 --> 00:51:44.550
+And yeah, I think if it's well only 0.1%
+
+00:51:44.550 --> 00:51:47.220
+of the time there's an open
+vulnerability that you can use.
+
+00:51:47.220 --> 00:51:48.540
+that's, yeah,
+
+00:51:48.540 --> 00:51:51.870
+that just makes it very
+difficult to use the system.
+
+00:51:51.870 --> 00:51:53.520
+So yeah, I think that
+would be roughly the sketch
+
+00:51:53.520 --> 00:51:56.590
+of the kind of safety case
+that we may wanna make
+
+00:51:58.050 --> 00:51:59.580
+that we think could be promising
+
+00:51:59.580 --> 00:52:02.010
+for using constitutional
+classifiers to get safety here.
+
+00:52:02.010 --> 00:52:05.340
+- Yeah, for me it's just
+another reminder of this.
+
+00:52:05.340 --> 00:52:07.830
+Yeah, the only perfectly
+safe system is the rock.
+
+00:52:07.830 --> 00:52:11.610
+You know, they always
+is really best practice
+
+00:52:11.610 --> 00:52:14.613
+insecurity of , yeah,
+no system is perfect.
+
+00:52:15.510 --> 00:52:17.160
+Most systems have vulnerabilities
+
+00:52:17.160 --> 00:52:21.120
+and there's always this measure of, okay,
+
+00:52:21.120 --> 00:52:23.310
+how much effort does
+someone need to put in?
+
+00:52:23.310 --> 00:52:24.810
+how hard is it for someone
+
+00:52:24.810 --> 00:52:27.270
+to get the information that you need?
+
+00:52:27.270 --> 00:52:29.730
+I'm kind of reminded of,
+
+00:52:29.730 --> 00:52:33.150
+I lived in Cambridge and Oxford in the UK,
+
+00:52:33.150 --> 00:52:35.280
+people cycle there all the time
+
+00:52:35.280 --> 00:52:38.040
+and bikes gets stolen all the time.
+
+00:52:38.040 --> 00:52:41.670
+I think most bikes you
+just get an angle grinder
+
+00:52:41.670 --> 00:52:43.620
+and it system goes
+straight through the lock.
+
+00:52:43.620 --> 00:52:45.120
+not a problem.
+
+00:52:45.120 --> 00:52:46.950
+Those bike locks are not,
+
+00:52:46.950 --> 00:52:48.840
+they're not perfectly robust,
+
+00:52:48.840 --> 00:52:50.010
+you know, in the same way.
+
+00:52:50.010 --> 00:52:52.860
+our system isn't, isn't perfectly robust,
+
+00:52:52.860 --> 00:52:54.420
+but sort of in practice,
+
+00:52:54.420 --> 00:52:56.970
+you put one lock or you
+put two locks on your bike,
+
+00:52:58.590 --> 00:53:01.050
+that basically reduces the risk.
+
+00:53:01.050 --> 00:53:02.359
+a huge amount.
+
+00:53:02.359 --> 00:53:04.050
+someone's gonna have
+to get an angle grinder
+
+00:53:04.050 --> 00:53:06.690
+and maybe only need to be
+there for an hour, two hours.
+
+00:53:06.690 --> 00:53:07.860
+Someone's gonna catch them.
+
+00:53:07.860 --> 00:53:09.420
+And yeah, it's really interesting
+
+00:53:09.420 --> 00:53:11.550
+'cause the research,
+
+00:53:11.550 --> 00:53:15.120
+it always happens in
+this broader structure
+
+00:53:15.120 --> 00:53:17.280
+and broader sensitive mitigations.
+
+00:53:17.280 --> 00:53:21.000
+So you mentioned the
+rapid response monitoring
+
+00:53:21.000 --> 00:53:23.040
+for new jailbreaks then
+being able to respond
+
+00:53:23.040 --> 00:53:24.330
+to new job breaks.
+
+00:53:24.330 --> 00:53:25.558
+And there are other things we can do
+
+00:53:25.558 --> 00:53:30.558
+monitoring for people trying
+to circumvent our systems.
+
+00:53:30.780 --> 00:53:33.600
+We have these classifiers
+and we can detect
+
+00:53:33.600 --> 00:53:35.160
+when people are trying to get around them.
+
+00:53:35.160 --> 00:53:37.350
+So yeah, I'm really excited to see
+
+00:53:37.350 --> 00:53:39.400
+how this work can really.
+
+00:53:39.400 --> 00:53:42.150
+I think it's a really good
+research contribution,
+
+00:53:42.150 --> 00:53:44.820
+but I'm really excited to see how we sort
+
+00:53:44.820 --> 00:53:46.410
+of put it into practice
+
+00:53:46.410 --> 00:53:47.430
+and put it into practice
+
+00:53:47.430 --> 00:53:51.060
+with all these other
+complimentary defensive mechanisms
+
+00:53:51.060 --> 00:53:52.380
+so that sort of overall we can make
+
+00:53:52.380 --> 00:53:54.630
+a really good safety case.
+
+00:53:54.630 --> 00:53:56.190
+- I agree.
+
+00:53:56.190 --> 00:53:57.810
+- Nice.
+
+00:53:57.810 --> 00:54:01.380
+So yeah, I think we spent
+about about 4,000 hours,
+
+00:54:01.380 --> 00:54:03.900
+4,000 hours of effort on the demo,
+
+00:54:03.900 --> 00:54:07.260
+but we did find some
+techniques that sort were able
+
+00:54:07.260 --> 00:54:09.240
+to circumvent our classifiers.
+
+00:54:09.240 --> 00:54:13.890
+So yeah, what do people
+try and what got through?
+
+00:54:13.890 --> 00:54:16.110
+- Yeah, so I think we
+were seeing a lot of stuff
+
+00:54:16.110 --> 00:54:18.240
+where people would use
+these kind of ciphers
+
+00:54:18.240 --> 00:54:21.450
+or encoding mechanisms
+to try to get the output
+
+00:54:21.450 --> 00:54:22.740
+to look a certain way,
+
+00:54:22.740 --> 00:54:23.910
+such as the output classifier
+
+00:54:23.910 --> 00:54:25.620
+can't really tell what it's saying
+
+00:54:25.620 --> 00:54:27.180
+and therefore wouldn't flag it.
+
+00:54:27.180 --> 00:54:29.400
+And so that was a pretty common
+thing that we were seeing.
+
+00:54:29.400 --> 00:54:31.333
+- Could you give an example
+of of something that?
+
+00:54:31.333 --> 00:54:33.360
+- Yeah, some very basic example here
+
+00:54:33.360 --> 00:54:35.220
+could be if you use
+basic 60 foreign coding
+
+00:54:35.220 --> 00:54:37.530
+or morse code or something,
+
+00:54:37.530 --> 00:54:39.386
+these might be things
+that the upper classifier
+
+00:54:39.386 --> 00:54:41.490
+has a little bit of trouble understanding
+
+00:54:41.490 --> 00:54:44.460
+and so therefore it's
+not as suspicious about
+
+00:54:44.460 --> 00:54:46.120
+some other strategies here.
+
+00:54:46.120 --> 00:54:48.060
+A very frequent one is that people try
+
+00:54:48.060 --> 00:54:50.160
+to replace the harmful chemical
+
+00:54:50.160 --> 00:54:53.070
+with some very benign
+thing water or something.
+
+00:54:53.070 --> 00:54:55.950
+And the idea here is just
+that when the classifiers see
+
+00:54:55.950 --> 00:54:58.260
+very dangerous chemical,
+
+00:54:58.260 --> 00:55:00.630
+it's just becomes very suspicious.
+
+00:55:00.630 --> 00:55:02.820
+And so if you replace it with
+a more harmless chemical,
+
+00:55:02.820 --> 00:55:04.710
+maybe it becomes less suspicious
+
+00:55:04.710 --> 00:55:07.800
+and then you try to hint to the classifier
+
+00:55:07.800 --> 00:55:09.480
+or hint to the model in some way
+
+00:55:09.480 --> 00:55:12.060
+that actually you meant
+this harmful chemical
+
+00:55:12.060 --> 00:55:13.860
+but you don't say the exact wording.
+
+00:55:14.790 --> 00:55:16.920
+And just some other minor ones here is
+
+00:55:16.920 --> 00:55:18.870
+some role-playing attacks
+where you have Claude
+
+00:55:18.870 --> 00:55:21.030
+try to act a certain way
+
+00:55:21.030 --> 00:55:23.250
+and also some prompt injection attacks.
+
+00:55:23.250 --> 00:55:25.170
+And definitely we saw a lot of cases
+
+00:55:25.170 --> 00:55:27.930
+of people just resampling a lot of times
+
+00:55:27.930 --> 00:55:29.700
+to try to get a better output
+
+00:55:29.700 --> 00:55:31.050
+that would get past the greater system.
+
+00:55:31.050 --> 00:55:32.700
+- Oh, so using the feedback that we-
+
+00:55:32.700 --> 00:55:35.430
+- Exactly, yeah, yeah.
+
+00:55:35.430 --> 00:55:37.740
+- I often think 'cause
+we have this basically
+
+00:55:37.740 --> 00:55:39.900
+an additional version of Claude
+
+00:55:39.900 --> 00:55:41.700
+that's looking at the outputs.
+
+00:55:41.700 --> 00:55:43.560
+So the outputs now need to basically be
+
+00:55:43.560 --> 00:55:45.990
+very obviously not harmful in some way.
+
+00:55:45.990 --> 00:55:48.300
+So yeah, you get these ciphers
+
+00:55:48.300 --> 00:55:53.300
+or don't talk about siren gas or PPE,
+
+00:55:54.060 --> 00:55:57.540
+talk about, refer to it with ,
+
+00:55:57.540 --> 00:56:01.830
+bananas or some other benign thing.
+
+00:56:01.830 --> 00:56:02.663
+- Yeah.
+
+00:56:02.663 --> 00:56:04.110
+- I guess one thing that I am,
+
+00:56:04.110 --> 00:56:07.900
+I'm curious about is what we would say to
+
+00:56:09.360 --> 00:56:11.310
+the people who are
+concerned we're gonna use
+
+00:56:11.310 --> 00:56:12.810
+these techniques to stop
+them being able to do
+
+00:56:12.810 --> 00:56:14.627
+what they want with Claudes
+
+00:56:17.640 --> 00:56:20.250
+and sort of why we've gone
+for the classifiers approach
+
+00:56:20.250 --> 00:56:22.350
+and the constitutional approach.
+
+00:56:22.350 --> 00:56:24.900
+- Yeah, I mean I think
+definitely my hope is
+
+00:56:24.900 --> 00:56:29.110
+this should improve
+your user experience for
+
+00:56:30.150 --> 00:56:31.170
+any tasks you're trying to do,
+
+00:56:31.170 --> 00:56:33.330
+which you're not actually dangerous.
+
+00:56:33.330 --> 00:56:34.480
+So yeah, I mean I think
+
+00:56:37.650 --> 00:56:40.320
+I would just guess getting classifiers
+
+00:56:40.320 --> 00:56:41.470
+to be really effective
+
+00:56:42.480 --> 00:56:45.540
+is just better than training
+the models themselves
+
+00:56:45.540 --> 00:56:47.253
+to reviews or not.
+
+00:56:48.150 --> 00:56:50.280
+And we can just more granularly pick out
+
+00:56:50.280 --> 00:56:53.100
+the behavior that we wanna block and so
+
+00:56:53.100 --> 00:56:55.950
+hopefully this just is
+just a preto improvement.
+
+00:56:55.950 --> 00:56:58.902
+It's better user experience for everyone
+
+00:56:58.902 --> 00:57:01.920
+and also more safe in terms of reliability
+
+00:57:01.920 --> 00:57:03.490
+of blocking the actual actual bad stuff.
+
+00:57:03.490 --> 00:57:07.491
+- Yeah, and another way I
+also think about this is that
+
+00:57:07.491 --> 00:57:11.280
+we wanna really be able
+to leverage the benefits
+
+00:57:11.280 --> 00:57:14.497
+of really advanced and AI
+
+00:57:14.497 --> 00:57:17.760
+and AI with advanced
+scientific capabilities.
+
+00:57:17.760 --> 00:57:20.400
+But actually if you don't have adequate
+
+00:57:20.400 --> 00:57:21.933
+protections in place,
+
+00:57:23.970 --> 00:57:26.490
+for one according to our
+responsible scaling program,
+
+00:57:26.490 --> 00:57:28.740
+we actually just cannot
+deploy that system.
+
+00:57:28.740 --> 00:57:29.790
+You know, we might come around
+
+00:57:29.790 --> 00:57:32.310
+and we have something
+new version of Claude
+
+00:57:32.310 --> 00:57:33.600
+that's absolutely amazing.
+
+00:57:33.600 --> 00:57:35.400
+, we really want to get it out there,
+
+00:57:35.400 --> 00:57:39.390
+but we just don't actually
+think it's responsible.
+
+00:57:39.390 --> 00:57:41.610
+You know, we've done threat modeling,
+
+00:57:41.610 --> 00:57:43.230
+we're concern out the risks
+
+00:57:43.230 --> 00:57:44.430
+and there's a way of saying ,
+
+00:57:44.430 --> 00:57:47.010
+if we don't have adequate
+protections in place,
+
+00:57:47.010 --> 00:57:48.840
+we actually are just,
+
+00:57:48.840 --> 00:57:50.970
+we are unable to actually
+reap the benefits
+
+00:57:50.970 --> 00:57:53.790
+in a responsible way.
+
+00:57:53.790 --> 00:57:56.820
+So it's kinda having the safeguards
+
+00:57:56.820 --> 00:57:59.280
+alongside the advanced capabilities
+
+00:57:59.280 --> 00:58:00.840
+means both together can be,
+
+00:58:00.840 --> 00:58:03.720
+you can actually responsibly
+and safely deploy
+
+00:58:03.720 --> 00:58:05.580
+really new advanced systems
+
+00:58:05.580 --> 00:58:07.797
+that can do really crazy things.
+
+00:58:07.797 --> 00:58:10.800
+And I think you sometimes
+you see this actually
+
+00:58:10.800 --> 00:58:13.440
+on Twitter in different communities,
+
+00:58:13.440 --> 00:58:15.240
+there are one group of people
+
+00:58:15.240 --> 00:58:16.650
+who are AI is great,
+
+00:58:16.650 --> 00:58:18.690
+is gonna do all these good things.
+
+00:58:18.690 --> 00:58:21.720
+That's true, and it
+can do all these things
+
+00:58:21.720 --> 00:58:23.397
+and there's the accelerationist
+
+00:58:23.397 --> 00:58:24.750
+and they wanna go ahead
+
+00:58:24.750 --> 00:58:26.460
+let's get relief advanced AI,
+
+00:58:26.460 --> 00:58:28.140
+let's get that now.
+
+00:58:28.140 --> 00:58:30.450
+And then there's that community
+
+00:58:30.450 --> 00:58:32.790
+and there's this other community of people
+
+00:58:32.790 --> 00:58:34.500
+who are concerned about the risks
+
+00:58:34.500 --> 00:58:37.950
+and there's kind of truth there too.
+
+00:58:37.950 --> 00:58:38.970
+there are risks
+
+00:58:38.970 --> 00:58:40.470
+and there are risks that
+we're concerned about
+
+00:58:40.470 --> 00:58:42.390
+and that you wanna mitigate.
+
+00:58:42.390 --> 00:58:44.880
+And , something that I
+
+00:58:44.880 --> 00:58:46.530
+about the responsible scaling program
+
+00:58:46.530 --> 00:58:48.990
+is that it has some nuance.
+
+00:58:48.990 --> 00:58:50.700
+there's one position
+that someone could take,
+
+00:58:50.700 --> 00:58:52.650
+which is accelerate as fast as you can
+
+00:58:52.650 --> 00:58:54.240
+or just stop, you know,
+
+00:58:54.240 --> 00:58:56.850
+and I kind of think this
+
+00:58:56.850 --> 00:58:57.990
+with the responsible scaling problem,
+
+00:58:57.990 --> 00:59:00.150
+it's okay, what we're gonna try and do
+
+00:59:00.150 --> 00:59:04.830
+is we are gonna see and try to predict
+
+00:59:04.830 --> 00:59:07.080
+what risks might occur,
+
+00:59:07.080 --> 00:59:08.854
+watch out for those risks.
+
+00:59:08.854 --> 00:59:13.180
+And when we're seeing evidence
+of those risks becoming real
+
+00:59:14.130 --> 00:59:15.780
+put the relevant mitigations in place
+
+00:59:15.780 --> 00:59:18.330
+and if we can't mitigate it appropriately,
+
+00:59:18.330 --> 00:59:21.030
+maybe we do not deploy
+or choose not to deploy.
+
+00:59:21.030 --> 00:59:22.770
+And I just that this
+
+00:59:22.770 --> 00:59:25.740
+is just a much more nuanced strategy
+
+00:59:25.740 --> 00:59:28.740
+because I think in some ways
+
+00:59:28.740 --> 00:59:30.690
+we are operating under
+a lot of uncertainty.
+
+00:59:30.690 --> 00:59:33.903
+we don't know exactly what's gonna happen.
+
+00:59:34.920 --> 00:59:39.783
+The risks, some types of risks are,
+
+00:59:40.830 --> 00:59:43.350
+sometimes it feels you're
+reading sci-fi stories
+
+00:59:43.350 --> 00:59:45.090
+and that doesn't mean you discard them,
+
+00:59:45.090 --> 00:59:46.230
+but it doesn't mean
+
+00:59:46.230 --> 00:59:48.960
+that they're necessarily
+100% guaranteed to happen.
+
+00:59:48.960 --> 00:59:52.920
+So it's kinda how do
+you navigate that place
+
+00:59:52.920 --> 00:59:54.600
+and so this uncertainty in a way
+
+00:59:54.600 --> 00:59:56.550
+that's responsible,
+
+00:59:56.550 --> 00:59:58.830
+that's gonna allow us to capture
+
+00:59:58.830 --> 01:00:00.870
+and sort of distribute the benefits
+
+01:00:00.870 --> 01:00:02.130
+of potentially having this
+
+01:00:02.130 --> 01:00:06.600
+really beneficial and powerful technology
+
+01:00:06.600 --> 01:00:09.160
+without incurring unnecessary
+
+01:00:10.350 --> 01:00:12.270
+costs on the rest of society
+
+01:00:12.270 --> 01:00:15.597
+and these sort of negative externalities.
+
+01:00:15.597 --> 01:00:18.270
+I'm curious if you guys
+have any favorite memories
+
+01:00:18.270 --> 01:00:21.660
+from the project.
+
+01:00:21.660 --> 01:00:23.850
+- I think it's just really funny
+
+01:00:23.850 --> 01:00:26.850
+with our prototype system that
+
+01:00:26.850 --> 01:00:28.620
+we knew the false positive rate was high,
+
+01:00:28.620 --> 01:00:30.600
+but then when we actually saw the
+
+01:00:30.600 --> 01:00:32.160
+result of the experiment of running it
+
+01:00:32.160 --> 01:00:33.390
+on the cloude.ai data,
+
+01:00:33.390 --> 01:00:35.460
+we're , oh that's outlier,
+
+01:00:35.460 --> 01:00:37.170
+and I kind of thought.
+
+01:00:37.170 --> 01:00:39.120
+And that was pretty interesting.
+
+01:00:39.120 --> 01:00:40.950
+We didn't think it was that high,
+
+01:00:40.950 --> 01:00:42.180
+but it was pretty high.
+
+01:00:42.180 --> 01:00:46.440
+- Yeah. I remember just
+this wasn't my personality.
+
+01:00:46.440 --> 01:00:48.240
+Kinda just anxiously refreshing the demo,
+
+01:00:48.240 --> 01:00:49.751
+being how many people,
+
+01:00:49.751 --> 01:00:51.067
+how many people ,
+
+01:00:51.067 --> 01:00:52.917
+"Oh my god, they cracked level four."
+
+01:00:54.450 --> 01:00:55.713
+They're coming for us.
+
+01:00:56.940 --> 01:00:58.539
+It was also really, really cool to see
+
+01:00:58.539 --> 01:01:01.320
+really a lot of the human creativity
+
+01:01:01.320 --> 01:01:02.550
+from the Red Teamers
+
+01:01:02.550 --> 01:01:05.640
+and some of the stuff
+that they came up with
+
+01:01:05.640 --> 01:01:08.760
+it's really, really, really smart.
+
+01:01:08.760 --> 01:01:10.680
+- I mean yeah, there's
+probably two that come to mind.
+
+01:01:10.680 --> 01:01:13.440
+I mean I think one thing we
+started to look at this line
+
+01:01:13.440 --> 01:01:17.580
+for in the RSP on
+successfully past Red Teaming,
+
+01:01:17.580 --> 01:01:20.519
+I think this line gave Manoc
+in particular a lot of stress.
+
+01:01:20.519 --> 01:01:23.730
+'cause he was , what does this even mean?
+
+01:01:23.730 --> 01:01:25.830
+What's the exact bar here?
+
+01:01:25.830 --> 01:01:27.600
+And then he then went off
+
+01:01:27.600 --> 01:01:31.950
+and did a two week project on figuring out
+
+01:01:31.950 --> 01:01:33.210
+how to operationalize this.
+
+01:01:33.210 --> 01:01:34.043
+- Yeah.
+
+01:01:34.043 --> 01:01:35.550
+- And he went and talked
+with a lot of people
+
+01:01:35.550 --> 01:01:36.990
+about what are the different threat models
+
+01:01:36.990 --> 01:01:38.850
+that we want to really guard against
+
+01:01:38.850 --> 01:01:40.530
+for the responsible scaling plan?
+
+01:01:40.530 --> 01:01:41.930
+what would make us feel
+
+01:01:42.930 --> 01:01:44.580
+we could make a really good
+
+01:01:44.580 --> 01:01:45.930
+kind of safety case or argument.
+
+01:01:45.930 --> 01:01:48.210
+And then he came back with a long doc
+
+01:01:48.210 --> 01:01:51.352
+and in the doc he specified we need to be,
+
+01:01:51.352 --> 01:01:54.483
+the threat model is you
+need to answer a list of,
+
+01:01:55.380 --> 01:01:57.630
+I think it was 10 questions or so.
+
+01:01:57.630 --> 01:01:59.134
+And you need to be able to do that.
+
+01:01:59.134 --> 01:02:01.680
+You need to be able to
+block someone from getting
+
+01:02:01.680 --> 01:02:04.205
+answers to these 10 questions
+
+01:02:04.205 --> 01:02:06.420
+after they've done Red Teaming
+
+01:02:06.420 --> 01:02:09.120
+for over 2,000 hours was the bar.
+
+01:02:09.120 --> 01:02:11.400
+And we're , okay, we're
+gonna aim for this bar.
+
+01:02:11.400 --> 01:02:12.780
+And I don't know,
+
+01:02:12.780 --> 01:02:14.040
+I'm just really proud of the team
+
+01:02:14.040 --> 01:02:15.850
+that we actually did hit that
+
+01:02:17.010 --> 01:02:19.320
+'cause Yeah, I know we
+kinda said that front
+
+01:02:19.320 --> 01:02:20.453
+a year before we finished the project.
+
+01:02:20.453 --> 01:02:23.970
+And now we got hit that level.
+
+01:02:23.970 --> 01:02:25.443
+I think that's really.
+
+01:02:26.520 --> 01:02:30.690
+Yeah, pretty, yeah I guess
+impressive goal setting
+
+01:02:30.690 --> 01:02:31.983
+and achievement of that.
+
+01:02:31.983 --> 01:02:35.040
+yeah, it seems kind of
+rare for research projects
+
+01:02:35.040 --> 01:02:36.840
+to actually do that.
+
+01:02:36.840 --> 01:02:41.790
+I think the other one memory
+that stands out to me is,
+
+01:02:41.790 --> 01:02:45.420
+I guess we were doing robustness research
+
+01:02:45.420 --> 01:02:48.660
+but then we read this
+scary line of the RSP
+
+01:02:48.660 --> 01:02:50.790
+and really thinking about it and then,
+
+01:02:50.790 --> 01:02:51.623
+but then we were ,
+
+01:02:51.623 --> 01:02:53.610
+oh this is talking with
+people about who's doing this?
+
+01:02:53.610 --> 01:02:57.090
+And we're , oh yeah, our kind of applied
+
+01:02:57.090 --> 01:02:58.740
+safeguards team.
+
+01:02:58.740 --> 01:03:00.330
+I guess yeah, it's called
+the safeguards team now.
+
+01:03:00.330 --> 01:03:02.520
+But yeah, originally this was ,
+
+01:03:02.520 --> 01:03:03.870
+this team was part of our
+
+01:03:03.870 --> 01:03:07.320
+kind of alignment science research team
+
+01:03:07.320 --> 01:03:08.247
+and so we were , oh yeah,
+
+01:03:08.247 --> 01:03:11.850
+the safeguards team is
+responsible for doing this
+
+01:03:11.850 --> 01:03:13.800
+and they'll have it covered
+
+01:03:13.800 --> 01:03:14.730
+and then we talked,
+
+01:03:14.730 --> 01:03:17.670
+we set up a meeting with some
+of the people on the team
+
+01:03:17.670 --> 01:03:18.733
+and they were ,
+
+01:03:18.733 --> 01:03:22.170
+" Who's going to achieve
+this level of robustness?"
+
+01:03:22.170 --> 01:03:23.003
+And then we were ,
+
+01:03:23.003 --> 01:03:24.810
+"Oh man, this is really tough.
+
+01:03:24.810 --> 01:03:28.710
+I guess we have to solve this problem."
+
+01:03:28.710 --> 01:03:33.630
+Which didn't seem it was
+our responsibility then.
+
+01:03:33.630 --> 01:03:35.700
+Yeah, that was sort of a,
+
+01:03:35.700 --> 01:03:37.740
+that week we went through an arc of
+
+01:03:37.740 --> 01:03:40.680
+realizing it was actually
+our responsibility
+
+01:03:40.680 --> 01:03:41.973
+to solve this problem.
+
+01:03:43.230 --> 01:03:45.270
+- Yeah, I view it as kinda ,
+
+01:03:47.699 --> 01:03:50.130
+it is kind of turned out that
+
+01:03:50.130 --> 01:03:52.350
+as far as we could tell
+we were the best people
+
+01:03:52.350 --> 01:03:54.330
+to do this job in Anthropic.
+
+01:03:54.330 --> 01:03:56.580
+given the situation,
+
+01:03:56.580 --> 01:03:58.800
+given the circumstances,
+
+01:03:58.800 --> 01:04:00.413
+given everything else that was happening
+
+01:04:00.413 --> 01:04:01.980
+in TS and safeguards,
+
+01:04:01.980 --> 01:04:04.713
+and then yeah there was this , okay,
+
+01:04:05.670 --> 01:04:08.100
+if we are the best people to do this,
+
+01:04:08.100 --> 01:04:09.540
+let's just try and do our best there.
+
+01:04:09.540 --> 01:04:12.030
+And then I kind of think
+there was this attitude
+
+01:04:12.030 --> 01:04:14.430
+in general from the team of just being ,
+
+01:04:14.430 --> 01:04:16.470
+okay, we don't know what
+the target should be,
+
+01:04:16.470 --> 01:04:17.610
+let's try and figure it out.
+
+01:04:17.610 --> 01:04:19.497
+We don't know what the
+approach to get there.
+
+01:04:19.497 --> 01:04:21.510
+And we were actually
+doing it another approach.
+
+01:04:21.510 --> 01:04:23.010
+We were doing advers all training,
+
+01:04:23.010 --> 01:04:24.930
+we were fine tuning
+models and we were , no,
+
+01:04:24.930 --> 01:04:26.070
+we don't think that's gonna get us there.
+
+01:04:26.070 --> 01:04:28.680
+And kind just actually
+quite consistently just
+
+01:04:28.680 --> 01:04:31.620
+pivoted to what we think
+was gonna get us there.
+
+01:04:31.620 --> 01:04:33.850
+- Maybe what's not clear from the paper
+
+01:04:34.740 --> 01:04:37.980
+is this was a huge
+engineering project probably
+
+01:04:37.980 --> 01:04:42.630
+five FTE years roughly.
+
+01:04:42.630 --> 01:04:45.240
+I think that's not obvious
+when you read the paper.
+
+01:04:45.240 --> 01:04:47.430
+Maybe it just looks a
+really simple method.
+
+01:04:47.430 --> 01:04:50.040
+But I think, yeah,
+
+01:04:50.040 --> 01:04:53.130
+I think the people on the team did a lot
+
+01:04:53.130 --> 01:04:57.690
+of making LLM pipelines
+for generating the data.
+
+01:04:57.690 --> 01:05:00.960
+I think yeah, it seemed very important
+
+01:05:00.960 --> 01:05:03.360
+for augmenting the data with
+different transformations,
+
+01:05:03.360 --> 01:05:05.910
+translating the data
+into different ciphers
+
+01:05:05.910 --> 01:05:07.620
+and then using that to train that data
+
+01:05:07.620 --> 01:05:09.750
+to generate the classified data.
+
+01:05:09.750 --> 01:05:12.390
+But yeah, I guess those
+are a couple of tricks
+
+01:05:12.390 --> 01:05:15.300
+that were salient to me and insights.
+
+01:05:15.300 --> 01:05:17.160
+But yeah, I guess I'm curious if
+
+01:05:17.160 --> 01:05:18.300
+anyone else wants to
+chip in with other things
+
+01:05:18.300 --> 01:05:20.190
+that are pretty important
+
+01:05:20.190 --> 01:05:22.560
+or non-obvious things about
+
+01:05:22.560 --> 01:05:24.960
+how to get this this to work well
+
+01:05:24.960 --> 01:05:26.940
+- I think a lot of the
+research project was in fact
+
+01:05:26.940 --> 01:05:30.360
+defining what the problem
+was in the first place.
+
+01:05:30.360 --> 01:05:32.010
+we had some kind
+
+01:05:32.010 --> 01:05:33.690
+of vague mandate from the RSP,
+
+01:05:33.690 --> 01:05:36.240
+but there was a lot of work in defining
+
+01:05:36.240 --> 01:05:37.920
+what the criteria would be.
+
+01:05:37.920 --> 01:05:39.480
+There's a lot of work in defining
+
+01:05:39.480 --> 01:05:41.400
+what does it mean to have human Red Team
+
+01:05:41.400 --> 01:05:43.170
+is and what would it mean
+
+01:05:43.170 --> 01:05:44.823
+for that to be sufficient?
+
+01:05:46.287 --> 01:05:48.570
+What kind of constitution should we have?
+
+01:05:48.570 --> 01:05:50.880
+what threat model do
+we actually care about?
+
+01:05:50.880 --> 01:05:53.463
+where do we draw the bar on specificity.
+
+01:05:54.960 --> 01:05:57.813
+Do we need both an input
+and output classifier?
+
+01:05:58.920 --> 01:06:00.690
+And that kind of depends on
+
+01:06:00.690 --> 01:06:03.930
+what kind of threats we're
+actually looking for.
+
+01:06:03.930 --> 01:06:05.430
+So I feel a lot of, yeah,
+
+01:06:05.430 --> 01:06:08.040
+well for the evaluations for example,
+
+01:06:08.040 --> 01:06:09.720
+how much do we care about
+the transformations?
+
+01:06:09.720 --> 01:06:12.330
+how many augmentations is too many
+
+01:06:12.330 --> 01:06:15.210
+to be kind of unuseful.
+
+01:06:15.210 --> 01:06:16.713
+unspecific.
+
+01:06:17.670 --> 01:06:19.380
+So I think a lot of difficulty
+
+01:06:19.380 --> 01:06:22.200
+was kind of actually defining the problem
+
+01:06:22.200 --> 01:06:23.910
+and kind of narrowing down
+
+01:06:23.910 --> 01:06:26.130
+the thing that we are trying to solve,
+
+01:06:26.130 --> 01:06:27.840
+trying to make the valuations good.
+
+01:06:27.840 --> 01:06:29.580
+Trying to find what
+the decision boundaries
+
+01:06:29.580 --> 01:06:30.413
+should even be.
+
+01:06:30.413 --> 01:06:34.650
+But I feel that now we've actually made
+
+01:06:34.650 --> 01:06:37.200
+a bunch of progress on
+even defining the problem,
+
+01:06:37.200 --> 01:06:39.570
+I feel more confident about us tackling
+
+01:06:39.570 --> 01:06:41.670
+similarly shaped problems in the future.
+
+01:06:41.670 --> 01:06:43.740
+So for example, if we have ,
+
+01:06:43.740 --> 01:06:45.840
+yeah, in the same way that
+constitution can be applied
+
+01:06:45.840 --> 01:06:47.550
+to many different problems,
+
+01:06:47.550 --> 01:06:50.190
+I think we have a better sense of
+
+01:06:50.190 --> 01:06:53.970
+how we might tackle this
+kind of big vague problem.
+
+01:06:53.970 --> 01:06:57.090
+how do we actually approach
+
+01:06:57.090 --> 01:06:59.250
+a threat modeling problem this?
+
+01:06:59.250 --> 01:07:01.740
+How would we even start thinking about
+
+01:07:01.740 --> 01:07:03.510
+how to make a safety case for this thing?
+
+01:07:03.510 --> 01:07:05.700
+what would constitute a sufficient eval?
+
+01:07:05.700 --> 01:07:07.412
+what would constitute
+
+01:07:07.412 --> 01:07:12.412
+a human Red Teaming based safety case.
+
+01:07:14.010 --> 01:07:18.120
+So I feel I think we'll be able to apply
+
+01:07:18.120 --> 01:07:20.790
+a lot of things that are kind of fuzzy
+
+01:07:20.790 --> 01:07:22.770
+or maybe not explicitly written down
+
+01:07:22.770 --> 01:07:25.230
+in the paper to other problems.
+
+01:07:25.230 --> 01:07:26.430
+maybe not just in misuse,
+
+01:07:26.430 --> 01:07:28.350
+but also in misalignment or control,
+
+01:07:28.350 --> 01:07:29.812
+things this.
+
+01:07:29.812 --> 01:07:32.280
+- Yeah, I'm also really excited about this
+
+01:07:32.280 --> 01:07:36.810
+directly practicing or building safeguards
+
+01:07:36.810 --> 01:07:38.850
+that we can deploy in practice
+
+01:07:38.850 --> 01:07:42.000
+and getting and constructing the evidence,
+
+01:07:42.000 --> 01:07:44.190
+and honestly assessing whether we think
+
+01:07:44.190 --> 01:07:46.200
+they're actually sufficient.
+
+01:07:46.200 --> 01:07:48.000
+There are so many things ,
+
+01:07:48.000 --> 01:07:49.020
+how do you run the meetings?
+
+01:07:49.020 --> 01:07:50.040
+how do you track the goals?
+
+01:07:50.040 --> 01:07:52.110
+really mundane things
+
+01:07:52.110 --> 01:07:54.900
+that at least often as researchers,
+
+01:07:54.900 --> 01:07:55.860
+it's not the obvious thing
+
+01:07:55.860 --> 01:07:57.450
+or the first thing you think about.
+
+01:07:57.450 --> 01:08:00.210
+Well Roman when I was
+my PhD reading papers,
+
+01:08:00.210 --> 01:08:03.257
+I would always just go
+straight to the method.
+
+01:08:03.257 --> 01:08:05.735
+That's what's interesting.
+
+01:08:05.735 --> 01:08:08.160
+But no, I think we learned so much at
+
+01:08:08.160 --> 01:08:11.190
+basically running and and
+executing on projects,
+
+01:08:11.190 --> 01:08:12.111
+projects this.
+
+01:08:12.111 --> 01:08:13.830
+- Yeah, I mean one thing
+I was gonna say here is ,
+
+01:08:13.830 --> 01:08:16.500
+I think a really critical of this project
+
+01:08:16.500 --> 01:08:18.270
+relative to other research papers
+
+01:08:18.270 --> 01:08:19.620
+research I've ever been involved in
+
+01:08:19.620 --> 01:08:20.970
+is that it was basically
+
+01:08:20.970 --> 01:08:22.726
+we had to solve this research problem
+
+01:08:22.726 --> 01:08:27.660
+on a very clear timeline
+with a fixed quality bar.
+
+01:08:27.660 --> 01:08:31.740
+So we had this 2,000
+hours of robustness bar
+
+01:08:31.740 --> 01:08:33.630
+that we had set for ourselves internally
+
+01:08:33.630 --> 01:08:37.350
+and it basically seemed the deadline
+
+01:08:37.350 --> 01:08:40.500
+was sort of external in the sense of ,
+
+01:08:40.500 --> 01:08:42.720
+external to our team in the sense of
+
+01:08:42.720 --> 01:08:44.400
+while their model capabilities
+
+01:08:44.400 --> 01:08:46.410
+are progressing at certain rates,
+
+01:08:46.410 --> 01:08:49.170
+the company is deploying new,
+
+01:08:49.170 --> 01:08:50.211
+Anthropics deploying new models.
+
+01:08:50.211 --> 01:08:52.710
+we don't want to be the long pole
+
+01:08:52.710 --> 01:08:56.899
+that causes the company to
+have to not deploy a model.
+
+01:08:56.899 --> 01:09:00.480
+And so yeah, I think there were just ,
+
+01:09:00.480 --> 01:09:01.590
+we would constantly be thinking
+
+01:09:01.590 --> 01:09:03.240
+and talking with other teams
+
+01:09:04.770 --> 01:09:08.460
+when do we think we might have a model
+
+01:09:08.460 --> 01:09:11.040
+that achieves a certain
+dangerous capability level,
+
+01:09:11.040 --> 01:09:12.906
+and based on that we were setting
+
+01:09:12.906 --> 01:09:15.930
+basically back chaining from that,
+
+01:09:15.930 --> 01:09:17.850
+doing sort of engineering style planning.
+
+01:09:17.850 --> 01:09:18.683
+week by week,
+
+01:09:18.683 --> 01:09:20.010
+what do we need to have done
+
+01:09:20.010 --> 01:09:21.783
+in order to hit that timeline.
+
+01:09:22.710 --> 01:09:24.330
+But also while still having,
+
+01:09:24.330 --> 01:09:25.860
+yeah, I think with a fixed quality bar,
+
+01:09:25.860 --> 01:09:27.240
+it's different than a paper deadline.
+
+01:09:27.240 --> 01:09:29.190
+Because with a paper
+deadline you can just say ,
+
+01:09:29.190 --> 01:09:31.080
+well we're just gonna
+throw out these results,
+
+01:09:31.080 --> 01:09:33.060
+this is what goes in the paper.
+
+01:09:33.060 --> 01:09:34.860
+- You know, change the problem
+you're trying to solve.
+
+01:09:34.860 --> 01:09:35.837
+- Change the problem
+you're trying to solve.
+
+01:09:35.837 --> 01:09:37.710
+- Before the paper's due.
+
+01:09:37.710 --> 01:09:38.553
+- Exactly.
+
+01:09:39.780 --> 01:09:41.010
+Claim less or whatever.
+
+01:09:41.010 --> 01:09:43.020
+I think you can really
+adjust the quality bar,
+
+01:09:43.020 --> 01:09:44.010
+but here we couldn't.
+
+01:09:44.010 --> 01:09:46.350
+And so that was partly what forced.
+
+01:09:46.350 --> 01:09:47.610
+I mean that was initially what forced us
+
+01:09:47.610 --> 01:09:48.810
+to even take the classifiers approach
+
+01:09:48.810 --> 01:09:49.643
+because we're ,
+
+01:09:49.643 --> 01:09:51.810
+we are not on track to hit the timeline
+
+01:09:51.810 --> 01:09:53.673
+that we were wanting to hit.
+
+01:09:56.670 --> 01:09:58.260
+With the previous approach,
+
+01:09:58.260 --> 01:10:00.090
+but also it led to other difficulties.
+
+01:10:00.090 --> 01:10:02.970
+For example, a number
+of people on the team
+
+01:10:02.970 --> 01:10:05.370
+were facing difficulties with
+
+01:10:05.370 --> 01:10:08.460
+how it's a plan given that
+the timeline is uncertain
+
+01:10:08.460 --> 01:10:09.720
+and that we kind of needed to take
+
+01:10:09.720 --> 01:10:11.160
+a conservative estimate of the timeline.
+
+01:10:11.160 --> 01:10:14.220
+And so I think there
+were a bunch of decisions
+
+01:10:14.220 --> 01:10:15.780
+that I think team members made,
+
+01:10:15.780 --> 01:10:18.450
+being , oh, we're just
+gonna write some code
+
+01:10:18.450 --> 01:10:19.500
+in a CoLab notebook
+
+01:10:19.500 --> 01:10:22.080
+in a way that's not super reproducible
+
+01:10:22.080 --> 01:10:23.580
+just to quickly generate some data
+
+01:10:23.580 --> 01:10:26.820
+so that we can train this
+next version of the classifier
+
+01:10:26.820 --> 01:10:28.950
+if we had a longer timeline
+
+01:10:28.950 --> 01:10:32.040
+or a more clear estimate of the timeline,
+
+01:10:32.040 --> 01:10:33.450
+we would've done this
+
+01:10:33.450 --> 01:10:35.280
+in a Python script that's reproducible
+
+01:10:35.280 --> 01:10:37.623
+and had some general tooling for this.
+
+01:10:38.820 --> 01:10:40.170
+So I think that.
+
+01:10:40.170 --> 01:10:42.660
+I'm not actually sure what we settled on
+
+01:10:42.660 --> 01:10:44.520
+in terms of in hindsight
+what we should have done.
+
+01:10:44.520 --> 01:10:48.300
+I think just maybe
+
+01:10:48.300 --> 01:10:50.250
+not taking too conservative an estimate
+
+01:10:50.250 --> 01:10:52.060
+so we have a longer time window
+
+01:10:53.790 --> 01:10:56.790
+for when to give us the
+amount of time we need
+
+01:10:56.790 --> 01:10:59.733
+to allow for some of the
+tooling work to happen.
+
+01:11:01.500 --> 01:11:03.663
+But at least picking
+your strategy in a way
+
+01:11:03.663 --> 01:11:05.194
+that the overall strategy
+
+01:11:05.194 --> 01:11:08.040
+could hit the timeline that you need.
+
+01:11:08.040 --> 01:11:09.330
+Yeah, I don't know if
+
+01:11:09.330 --> 01:11:11.400
+other people have
+thoughts on some of this.
+
+01:11:11.400 --> 01:11:12.853
+- Yeah, I guess ,
+
+01:11:12.853 --> 01:11:14.070
+I mean taking a step back,
+
+01:11:14.070 --> 01:11:17.160
+I feel this really makes me think about
+
+01:11:17.160 --> 01:11:19.380
+just this is an interesting time
+
+01:11:19.380 --> 01:11:22.110
+for safety research in general.
+
+01:11:22.110 --> 01:11:25.177
+And I think a lot of research is,
+
+01:11:25.177 --> 01:11:27.540
+I guess research in
+safety kind of started out
+
+01:11:27.540 --> 01:11:28.740
+to be a little bit blue sky.
+
+01:11:28.740 --> 01:11:30.240
+people are speculating about
+
+01:11:30.240 --> 01:11:32.400
+what models might be in the future.
+
+01:11:32.400 --> 01:11:34.530
+And I think we're starting to see
+
+01:11:34.530 --> 01:11:36.810
+kind of these threats materializing
+
+01:11:36.810 --> 01:11:40.080
+and we also need to adapt our research
+
+01:11:40.080 --> 01:11:42.510
+into actually being usable in production.
+
+01:11:42.510 --> 01:11:45.210
+So I feel that as a research team
+
+01:11:45.210 --> 01:11:48.570
+we're solving kind of an
+interesting meta problem
+
+01:11:48.570 --> 01:11:51.360
+in a sense of how do we adapt
+
+01:11:51.360 --> 01:11:52.920
+our normal research techniques
+
+01:11:52.920 --> 01:11:55.380
+to actually make things happen
+
+01:11:55.380 --> 01:11:56.553
+in the real world.
+
+01:11:57.653 --> 01:11:59.550
+And I think that's something that ,
+
+01:11:59.550 --> 01:12:01.620
+safety research as a
+whole has to grapple with,
+
+01:12:01.620 --> 01:12:05.490
+is we actually need to
+solve these problems now.
+
+01:12:05.490 --> 01:12:07.530
+We don't necessarily have a lot of time
+
+01:12:07.530 --> 01:12:11.640
+to just kind of do a
+lot of blue sky research
+
+01:12:11.640 --> 01:12:13.740
+and we wanna actually make
+things work in practice.
+
+01:12:13.740 --> 01:12:14.850
+I think in interpretability
+
+01:12:14.850 --> 01:12:17.010
+is also running into this where
+
+01:12:17.010 --> 01:12:18.330
+previously people are doing research
+
+01:12:18.330 --> 01:12:19.900
+on maybe very small models
+
+01:12:20.755 --> 01:12:22.140
+with very few layers or something this.
+
+01:12:22.140 --> 01:12:24.360
+And a lot of their problem is ,
+
+01:12:24.360 --> 01:12:27.630
+yeah scaling things up
+to tackle a real model
+
+01:12:27.630 --> 01:12:31.247
+is not a very small
+engineering feat at all.
+
+01:12:31.247 --> 01:12:35.010
+And yeah, I think it's kind of interesting
+
+01:12:35.010 --> 01:12:38.010
+and I guess scary that we have to
+
+01:12:38.010 --> 01:12:40.650
+actually really get our together
+
+01:12:40.650 --> 01:12:43.560
+and make things really work in practice.
+
+01:12:43.560 --> 01:12:47.130
+- Yeah, I think the other point
+I would make along that vein
+
+01:12:47.130 --> 01:12:49.410
+is that one thing that was really helpful,
+
+01:12:49.410 --> 01:12:53.700
+surprisingly helpful to
+me about in this project
+
+01:12:53.700 --> 01:12:55.380
+was just talking with product people.
+
+01:12:55.380 --> 01:12:56.213
+Just being ,
+
+01:12:56.213 --> 01:12:58.530
+what are the actual
+constraints for the system
+
+01:12:58.530 --> 01:13:00.090
+you want us to deploy?
+
+01:13:00.090 --> 01:13:03.450
+how much would you
+prioritize different things?
+
+01:13:03.450 --> 01:13:05.430
+And I think there are definitely
+
+01:13:05.430 --> 01:13:06.570
+some key surprises there.
+
+01:13:06.570 --> 01:13:09.530
+At least to me I was very surprised by
+
+01:13:09.530 --> 01:13:12.510
+how important streaming support is
+
+01:13:12.510 --> 01:13:14.220
+in terms of being able to show
+
+01:13:14.220 --> 01:13:17.430
+each generate word by word
+
+01:13:17.430 --> 01:13:18.480
+and show that to the user
+
+01:13:18.480 --> 01:13:21.300
+that's very important
+for lots of applications
+
+01:13:21.300 --> 01:13:22.230
+and it's not something
+
+01:13:22.230 --> 01:13:24.420
+I would've necessarily
+realized beforehand.
+
+01:13:24.420 --> 01:13:25.500
+Each of these applications,
+
+01:13:25.500 --> 01:13:27.203
+if we don't hit the safety bar
+
+01:13:27.203 --> 01:13:30.543
+then we may not be able to
+deploy in that new domain.
+
+01:13:31.470 --> 01:13:34.590
+And I think just getting
+us a stack ranked list
+
+01:13:34.590 --> 01:13:36.450
+of what are the most important
+
+01:13:36.450 --> 01:13:39.090
+for the company to be able to deploy
+
+01:13:39.090 --> 01:13:41.100
+and then just prioritizing
+those use cases,
+
+01:13:41.100 --> 01:13:43.650
+that's in particular how we ended up at
+
+01:13:43.650 --> 01:13:46.800
+this token by token compatible classifier.
+
+01:13:46.800 --> 01:13:49.050
+And I think in general
+is a very good principle
+
+01:13:49.050 --> 01:13:51.480
+for supporting for future risks.
+
+01:13:51.480 --> 01:13:56.400
+I think we'll have the
+next generation of risks
+
+01:13:56.400 --> 01:13:58.046
+where we need even higher
+levels of robustness.
+
+01:13:58.046 --> 01:14:01.410
+I think this is a good strategy
+for getting safety there
+
+01:14:01.410 --> 01:14:04.710
+or for misalignment risks related to.
+
+01:14:04.710 --> 01:14:06.150
+As themselves doing bad things,
+
+01:14:06.150 --> 01:14:08.250
+I think we'd take
+similar approach as well.
+
+01:14:08.250 --> 01:14:11.370
+- Great, it's been
+really lovely to be here
+
+01:14:11.370 --> 01:14:13.680
+and chat with you guys
+
+01:14:13.680 --> 01:14:15.600
+and sort of kind of celebrate
+the sort of progress
+
+01:14:15.600 --> 01:14:18.523
+and also look ahead to
+
+01:14:18.523 --> 01:14:20.640
+all the challenges that we're gonna face
+
+01:14:20.640 --> 01:14:22.770
+and things this.
+
+01:14:22.770 --> 01:14:25.533
+So, thank thanks so much
+and thanks for tuning in.
+

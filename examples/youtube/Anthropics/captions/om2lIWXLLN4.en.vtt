@@ -1,0 +1,5284 @@
+WEBVTT
+Kind: captions
+Language: en
+
+00:00:00.229 --> 00:00:03.136
+- Why are we working on
+AI in the first place?
+
+00:00:03.136 --> 00:00:05.629
+I'm just gonna arbitrarily pick Jared.
+
+00:00:05.629 --> 00:00:07.437
+Why are you doing AI at all?
+
+00:00:07.437 --> 00:00:09.499
+- I mean, I was working
+on physics for a long time
+
+00:00:09.499 --> 00:00:10.552
+and I got bored,
+
+00:00:10.552 --> 00:00:12.603
+and I wanted to hang out
+with more of my friends,
+
+00:00:12.603 --> 00:00:14.179
+so yeah.
+
+00:00:14.179 --> 00:00:15.435
+- Yeah, I thought Dario pitched you on it.
+
+00:00:15.435 --> 00:00:17.950
+- I don't think I explicitly
+pitched you at any point.
+
+00:00:17.950 --> 00:00:21.113
+I just kind of, like, showed
+you results of, like, AI models
+
+00:00:21.113 --> 00:00:24.406
+and then was trying to
+make the point that, like,
+
+00:00:24.406 --> 00:00:27.116
+they're very general and they
+don't only apply to one thing
+
+00:00:27.116 --> 00:00:28.748
+and then just at some point,
+
+00:00:28.748 --> 00:00:30.380
+after I showed you enough
+of them, you were like,
+
+00:00:30.380 --> 00:00:32.452
+"Oh yeah, that seems like it's right."
+
+00:00:32.452 --> 00:00:34.116
+- How long had you been
+a professor before?
+
+00:00:34.116 --> 00:00:34.949
+Like, when you started?
+
+00:00:34.949 --> 00:00:36.624
+- I think like six years or so.
+
+00:00:36.624 --> 00:00:37.800
+I think I helped recruit Sam.
+
+00:00:37.800 --> 00:00:38.925
+- I talked to you and you were like,
+
+00:00:38.925 --> 00:00:40.782
+"I think I've created a good bubble here-"
+
+00:00:40.782 --> 00:00:41.615
+- Yeah.
+
+00:00:41.615 --> 00:00:43.010
+- "And like my goal is
+to get Tom to come back."
+
+00:00:43.010 --> 00:00:43.843
+That worked.
+
+00:00:43.843 --> 00:00:45.656
+- And did you meet everyone through Google
+
+00:00:45.656 --> 00:00:48.538
+when you were doing the
+interpretability stuff, Chris?
+
+00:00:48.538 --> 00:00:49.371
+- No.
+
+00:00:49.371 --> 00:00:50.216
+So I guess
+
+00:00:50.216 --> 00:00:52.581
+I actually met a bunch
+of you when I was 19
+
+00:00:52.581 --> 00:00:53.647
+and I was visiting-
+- Oh yeah?
+
+00:00:53.647 --> 00:00:54.795
+- In the Bay Area for the first time.
+
+00:00:54.795 --> 00:00:57.631
+So I guess I met Dario and Jared then,
+
+00:00:57.631 --> 00:00:58.856
+and I guess they were postdocs,
+
+00:00:58.856 --> 00:01:00.722
+which I thought was very cool at the time.
+
+00:01:00.722 --> 00:01:03.842
+And then I was working at
+Google Brain and Dario joined
+
+00:01:03.842 --> 00:01:05.712
+and we sat side by side,
+actually, for a while.
+
+00:01:05.712 --> 00:01:07.186
+We had desks beside each other,
+
+00:01:07.186 --> 00:01:08.882
+and I worked with Tom there as well.
+
+00:01:08.882 --> 00:01:09.862
+And then, of course,
+
+00:01:09.862 --> 00:01:13.329
+I got to work with all of you
+at OpenAI when I went there.
+
+00:01:13.329 --> 00:01:14.162
+- Yeah.
+
+00:01:14.162 --> 00:01:15.397
+- So I guess I've known
+a lot of you for, like,
+
+00:01:15.397 --> 00:01:17.533
+more than a decade, which is kind of wild.
+
+00:01:17.533 --> 00:01:18.366
+- If I remember correctly,
+
+00:01:18.366 --> 00:01:22.229
+I met Dario in 2015 when I went
+to a conference you were at
+
+00:01:22.229 --> 00:01:24.864
+and I tried to interview
+you and Google PR said
+
+00:01:24.864 --> 00:01:27.018
+I would've read all of
+your research papers
+
+00:01:27.018 --> 00:01:27.851
+that you needed to-
+
+00:01:27.851 --> 00:01:29.298
+- Uh, yeah, I think I was writing
+
+00:01:29.298 --> 00:01:31.498
+"Concrete problems in AI safety"
+
+00:01:31.498 --> 00:01:32.484
+when I was at Google.
+
+00:01:32.484 --> 00:01:34.458
+- I think you wrote a
+story about that paper.
+
+00:01:34.458 --> 00:01:35.291
+- I did.
+
+00:01:35.291 --> 00:01:38.098
+- I remember right before
+I started working with you,
+
+00:01:38.098 --> 00:01:40.136
+I think you invited me to the office
+
+00:01:40.136 --> 00:01:41.655
+and I got to like come chat
+
+00:01:41.655 --> 00:01:44.400
+and just like tell me everything about AI.
+
+00:01:44.400 --> 00:01:46.464
+And you like explained,
+
+00:01:46.464 --> 00:01:48.229
+I remember afterwards being like,
+
+00:01:48.229 --> 00:01:50.432
+"Oh, I guess this stuff is
+
+00:01:50.432 --> 00:01:51.850
+much more serious than I realized.
+
+00:01:51.850 --> 00:01:53.098
+And you were, like,
+
+00:01:53.098 --> 00:01:54.768
+probably explaining
+the big blob of compute
+
+00:01:54.768 --> 00:01:56.296
+and like parameter counting
+
+00:01:56.296 --> 00:01:58.836
+and how many neurons are in
+the brain and everything.
+
+00:01:58.836 --> 00:02:00.615
+- And I feel like Dario often
+has that effect on people;
+
+00:02:00.615 --> 00:02:02.026
+"This is much more
+serious than I realized."
+
+00:02:02.026 --> 00:02:03.694
+- Yeah, I'm the bringer of happy tidings.
+
+00:02:06.564 --> 00:02:09.000
+- But I remember when we were at OpenAI
+
+00:02:09.000 --> 00:02:11.127
+when there was the scaling law stuff
+
+00:02:11.127 --> 00:02:12.544
+and just making things bigger
+
+00:02:12.544 --> 00:02:14.458
+and it started to feel
+like it was working,
+
+00:02:14.458 --> 00:02:16.832
+and then it kind of kept on eerily working
+
+00:02:16.832 --> 00:02:18.400
+on a bunch of different projects,
+
+00:02:18.400 --> 00:02:20.188
+which I think is how we all ended up
+
+00:02:20.188 --> 00:02:22.191
+working closely together,
+
+00:02:22.191 --> 00:02:24.269
+'cause it was first GPT-2
+
+00:02:24.269 --> 00:02:26.643
+and then scaling laws and
+GPT-3 and we ended up-
+
+00:02:26.643 --> 00:02:28.572
+- Yeah, we were the blob of people
+
+00:02:28.572 --> 00:02:30.272
+that were making things work.
+- Yeah.
+
+00:02:30.272 --> 00:02:31.105
+- That's right.
+
+00:02:31.105 --> 00:02:32.187
+- I think we're also excited about safety,
+
+00:02:32.187 --> 00:02:34.616
+'cause in that era there
+was sort of this idea that
+
+00:02:34.616 --> 00:02:37.107
+AI would become very powerful
+
+00:02:37.107 --> 00:02:41.048
+but, like, potentially not
+understand human values
+
+00:02:41.048 --> 00:02:42.651
+or not even be able to
+communicate with us.
+
+00:02:42.651 --> 00:02:44.573
+And so I think we were
+all pretty excited about
+
+00:02:44.573 --> 00:02:48.229
+language models as a
+way to kind of guarantee
+
+00:02:48.229 --> 00:02:50.285
+that AI systems would have to understand
+
+00:02:50.285 --> 00:02:52.936
+kind of implicit knowledge that-
+
+00:02:52.936 --> 00:02:56.555
+- And RL from human feedback
+on top of language models,
+
+00:02:56.555 --> 00:02:59.888
+which was the whole reason
+for scaling these models up
+
+00:02:59.888 --> 00:03:03.889
+was that, you know, the
+models weren't smart enough
+
+00:03:03.889 --> 00:03:06.197
+to do RLHF on top of,
+
+00:03:06.197 --> 00:03:08.322
+so that's the kind of intertwinement of
+
+00:03:08.322 --> 00:03:10.789
+safety and scaling of the
+models that we, you know,
+
+00:03:10.789 --> 00:03:11.834
+still believe in today.
+
+00:03:11.834 --> 00:03:14.331
+- Yeah, I think there was
+also an element of like
+
+00:03:14.331 --> 00:03:17.712
+the scaling work was done
+as part of the safety team
+
+00:03:17.712 --> 00:03:18.545
+that, you know-
+- Mm-hmm.
+
+00:03:18.545 --> 00:03:19.964
+- Dario started at OpenAI,
+
+00:03:19.964 --> 00:03:22.869
+because we thought that
+forecasting AI trends
+
+00:03:22.869 --> 00:03:25.917
+was important to be able
+to have us taken seriously
+
+00:03:25.917 --> 00:03:27.842
+and take safety seriously as a problem.
+
+00:03:27.842 --> 00:03:28.675
+- Correct.
+
+00:03:28.675 --> 00:03:29.701
+- Yeah, and we took,
+
+00:03:29.701 --> 00:03:31.600
+I remember being in
+some airport in England
+
+00:03:31.600 --> 00:03:35.470
+sampling from GPT-2 and using
+it to write fake news articles
+
+00:03:35.470 --> 00:03:37.499
+and Slacking Dario and being like,
+
+00:03:37.499 --> 00:03:38.914
+"Oh, this stuff actually works.
+
+00:03:38.914 --> 00:03:39.747
+It might have, like,
+
+00:03:39.747 --> 00:03:41.425
+huge policy implications."
+
+00:03:41.425 --> 00:03:43.565
+I think Dario said something like, "Yes."
+
+00:03:46.708 --> 00:03:48.307
+His typical way.
+
+00:03:48.307 --> 00:03:49.693
+But then we worked on that a bunch
+
+00:03:49.693 --> 00:03:51.934
+as well as the release stuff,
+which was kind of wild.
+
+00:03:51.934 --> 00:03:52.997
+- Yeah, I remember the release stuff.
+
+00:03:52.997 --> 00:03:54.846
+I think that was when we first
+started working together.
+
+00:03:54.846 --> 00:03:56.009
+- Yeah.
+- That was a fun time.
+
+00:03:56.009 --> 00:03:57.691
+- Yes.
+- The GPT-2 launch.
+
+00:03:57.691 --> 00:03:58.524
+- Yeah.
+
+00:03:58.524 --> 00:04:00.107
+But I think it was good for
+us 'cause we did a kind of
+
+00:04:00.107 --> 00:04:03.466
+slightly strange,
+safety-oriented thing altogether,
+
+00:04:03.466 --> 00:04:05.697
+and then we ended up doing Anthropic,
+
+00:04:05.697 --> 00:04:08.235
+which is a much larger, slightly strange,
+
+00:04:08.235 --> 00:04:09.577
+safety-oriented thing-
+
+00:04:09.577 --> 00:04:10.977
+- That's right.
+- Together.
+
+00:04:10.977 --> 00:04:13.506
+- So I guess just like going
+back to the concrete problems,
+
+00:04:13.506 --> 00:04:14.339
+'cause I remember,
+
+00:04:14.339 --> 00:04:17.226
+so I joined OpenAI in like 2016,
+
+00:04:17.226 --> 00:04:19.155
+like one of the first
+20 employees or whatever
+
+00:04:19.155 --> 00:04:20.061
+with you, Dario,
+
+00:04:20.061 --> 00:04:21.019
+and I remember at that time
+
+00:04:21.019 --> 00:04:23.036
+the concrete problems in AI safety
+
+00:04:23.036 --> 00:04:26.113
+seemed like it was like the
+first mainstream AI safety-
+
+00:04:26.113 --> 00:04:27.467
+- Yes.
+- Paper, I guess?
+
+00:04:27.467 --> 00:04:29.827
+I don't really know if I ever
+asked you what the story was
+
+00:04:29.827 --> 00:04:31.059
+for how that came about.
+
+00:04:31.059 --> 00:04:34.177
+- Chris knows the story,
+'cause he was involved in it.
+
+00:04:34.177 --> 00:04:36.771
+I think, you know, we were both at Google.
+
+00:04:36.771 --> 00:04:38.845
+I forget what other
+project I was working on,
+
+00:04:38.845 --> 00:04:40.361
+but like with many things,
+
+00:04:40.361 --> 00:04:43.014
+it was my attempt to kind
+of procrastinate from
+
+00:04:43.014 --> 00:04:44.707
+whatever other project I was working on
+
+00:04:44.707 --> 00:04:45.540
+that I've now
+
+00:04:45.540 --> 00:04:47.656
+completely forgotten what it was.
+
+00:04:47.656 --> 00:04:52.574
+But I think it was like Chris
+and I decided to write down
+
+00:04:52.574 --> 00:04:55.534
+what are some open problems
+in terms of AI safety,
+
+00:04:55.534 --> 00:04:57.753
+and also AI safety you
+usually talked about
+
+00:04:57.753 --> 00:05:01.502
+in this very kind of
+abstruse, abstract way.
+
+00:05:01.502 --> 00:05:03.731
+Can we kind of ground it in the ML
+
+00:05:03.731 --> 00:05:04.964
+that was going on at the time?
+
+00:05:04.964 --> 00:05:08.126
+I mean, now there's been, like,
+you know, six, seven years
+
+00:05:08.126 --> 00:05:10.222
+of work in that vein,
+
+00:05:10.222 --> 00:05:12.348
+but it was almost a
+strange idea at the time.
+
+00:05:12.348 --> 00:05:14.539
+- Yeah, I think there's a
+way in which it was almost a
+
+00:05:14.539 --> 00:05:18.046
+kind of political project,
+where at the time,
+
+00:05:18.046 --> 00:05:20.141
+a lot of people didn't
+take safety seriously.
+
+00:05:20.141 --> 00:05:21.522
+So I think that there
+was sort of this goal
+
+00:05:21.522 --> 00:05:23.289
+to collate a list of problems
+
+00:05:23.289 --> 00:05:26.337
+that sort of people
+agreed were reasonable,
+
+00:05:26.337 --> 00:05:28.577
+often already existed in literature,
+
+00:05:28.577 --> 00:05:33.173
+and then get a bunch of people
+across different institutions
+
+00:05:33.173 --> 00:05:34.925
+who are credible to be authors.
+
+00:05:34.925 --> 00:05:37.219
+And like, I remember I
+had this whole long period
+
+00:05:37.219 --> 00:05:39.953
+where I just talked to 20
+different researchers at Brain
+
+00:05:39.953 --> 00:05:42.137
+to build support for publishing the paper.
+
+00:05:42.137 --> 00:05:42.970
+Like in some ways,
+
+00:05:42.970 --> 00:05:44.465
+if you look at it in terms of the problems
+
+00:05:44.465 --> 00:05:45.673
+and a lot of things that emphasized,
+
+00:05:45.673 --> 00:05:47.506
+I think it, you know,
+hasn't held up that well
+
+00:05:47.506 --> 00:05:48.339
+in that it's, you know,
+
+00:05:48.339 --> 00:05:49.954
+I think it's not really
+the right problems,
+
+00:05:49.954 --> 00:05:52.121
+but I think if you sort
+of see it instead as
+
+00:05:52.121 --> 00:05:53.855
+a consensus-building exercise,
+
+00:05:53.855 --> 00:05:56.510
+that there's something here that is real
+
+00:05:56.510 --> 00:05:58.407
+and that is worth taking seriously,
+
+00:05:58.407 --> 00:06:00.174
+then it was a pretty important moment.
+
+00:06:00.174 --> 00:06:02.916
+- I mean, you end up in this
+really weird sci-fi world
+
+00:06:02.916 --> 00:06:04.566
+where I remember at
+the start of Anthropic,
+
+00:06:04.566 --> 00:06:06.586
+we were talking about constitutional AI
+
+00:06:06.586 --> 00:06:07.702
+and I think Jared said,
+
+00:06:07.702 --> 00:06:09.458
+"Oh, we're just gonna write a constitution
+
+00:06:09.458 --> 00:06:10.465
+for a language model
+
+00:06:10.465 --> 00:06:12.118
+and that'll change all of its behavior."
+
+00:06:12.118 --> 00:06:15.416
+And I remember that
+sounded incredibly crazy
+
+00:06:15.416 --> 00:06:16.934
+at the time,
+
+00:06:16.934 --> 00:06:18.755
+but why did you guys
+think that was gonna work?
+
+00:06:18.755 --> 00:06:21.131
+Because I remember that was
+one of the first early, like,
+
+00:06:21.131 --> 00:06:23.450
+big research ideas we had at the company.
+
+00:06:23.450 --> 00:06:24.283
+- Yeah, I mean,
+
+00:06:24.283 --> 00:06:25.367
+I think Dario and I had
+talked about it for a while.
+
+00:06:25.367 --> 00:06:27.579
+I guess I think simple things
+
+00:06:27.579 --> 00:06:29.547
+just work really, really well in AI.
+
+00:06:29.547 --> 00:06:32.027
+And so like, I think the
+first versions of that
+
+00:06:32.027 --> 00:06:33.566
+were quite complicated,
+
+00:06:33.566 --> 00:06:36.003
+but then we kind of like
+whittled away into, like,
+
+00:06:36.003 --> 00:06:38.567
+just use the fact that
+AI systems are good at
+
+00:06:38.567 --> 00:06:40.491
+solving multiple choice exams
+
+00:06:40.491 --> 00:06:42.761
+and give them a prompt that tells them
+
+00:06:42.761 --> 00:06:46.406
+what they're looking for and
+that was kind of a lot of
+
+00:06:46.406 --> 00:06:47.864
+what we needed.
+
+00:06:47.864 --> 00:06:50.393
+- And then we were able to just
+write down these principles.
+
+00:06:50.393 --> 00:06:52.846
+- I mean, it goes back to,
+like, the big blob of compute
+
+00:06:52.846 --> 00:06:55.378
+or the bitter lesson or
+the scaling hypothesis.
+
+00:06:55.378 --> 00:06:57.350
+If you can identify, you know,
+
+00:06:57.350 --> 00:07:00.168
+something that you can
+give the AI data for
+
+00:07:00.168 --> 00:07:01.657
+and that's kind of a clear target,
+
+00:07:01.657 --> 00:07:02.612
+you'll get it to do it.
+
+00:07:02.612 --> 00:07:05.683
+So like here's this set of instructions,
+
+00:07:05.683 --> 00:07:07.379
+here's this set of principles.
+
+00:07:07.379 --> 00:07:10.665
+AI language models can like
+read that set of principles
+
+00:07:10.665 --> 00:07:12.874
+and they can compare it to the behavior
+
+00:07:12.874 --> 00:07:14.654
+that they themselves are engaging in.
+
+00:07:14.654 --> 00:07:16.910
+And so like you've got
+your training target there,
+
+00:07:16.910 --> 00:07:17.943
+so once you know that,
+
+00:07:17.943 --> 00:07:19.611
+I think my view and Jared's view is
+
+00:07:19.611 --> 00:07:20.841
+there's a way to get it to work;
+
+00:07:20.841 --> 00:07:23.075
+you just have to fiddle
+with enough of the details.
+
+00:07:23.075 --> 00:07:23.963
+- Yeah.
+
+00:07:23.963 --> 00:07:25.506
+I think it was always weird for me,
+
+00:07:25.506 --> 00:07:26.830
+especially in these early eras,
+
+00:07:26.830 --> 00:07:30.059
+'cause like I was in physics
+and then coming from physics,
+
+00:07:30.059 --> 00:07:32.135
+and I think now we forget about this
+
+00:07:32.135 --> 00:07:34.064
+'cause everyone's excited about AI,
+
+00:07:34.064 --> 00:07:37.310
+but like, I remember
+talking to Dario about
+
+00:07:37.310 --> 00:07:38.622
+concrete problems and other things,
+
+00:07:38.622 --> 00:07:41.372
+and I just got the sense
+that AI researchers
+
+00:07:41.372 --> 00:07:43.979
+were very, very kind of
+psychologically damaged
+
+00:07:43.979 --> 00:07:45.681
+by the AI winter
+
+00:07:45.681 --> 00:07:47.462
+where they just kind of felt like
+
+00:07:47.462 --> 00:07:50.598
+having really ambitious
+ideas or ambitious visions
+
+00:07:50.598 --> 00:07:52.330
+was, like, very disallowed.
+
+00:07:52.330 --> 00:07:53.814
+And that's kind of how I imagine it was
+
+00:07:53.814 --> 00:07:55.600
+in terms of talking about safety.
+
+00:07:55.600 --> 00:07:56.935
+In order to care about safety,
+
+00:07:56.935 --> 00:07:58.851
+you have to believe that AI
+systems could actually be
+
+00:07:58.851 --> 00:08:01.017
+really powerful and really useful,
+
+00:08:01.017 --> 00:08:02.884
+and I think that there
+was kind of a prohibition
+
+00:08:02.884 --> 00:08:04.598
+against being ambitious.
+
+00:08:04.598 --> 00:08:05.682
+- And I think
+
+00:08:05.682 --> 00:08:07.551
+one of the benefits is that
+physicists are very arrogant
+
+00:08:07.551 --> 00:08:09.095
+and so they're constantly
+
+00:08:09.095 --> 00:08:10.403
+doing really ambitious things
+
+00:08:10.403 --> 00:08:12.795
+and talking about things
+in terms of grand schemes,
+
+00:08:12.795 --> 00:08:14.253
+and so-
+
+00:08:14.253 --> 00:08:15.086
+- Yeah.
+
+00:08:15.086 --> 00:08:17.040
+- I mean, I think that's definitely true.
+
+00:08:17.040 --> 00:08:18.902
+Like I remember in 2014,
+
+00:08:18.902 --> 00:08:21.175
+it was like there were
+just like, I don't know,
+
+00:08:21.175 --> 00:08:23.222
+there were just some things
+you couldn't say, right?
+
+00:08:23.222 --> 00:08:26.301
+But I actually think it was
+kind of an extension of problems
+
+00:08:26.301 --> 00:08:28.440
+that exist across academia,
+
+00:08:28.440 --> 00:08:30.785
+other than maybe theoretical physics,
+
+00:08:30.785 --> 00:08:32.351
+where they've kind of evolved into
+
+00:08:32.351 --> 00:08:35.342
+very risk-averse institutions
+for a number of reasons.
+
+00:08:35.342 --> 00:08:37.134
+And even the industrial parts of AI
+
+00:08:37.134 --> 00:08:40.485
+had kind of transplanted or
+fork lifted that mentality.
+
+00:08:40.485 --> 00:08:41.883
+And it took a long time.
+
+00:08:41.883 --> 00:08:43.688
+I think it took it until like 2022
+
+00:08:43.688 --> 00:08:45.211
+to get out of that mentality.
+
+00:08:45.211 --> 00:08:46.271
+- There's a weird thing about like,
+
+00:08:46.271 --> 00:08:49.726
+what does it mean to be
+conservative and respectful,
+
+00:08:49.726 --> 00:08:51.921
+where you might think like,
+
+00:08:51.921 --> 00:08:53.987
+one version you could have is that
+
+00:08:53.987 --> 00:08:55.703
+what it means to be conservative
+is to take the risks
+
+00:08:55.703 --> 00:08:57.172
+or the potential harms
+of what you're doing
+
+00:08:57.172 --> 00:08:59.007
+really seriously and worry about that.
+
+00:08:59.007 --> 00:09:01.387
+But another kind of
+conservatism is to be like,
+
+00:09:01.387 --> 00:09:04.243
+"Ah, you know, taking
+an idea too seriously
+
+00:09:04.243 --> 00:09:05.939
+and believing that it might succeed
+
+00:09:05.939 --> 00:09:07.854
+is sort of like scientific arrogance."
+
+00:09:07.854 --> 00:09:11.030
+And so I think there's like
+kind of two different kinds of
+
+00:09:11.030 --> 00:09:12.731
+conservatism or caution,
+
+00:09:12.731 --> 00:09:14.054
+and I think we were sort of in a regime
+
+00:09:14.054 --> 00:09:15.888
+that was very controlled by that one.
+
+00:09:15.888 --> 00:09:17.441
+I mean, you see it historically, right?
+
+00:09:17.441 --> 00:09:20.577
+Like if you look at the
+early discussions in 1939
+
+00:09:20.577 --> 00:09:22.803
+between, you know, people
+involved in nuclear physics
+
+00:09:22.803 --> 00:09:24.539
+about what the nuclear bombs were,
+
+00:09:24.539 --> 00:09:25.822
+sort of a serious concern.
+
+00:09:25.822 --> 00:09:27.676
+You see exactly the same thing
+
+00:09:27.676 --> 00:09:30.361
+with Fermi resisting these ideas,
+
+00:09:30.361 --> 00:09:32.382
+because it just seemed
+kind of like a crazy thing.
+
+00:09:32.382 --> 00:09:34.179
+And other people, like Szilard or Teller,
+
+00:09:34.179 --> 00:09:36.328
+taking the ideas seriously
+
+00:09:36.328 --> 00:09:37.803
+because they were worried about the risks.
+
+00:09:37.803 --> 00:09:38.636
+- Yeah.
+
+00:09:38.636 --> 00:09:40.200
+Perhaps the deepest lesson
+
+00:09:40.200 --> 00:09:42.083
+that I've learned in the last 10 years,
+
+00:09:42.083 --> 00:09:43.486
+and probably, you know,
+
+00:09:43.486 --> 00:09:45.700
+all of you have learned
+some form of it as well,
+
+00:09:45.700 --> 00:09:48.812
+is there can be this kind
+of seeming consensus,
+
+00:09:48.812 --> 00:09:51.078
+these things that kind of everyone knows,
+
+00:09:51.078 --> 00:09:52.430
+that, I don't know,
+
+00:09:52.430 --> 00:09:55.334
+seem sort of wise, seem
+like they're common sense,
+
+00:09:55.334 --> 00:09:59.198
+but really, they're just
+kind of herding behavior
+
+00:09:59.198 --> 00:10:02.019
+masquerading as maturity
+and sophistication.
+
+00:10:02.019 --> 00:10:02.852
+- Mm-hmm.
+
+00:10:02.852 --> 00:10:06.807
+- And when you've seen the
+consensus can change overnight-
+
+00:10:06.807 --> 00:10:08.787
+And when you've seen it
+happen a number of times,
+
+00:10:08.787 --> 00:10:11.593
+you suspected but you
+didn't really bet on it
+
+00:10:11.593 --> 00:10:13.851
+and you're like, "Oh man,
+I kind of thought this,
+
+00:10:13.851 --> 00:10:14.814
+but what do I know?"
+
+00:10:14.814 --> 00:10:16.692
+You know, "How how can I be right
+
+00:10:16.692 --> 00:10:17.566
+and all these people are wrong?"
+
+00:10:17.566 --> 00:10:19.785
+You see that a few times,
+then you just start saying,
+
+00:10:19.785 --> 00:10:21.768
+"Nope, this is the bet we're gonna make.
+
+00:10:21.768 --> 00:10:22.947
+I don't know for sure if we're right,
+
+00:10:22.947 --> 00:10:26.005
+but like, just ignore all this
+other stuff, see it happen,
+
+00:10:26.005 --> 00:10:28.998
+and, I don't know, even if
+you're right 50% of the time
+
+00:10:28.998 --> 00:10:32.018
+being right 50% of the time
+contributes so much," right?
+
+00:10:32.018 --> 00:10:33.552
+You're adding so much
+
+00:10:33.552 --> 00:10:35.467
+that is not being added by anyone else.
+
+00:10:35.467 --> 00:10:36.300
+- Yeah.
+
+00:10:36.300 --> 00:10:37.726
+- And it feels like
+that's where we are today
+
+00:10:37.726 --> 00:10:39.022
+with some safety stuff,
+
+00:10:39.022 --> 00:10:40.891
+where there's like a consensus view that
+
+00:10:40.891 --> 00:10:42.985
+a lot of this safety stuff is unusual
+
+00:10:42.985 --> 00:10:45.385
+or doesn't naturally fall
+out of the technology.
+
+00:10:45.385 --> 00:10:47.566
+And then at Anthropic, we
+do all of this research
+
+00:10:47.566 --> 00:10:49.741
+where weird safety misalignment problems
+
+00:10:49.741 --> 00:10:53.267
+fall out as a natural dividend
+of the tech we're building,
+
+00:10:53.267 --> 00:10:54.693
+so it feels like we're in that
+
+00:10:54.693 --> 00:10:56.721
+counter-consensus view right now.
+
+00:10:56.721 --> 00:10:58.780
+- But I feel like that has
+been shifting over the past,
+
+00:10:58.780 --> 00:11:00.000
+even just like 18-
+
+00:11:00.000 --> 00:11:00.947
+- We've been helping to shift-
+
+00:11:00.947 --> 00:11:01.842
+- We've definitely been helping.
+
+00:11:01.842 --> 00:11:02.725
+- No, I mean-
+- Yeah.
+
+00:11:02.725 --> 00:11:03.558
+- By publishing and doing research.
+
+00:11:03.558 --> 00:11:04.499
+- Constant publishing.
+- This constant force.
+
+00:11:04.499 --> 00:11:06.097
+Yeah.
+- But I also think, just,
+
+00:11:06.097 --> 00:11:09.415
+world sentiment around AI has
+shifted really dramatically,
+
+00:11:09.415 --> 00:11:10.698
+and, you know,
+
+00:11:10.698 --> 00:11:12.912
+it's more common in the
+user research that we do
+
+00:11:12.912 --> 00:11:15.834
+to hear just customers,
+regular people say,
+
+00:11:15.834 --> 00:11:18.851
+"I'm really worried about what
+the impact of AI on the world
+
+00:11:18.851 --> 00:11:19.943
+more broadly is going to be."
+
+00:11:19.943 --> 00:11:21.334
+And sometimes that means, you know,
+
+00:11:21.334 --> 00:11:24.957
+jobs or bias or toxicity, but
+it also sometimes means like,
+
+00:11:24.957 --> 00:11:26.943
+is this just gonna mess
+up the world, right?
+
+00:11:26.943 --> 00:11:29.823
+How is this gonna contribute
+to fundamentally changing
+
+00:11:29.823 --> 00:11:31.274
+how humans work together, operate?
+
+00:11:31.274 --> 00:11:33.077
+Which is, I wouldn't have
+predicted that actually,
+
+00:11:33.077 --> 00:11:34.061
+you know?
+- Oh yeah.
+
+00:11:34.061 --> 00:11:35.080
+But yeah, for whatever reason,
+
+00:11:35.080 --> 00:11:37.709
+it seems like people in
+the ML research sphere
+
+00:11:37.709 --> 00:11:40.167
+have always been more pessimistic about
+
+00:11:40.167 --> 00:11:41.730
+AI becoming very powerful-
+
+00:11:41.730 --> 00:11:43.319
+- Yeah.
+- Than the general public.
+
+00:11:43.319 --> 00:11:44.152
+- Maybe it's a weird-
+
+00:11:44.152 --> 00:11:44.985
+- General public's just like-
+
+00:11:44.985 --> 00:11:45.818
+- Humility or something, yeah.
+
+00:11:45.818 --> 00:11:48.271
+- When Dario and I went to
+the White House in 2023,
+
+00:11:48.271 --> 00:11:50.605
+in that meeting, like Harris
+and Raimondo and stuff
+
+00:11:50.605 --> 00:11:53.263
+basically said, I'll paraphrase,
+
+00:11:53.263 --> 00:11:55.503
+but basically said like,
+"We've got our eye on you guys.
+
+00:11:55.503 --> 00:11:57.166
+Like, AI's gonna be a really big deal
+
+00:11:57.166 --> 00:11:58.794
+and we're now actually paying attention,"
+
+00:11:58.794 --> 00:11:59.964
+which is-
+- And they're right.
+
+00:11:59.964 --> 00:12:01.209
+- They're right.
+
+00:12:01.209 --> 00:12:02.042
+- They're absolutely right.
+
+00:12:02.042 --> 00:12:03.217
+Absolutely right.
+- But I think in 2018
+
+00:12:03.217 --> 00:12:04.366
+you wouldn't have been like,
+
+00:12:04.366 --> 00:12:06.158
+"The President will call
+you to the White House
+
+00:12:06.158 --> 00:12:07.379
+to tell you
+
+00:12:07.379 --> 00:12:08.731
+they're paying close attention to
+
+00:12:08.731 --> 00:12:10.254
+the development of language models."
+
+00:12:10.254 --> 00:12:11.087
+- Yeah.
+
+00:12:11.087 --> 00:12:11.920
+- Which is like a crazy place-
+
+00:12:11.920 --> 00:12:12.753
+- That was not on the bingo card.
+
+00:12:13.667 --> 00:12:15.699
+- That was like 2018.
+
+00:12:15.699 --> 00:12:17.075
+- One thing that I think
+is interesting, too,
+
+00:12:17.075 --> 00:12:22.075
+just is, I guess, like all
+of us kind of got into this
+
+00:12:22.376 --> 00:12:24.375
+when it didn't seem like there was-
+
+00:12:24.375 --> 00:12:25.208
+- Mm-hmm.
+
+00:12:25.208 --> 00:12:27.173
+- Like we thought that it
+could happen, but yeah,
+
+00:12:27.173 --> 00:12:30.776
+it was like Fermi being
+skeptical of the atomic bomb.
+
+00:12:30.776 --> 00:12:33.258
+It was like he was just a good scientist
+
+00:12:33.258 --> 00:12:35.922
+and there was some evidence
+that it could happen,
+
+00:12:35.922 --> 00:12:38.185
+but there also was a lot of
+evidence against it happening.
+
+00:12:38.185 --> 00:12:39.074
+- Mm-hmm.
+
+00:12:39.074 --> 00:12:41.619
+- And he, I guess, decided
+that it would be worthwhile
+
+00:12:41.619 --> 00:12:44.515
+because if it was true,
+then it would be a big deal.
+
+00:12:44.515 --> 00:12:45.756
+And I think for all of
+us, it was like, yeah,
+
+00:12:45.756 --> 00:12:49.699
+like 2015, 2016, 2017,
+there was some evidence
+
+00:12:49.699 --> 00:12:51.904
+and increasing evidence that
+this might be a big deal,
+
+00:12:51.904 --> 00:12:55.124
+but I remember in 2016, like
+talking to all my advisors-
+
+00:12:55.124 --> 00:12:55.957
+- Yeah, yeah.
+
+00:12:55.957 --> 00:12:57.275
+- And I was like, "I've
+done startup stuff.
+
+00:12:57.275 --> 00:12:59.740
+I wanna help out with AI safety,
+
+00:12:59.740 --> 00:13:01.448
+but I'm not great at math.
+
+00:13:01.448 --> 00:13:03.568
+I don't exactly know
+
+00:13:03.568 --> 00:13:04.957
+how I can do it."
+
+00:13:04.957 --> 00:13:07.650
+And I think at the time
+people either were like,
+
+00:13:07.650 --> 00:13:09.835
+"Well, you need to be super
+good at decision theory
+
+00:13:09.835 --> 00:13:10.821
+in order to help out."
+
+00:13:10.821 --> 00:13:12.315
+And I was like, "Eh, that's
+probably not gonna work."
+
+00:13:12.315 --> 00:13:14.141
+Or they were like,
+
+00:13:14.141 --> 00:13:14.974
+"It doesn't really seem like
+
+00:13:14.974 --> 00:13:17.190
+we're gonna get some crazy AI thing,"
+
+00:13:17.190 --> 00:13:20.382
+and so I had only a few people, basically,
+
+00:13:20.382 --> 00:13:21.599
+that were like,
+
+00:13:21.599 --> 00:13:24.010
+"Yeah, okay, that seems
+like a good thing to do."
+
+00:13:24.010 --> 00:13:25.379
+- I remember in 2014
+
+00:13:25.379 --> 00:13:27.968
+making graphs of ImageNet
+results over time
+
+00:13:27.968 --> 00:13:28.816
+when I was a journalist
+
+00:13:28.816 --> 00:13:31.006
+and trying to get stories published about
+
+00:13:31.006 --> 00:13:32.767
+and people thought I was completely mad.
+
+00:13:32.767 --> 00:13:34.587
+And then I remember in 2015
+
+00:13:34.587 --> 00:13:35.769
+trying to persuade Bloomberg
+
+00:13:35.769 --> 00:13:37.750
+to let me write a story about NVIDIA,
+
+00:13:37.750 --> 00:13:40.152
+because every AI research
+paper had started mentioning
+
+00:13:40.152 --> 00:13:41.737
+the use of GPUs,
+
+00:13:41.737 --> 00:13:43.495
+and they said that was completely mad.
+
+00:13:43.495 --> 00:13:46.654
+And then in 2016 when I left
+journalism to go into AI,
+
+00:13:46.654 --> 00:13:48.171
+I have these emails saying,
+
+00:13:48.171 --> 00:13:50.342
+"You're making the worst
+mistake of your life,"
+
+00:13:51.682 --> 00:13:52.959
+which I now occasionally look back on,
+
+00:13:55.333 --> 00:13:58.387
+but it was like it all
+seemed crazy at the time,
+
+00:13:58.387 --> 00:13:59.990
+from many perspectives,
+
+00:13:59.990 --> 00:14:02.958
+to go and take this seriously,
+that scaling was gonna work,
+
+00:14:02.958 --> 00:14:04.760
+and something was maybe different about
+
+00:14:04.760 --> 00:14:06.072
+the technology paradigm.
+
+00:14:06.072 --> 00:14:07.354
+- You're like Michael
+Jordan and that coach
+
+00:14:07.354 --> 00:14:08.672
+that didn't believe in him in high school.
+
+00:14:09.894 --> 00:14:11.302
+- How did you actually
+make the decision, though?
+
+00:14:11.302 --> 00:14:14.403
+Was it did you feel torn
+or was it obvious to you?
+
+00:14:14.403 --> 00:14:16.550
+- I did a crazy counter-bet where I said,
+
+00:14:16.550 --> 00:14:19.040
+"Let me become your full-time AI reporter
+
+00:14:19.040 --> 00:14:20.598
+and double my salary,"
+
+00:14:20.598 --> 00:14:22.548
+which I knew that they
+wouldn't say yes to.
+
+00:14:22.548 --> 00:14:25.205
+And then I went to sleep and
+then I woke up and resigned.
+
+00:14:25.205 --> 00:14:26.187
+It was all fairly relaxed.
+
+00:14:27.666 --> 00:14:29.766
+- You're just a decisive guy.
+
+00:14:29.766 --> 00:14:31.267
+- In that instance, I was.
+
+00:14:31.267 --> 00:14:33.843
+I think it's because I
+was like going to work,
+
+00:14:33.843 --> 00:14:35.470
+reading archive papers,
+
+00:14:35.470 --> 00:14:36.939
+and then printing archive papers off
+
+00:14:36.939 --> 00:14:39.086
+and coming home and
+reading archive papers,
+
+00:14:39.086 --> 00:14:42.766
+including Dario's papers
+from the Baidu stuff
+
+00:14:42.766 --> 00:14:43.599
+and being like,
+
+00:14:43.599 --> 00:14:46.004
+"Something completely
+crazy is happening here."
+
+00:14:46.004 --> 00:14:48.126
+And at some point I thought
+you should bet with conviction,
+
+00:14:48.126 --> 00:14:50.347
+which I think everyone here
+has done in their careers,
+
+00:14:50.347 --> 00:14:53.384
+is just betting with conviction
+that this is gonna work.
+
+00:14:53.384 --> 00:14:54.302
+- Yeah.
+
+00:14:54.302 --> 00:14:56.646
+- I definitely was not as decisive of you.
+
+00:14:56.646 --> 00:14:58.791
+I spent, like, six months
+
+00:14:58.791 --> 00:15:01.166
+flip flopping, like,
+"Okay, should I, actually?
+
+00:15:01.166 --> 00:15:01.999
+Should I do it?
+
+00:15:01.999 --> 00:15:02.944
+Should I try to do a startup?
+
+00:15:02.944 --> 00:15:04.518
+Should I try to do this thing?"
+
+00:15:04.518 --> 00:15:05.686
+- But I also feel like back then,
+
+00:15:05.686 --> 00:15:08.284
+there wasn't as much talk of engineers
+
+00:15:08.284 --> 00:15:10.032
+and the impact that an engineer can have
+
+00:15:10.032 --> 00:15:10.971
+on AI, right?
+- Yeah, yeah, no way.
+
+00:15:10.971 --> 00:15:12.750
+- That feels so natural to us now.
+
+00:15:12.750 --> 00:15:14.849
+And we're at the same sort of talent raise
+
+00:15:14.849 --> 00:15:17.190
+for engineers of all different types,
+
+00:15:17.190 --> 00:15:19.523
+but at the time, it was
+like, you're a researcher,
+
+00:15:19.523 --> 00:15:20.356
+and that's the only people
+
+00:15:20.356 --> 00:15:21.520
+that can work on AI.
+- Yeah.
+
+00:15:21.520 --> 00:15:22.491
+- So I don't think it was crazy
+
+00:15:22.491 --> 00:15:24.242
+that you were spending
+time thinking about that.
+
+00:15:24.242 --> 00:15:25.075
+- Yeah.
+
+00:15:25.075 --> 00:15:27.043
+Yeah, and I think that that
+was basically the thing
+
+00:15:27.043 --> 00:15:28.411
+that got me to join OpenAI,
+
+00:15:28.411 --> 00:15:31.724
+was like I messaged the people
+there and they were like,
+
+00:15:31.724 --> 00:15:33.549
+"Yeah, we actually think
+that you can help out-"
+
+00:15:33.549 --> 00:15:34.760
+- Yeah.
+- "By doing engineering work."
+
+00:15:34.760 --> 00:15:35.707
+- Yeah.
+
+00:15:35.707 --> 00:15:37.803
+- "And that you can help out
+with AI safety in that way."
+
+00:15:37.803 --> 00:15:38.636
+- Mm-hmm.
+- Which I think
+
+00:15:38.636 --> 00:15:40.438
+there hadn't really been
+an opportunity for that,
+
+00:15:40.438 --> 00:15:41.379
+so that was what-
+
+00:15:41.379 --> 00:15:42.212
+- That's right.
+- Brought me there.
+
+00:15:42.212 --> 00:15:44.102
+- You were my manager at OpenAI.
+
+00:15:44.102 --> 00:15:44.935
+- I was, that's right.
+
+00:15:44.935 --> 00:15:47.470
+- I think I joined after
+you'd been there for a while.
+
+00:15:47.470 --> 00:15:48.303
+- A little bit.
+
+00:15:48.303 --> 00:15:49.310
+- 'Cause I was at Brain for a bit.
+
+00:15:49.310 --> 00:15:50.143
+- Yeah.
+
+00:15:50.143 --> 00:15:50.976
+- I don't know if I ever asked you
+
+00:15:50.976 --> 00:15:53.779
+what it was that got you to join?
+
+00:15:53.779 --> 00:15:55.515
+- Yeah, so I had been at Stripe
+
+00:15:55.515 --> 00:15:57.723
+for about five and a half years
+
+00:15:57.723 --> 00:15:59.792
+and I knew Greg; he had been my boss.
+
+00:15:59.792 --> 00:16:01.621
+He was my boss at Stripe for a while,
+
+00:16:01.621 --> 00:16:04.013
+and I actually introduced him and Dario,
+
+00:16:04.013 --> 00:16:06.259
+because I said, when
+he was starting OpenAI,
+
+00:16:06.259 --> 00:16:10.003
+I was like, "The smartest
+person that I know is Dario.
+
+00:16:10.003 --> 00:16:12.133
+You would be really lucky to get him."
+
+00:16:12.133 --> 00:16:13.915
+So Dario was at OpenAI,
+
+00:16:13.915 --> 00:16:16.661
+I had a few friends from Stripe
+that had gone there, too.
+
+00:16:16.661 --> 00:16:18.739
+And I think sort of like you,
+
+00:16:18.739 --> 00:16:22.163
+I'd been thinking about what
+I wanted to do after Stripe.
+
+00:16:22.163 --> 00:16:24.378
+I had gone there just 'cause
+I wanted to get more skills
+
+00:16:24.378 --> 00:16:26.101
+after working in, you know,
+
+00:16:26.101 --> 00:16:28.416
+nonprofit and international development,
+
+00:16:28.416 --> 00:16:31.512
+and I actually thought I was
+gonna go back to doing that.
+
+00:16:31.512 --> 00:16:33.583
+Like, essentially, I
+had always been working.
+
+00:16:33.583 --> 00:16:36.134
+I was like, "I really wanna
+help people that have, you know,
+
+00:16:36.134 --> 00:16:37.379
+less than I do,"
+
+00:16:37.379 --> 00:16:38.384
+but I didn't have the skills
+
+00:16:38.384 --> 00:16:39.923
+when I was doing it before Stripe.
+
+00:16:39.923 --> 00:16:40.756
+- Yep.
+
+00:16:40.756 --> 00:16:42.678
+- And so I looked at going
+back to public health.
+
+00:16:42.678 --> 00:16:44.739
+I thought about going back
+into politics very briefly,
+
+00:16:44.739 --> 00:16:47.637
+but I was also looking around
+at other tech companies
+
+00:16:47.637 --> 00:16:50.195
+and other sort of ways of having impact,
+
+00:16:50.195 --> 00:16:51.438
+and OpenAI, at the time,
+
+00:16:51.438 --> 00:16:52.949
+felt like it was a
+really nice intersection.
+
+00:16:52.949 --> 00:16:54.051
+It was a nonprofit,
+
+00:16:54.051 --> 00:16:56.667
+they were working on this
+really big, lofty mission.
+
+00:16:56.667 --> 00:16:59.515
+I really believed in sort of
+the AI, you know, potential,
+
+00:16:59.515 --> 00:17:01.892
+because, I mean, I know
+Dario a little bit,
+
+00:17:01.892 --> 00:17:02.933
+and so he was-
+
+00:17:02.933 --> 00:17:04.125
+- And they needed management help.
+
+00:17:04.125 --> 00:17:06.157
+- The definitely needed help.
+
+00:17:06.157 --> 00:17:07.312
+That is a fact.
+
+00:17:07.312 --> 00:17:10.462
+And so I think that it
+felt very me-shaped, right?
+
+00:17:10.462 --> 00:17:12.337
+I was like, "Oh, there's this nonprofit
+
+00:17:12.337 --> 00:17:14.730
+and there's all these really great people
+
+00:17:14.730 --> 00:17:16.565
+with these really good intentions,
+
+00:17:16.565 --> 00:17:18.299
+but it seems like they're
+a little bit of a mess."
+
+00:17:18.299 --> 00:17:19.269
+- Yeah.
+
+00:17:19.269 --> 00:17:21.546
+And that felt really exciting to me,
+
+00:17:21.546 --> 00:17:23.302
+to get to come in and even, you know,
+
+00:17:23.302 --> 00:17:25.962
+just I was such a utility player, right?
+
+00:17:25.962 --> 00:17:27.174
+I was running people,
+
+00:17:27.174 --> 00:17:29.005
+but I was also running some
+of the technical teams-
+
+00:17:29.005 --> 00:17:29.838
+- Scaling orgs, yep.
+
+00:17:29.838 --> 00:17:30.671
+- Yeah, the scaling org,
+
+00:17:30.671 --> 00:17:31.741
+I worked on the language team,
+
+00:17:31.741 --> 00:17:32.574
+I took over-
+
+00:17:32.574 --> 00:17:33.407
+- You worked on policy-
+
+00:17:33.407 --> 00:17:34.579
+- I worked on some policy stuff,
+
+00:17:34.579 --> 00:17:35.663
+I worked with Chris,
+
+00:17:35.663 --> 00:17:38.288
+and I felt like there
+was just so much goodness
+
+00:17:38.288 --> 00:17:40.592
+in so many of the employees there,
+
+00:17:40.592 --> 00:17:42.693
+and I felt a very strong desire to come
+
+00:17:42.693 --> 00:17:44.952
+and sort of just try to
+help make the company
+
+00:17:44.952 --> 00:17:46.454
+a little more functional.
+
+00:17:46.454 --> 00:17:49.182
+- I remember towards the
+end, after we'd done GPT-3,
+
+00:17:49.182 --> 00:17:50.015
+you were like,
+
+00:17:50.015 --> 00:17:51.976
+"Have you guys heard of something
+called trust and safety?"
+
+00:17:51.976 --> 00:17:53.451
+- Yes, I remember that!
+
+00:17:55.692 --> 00:17:57.358
+That did happen.
+- Yeah.
+
+00:17:57.358 --> 00:17:58.191
+- Yeah.
+- I said, you know,
+
+00:17:58.191 --> 00:18:00.549
+"I used to run some trust
+and safety teams at Stripe.
+
+00:18:00.549 --> 00:18:02.561
+There's a thing called trust and safety
+
+00:18:02.561 --> 00:18:05.123
+that you might wanna consider
+for a technology like this."
+
+00:18:05.123 --> 00:18:08.960
+And it's funny because it's
+sort of is the intermediary step
+
+00:18:08.960 --> 00:18:11.957
+between, you know, AI
+safety research, right,
+
+00:18:11.957 --> 00:18:13.824
+which is how do you
+actually make the model safe
+
+00:18:13.824 --> 00:18:15.350
+to something just much more practical.
+
+00:18:15.350 --> 00:18:18.429
+I do think there was a
+value in saying, you know,
+
+00:18:18.429 --> 00:18:19.707
+this is gonna be a big thing;
+
+00:18:19.707 --> 00:18:21.343
+we also have to be doing
+this sort of practical work
+
+00:18:21.343 --> 00:18:23.328
+day to day to build the muscles
+
+00:18:23.328 --> 00:18:26.317
+for when things are gonna
+be a lot higher stakes.
+
+00:18:26.317 --> 00:18:28.522
+- That might be a good transition point
+
+00:18:28.522 --> 00:18:31.461
+to talk about things like the
+responsible scaling policy
+
+00:18:31.461 --> 00:18:33.128
+and how we came up with that,
+
+00:18:33.128 --> 00:18:35.693
+or why we came up with it
+and how we're using it now,
+
+00:18:35.693 --> 00:18:37.963
+especially given how much
+trust and safety work
+
+00:18:37.963 --> 00:18:39.960
+we do on today's models.
+
+00:18:39.960 --> 00:18:41.944
+So whose idea was the RSP?
+
+00:18:41.944 --> 00:18:43.377
+Was you and Paul?
+- So, yeah,
+
+00:18:43.377 --> 00:18:47.022
+it was me and Paul first
+talked about it in late,
+
+00:18:47.022 --> 00:18:49.942
+Paul Christiano, in late 2022.
+
+00:18:49.942 --> 00:18:50.775
+- Mm-hmm.
+
+00:18:50.775 --> 00:18:52.631
+- First it was like, oh,
+should we cap scaling at a,
+
+00:18:52.631 --> 00:18:54.225
+you know, particular point
+
+00:18:54.225 --> 00:18:57.993
+until we've discovered how to
+solve certain safety problems?
+
+00:18:57.993 --> 00:18:59.563
+And then it was like, well, you know,
+
+00:18:59.563 --> 00:19:01.427
+it's kind of strange
+to have this one place
+
+00:19:01.427 --> 00:19:02.907
+where you cap it and then you uncap it,
+
+00:19:02.907 --> 00:19:05.208
+so let's have a bunch of thresholds,
+
+00:19:05.208 --> 00:19:07.995
+and then at each threshold
+you have to do certain tests
+
+00:19:07.995 --> 00:19:09.576
+to see if the model is capable
+
+00:19:09.576 --> 00:19:10.627
+and you have to take
+
+00:19:10.627 --> 00:19:12.693
+increasing safety and security measures.
+
+00:19:12.693 --> 00:19:14.248
+But originally we had this idea,
+
+00:19:14.248 --> 00:19:17.112
+and then the thought
+was just look, you know,
+
+00:19:17.112 --> 00:19:20.820
+this'll go better if it's
+done by some third party.
+
+00:19:20.820 --> 00:19:23.008
+Like, we shouldn't be
+the ones to do it, right?
+
+00:19:23.008 --> 00:19:24.343
+It shouldn't come from one company,
+
+00:19:24.343 --> 00:19:26.532
+'cause then other companies
+are less likely to adopt it.
+
+00:19:26.532 --> 00:19:28.931
+So Paul actually went off and designed it,
+
+00:19:28.931 --> 00:19:31.883
+and, you know, many, many
+features of it changed
+
+00:19:31.883 --> 00:19:33.963
+and we were kind of, on our side,
+
+00:19:33.963 --> 00:19:36.643
+working on how it should work.
+
+00:19:36.643 --> 00:19:39.013
+And, you know, once Paul
+had something together,
+
+00:19:39.013 --> 00:19:42.491
+then pretty much immediately
+after he announced the concept,
+
+00:19:42.491 --> 00:19:44.806
+we announced ours within a month or two.
+
+00:19:44.806 --> 00:19:46.589
+I mean, many of us were
+heavily involved in it.
+
+00:19:46.589 --> 00:19:49.392
+I remember writing at least
+one draft of it myself,
+
+00:19:49.392 --> 00:19:50.890
+but there were several drafts of it.
+
+00:19:50.890 --> 00:19:53.223
+- There were so many drafts.
+
+00:19:54.704 --> 00:19:56.000
+- I think it's gone through
+the most drafts of any doc.
+
+00:19:56.000 --> 00:19:56.833
+- Yeah.
+
+00:19:56.833 --> 00:19:57.666
+- Which makes sense, right?
+
+00:19:57.666 --> 00:19:59.013
+It's like, I feel like it is
+
+00:19:59.013 --> 00:20:03.088
+in the same way that the US
+treats like the Constitution,
+
+00:20:03.088 --> 00:20:04.474
+as like the holy document.
+
+00:20:04.474 --> 00:20:05.307
+- Yeah.
+- Which like,
+
+00:20:05.307 --> 00:20:07.400
+I think is just a big thing
+that like strengthens the US.
+
+00:20:07.400 --> 00:20:08.323
+- Yes.
+
+00:20:08.323 --> 00:20:10.019
+- And like we don't expect
+the US to go off the rails,
+
+00:20:10.019 --> 00:20:12.490
+in part, because just like
+every single person in the US
+
+00:20:12.490 --> 00:20:14.552
+is like, "The Constitution is a big deal,
+
+00:20:14.552 --> 00:20:15.632
+and if you tread on that-"
+- Yeah.
+
+00:20:15.632 --> 00:20:16.773
+- "Like, I'm mad."
+
+00:20:16.773 --> 00:20:17.685
+- Yeah, yeah.
+
+00:20:17.685 --> 00:20:19.805
+- Like I think that the RSP is our,
+
+00:20:19.805 --> 00:20:21.000
+like, it holds that thing.
+
+00:20:21.000 --> 00:20:22.800
+It's like the holy document for Anthropic.
+
+00:20:22.800 --> 00:20:26.120
+So it's worth doing a lot of
+iterations getting it right.
+
+00:20:26.120 --> 00:20:27.901
+- Some of what I think
+has been so cool to watch
+
+00:20:27.901 --> 00:20:31.040
+about the RSP development
+at Anthropic, too,
+
+00:20:31.040 --> 00:20:32.581
+is it feels like it has gone through
+
+00:20:32.581 --> 00:20:33.627
+so many different phases
+
+00:20:33.627 --> 00:20:34.942
+and there's so many different skills
+
+00:20:34.942 --> 00:20:36.557
+that are needed to make it work, right?
+
+00:20:36.557 --> 00:20:37.869
+There's like the big ideas,
+
+00:20:37.869 --> 00:20:40.795
+which I feel like Dario
+and Paul and Sam and Jared
+
+00:20:40.795 --> 00:20:43.704
+and so many others are like,
+"What are the principles?
+
+00:20:43.704 --> 00:20:45.005
+Like what are we trying to say?
+
+00:20:45.005 --> 00:20:46.390
+How do we know if we're right?"
+
+00:20:46.390 --> 00:20:49.357
+But there's also this
+very operational approach
+
+00:20:49.357 --> 00:20:50.420
+to just iterating
+
+00:20:50.420 --> 00:20:51.696
+where we're like, "Well, we thought that
+
+00:20:51.696 --> 00:20:54.560
+we were gonna see this at
+this, you know, safety level,
+
+00:20:54.560 --> 00:20:55.393
+and we didn't,
+
+00:20:55.393 --> 00:20:57.299
+so should we change it so
+that we're making sure that
+
+00:20:57.299 --> 00:20:58.697
+we're holding ourselves accountable?"
+
+00:20:58.697 --> 00:21:01.019
+And then there's all kinds of
+organizational things, right?
+
+00:21:01.019 --> 00:21:01.852
+We just were like,
+
+00:21:01.852 --> 00:21:03.957
+"Let's change the structure
+of the RSP organization
+
+00:21:03.957 --> 00:21:05.940
+for clearer accountability."
+
+00:21:05.940 --> 00:21:08.136
+And I think my sense
+is that for a document
+
+00:21:08.136 --> 00:21:09.697
+that's as important as this, right,
+
+00:21:09.697 --> 00:21:11.320
+I love the Constitution analogy,
+
+00:21:11.320 --> 00:21:13.837
+it's like there's all of
+these bodies and systems
+
+00:21:13.837 --> 00:21:15.069
+that exist in the US
+
+00:21:15.069 --> 00:21:17.223
+to make sure that we follow
+the Constitution, right?
+
+00:21:17.223 --> 00:21:18.737
+There's the courts,
+there's the Supreme Court,
+
+00:21:18.737 --> 00:21:20.072
+there's the presidency,
+
+00:21:20.072 --> 00:21:23.990
+there's, you know, both houses of Congress
+
+00:21:23.990 --> 00:21:26.108
+and they do all kinds of
+other things, of course,
+
+00:21:26.108 --> 00:21:28.437
+but there's like all of this
+infrastructure that you need
+
+00:21:28.437 --> 00:21:29.728
+around this one document,
+
+00:21:29.728 --> 00:21:31.955
+and I feel like we're also
+learning that lesson here.
+
+00:21:31.955 --> 00:21:33.004
+- I think it sort of reflects a view
+
+00:21:33.004 --> 00:21:34.630
+a lot of us have about safety,
+
+00:21:34.630 --> 00:21:37.024
+which is that it's a solvable problem.
+
+00:21:37.024 --> 00:21:37.857
+- Mm-hmm.
+
+00:21:37.857 --> 00:21:39.508
+- It's just a very, very hard problem
+
+00:21:39.508 --> 00:21:40.995
+that's gonna take tons and tons of work.
+
+00:21:40.995 --> 00:21:41.990
+- Mm-hmm.
+- Yeah.
+
+00:21:41.990 --> 00:21:43.810
+- All of these institutions
+that we need to build up,
+
+00:21:43.810 --> 00:21:46.341
+like there's all sorts of
+institutions built up around
+
+00:21:46.341 --> 00:21:49.573
+like automotive safety, built
+up over many, many years.
+
+00:21:49.573 --> 00:21:51.673
+But we're like, "Do we
+have the time to do that?
+
+00:21:51.673 --> 00:21:54.229
+We've gotta go as fast
+as we can to figure out
+
+00:21:54.229 --> 00:21:56.620
+what the institutions we
+need for AI safety are,
+
+00:21:56.620 --> 00:21:58.939
+and build those and try
+to build them here first,
+
+00:21:58.939 --> 00:22:00.059
+but make it exportable."
+
+00:22:00.059 --> 00:22:00.892
+- That's right.
+
+00:22:00.892 --> 00:22:01.960
+- It it forces unity also,
+
+00:22:01.960 --> 00:22:04.784
+because if any part of the org
+
+00:22:04.784 --> 00:22:08.127
+is not kind of in line
+with our safety values,
+
+00:22:08.127 --> 00:22:10.691
+it shows up through
+kind of the RSP, right?
+
+00:22:10.691 --> 00:22:13.390
+The RSP is gonna block them
+from doing what they want to do,
+
+00:22:13.390 --> 00:22:16.859
+and so it's a way to remind
+everyone over and over again,
+
+00:22:16.859 --> 00:22:20.000
+basically, to make safety
+a product requirement,
+
+00:22:20.000 --> 00:22:22.041
+part of the product planning process.
+
+00:22:22.041 --> 00:22:24.642
+And so, like, it's not just
+a bunch of kind of like
+
+00:22:24.642 --> 00:22:26.309
+bromides that we repeat;
+
+00:22:26.309 --> 00:22:27.902
+it's something that you actually,
+
+00:22:27.902 --> 00:22:30.176
+if you show up here
+and you're not aligned,
+
+00:22:30.176 --> 00:22:31.789
+you actually run into it.
+
+00:22:31.789 --> 00:22:32.622
+- Yeah.
+
+00:22:32.622 --> 00:22:34.759
+- And you either have to
+learn to get with the program
+
+00:22:34.759 --> 00:22:37.685
+or it doesn't work out.
+- Yeah.
+
+00:22:37.685 --> 00:22:39.811
+- The RSPs become kind of funny over time
+
+00:22:39.811 --> 00:22:42.393
+because we spend thousands
+of hours of work on it,
+
+00:22:42.393 --> 00:22:44.947
+and then I go and talk to
+senators and I explain the RSP,
+
+00:22:44.947 --> 00:22:46.544
+and I'm like, "We have some stuff
+
+00:22:46.544 --> 00:22:49.097
+that means it's hard
+to steal what we make,
+
+00:22:49.097 --> 00:22:50.410
+and also that it's safe."
+
+00:22:50.410 --> 00:22:51.426
+And they're like,
+
+00:22:51.426 --> 00:22:54.108
+"Yes, that's a completely
+normal thing to do.
+
+00:22:55.443 --> 00:22:57.829
+Are you telling me not
+everyone does this?"
+
+00:22:57.829 --> 00:22:58.863
+You're like, "Oh, okay, yeah."
+
+00:22:58.863 --> 00:23:00.209
+Yeah.
+
+00:23:01.093 --> 00:23:03.061
+- It's half true that that
+not everyone does this.
+
+00:23:03.061 --> 00:23:03.894
+- Yeah.
+
+00:23:03.894 --> 00:23:04.727
+- But that kind of,
+
+00:23:04.727 --> 00:23:07.496
+it's amazing because we've
+spent so much effort on it here
+
+00:23:07.496 --> 00:23:08.725
+and when you boil it down, they're like,
+
+00:23:08.725 --> 00:23:10.373
+"Yes, that sounds like a normal way
+
+00:23:10.373 --> 00:23:12.139
+to do that."
+- Yeah, that sounds good.
+
+00:23:12.139 --> 00:23:13.661
+- That's been the goal.
+
+00:23:13.661 --> 00:23:14.648
+Like Daniela was saying,
+
+00:23:14.648 --> 00:23:16.192
+"Let's make this as boring and normal.
+
+00:23:16.192 --> 00:23:17.705
+Like let's make this a finance thing."
+
+00:23:17.705 --> 00:23:19.235
+- Yeah, imagine it's like an audit.
+
+00:23:19.235 --> 00:23:20.389
+- Yeah, yeah.
+- Right?
+
+00:23:20.389 --> 00:23:22.317
+Yeah.
+- No, boring and normal
+
+00:23:22.317 --> 00:23:23.704
+is what we want,
+
+00:23:23.704 --> 00:23:25.089
+certainly in retrospect.
+- Yeah.
+
+00:23:25.089 --> 00:23:26.288
+Well also, Dario,
+
+00:23:26.288 --> 00:23:27.733
+I think in addition to driving alignment,
+
+00:23:27.733 --> 00:23:29.475
+it also drives clarity-
+- Mm-hmm.
+
+00:23:29.475 --> 00:23:32.763
+- Because it's written down
+what we're trying to do
+
+00:23:32.763 --> 00:23:34.757
+and it's legible to
+everyone in the company,
+
+00:23:34.757 --> 00:23:36.205
+and it's legible externally
+
+00:23:36.205 --> 00:23:38.601
+what we think we're supposed
+to be aiming towards
+
+00:23:38.601 --> 00:23:39.994
+from a safety perspective.
+
+00:23:39.994 --> 00:23:40.827
+It's not perfect.
+
+00:23:40.827 --> 00:23:42.525
+We're iterating on it,
+we're making it better,
+
+00:23:42.525 --> 00:23:44.528
+but I think there's some
+value in saying like,
+
+00:23:44.528 --> 00:23:46.932
+"This is what we're worried
+about, this thing over here."
+
+00:23:46.932 --> 00:23:49.979
+Like you can't just use
+this word to sort of
+
+00:23:49.979 --> 00:23:51.581
+derail something in
+either direction, right?
+
+00:23:51.581 --> 00:23:53.469
+To say, "Oh, because of
+safety, we can't do X,
+
+00:23:53.469 --> 00:23:55.333
+or because of safety, we have to do X."
+
+00:23:55.333 --> 00:23:57.849
+We're really trying to make
+it clearer what we mean.
+
+00:23:57.849 --> 00:24:00.365
+- Yeah, it prevents
+you from worrying about
+
+00:24:00.365 --> 00:24:02.160
+every last little thing under the sun.
+
+00:24:02.160 --> 00:24:03.534
+- That's right.
+
+00:24:03.534 --> 00:24:05.184
+- Because it's actually the fire drills
+
+00:24:05.184 --> 00:24:07.285
+that damage the cause of
+safety in the long run.
+
+00:24:07.285 --> 00:24:08.118
+- Right.
+
+00:24:08.118 --> 00:24:08.951
+- I've said like, "If there's a building,
+
+00:24:08.951 --> 00:24:12.363
+and, you know, the fire
+alarm goes off every week,
+
+00:24:12.363 --> 00:24:13.969
+like, that's a really unsafe building."
+
+00:24:13.969 --> 00:24:14.802
+- Mm-hmm.
+
+00:24:14.802 --> 00:24:15.635
+- 'Cause when there's
+like actually a fire,
+
+00:24:15.635 --> 00:24:16.629
+you're just gonna be like-
+- No ones gonna care.
+
+00:24:16.629 --> 00:24:17.462
+- "Oh, it just goes off all the time."
+
+00:24:17.462 --> 00:24:18.480
+So-
+- Yeah.
+
+00:24:18.480 --> 00:24:20.589
+- It's very important to be calibrated.
+
+00:24:20.589 --> 00:24:21.576
+- Yeah.
+- That's right.
+
+00:24:21.576 --> 00:24:22.409
+- Yeah.
+
+00:24:22.409 --> 00:24:24.777
+A slightly different frame
+that I find kind of clarifying
+
+00:24:24.777 --> 00:24:27.011
+is that I think that RSP
+creates healthy incentives
+
+00:24:27.011 --> 00:24:28.751
+at a lot of levels.
+- Mm.
+
+00:24:28.751 --> 00:24:30.392
+- So I think internally it aligns
+
+00:24:30.392 --> 00:24:32.789
+the incentives of every team with safety
+
+00:24:32.789 --> 00:24:34.755
+because it means that if we
+don't make progress on safety,
+
+00:24:34.755 --> 00:24:36.294
+we're gonna block.
+
+00:24:36.294 --> 00:24:38.628
+I also think that externally
+
+00:24:38.628 --> 00:24:40.730
+it creates a lot of healthier incentives
+
+00:24:40.730 --> 00:24:42.776
+than other possibilities,
+at least that I see,
+
+00:24:42.776 --> 00:24:44.283
+because it means that, you
+know, if we at some point
+
+00:24:44.283 --> 00:24:45.563
+have to take some kind of dramatic action,
+
+00:24:45.563 --> 00:24:46.565
+like, if at some point we have to say,
+
+00:24:46.565 --> 00:24:48.429
+"You know, our model,
+we've reached some point
+
+00:24:48.429 --> 00:24:50.051
+and we can't yet make a model safe,"
+
+00:24:50.051 --> 00:24:52.443
+it aligns that with
+sort of the point where
+
+00:24:52.443 --> 00:24:54.947
+there's evidence that
+supports that decision
+
+00:24:54.947 --> 00:24:57.027
+and there's sort of a
+preexisting framework
+
+00:24:57.027 --> 00:24:58.876
+for thinking about it, and it's legible.
+
+00:24:58.876 --> 00:25:01.961
+And so I think there's a lot
+of levels at which the RSP,
+
+00:25:01.961 --> 00:25:04.613
+I think in ways that maybe I
+didn't initially understand
+
+00:25:04.613 --> 00:25:07.539
+when we were talking about
+the early versions of it,
+
+00:25:07.539 --> 00:25:08.825
+it creates a better framework
+
+00:25:08.825 --> 00:25:11.480
+than any of the other ones
+that I've thought about.
+
+00:25:11.480 --> 00:25:12.995
+- I think this is all true,
+
+00:25:12.995 --> 00:25:15.670
+but I feel like it undersells sort of like
+
+00:25:15.670 --> 00:25:18.580
+how challenging it's been
+to sort of figure out
+
+00:25:18.580 --> 00:25:21.716
+what the right policies and evaluations
+
+00:25:21.716 --> 00:25:24.077
+and what the lines should be.
+
+00:25:24.077 --> 00:25:26.577
+I think that we have and continue to
+
+00:25:26.577 --> 00:25:27.851
+sort of iterate a lot on that,
+
+00:25:27.851 --> 00:25:30.568
+and I think there is a
+question also that's difficult
+
+00:25:30.568 --> 00:25:32.191
+of sort of you could be at a point where
+
+00:25:32.191 --> 00:25:34.142
+it's very clear something's dangerous
+
+00:25:34.142 --> 00:25:35.525
+or very clear that something's safe,
+
+00:25:35.525 --> 00:25:37.631
+but with some technology that's so new,
+
+00:25:37.631 --> 00:25:39.315
+there's actually like a big gray area.
+
+00:25:39.315 --> 00:25:41.050
+And so I think that has been, like,
+
+00:25:41.050 --> 00:25:43.079
+all the things that we're saying
+
+00:25:43.079 --> 00:25:45.045
+were things that made me
+
+00:25:45.045 --> 00:25:47.565
+really, really excited about
+the RSP at the beginning,
+
+00:25:47.565 --> 00:25:48.398
+and still do,
+
+00:25:48.398 --> 00:25:51.520
+but also I think enacting this
+
+00:25:51.520 --> 00:25:54.117
+in a clear way and making it work
+
+00:25:54.117 --> 00:25:56.932
+has been much harder and more complicated
+
+00:25:56.932 --> 00:25:58.112
+than I anticipated.
+
+00:25:58.112 --> 00:25:59.301
+- Yeah, I think this is exactly the point.
+
+00:25:59.301 --> 00:26:00.134
+Like-
+- Yeah.
+
+00:26:00.134 --> 00:26:02.363
+- Like the gray areas are
+impossible to predict.
+
+00:26:02.363 --> 00:26:03.365
+There's so many of them.
+
+00:26:03.365 --> 00:26:05.437
+Like, until you actually
+try to implement everything,
+
+00:26:05.437 --> 00:26:07.033
+you don't know what's going to go wrong.
+
+00:26:07.033 --> 00:26:09.304
+So what we're trying to do is
+go and implement everything
+
+00:26:09.304 --> 00:26:12.002
+so we can see as early as
+possible what's going to go wrong,
+
+00:26:12.002 --> 00:26:13.195
+so-
+- Yeah, you have to-
+
+00:26:13.195 --> 00:26:14.296
+- The gray areas are-
+
+00:26:14.296 --> 00:26:15.352
+- You have to do three
+or four passes before-
+
+00:26:15.352 --> 00:26:16.185
+- Yeah.
+- Yeah.
+
+00:26:16.185 --> 00:26:17.805
+- Before you really, really get it right.
+
+00:26:17.805 --> 00:26:20.306
+Like, iteration is just
+very powerful and, you know,
+
+00:26:20.306 --> 00:26:23.027
+you're not gonna get it
+right on the first time.
+
+00:26:23.027 --> 00:26:25.338
+And so, you know, if the
+stakes are increasing,
+
+00:26:25.338 --> 00:26:27.107
+you want to get your iterations in early;
+
+00:26:27.107 --> 00:26:28.421
+you don't want to get them in late.
+
+00:26:28.421 --> 00:26:29.254
+- You're also building
+
+00:26:29.254 --> 00:26:32.283
+the internal institutions and processes,
+
+00:26:32.283 --> 00:26:34.133
+so the specifics might change a lot,
+
+00:26:34.133 --> 00:26:36.199
+but building the muscle of just doing it
+
+00:26:36.199 --> 00:26:37.691
+is the really valuable thing.
+
+00:26:37.691 --> 00:26:41.651
+- I'm responsible for, like,
+compute at Anthropic, and so-
+
+00:26:41.651 --> 00:26:42.484
+- That's important.
+
+00:26:42.484 --> 00:26:43.752
+- So, thank you.
+
+00:26:43.752 --> 00:26:44.611
+I think so.
+
+00:26:44.611 --> 00:26:48.694
+So like for me,
+
+00:26:48.694 --> 00:26:51.149
+like I guess we have to
+deal with external folks-
+
+00:26:51.149 --> 00:26:51.982
+- Yeah.
+
+00:26:51.982 --> 00:26:53.048
+- And different external folks
+
+00:26:53.048 --> 00:26:55.048
+kind of are on different
+spectrums of the, like,
+
+00:26:55.048 --> 00:26:56.776
+how fast do they think stuff is gonna get?
+
+00:26:56.776 --> 00:26:57.609
+- Mm-hmm.
+- And like,
+
+00:26:57.609 --> 00:26:58.442
+I think that's also been a thing,
+
+00:26:58.442 --> 00:27:00.466
+where I started out
+like not thinking stuff
+
+00:27:00.466 --> 00:27:02.972
+would be that fast and
+have changed over time.
+
+00:27:02.972 --> 00:27:04.787
+And so, I have sympathy for that.
+
+00:27:04.787 --> 00:27:07.140
+And so I think the RSP has
+been extremely useful for me
+
+00:27:07.140 --> 00:27:08.483
+in communicating with people
+
+00:27:08.483 --> 00:27:10.316
+who think that things might take longer
+
+00:27:10.316 --> 00:27:12.206
+because then we have a
+thing where it's like,
+
+00:27:12.206 --> 00:27:15.132
+we don't need to do
+extreme safety measures
+
+00:27:15.132 --> 00:27:18.300
+until stuff gets really intense,
+
+00:27:18.300 --> 00:27:21.137
+and then they might be like,
+
+00:27:21.137 --> 00:27:22.664
+"I don't think stuff will
+get intense for a long time."
+
+00:27:22.664 --> 00:27:23.497
+And then I'll be like,
+
+00:27:23.497 --> 00:27:25.273
+"Okay, yeah, we don't have to
+do extreme safety measures."
+
+00:27:25.273 --> 00:27:27.042
+And so that makes it a lot easier
+
+00:27:27.042 --> 00:27:29.421
+to communicate with
+other folks externally.
+
+00:27:29.421 --> 00:27:30.653
+- Yeah, yeah, it makes it like
+
+00:27:30.653 --> 00:27:33.120
+a normal thing you can talk about,
+
+00:27:33.120 --> 00:27:34.688
+rather than something really strange.
+
+00:27:34.688 --> 00:27:35.611
+- Yeah.
+- Yeah.
+
+00:27:35.611 --> 00:27:37.781
+How else is it showing up for people?
+
+00:27:37.781 --> 00:27:38.614
+You are-
+
+00:27:38.614 --> 00:27:40.040
+- Evals, evals, evals.
+
+00:27:40.040 --> 00:27:41.224
+- Good.
+
+00:27:41.224 --> 00:27:42.182
+- It's all about evals.
+
+00:27:42.182 --> 00:27:43.425
+Everyone's doing evals.
+
+00:27:43.425 --> 00:27:45.592
+Like, your training team is
+doing evals all the time.
+
+00:27:45.592 --> 00:27:47.224
+We're trying to figure out, like,
+
+00:27:47.224 --> 00:27:48.776
+has this model gotten enough better
+
+00:27:48.776 --> 00:27:51.480
+that it has the potential to be dangerous?
+
+00:27:51.480 --> 00:27:54.341
+So how many teams do we
+have that are evals teams?
+
+00:27:54.341 --> 00:27:56.008
+You have Frontier Red Team.
+
+00:27:56.008 --> 00:27:58.365
+There must be, I mean
+there's a lot of people-
+
+00:27:58.365 --> 00:28:00.733
+- Every team produces evals, basically.
+
+00:28:00.733 --> 00:28:03.264
+- And that means you're just
+measuring against the RSP,
+
+00:28:03.264 --> 00:28:05.753
+like measuring for certain signs of
+
+00:28:05.753 --> 00:28:07.491
+things that would concern
+you or not concern you.
+
+00:28:07.491 --> 00:28:08.324
+- Exactly.
+
+00:28:08.324 --> 00:28:12.907
+Like it's easy to lower bound
+the abilities of a model,
+
+00:28:14.179 --> 00:28:15.106
+but it's hard to upper bound,
+
+00:28:15.106 --> 00:28:17.598
+so we just put tons and
+tons of research effort
+
+00:28:17.598 --> 00:28:19.019
+into saying, like,
+
+00:28:19.019 --> 00:28:21.131
+"Can this model do this
+dangerous thing or not?
+
+00:28:21.131 --> 00:28:23.237
+Maybe there's some trick
+that we haven't thought of,
+
+00:28:23.237 --> 00:28:25.323
+like chain of thought or best event
+
+00:28:25.323 --> 00:28:27.707
+or some kind of tool
+use that's gonna make it
+
+00:28:27.707 --> 00:28:30.337
+so it can help you do
+something very dangerous."
+
+00:28:30.337 --> 00:28:31.843
+- It's been really useful in policy,
+
+00:28:31.843 --> 00:28:34.255
+because it's been a
+really abstract concept,
+
+00:28:34.255 --> 00:28:35.341
+what safety is,
+
+00:28:35.341 --> 00:28:37.042
+and when I'm like, "We have an eval
+
+00:28:37.042 --> 00:28:39.336
+which changes whether we
+deploy the model or not,"
+
+00:28:39.336 --> 00:28:40.696
+and then you can go and calibrate with
+
+00:28:40.696 --> 00:28:43.387
+policymakers or experts
+in national security
+
+00:28:43.387 --> 00:28:45.699
+or some of these CBRN areas that we do,
+
+00:28:45.699 --> 00:28:48.983
+to actually help us build
+evals that are well-calibrated
+
+00:28:48.983 --> 00:28:50.133
+and that, counter-factually,
+
+00:28:50.133 --> 00:28:52.120
+just wouldn't have happened otherwise,
+
+00:28:52.120 --> 00:28:54.051
+but once you've got the specific thing,
+
+00:28:54.051 --> 00:28:55.251
+people are a lot more motivated
+
+00:28:55.251 --> 00:28:56.821
+to help you make it accurate,
+
+00:28:56.821 --> 00:28:58.341
+so it's been useful for that.
+
+00:28:58.341 --> 00:28:59.643
+How has it shown up for-
+- The RSP shows up for me,
+
+00:28:59.643 --> 00:29:00.476
+for sure.
+
+00:29:01.411 --> 00:29:03.077
+Often.
+
+00:29:03.077 --> 00:29:04.830
+I actually think, weirdly,
+
+00:29:04.830 --> 00:29:08.019
+the way that I think about
+the RSP the most is like
+
+00:29:08.019 --> 00:29:09.256
+what it sounds like-
+
+00:29:09.256 --> 00:29:10.089
+- Mm-hmm?
+
+00:29:10.089 --> 00:29:10.922
+- Just like the tone.
+
+00:29:10.922 --> 00:29:13.069
+I think we just did a big
+rewrite of the tone of the RSP
+
+00:29:13.069 --> 00:29:15.889
+because it felt overly technocratic,
+
+00:29:15.889 --> 00:29:17.283
+and even a little bit adversarial.
+
+00:29:17.283 --> 00:29:18.827
+I spent a lot of time thinking about like,
+
+00:29:18.827 --> 00:29:19.800
+how do you build a system
+
+00:29:19.800 --> 00:29:21.016
+that people just wanna be a part of?
+
+00:29:21.016 --> 00:29:21.849
+- Mm-hmm.
+- Right?
+
+00:29:21.849 --> 00:29:23.605
+It's so much better if
+the RSP is something
+
+00:29:23.605 --> 00:29:26.520
+that everyone in the company
+can walk around and tell you,
+
+00:29:26.520 --> 00:29:28.138
+you know, just like with OKRs
+
+00:29:28.138 --> 00:29:29.136
+like we do right now-
+- Yeah.
+
+00:29:29.136 --> 00:29:32.064
+- Like, what are the top goals of the RSP?
+
+00:29:32.064 --> 00:29:32.897
+How do we know if we're meeting them?
+
+00:29:32.897 --> 00:29:35.064
+What AI safety level are we at right now?
+
+00:29:35.064 --> 00:29:35.917
+Are we at ASL-2?
+
+00:29:35.917 --> 00:29:37.485
+Are we at ASL-3?
+
+00:29:37.485 --> 00:29:38.763
+That people know what to look for
+
+00:29:38.763 --> 00:29:40.672
+because that is how you're going to have
+
+00:29:40.672 --> 00:29:42.813
+good, common knowledge of
+if something's going wrong,
+
+00:29:42.813 --> 00:29:43.646
+right?
+
+00:29:43.646 --> 00:29:44.729
+If it's overly technocratic,
+
+00:29:44.729 --> 00:29:45.562
+and it's something that
+
+00:29:45.562 --> 00:29:47.036
+only particular people in the company
+
+00:29:47.036 --> 00:29:48.477
+feel is accessible to them,
+
+00:29:48.477 --> 00:29:50.365
+it's just like not as productive, right?
+
+00:29:50.365 --> 00:29:52.500
+And I think it's been really cool
+
+00:29:52.500 --> 00:29:54.456
+to watch it sort of
+transition into this document
+
+00:29:54.456 --> 00:29:56.027
+where I actually think most,
+
+00:29:56.027 --> 00:29:58.729
+if not everybody at the company,
+regardless of their role,
+
+00:29:58.729 --> 00:30:00.936
+could read it and say, "This
+feels really reasonable.
+
+00:30:00.936 --> 00:30:03.797
+I wanna make sure that we're building AI
+
+00:30:03.797 --> 00:30:04.970
+in the following ways,
+
+00:30:04.970 --> 00:30:07.112
+and I see why I would be
+worried about these things,
+
+00:30:07.112 --> 00:30:08.696
+and I also kind of know what to look for
+
+00:30:08.696 --> 00:30:10.091
+if I bump into something," right?
+
+00:30:10.091 --> 00:30:11.915
+It's almost like make it simple enough
+
+00:30:11.915 --> 00:30:15.048
+that if you are working
+at a manufacturing plant
+
+00:30:15.048 --> 00:30:15.881
+and you're like,
+
+00:30:15.881 --> 00:30:17.744
+"Huh, it looks like the
+safety seatbelt on this
+
+00:30:17.744 --> 00:30:19.629
+should connect this way,
+but it doesn't connect,"
+
+00:30:19.629 --> 00:30:20.648
+that you can spot it.
+
+00:30:20.648 --> 00:30:21.481
+- Mm-hmm.
+
+00:30:21.481 --> 00:30:23.115
+- And that there's just
+like healthy feedback flow
+
+00:30:23.115 --> 00:30:25.333
+between leadership and the board
+
+00:30:25.333 --> 00:30:26.889
+and the rest of the company
+
+00:30:26.889 --> 00:30:28.296
+and the people that are
+actually building it,
+
+00:30:28.296 --> 00:30:30.507
+because I actually think the
+way this stuff goes wrong
+
+00:30:30.507 --> 00:30:34.251
+in most cases is just, like,
+the wires don't connect
+
+00:30:34.251 --> 00:30:35.579
+or like they get crossed,
+
+00:30:35.579 --> 00:30:37.171
+and that would just be like
+
+00:30:37.171 --> 00:30:39.445
+a really sad way for
+things to go wrong, right?
+
+00:30:39.445 --> 00:30:41.070
+It's just all about operationalizing it,
+
+00:30:41.070 --> 00:30:42.803
+making it easy for people to understand.
+
+00:30:42.803 --> 00:30:43.636
+- Yeah, the thing I would say is
+
+00:30:43.636 --> 00:30:45.501
+none of us wanted to found a company.
+
+00:30:45.501 --> 00:30:49.616
+We just felt like it was our duty, right?
+
+00:30:49.616 --> 00:30:51.035
+- It felt like we had to.
+
+00:30:51.035 --> 00:30:52.325
+- Like, we have to do this thing.
+
+00:30:52.325 --> 00:30:55.426
+This is the way we're gonna
+make things go better with AI.
+
+00:30:55.426 --> 00:30:57.760
+Like that's also why we
+did the pledge, right?
+
+00:30:57.760 --> 00:30:59.301
+- Yeah.
+- Because we're like
+
+00:30:59.301 --> 00:31:01.128
+the reason we're doing this
+is it feels like our duty.
+
+00:31:01.128 --> 00:31:05.228
+- I wanted to invent and discover things
+
+00:31:05.228 --> 00:31:06.993
+in some kind of beneficial way.
+
+00:31:06.993 --> 00:31:10.397
+That was how I came to it,
+and that led to working on AI,
+
+00:31:10.397 --> 00:31:12.727
+and AI required a lot of engineering
+
+00:31:12.727 --> 00:31:15.330
+and eventually AI
+required a lot of capital,
+
+00:31:15.330 --> 00:31:17.413
+but what I found was that
+
+00:31:19.410 --> 00:31:22.230
+if you don't do this in a way where
+
+00:31:22.230 --> 00:31:23.537
+you're setting the environment,
+
+00:31:23.537 --> 00:31:26.013
+where you set up the company,
+
+00:31:26.013 --> 00:31:27.783
+then a lot of it gets done,
+
+00:31:27.783 --> 00:31:30.097
+a lot of it repeats the same mistakes
+
+00:31:30.097 --> 00:31:34.430
+that I found so alienating
+about the tech community.
+
+00:31:35.612 --> 00:31:36.799
+It's the same people,
+
+00:31:36.799 --> 00:31:38.044
+it's the same attitude,
+
+00:31:38.044 --> 00:31:39.746
+it's the same pattern-matching,
+
+00:31:39.746 --> 00:31:42.618
+And so at some point it
+just seemed inevitable
+
+00:31:42.618 --> 00:31:44.359
+that we need to do it in a different way.
+
+00:31:44.359 --> 00:31:45.700
+- When we were hanging
+out in graduate school,
+
+00:31:45.700 --> 00:31:48.032
+I remember you had kind
+of this whole program
+
+00:31:48.032 --> 00:31:50.466
+of trying to figure out how to do science
+
+00:31:50.466 --> 00:31:52.531
+in a way that would sort
+of advance the public good.
+
+00:31:52.531 --> 00:31:54.884
+And I think that's pretty similar to
+
+00:31:54.884 --> 00:31:57.472
+how we we think about this.
+
+00:31:57.472 --> 00:31:59.596
+I think you had this like
+Project Vannevar or something,
+
+00:31:59.596 --> 00:32:01.026
+to do that.
+
+00:32:01.026 --> 00:32:02.087
+I was a professor.
+
+00:32:02.087 --> 00:32:04.532
+I think basically I just
+looked at the situation
+
+00:32:04.532 --> 00:32:06.544
+and I was convinced that AI
+
+00:32:06.544 --> 00:32:09.435
+was on a very, very, very steep trajectory
+
+00:32:09.435 --> 00:32:10.994
+in terms of impact,
+
+00:32:10.994 --> 00:32:14.442
+didn't seem like because of
+the necessity for capital,
+
+00:32:14.442 --> 00:32:16.906
+and as a physics professor,
+I could continue doing that
+
+00:32:16.906 --> 00:32:20.530
+and I kind of wanted to work
+with people that I trusted
+
+00:32:20.530 --> 00:32:24.066
+in building an institution
+to try to make AI go well.
+
+00:32:24.066 --> 00:32:29.066
+But yeah, I would never
+recommend founding a company.
+
+00:32:29.159 --> 00:32:30.264
+Or really want to do it.
+
+00:32:30.264 --> 00:32:32.726
+I mean, yeah, I think it's
+just a means to an end.
+
+00:32:32.726 --> 00:32:33.559
+I mean,
+
+00:32:33.559 --> 00:32:35.498
+I think that's like usually
+how things go well, though.
+
+00:32:35.498 --> 00:32:37.279
+If you're doing something
+just to sort of like
+
+00:32:37.279 --> 00:32:39.336
+enrich yourself or gain power or, like,
+
+00:32:39.336 --> 00:32:41.254
+you have to sort of actually care about
+
+00:32:41.254 --> 00:32:43.569
+accomplishing a real goal in the world
+
+00:32:43.569 --> 00:32:46.124
+and then you find whatever
+means you have to.
+
+00:32:46.124 --> 00:32:47.900
+- Well, something I think about a lot
+
+00:32:47.900 --> 00:32:50.628
+as just a strategic advantage for us is,
+
+00:32:50.628 --> 00:32:52.434
+I mean, it sounds really funny to say,
+
+00:32:52.434 --> 00:32:55.580
+but just like how much trust
+there is at this table,
+
+00:32:55.580 --> 00:32:56.413
+right?
+- Mm-hmm.
+
+00:32:56.413 --> 00:32:57.679
+- Like I think that's not, I mean,
+
+00:32:57.679 --> 00:32:58.884
+Tom, you were at other startups.
+
+00:32:58.884 --> 00:33:00.388
+I was never a founder before,
+
+00:33:00.388 --> 00:33:02.987
+but it's actually really
+hard to get a group of,
+
+00:33:02.987 --> 00:33:07.399
+like, a big group of people,
+to have like the same mission.
+
+00:33:07.399 --> 00:33:08.232
+Right?
+
+00:33:08.232 --> 00:33:10.791
+And I think the thing that I
+feel like the happiest about
+
+00:33:10.791 --> 00:33:11.624
+when I come into work,
+
+00:33:11.624 --> 00:33:13.302
+and probably the most
+proud of at Anthropic,
+
+00:33:13.302 --> 00:33:16.616
+is how well that has
+scaled to a lot of people.
+
+00:33:16.616 --> 00:33:18.568
+It feels to me like in this group
+
+00:33:18.568 --> 00:33:19.844
+and with the rest of leadership,
+
+00:33:19.844 --> 00:33:21.254
+everyone is here for the mission,
+
+00:33:21.254 --> 00:33:22.942
+and our mission is really clear-
+
+00:33:22.942 --> 00:33:25.484
+- Yep.
+- And it's very pure, right?
+
+00:33:25.484 --> 00:33:27.838
+And I think that is something
+that I don't see as often,
+
+00:33:27.838 --> 00:33:29.937
+to Dario's point, in sort
+of the tech industry.
+
+00:33:29.937 --> 00:33:32.258
+It feels like there's just a wholesomeness
+
+00:33:32.258 --> 00:33:33.535
+to what we're trying to do.
+
+00:33:33.535 --> 00:33:35.725
+Like, no, I agree, none of us were like,
+
+00:33:35.725 --> 00:33:37.024
+"Let's just go found a company!"
+
+00:33:37.024 --> 00:33:39.221
+I felt like we had to do it, right?
+
+00:33:39.221 --> 00:33:40.054
+It just felt like
+
+00:33:40.054 --> 00:33:41.724
+we couldn't keep doing what we were doing
+
+00:33:41.724 --> 00:33:42.580
+at the place we were doing it.
+
+00:33:42.580 --> 00:33:44.009
+We had to do it by ourselves.
+
+00:33:44.009 --> 00:33:46.745
+- And it felt like with GPT-3,
+
+00:33:46.745 --> 00:33:48.845
+you know, which all of us had
+like touched or worked on,
+
+00:33:48.845 --> 00:33:50.780
+and scaling laws and everything else,
+
+00:33:50.780 --> 00:33:53.521
+we could see it in front of us in 2020.
+
+00:33:53.521 --> 00:33:54.439
+And it felt like, well,
+
+00:33:54.439 --> 00:33:56.540
+if we don't do something
+soon, all together,
+
+00:33:56.540 --> 00:33:58.555
+you're gonna hit the point of no return.
+
+00:33:58.555 --> 00:34:00.155
+And you have to do something
+
+00:34:00.155 --> 00:34:02.797
+to have any ability to
+change the environment.
+
+00:34:02.797 --> 00:34:03.630
+- Mm-hmm.
+
+00:34:03.630 --> 00:34:05.154
+- I think, building off Daniela,
+
+00:34:05.154 --> 00:34:07.447
+I do think that there's
+just like a lot of trust-
+
+00:34:07.447 --> 00:34:08.765
+- Mm-hmm.
+- In this group.
+
+00:34:08.765 --> 00:34:11.604
+I think each of us knows
+that we got into this
+
+00:34:11.604 --> 00:34:13.334
+because we wanna help out with the world.
+
+00:34:13.334 --> 00:34:14.189
+- Yeah.
+
+00:34:14.189 --> 00:34:17.670
+- We did the the 80% pledge thing,
+
+00:34:17.670 --> 00:34:20.520
+and that was like a thing
+that everybody was just like,
+
+00:34:20.520 --> 00:34:21.770
+"Yes, obviously we're gonna do this."
+
+00:34:21.770 --> 00:34:22.603
+- Mm-hmm.
+- Yeah, yeah.
+
+00:34:22.603 --> 00:34:26.563
+- And yeah, I do think
+that the trust thing
+
+00:34:26.563 --> 00:34:29.099
+is a special thing that's extremely rare.
+
+00:34:29.099 --> 00:34:29.932
+- Yeah.
+
+00:34:29.932 --> 00:34:33.181
+- I credit Daniela with
+keeping the bar high.
+
+00:34:33.181 --> 00:34:34.615
+I credit you with the fact-
+
+00:34:34.615 --> 00:34:36.147
+- Keeping out the clowns.
+
+00:34:36.147 --> 00:34:37.864
+Keeping out the clowns.
+
+00:34:37.864 --> 00:34:39.189
+- Chief clown wrangler!
+
+00:34:39.189 --> 00:34:40.022
+That's my job.
+
+00:34:40.022 --> 00:34:41.362
+- No, but you're the reason
+the culture scaled, I think.
+
+00:34:41.362 --> 00:34:42.195
+- Yeah.
+
+00:34:42.195 --> 00:34:43.378
+People say how nice people are here.
+
+00:34:43.378 --> 00:34:44.211
+- Yeah.
+
+00:34:44.211 --> 00:34:47.464
+- Which is actually a
+wildly important thing.
+
+00:34:47.464 --> 00:34:49.517
+- I think Anthropic is
+really low politics,
+
+00:34:49.517 --> 00:34:50.350
+and of course,
+
+00:34:50.350 --> 00:34:52.312
+we all have a different
+vantage point than average,
+
+00:34:52.312 --> 00:34:54.668
+and I try to remember that.
+- It's because of low ego.
+
+00:34:54.668 --> 00:34:55.818
+- But it's low ego,
+
+00:34:55.818 --> 00:34:57.805
+and I think I do think
+our interview process
+
+00:34:57.805 --> 00:34:59.759
+and just the type of people who work here,
+
+00:34:59.759 --> 00:35:03.220
+like, there's almost a like
+allergic reaction to politics.
+
+00:35:03.220 --> 00:35:04.426
+- And unity.
+
+00:35:04.426 --> 00:35:06.882
+- Mm-hmm.
+- Unity is so important.
+
+00:35:06.882 --> 00:35:09.720
+The idea that the product
+team, the research team-
+
+00:35:09.720 --> 00:35:10.553
+- Yes.
+
+00:35:10.553 --> 00:35:12.125
+- The trust and safety team,
+
+00:35:12.125 --> 00:35:14.576
+you know, the go-to market
+team, the policy team-
+
+00:35:14.576 --> 00:35:15.409
+- Yeah.
+
+00:35:15.409 --> 00:35:18.050
+- Like, the safety folks,
+
+00:35:18.050 --> 00:35:22.712
+they're all trying to contribute
+to kind of the same goal,
+
+00:35:22.712 --> 00:35:23.784
+the same mission of the company,
+
+00:35:23.784 --> 00:35:24.617
+right?
+- Yes.
+
+00:35:24.617 --> 00:35:26.305
+- I think it's dysfunctional when
+
+00:35:26.305 --> 00:35:28.420
+different parts of the company
+
+00:35:28.420 --> 00:35:30.823
+think they're trying to
+accomplish different things-
+
+00:35:30.823 --> 00:35:31.656
+- Yeah.
+
+00:35:31.656 --> 00:35:32.866
+- Think the company's
+about different things
+
+00:35:32.866 --> 00:35:34.938
+or think that other parts of the company
+
+00:35:34.938 --> 00:35:36.886
+are trying to undermine
+what they're doing.
+
+00:35:36.886 --> 00:35:37.719
+- Yeah.
+
+00:35:37.719 --> 00:35:38.717
+- And I think the most important thing
+
+00:35:38.717 --> 00:35:40.464
+we've managed to preserve is,
+
+00:35:40.464 --> 00:35:42.968
+and again, things like the RSP drive it,
+
+00:35:42.968 --> 00:35:45.241
+this idea that it's not, you know,
+
+00:35:45.241 --> 00:35:47.736
+there's some parts of the
+company causing damage
+
+00:35:47.736 --> 00:35:50.536
+and other parts of the
+company trying to repair it,
+
+00:35:50.536 --> 00:35:52.754
+but that there are different
+parts of the company
+
+00:35:52.754 --> 00:35:54.123
+doing different functions
+
+00:35:54.123 --> 00:35:57.024
+and that they all function
+under a single theory of change.
+
+00:35:57.024 --> 00:35:58.721
+- Extreme pragmatism, right?
+
+00:35:58.721 --> 00:35:59.554
+- Yeah.
+
+00:35:59.554 --> 00:36:02.298
+- You know, the reason I went
+to OpenAI in the first place,
+
+00:36:02.298 --> 00:36:03.834
+you know, it was a nonprofit,
+
+00:36:03.834 --> 00:36:06.042
+it was a place where I could
+go and focus on safety,
+
+00:36:06.042 --> 00:36:08.370
+and I think over time, you know,
+
+00:36:08.370 --> 00:36:10.586
+that maybe wasn't as good a fit
+
+00:36:10.586 --> 00:36:12.085
+and there were some difficult decisions.
+
+00:36:12.085 --> 00:36:13.820
+And I think, in a lot of ways,
+
+00:36:13.820 --> 00:36:16.645
+I really trusted Dario
+and Daniela on that,
+
+00:36:16.645 --> 00:36:18.922
+but I didn't want to leave.
+
+00:36:18.922 --> 00:36:21.690
+That was something that
+I think I was actually
+
+00:36:21.690 --> 00:36:24.552
+pretty reluctant to go along with,
+
+00:36:24.552 --> 00:36:25.949
+because I think, for one thing,
+
+00:36:25.949 --> 00:36:27.580
+I didn't know that it
+was good for the world
+
+00:36:27.580 --> 00:36:29.325
+to have more AI labs.
+
+00:36:29.325 --> 00:36:30.397
+And I think it was something that
+
+00:36:30.397 --> 00:36:32.000
+I was pretty, pretty reluctant for.
+
+00:36:32.000 --> 00:36:34.514
+And I think, as well, when we did leave,
+
+00:36:34.514 --> 00:36:38.173
+I think I was, you know, I was
+reluctant to start a company.
+
+00:36:38.173 --> 00:36:40.008
+I think I was arguing for a long time
+
+00:36:40.008 --> 00:36:41.435
+that we should do a nonprofit instead,
+
+00:36:41.435 --> 00:36:42.764
+and just focus on safety research.
+
+00:36:42.764 --> 00:36:43.597
+- Yes.
+
+00:36:43.597 --> 00:36:46.808
+- And I think it really took pragmatism
+
+00:36:46.808 --> 00:36:49.043
+and confronting the constraints
+
+00:36:49.043 --> 00:36:52.428
+and just being honest about
+what the constraints implied
+
+00:36:52.428 --> 00:36:53.862
+for accomplishing that mission-
+
+00:36:53.862 --> 00:36:54.695
+- Mm-hmm.
+
+00:36:54.695 --> 00:36:55.558
+- That led to Anthropic.
+
+00:36:55.558 --> 00:36:57.661
+- I think just a really important lesson
+
+00:36:57.661 --> 00:36:59.496
+that we were good about early on
+
+00:36:59.496 --> 00:37:02.176
+is make less promises
+and keep more of them.
+
+00:37:02.176 --> 00:37:03.128
+- Yeah.
+- Right?
+
+00:37:03.128 --> 00:37:03.961
+- Yeah.
+
+00:37:03.961 --> 00:37:07.544
+- Like, try to be
+calibrated, be realistic,
+
+00:37:08.755 --> 00:37:11.301
+confront the trade-offs,
+because, you know,
+
+00:37:11.301 --> 00:37:12.809
+trust and credibility
+
+00:37:12.809 --> 00:37:14.589
+are more important than
+any particular policy.
+
+00:37:14.589 --> 00:37:15.589
+- Yeah.
+
+00:37:15.589 --> 00:37:19.429
+- It is so unusual to have what we have,
+
+00:37:19.429 --> 00:37:23.280
+and watching Mike Krieger
+defend safety things,
+
+00:37:23.280 --> 00:37:25.723
+of like reasons why we
+shouldn't ship a product yet,
+
+00:37:25.723 --> 00:37:28.641
+but also then to watch
+Vinay sort of say like,
+
+00:37:28.641 --> 00:37:31.083
+"Okay, we have to do the
+right thing for the business.
+
+00:37:31.083 --> 00:37:32.567
+Like how do we get this
+across the finish line?"
+
+00:37:32.567 --> 00:37:33.400
+- Mm-hmm, yep.
+
+00:37:33.400 --> 00:37:34.351
+- And to hear, you know,
+
+00:37:34.351 --> 00:37:36.469
+people like deep in the
+technical safety org
+
+00:37:36.469 --> 00:37:39.413
+talking about how it's also
+important that we build things
+
+00:37:39.413 --> 00:37:41.021
+that are practical for people,
+
+00:37:41.021 --> 00:37:42.459
+and hearing, you know,
+
+00:37:42.459 --> 00:37:43.895
+engineers on inference talk about safety.
+
+00:37:43.895 --> 00:37:44.995
+That's amazing.
+
+00:37:44.995 --> 00:37:47.099
+Like, I think that is, again,
+
+00:37:47.099 --> 00:37:48.656
+one of the most special
+things about working here,
+
+00:37:48.656 --> 00:37:52.800
+is everybody with that unity
+is prioritizing the pragmatism,
+
+00:37:52.800 --> 00:37:54.180
+the safety, the business.
+
+00:37:54.180 --> 00:37:55.493
+That's wild.
+
+00:37:55.493 --> 00:37:56.475
+- The safest move-
+- I think about it as-
+
+00:37:56.475 --> 00:37:57.502
+- Yeah.
+
+00:37:57.502 --> 00:37:59.554
+- Spreading the trade-offs-
+- Yeah.
+
+00:37:59.554 --> 00:38:04.110
+- From just the leadership
+of the company to everyone,
+
+00:38:04.110 --> 00:38:04.943
+right?
+- Yeah.
+
+00:38:04.943 --> 00:38:06.525
+- I think the dysfunctional world is like,
+
+00:38:06.525 --> 00:38:10.024
+you have a bunch of people
+who only see a big, you know,
+
+00:38:10.024 --> 00:38:11.979
+safety is like, "We
+always have to do this,"
+
+00:38:11.979 --> 00:38:13.936
+and product is like, "We
+always have to do this,"
+
+00:38:13.936 --> 00:38:15.557
+and research is like, you know,
+
+00:38:15.557 --> 00:38:17.012
+"This is the only thing we care about."
+
+00:38:17.012 --> 00:38:19.231
+And then you're stuck at the top,
+
+00:38:19.231 --> 00:38:20.064
+right?
+- Yeah.
+
+00:38:20.064 --> 00:38:20.897
+- You're stuck at the top.
+
+00:38:20.897 --> 00:38:21.864
+You have to decide between
+
+00:38:21.864 --> 00:38:24.144
+you don't have as much
+information as either of them.
+
+00:38:24.144 --> 00:38:25.575
+That's the dysfunctional world.
+
+00:38:25.575 --> 00:38:26.921
+The functional world is when
+
+00:38:26.921 --> 00:38:29.134
+you're able to communicate to everyone,
+
+00:38:29.134 --> 00:38:31.539
+"There are these trade-offs
+we're all facing together."
+
+00:38:31.539 --> 00:38:32.372
+- Yeah.
+
+00:38:32.372 --> 00:38:34.160
+- The world is a far from perfect place.
+
+00:38:34.160 --> 00:38:36.053
+There's just trade-offs.
+
+00:38:36.053 --> 00:38:38.419
+Everything you do is gonna be suboptimal.
+
+00:38:38.419 --> 00:38:40.768
+Everything you do is gonna be
+
+00:38:40.768 --> 00:38:43.920
+some attempt to get the best
+of both worlds that, you know,
+
+00:38:43.920 --> 00:38:46.323
+doesn't work out as well
+as you thought it was,
+
+00:38:46.323 --> 00:38:48.123
+and everyone is on the same page about
+
+00:38:48.123 --> 00:38:50.542
+confronting those trade-offs together,
+
+00:38:50.542 --> 00:38:53.155
+and they just feel like
+they're confronting them
+
+00:38:53.155 --> 00:38:54.229
+from a particular post.
+
+00:38:54.229 --> 00:38:55.062
+- Mm-hmm.
+
+00:38:55.062 --> 00:38:57.805
+- From a particular job, as
+part of the overall job of
+
+00:38:57.805 --> 00:38:59.259
+confronting all the trade-offs.
+
+00:38:59.259 --> 00:39:00.731
+- It's a bet on race to the top, right?
+
+00:39:00.731 --> 00:39:02.110
+- It's a bet on race to the top, yeah.
+
+00:39:02.110 --> 00:39:03.197
+- Like it's not a pure upside bet.
+
+00:39:03.197 --> 00:39:04.952
+Things could go wrong, but-
+
+00:39:04.952 --> 00:39:05.785
+- Yeah.
+- Like,
+
+00:39:05.785 --> 00:39:06.618
+we're all aligned on like,
+
+00:39:06.618 --> 00:39:08.542
+"This is the bet that we're making."
+
+00:39:08.542 --> 00:39:10.242
+- And markets are pragmatic,
+
+00:39:10.242 --> 00:39:14.294
+so if the more successful
+Anthropic becomes as a company,
+
+00:39:14.294 --> 00:39:16.544
+the more incentive there
+is for people to copy
+
+00:39:16.544 --> 00:39:18.787
+the things that make us successful.
+
+00:39:18.787 --> 00:39:20.475
+And the more that success is tied to
+
+00:39:20.475 --> 00:39:22.062
+actual safety stuff we do,
+
+00:39:22.062 --> 00:39:23.160
+the more it just creates
+
+00:39:23.160 --> 00:39:25.594
+a gravitational force in the industry
+
+00:39:25.594 --> 00:39:28.984
+that will actually get the
+rest of industry to compete.
+
+00:39:28.984 --> 00:39:30.912
+And it's like, "Sure,
+we'll build seat belts
+
+00:39:30.912 --> 00:39:32.491
+and everyone else can copy them."
+
+00:39:32.491 --> 00:39:33.324
+That's good.
+
+00:39:33.324 --> 00:39:34.157
+Yeah.
+
+00:39:34.157 --> 00:39:34.990
+- That's like good world.
+
+00:39:34.990 --> 00:39:36.515
+- That's really good.
+- Yeah.
+
+00:39:36.515 --> 00:39:37.544
+This is the race to the top, right?
+
+00:39:37.544 --> 00:39:38.489
+But if you're saying,
+
+00:39:38.489 --> 00:39:40.012
+"Well, we're not gonna
+build the technology,
+
+00:39:40.012 --> 00:39:42.544
+you're not gonna build it
+better than someone else,"
+
+00:39:42.544 --> 00:39:44.227
+that in the end,
+
+00:39:44.227 --> 00:39:46.963
+that just doesn't work
+because you're not proving
+
+00:39:46.963 --> 00:39:48.780
+that it's possible to
+get from here to there.
+
+00:39:48.780 --> 00:39:49.613
+- Mm-hmm.
+
+00:39:49.613 --> 00:39:50.934
+- Where the world needs to get,
+
+00:39:50.934 --> 00:39:53.638
+nevermind the industry,
+nevermind one company,
+
+00:39:53.638 --> 00:39:56.335
+is it needs to get us
+successfully through from
+
+00:39:56.335 --> 00:39:58.653
+this technology does-doesn't exist
+
+00:39:58.653 --> 00:40:01.745
+to the technology exists
+in a very powerful way
+
+00:40:01.745 --> 00:40:04.017
+and society has actually managed it.
+
+00:40:04.017 --> 00:40:05.806
+And I think the only
+way that's gonna happen
+
+00:40:05.806 --> 00:40:09.179
+is that if you have, at the
+level of a single company,
+
+00:40:09.179 --> 00:40:11.286
+and eventually at the
+level of the industry,
+
+00:40:11.286 --> 00:40:13.067
+you're actually confronting
+those trade-offs.
+
+00:40:13.067 --> 00:40:18.001
+You have to find a way to
+actually be competitive,
+
+00:40:18.001 --> 00:40:20.515
+to actually lead the
+industry, in some cases,
+
+00:40:20.515 --> 00:40:22.987
+and yet manage to do things safely.
+
+00:40:22.987 --> 00:40:24.188
+And if you can do that,
+
+00:40:24.188 --> 00:40:28.037
+the gravitational pull
+you exert is so great.
+
+00:40:28.037 --> 00:40:29.489
+There's so many factors,
+
+00:40:29.489 --> 00:40:31.731
+from the regulatory environment,
+
+00:40:31.731 --> 00:40:34.702
+to the kinds of people who
+wanna work at different places,
+
+00:40:34.702 --> 00:40:36.919
+to, even sometimes,
+the views of customers-
+
+00:40:36.919 --> 00:40:37.752
+- Yeah.
+
+00:40:37.752 --> 00:40:39.706
+- That kind of drive in the direction of
+
+00:40:39.706 --> 00:40:43.219
+if you can show that you
+can do well on safety
+
+00:40:43.219 --> 00:40:45.675
+without sacrificing
+competitiveness, right,
+
+00:40:45.675 --> 00:40:48.402
+if you can find these kind of win-wins,
+
+00:40:48.402 --> 00:40:50.717
+then others are incentivized
+to do the same thing.
+
+00:40:50.717 --> 00:40:52.539
+- Yeah, I mean I think that's why
+
+00:40:52.539 --> 00:40:55.243
+getting things like the
+RSP right is so important,
+
+00:40:55.243 --> 00:40:58.076
+because I think that we ourselves,
+
+00:40:59.030 --> 00:41:02.736
+seeing where the technology
+is headed, have often thought,
+
+00:41:02.736 --> 00:41:05.370
+"Oh wow, we need to be really
+careful of this thing,"
+
+00:41:05.370 --> 00:41:07.901
+but at the same time we
+have to be even more careful
+
+00:41:07.901 --> 00:41:09.759
+not to be crying wolf,
+
+00:41:09.759 --> 00:41:12.951
+saying that like, "Innovation
+needs to stop here."
+
+00:41:12.951 --> 00:41:17.951
+We need to sort of find a way
+to make AI useful, innovative,
+
+00:41:19.048 --> 00:41:20.744
+delightful for customers,
+
+00:41:20.744 --> 00:41:24.485
+but also figure out what the
+constraints really have to be
+
+00:41:24.485 --> 00:41:27.190
+that we can stand behind,
+that makes systems safe,
+
+00:41:27.190 --> 00:41:30.337
+so that it's possible
+for others to think that
+
+00:41:30.337 --> 00:41:31.933
+they can do that too,
+
+00:41:31.933 --> 00:41:34.360
+and they can succeed,
+they can compete with us.
+
+00:41:34.360 --> 00:41:35.840
+- We're not doomers, right?
+
+00:41:35.840 --> 00:41:37.238
+Like, we wanna build the positive thing.
+
+00:41:37.238 --> 00:41:38.071
+- Yeah.
+
+00:41:38.071 --> 00:41:38.904
+- We wanna like build the good thing.
+
+00:41:38.904 --> 00:41:40.648
+- And we've seen it happen in practice.
+
+00:41:40.648 --> 00:41:43.412
+A few months after we
+came out with our RSP,
+
+00:41:43.412 --> 00:41:46.928
+the three most prominent AI
+companies had one, right?
+
+00:41:46.928 --> 00:41:48.148
+Interpretability research,
+
+00:41:48.148 --> 00:41:49.890
+that's another area we've done it.
+
+00:41:49.890 --> 00:41:52.039
+Just the focus on safety overall,
+
+00:41:52.039 --> 00:41:54.714
+like collaboration with
+the AI safety institutes,
+
+00:41:54.714 --> 00:41:56.010
+other areas.
+
+00:41:56.010 --> 00:41:59.196
+- Yeah, the Frontier Red Team
+got cloned almost immediately,
+
+00:41:59.196 --> 00:42:00.029
+which is good.
+
+00:42:00.029 --> 00:42:02.359
+You want all the labs
+to be testing for like,
+
+00:42:02.359 --> 00:42:04.514
+very, very security-scary risks.
+
+00:42:04.514 --> 00:42:05.347
+- Export the seat belts.
+
+00:42:05.347 --> 00:42:06.260
+- Yeah, exactly.
+- Mm-hmm,
+
+00:42:06.260 --> 00:42:07.588
+export the seat belts.
+
+00:42:07.588 --> 00:42:08.876
+Well, Jack also mentioned it earlier,
+
+00:42:08.876 --> 00:42:12.257
+but customers also really
+care about safety, right?
+
+00:42:12.257 --> 00:42:14.496
+Customers don't want models
+that are hallucinating.
+
+00:42:14.496 --> 00:42:16.524
+They don't want models
+that are easy to jailbreak.
+
+00:42:16.524 --> 00:42:19.311
+They want models that
+are helpful and harmless,
+
+00:42:19.311 --> 00:42:20.144
+right?
+- Yeah.
+
+00:42:20.144 --> 00:42:21.293
+- And so a lot of the time,
+
+00:42:21.293 --> 00:42:22.711
+what we hear in customer calls is just,
+
+00:42:22.711 --> 00:42:24.466
+"We're going with Claude
+because we know it's safer."
+
+00:42:24.466 --> 00:42:26.983
+I think that is also a
+huge market impact, right,
+
+00:42:26.983 --> 00:42:29.167
+because our ability to have models
+
+00:42:29.167 --> 00:42:31.248
+that are trustworthy and reliable,
+
+00:42:31.248 --> 00:42:33.467
+that matters for the market pressure
+
+00:42:33.467 --> 00:42:35.271
+that it puts on competitors, too.
+
+00:42:35.271 --> 00:42:37.536
+- Maybe to unpack
+something that Dario said
+
+00:42:37.536 --> 00:42:38.369
+a little bit more,
+
+00:42:38.369 --> 00:42:40.463
+I think there's this
+narrative or this idea
+
+00:42:40.463 --> 00:42:42.378
+that maybe the virtuous thing
+
+00:42:42.378 --> 00:42:45.601
+is to almost like nobly fail, right?
+
+00:42:45.601 --> 00:42:46.892
+It's like you should go
+
+00:42:46.892 --> 00:42:48.916
+and like put safety,
+
+00:42:48.916 --> 00:42:50.603
+you should go and put things,
+
+00:42:50.603 --> 00:42:53.802
+you should sort of demonstrate
+like in an impragmatic way
+
+00:42:53.802 --> 00:42:54.831
+so that you can sort of demonstrate
+
+00:42:54.831 --> 00:42:58.284
+your purity to the cause
+or something like this.
+
+00:42:58.284 --> 00:43:00.351
+And I think if you do that,
+
+00:43:00.351 --> 00:43:02.184
+it's actually very self-defeating.
+
+00:43:02.184 --> 00:43:03.167
+For one thing, it means that
+
+00:43:03.167 --> 00:43:05.999
+you're gonna have the
+people who are are deciding,
+
+00:43:05.999 --> 00:43:06.832
+making decisions,
+
+00:43:06.832 --> 00:43:09.151
+be self-selected for being
+people who don't care,
+
+00:43:09.151 --> 00:43:11.368
+and for people who aren't
+prioritizing safety
+
+00:43:11.368 --> 00:43:13.097
+and who don't care about it.
+
+00:43:13.097 --> 00:43:14.740
+And I think, on the other hand,
+
+00:43:14.740 --> 00:43:17.574
+if you try really hard to find the way
+
+00:43:17.574 --> 00:43:19.682
+to align the incentives
+
+00:43:19.682 --> 00:43:22.206
+and make it so that if
+there are hard decisions,
+
+00:43:22.206 --> 00:43:23.958
+they happen at the points where
+
+00:43:23.958 --> 00:43:26.314
+there is the most force to go and support
+
+00:43:26.314 --> 00:43:28.352
+making the correct hard decisions,
+
+00:43:28.352 --> 00:43:29.852
+and where there's the most evidence,
+
+00:43:29.852 --> 00:43:32.511
+then you can sort of start to
+trigger this race to the top
+
+00:43:32.511 --> 00:43:33.951
+that Dario is describing,
+
+00:43:33.951 --> 00:43:37.282
+where instead of going
+and having, you know,
+
+00:43:37.282 --> 00:43:39.895
+the people who care get
+pushed out of influence,
+
+00:43:39.895 --> 00:43:43.388
+you instead pull other people
+to have to go and follow.
+
+00:43:43.388 --> 00:43:45.607
+- So what are you all excited about
+
+00:43:45.607 --> 00:43:48.907
+when it comes to the next
+things we'll be working on?
+
+00:43:48.907 --> 00:43:50.332
+- Well, I think there's a bunch of reasons
+
+00:43:50.332 --> 00:43:52.751
+you can be excited about interpretability.
+
+00:43:52.751 --> 00:43:54.276
+One is obviously safety,
+
+00:43:54.276 --> 00:43:56.746
+but there's another one
+that I think I find,
+
+00:43:56.746 --> 00:43:58.895
+at an emotional level, you know,
+
+00:43:58.895 --> 00:44:02.330
+equally exciting or
+equally meaningful to me,
+
+00:44:02.330 --> 00:44:05.283
+which is just that I think
+neural networks are beautiful
+
+00:44:05.283 --> 00:44:07.759
+and I think that there's
+a lot of beauty in them
+
+00:44:07.759 --> 00:44:08.810
+that we don't see.
+
+00:44:08.810 --> 00:44:10.858
+We treat them like these black boxes that
+
+00:44:10.858 --> 00:44:14.183
+we're not particularly
+interested in the internal stuff,
+
+00:44:14.183 --> 00:44:15.988
+but when you start to
+go and look inside them,
+
+00:44:15.988 --> 00:44:19.073
+they're just full of
+amazing, beautiful structure.
+
+00:44:19.073 --> 00:44:22.824
+You know, it's sort of like
+if people looked at biology
+
+00:44:22.824 --> 00:44:27.795
+and they were like, "You know,
+evolution is really boring.
+
+00:44:27.795 --> 00:44:31.096
+It's just a simple thing that
+goes and runs for a long time,
+
+00:44:31.096 --> 00:44:32.224
+and then it makes animals,"
+
+00:44:32.224 --> 00:44:33.423
+and like, instead,
+
+00:44:33.423 --> 00:44:34.597
+it's like, actually, you know,
+
+00:44:34.597 --> 00:44:36.843
+each one of those animals
+that evolution produces,
+
+00:44:36.843 --> 00:44:39.336
+and I think that, you know,
+it's an optimization process,
+
+00:44:39.336 --> 00:44:40.169
+like training a neural network.
+
+00:44:40.169 --> 00:44:41.002
+You know,
+
+00:44:41.002 --> 00:44:43.342
+they're full of incredible
+complexity and structure,
+
+00:44:43.342 --> 00:44:47.075
+and we have an entire
+sort of artificial biology
+
+00:44:47.075 --> 00:44:48.795
+inside of neural networks.
+
+00:44:48.795 --> 00:44:51.190
+If you're just willing
+to look inside them,
+
+00:44:51.190 --> 00:44:52.891
+there's all of this amazing stuff.
+
+00:44:52.891 --> 00:44:55.699
+And I think that we're just
+starting to slowly unpack it,
+
+00:44:55.699 --> 00:44:57.911
+and it's incredible, and
+there's so much there,
+
+00:44:57.911 --> 00:44:59.604
+but there's just so much
+we discovered there.
+
+00:44:59.604 --> 00:45:01.326
+We're just starting to crack it open
+
+00:45:01.326 --> 00:45:04.926
+and I think it's gonna
+be amazing and beautiful.
+
+00:45:04.926 --> 00:45:07.059
+And sometimes I imagine, you know,
+
+00:45:07.059 --> 00:45:08.355
+like a decade in the future,
+
+00:45:08.355 --> 00:45:10.657
+walking into a bookstore
+and buying, you know,
+
+00:45:10.657 --> 00:45:12.803
+the textbook on neural
+network interpretability
+
+00:45:12.803 --> 00:45:15.100
+or really, like, on the
+biology of neural networks,
+
+00:45:15.100 --> 00:45:17.144
+and just the kind of wild things
+
+00:45:17.144 --> 00:45:18.641
+that are gonna be inside of it.
+
+00:45:18.641 --> 00:45:20.765
+And I think that in the next decade,
+
+00:45:20.765 --> 00:45:22.131
+in the next couple of years even,
+
+00:45:22.131 --> 00:45:23.999
+we're gonna go and start to go in
+
+00:45:23.999 --> 00:45:26.595
+and really discover all of those things.
+
+00:45:26.595 --> 00:45:29.946
+And it's gonna be wild and incredible.
+
+00:45:29.946 --> 00:45:31.262
+- It's also gonna be great
+
+00:45:31.262 --> 00:45:33.084
+that you get to buy your own textbook.
+
+00:45:34.315 --> 00:45:35.411
+- Just have your face on it.
+
+00:45:35.411 --> 00:45:38.551
+- I mean, yeah.
+
+00:45:38.551 --> 00:45:41.842
+- I'm excited that a few years
+ago if you had said like,
+
+00:45:41.842 --> 00:45:44.814
+"Governments will set up new bodies
+
+00:45:44.814 --> 00:45:46.936
+to test and evaluate AI systems
+
+00:45:46.936 --> 00:45:49.182
+and they will actually
+be competent and good,"
+
+00:45:49.182 --> 00:45:51.184
+you would've not thought that
+was going to be the case.
+
+00:45:51.184 --> 00:45:52.496
+But it's happened,
+
+00:45:52.496 --> 00:45:55.631
+it's kind of like governments have built
+
+00:45:55.631 --> 00:45:57.582
+these new embassies, almost,
+
+00:45:57.582 --> 00:46:00.112
+to deal with this new kind
+of class of technology
+
+00:46:00.112 --> 00:46:02.998
+or, like, thing that Chris studies.
+
+00:46:02.998 --> 00:46:05.779
+And I'm just very excited
+to see where that goes.
+
+00:46:05.779 --> 00:46:08.536
+I think it actually means
+that we have state capacity
+
+00:46:08.536 --> 00:46:10.886
+to deal with this kind
+of societal transition,
+
+00:46:10.886 --> 00:46:12.227
+so it's not just companies.
+
+00:46:12.227 --> 00:46:14.200
+And I'm excited to help with that.
+
+00:46:14.200 --> 00:46:17.312
+- I'm already excited
+about this to, you know,
+
+00:46:17.312 --> 00:46:18.515
+to a certain extent today,
+
+00:46:18.515 --> 00:46:20.981
+but I think just
+imagining the future world
+
+00:46:20.981 --> 00:46:24.251
+of what AI is going to
+be able to do for people
+
+00:46:24.251 --> 00:46:28.366
+is it's impossible to not
+feel excited about that.
+
+00:46:28.366 --> 00:46:30.323
+Dario talks about this a lot,
+
+00:46:30.323 --> 00:46:32.854
+but I think even just
+the sort of glimmers of
+
+00:46:32.854 --> 00:46:35.035
+Claude being able to help with, you know,
+
+00:46:35.035 --> 00:46:37.862
+vaccine development and cancer research
+
+00:46:37.862 --> 00:46:39.905
+and biological research
+
+00:46:39.905 --> 00:46:42.838
+is crazy, like, just to be able
+to watch what it can do now,
+
+00:46:42.838 --> 00:46:44.051
+but when I fast forward, you know,
+
+00:46:44.051 --> 00:46:46.232
+three years in the future
+or five years in the future,
+
+00:46:46.232 --> 00:46:48.683
+imagining that Claude could actually solve
+
+00:46:48.683 --> 00:46:50.216
+so many of the fundamental problems
+
+00:46:50.216 --> 00:46:52.549
+that we just face as humans.
+
+00:46:53.492 --> 00:46:56.235
+Even just from a health perspective alone,
+
+00:46:56.235 --> 00:46:58.558
+even if you sort of take
+everything else out,
+
+00:46:58.558 --> 00:47:00.363
+feels really exciting to me,
+
+00:47:00.363 --> 00:47:01.419
+just like thinking back to
+
+00:47:01.419 --> 00:47:03.334
+my international development times.
+
+00:47:03.334 --> 00:47:05.512
+It would be amazing if
+Claude was responsible for
+
+00:47:05.512 --> 00:47:07.843
+helping to do a lot of the
+work that I was trying to do
+
+00:47:07.843 --> 00:47:10.254
+a lot less effectively
+when I was, like, 25.
+
+00:47:10.254 --> 00:47:11.712
+- I mean, I guess similarly,
+
+00:47:11.712 --> 00:47:13.723
+I'm excited to build Claude for work.
+
+00:47:13.723 --> 00:47:17.759
+Like, I'm excited to build
+Claude into the company
+
+00:47:17.759 --> 00:47:19.953
+and into companies all over the world.
+
+00:47:19.953 --> 00:47:23.686
+- I guess I'm excited just
+for, I guess like, personally,
+
+00:47:23.686 --> 00:47:26.118
+like I like using Claude a lot
+
+00:47:26.118 --> 00:47:27.529
+at work,
+
+00:47:27.529 --> 00:47:29.611
+and so like, definitely,
+
+00:47:29.611 --> 00:47:31.824
+there's been increasing
+amounts of like home times
+
+00:47:31.824 --> 00:47:34.774
+with like me just like chatting
+with Claude about stuff.
+
+00:47:34.774 --> 00:47:39.086
+I think the biggest recent
+thing has been code-
+
+00:47:39.086 --> 00:47:39.919
+- Mm-hmm.
+
+00:47:39.919 --> 00:47:41.343
+- Where like six months ago,
+
+00:47:41.343 --> 00:47:43.608
+I didn't use Claude to do any coding work.
+
+00:47:43.608 --> 00:47:44.441
+Like,
+
+00:47:44.441 --> 00:47:46.912
+our teams didn't really use
+Claude that much for coding,
+
+00:47:46.912 --> 00:47:48.507
+and now it's like just phase difference.
+
+00:47:48.507 --> 00:47:52.478
+Like, I gave a talk at
+YCU like week before last,
+
+00:47:52.478 --> 00:47:54.150
+and at the beginning I just asked like,
+
+00:47:54.150 --> 00:47:59.150
+"Okay, so how many folks here
+use Claude for coding now?"
+
+00:47:59.633 --> 00:48:01.497
+And literally 95% of hands-
+
+00:48:01.497 --> 00:48:02.330
+- Wow.
+- Wow.
+
+00:48:02.330 --> 00:48:03.590
+- Like, all the hands in the room,
+
+00:48:03.590 --> 00:48:05.647
+which just is totally
+different than how it was
+
+00:48:05.647 --> 00:48:06.832
+four months ago or whatever.
+
+00:48:06.832 --> 00:48:07.803
+- Mm-hmm.
+- Yeah.
+
+00:48:07.803 --> 00:48:09.718
+- So when I think about
+what I'm excited about,
+
+00:48:09.718 --> 00:48:12.742
+I think about places where,
+you know, like I said before,
+
+00:48:12.742 --> 00:48:15.957
+where there's this kind
+of consensus that, again,
+
+00:48:15.957 --> 00:48:17.067
+seems like consensus,
+
+00:48:17.067 --> 00:48:18.785
+seems like what everyone wise thinks,
+
+00:48:18.785 --> 00:48:21.531
+and then it just kind of breaks,
+
+00:48:21.531 --> 00:48:23.819
+and so places where I think
+that's about to happen
+
+00:48:23.819 --> 00:48:25.310
+and it hasn't happened yet.
+
+00:48:25.310 --> 00:48:27.220
+One of them is interpretability.
+
+00:48:27.220 --> 00:48:30.483
+I think interpretability
+is both the key to
+
+00:48:30.483 --> 00:48:33.919
+steering and making safe AI systems,
+
+00:48:33.919 --> 00:48:35.350
+and we're about to understand,
+
+00:48:35.350 --> 00:48:39.040
+and interpretability
+contains insights about
+
+00:48:39.040 --> 00:48:40.990
+intelligent optimization problems
+
+00:48:40.990 --> 00:48:43.653
+and about how the human brain works.
+
+00:48:43.653 --> 00:48:45.942
+I've said, and I'm really not joking,
+
+00:48:45.942 --> 00:48:48.968
+Chris Olah is gonna be a
+future Nobel Medicine Laureate.
+
+00:48:48.968 --> 00:48:49.960
+- Aw, yeah.
+
+00:48:49.960 --> 00:48:50.793
+- I'm serious.
+
+00:48:50.793 --> 00:48:51.746
+I'm serious,
+
+00:48:51.746 --> 00:48:53.375
+because a lot of these,
+
+00:48:53.375 --> 00:48:54.328
+I used to be a neuroscientist,
+
+00:48:54.328 --> 00:48:56.408
+a lot of these mental illnesses,
+
+00:48:56.408 --> 00:48:58.351
+the ones we haven't figured out, right,
+
+00:48:58.351 --> 00:49:00.537
+schizophrenia or the mood disorders,
+
+00:49:00.537 --> 00:49:04.305
+I suspect there's some higher
+level system thing going on
+
+00:49:04.305 --> 00:49:06.867
+and that it's hard to make
+sense of those with brains
+
+00:49:06.867 --> 00:49:08.766
+because brains are so mushy
+
+00:49:08.766 --> 00:49:11.066
+and hard to open up and interact with.
+
+00:49:11.066 --> 00:49:12.289
+Neural nets are not like this;
+
+00:49:12.289 --> 00:49:13.493
+they're not a perfect analogy,
+
+00:49:13.493 --> 00:49:16.157
+but as time goes on, they
+will be a better analogy.
+
+00:49:16.157 --> 00:49:17.336
+That's one area.
+
+00:49:17.336 --> 00:49:19.560
+Second is, related to that,
+
+00:49:19.560 --> 00:49:22.652
+I think just the use of AI for biology.
+
+00:49:22.652 --> 00:49:26.710
+Biology is an incredibly
+difficult problem.
+
+00:49:26.710 --> 00:49:31.161
+People continue to be skeptical,
+for a number of reasons.
+
+00:49:31.161 --> 00:49:33.049
+I think that consensus
+is starting to break.
+
+00:49:33.049 --> 00:49:34.837
+We saw a Nobel Prize in chemistry
+
+00:49:34.837 --> 00:49:37.820
+awarded for AlphaFold;
+remarkable accomplishment.
+
+00:49:37.820 --> 00:49:39.763
+We should be trying to build things
+
+00:49:39.763 --> 00:49:42.122
+that can help us create
+a hundred AlphaFolds.
+
+00:49:42.122 --> 00:49:46.122
+And then finally, using
+AI to enhance democracy.
+
+00:49:46.957 --> 00:49:49.891
+We worry about if AI is
+built in the wrong way,
+
+00:49:49.891 --> 00:49:52.205
+it can be a tool for authoritarianism.
+
+00:49:52.205 --> 00:49:56.888
+How can AI be a tool for
+freedom and self-determination?
+
+00:49:56.888 --> 00:49:59.386
+I think that one is
+earlier than the other two,
+
+00:49:59.386 --> 00:50:01.715
+but it's gonna be just as important.
+
+00:50:01.715 --> 00:50:04.150
+- Yeah, I mean, I guess two things that
+
+00:50:04.150 --> 00:50:05.923
+at least connect to what
+you were saying earlier,
+
+00:50:05.923 --> 00:50:10.840
+I mean, one is I feel like
+people frequently join Anthropic
+
+00:50:12.487 --> 00:50:13.736
+because they're sort of
+
+00:50:13.736 --> 00:50:17.206
+scientifically really curious about AI
+
+00:50:17.206 --> 00:50:21.707
+and then kind of get
+convinced by AI progress
+
+00:50:21.707 --> 00:50:24.824
+to sort of share the vision of the need,
+
+00:50:24.824 --> 00:50:26.381
+not just to advance the technology,
+
+00:50:26.381 --> 00:50:28.144
+but to understand it more deeply
+
+00:50:28.144 --> 00:50:31.230
+and to make sure that it's safe.
+
+00:50:31.230 --> 00:50:33.721
+And I feel like it's actually
+just sort of exciting
+
+00:50:33.721 --> 00:50:36.675
+to have people that you're working with
+
+00:50:36.675 --> 00:50:39.272
+kind of more and more
+united in their vision
+
+00:50:39.272 --> 00:50:41.478
+for both what AI development looks like
+
+00:50:41.478 --> 00:50:44.552
+and the sort of sense of
+responsibility associated with it.
+
+00:50:44.552 --> 00:50:46.076
+And I feel like that's
+been happening a lot
+
+00:50:46.076 --> 00:50:47.445
+due to a lot of advances
+
+00:50:47.445 --> 00:50:48.525
+that have happened in the last year,
+
+00:50:48.525 --> 00:50:50.156
+like what Tom talked about.
+
+00:50:50.156 --> 00:50:51.341
+Another is that, I mean,
+
+00:50:51.341 --> 00:50:53.511
+going back really to concrete problems,
+
+00:50:53.511 --> 00:50:56.627
+I feel like we've done a
+lot of work on AI safety
+
+00:50:56.627 --> 00:50:57.581
+up until this point.
+
+00:50:57.581 --> 00:50:59.091
+A lot of it's really important,
+
+00:50:59.091 --> 00:51:01.715
+but I think we're now, with
+some recent developments,
+
+00:51:01.715 --> 00:51:04.328
+really getting a glimmer
+of what kinds of risks
+
+00:51:04.328 --> 00:51:06.533
+might literally come about from systems
+
+00:51:06.533 --> 00:51:07.944
+that are very, very advanced-
+
+00:51:07.944 --> 00:51:08.777
+- Mm-hmm.
+
+00:51:08.777 --> 00:51:11.026
+- So that we can
+investigate and study them
+
+00:51:11.026 --> 00:51:13.341
+directly with interpretability,
+
+00:51:13.341 --> 00:51:15.747
+with other kinds of safety mechanisms,
+
+00:51:15.747 --> 00:51:17.829
+and really understand what the risks from
+
+00:51:17.829 --> 00:51:21.103
+very advanced AI might look like.
+
+00:51:21.103 --> 00:51:23.298
+And I think that that's something that is
+
+00:51:23.298 --> 00:51:26.269
+really gonna allow us to
+sort of further the mission
+
+00:51:26.269 --> 00:51:29.849
+in a really deeply
+scientific, empirical way.
+
+00:51:29.849 --> 00:51:31.995
+And so I'm excited about sort
+of the next six months of
+
+00:51:31.995 --> 00:51:33.862
+how we use our understanding of
+
+00:51:33.862 --> 00:51:37.549
+what can go wrong with advanced
+systems to characterize that
+
+00:51:37.549 --> 00:51:40.518
+and figure out how to
+avoid those pitfalls.
+
+00:51:40.518 --> 00:51:41.496
+- Perfect.
+
+00:51:41.496 --> 00:51:42.329
+Fin!
+- Yay!
+
+00:51:42.329 --> 00:51:43.162
+- We did it!
+
+00:51:43.162 --> 00:51:44.387
+- Woo!
+
+00:51:44.387 --> 00:51:45.928
+- Good time.
+- I know.
+
+00:51:45.928 --> 00:51:48.261
+We gotta do this more often.
+

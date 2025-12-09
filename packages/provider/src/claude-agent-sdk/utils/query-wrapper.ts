@@ -59,6 +59,13 @@ function extractUsage(resultMessage: {
 }
 
 /**
+ * Result type that includes session ID from SDK
+ */
+export type AgenticQueryResult<T> = ProviderResultWithUsage<T> & {
+  sessionId?: string;
+};
+
+/**
  * Process SDK result message and return appropriate provider result
  */
 function processResultMessage<T>(
@@ -267,12 +274,55 @@ export async function executeQueryWithRetry<T>(
   );
 }
 
+/** Whitelist pattern for valid content IDs (alphanumeric, hyphens, underscores) */
+const VALID_CONTENT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
+
 /**
- * Extract content ID from agentic prompt
+ * Extract content ID from agentic prompt with comprehensive path traversal protection
+ *
+ * Security measures:
+ * - URL decodes input to catch encoded attacks (%2e%2e = ..)
+ * - Checks for null bytes that could bypass validation
+ * - Whitelist validation (only alphanumeric, hyphens, underscores)
+ * - Rejects any path separators or traversal sequences
  */
-function extractContentIdFromPrompt(prompt: string): string | null {
+export function extractContentIdFromPrompt(prompt: string): string | null {
   const match = prompt.match(CONTENT_ID_REGEX);
-  return match ? (match[1] ?? null) : null;
+  const rawId = match?.[1];
+
+  if (!rawId) {
+    return null;
+  }
+
+  // Decode URL-encoded characters to catch bypass attempts
+  let decodedId: string;
+  try {
+    decodedId = decodeURIComponent(rawId);
+  } catch {
+    // Invalid encoding - reject
+    return null;
+  }
+
+  // Check for null bytes (can bypass string checks in some systems)
+  if (decodedId.includes("\0")) {
+    return null;
+  }
+
+  // Reject path traversal and separator characters
+  if (
+    decodedId.includes("..") ||
+    decodedId.includes("/") ||
+    decodedId.includes("\\")
+  ) {
+    return null;
+  }
+
+  // Whitelist validation - only safe characters allowed
+  if (!VALID_CONTENT_ID_PATTERN.test(decodedId)) {
+    return null;
+  }
+
+  return decodedId;
 }
 
 /**
@@ -295,7 +345,7 @@ export async function executeAgenticQuery<T>(
   prompt: string,
   jsonSchema: Record<string, unknown>,
   config?: ClaudeAgentConfig
-): Promise<ProviderResultWithUsage<T>> {
+): Promise<AgenticQueryResult<T>> {
   try {
     const resolvedConfig = resolveConfig(config);
 
@@ -350,11 +400,22 @@ export async function executeAgenticQuery<T>(
       },
     });
 
+    // Track session ID from init message
+    let sessionId: string | undefined;
+
     // Process async generator - query() returns AsyncGenerator<SDKMessage, void>
     for await (const message of result) {
       // Log all messages for debugging
       if (contentId) {
         logger.log(message as Record<string, unknown>);
+      }
+
+      // Capture session ID from init message
+      if (
+        message.type === "system" &&
+        (message as { subtype?: string }).subtype === "init"
+      ) {
+        sessionId = (message as { session_id?: string }).session_id;
       }
 
       if (message.type !== "result") {
@@ -363,7 +424,8 @@ export async function executeAgenticQuery<T>(
 
       logger.close();
       const usage = extractUsage(message);
-      return processResultMessage<T>(message, usage);
+      const providerResult = processResultMessage<T>(message, usage);
+      return { ...providerResult, sessionId };
     }
 
     logger.close();
@@ -375,6 +437,7 @@ export async function executeAgenticQuery<T>(
         type: "unknown",
         message: "No result received from SDK",
       },
+      sessionId,
     };
   } catch (error) {
     return mapException(error);
@@ -393,11 +456,11 @@ export async function executeAgenticQueryWithRetry<T>(
   prompt: string,
   jsonSchema: Record<string, unknown>,
   config?: ClaudeAgentConfig
-): Promise<ProviderResultWithUsage<T>> {
+): Promise<AgenticQueryResult<T>> {
   const resolvedConfig = resolveConfig(config);
   const maxRetries = resolvedConfig.maxRetries;
 
-  let lastResult: ProviderResultWithUsage<T> | undefined;
+  let lastResult: AgenticQueryResult<T> | undefined;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const result = await executeAgenticQuery<T>(prompt, jsonSchema, config);

@@ -9,10 +9,9 @@ env:
   IMAGE_NAME: looplia:test
 
 jobs:
-  docker-e2e:
+  # Build Docker image once and share with all test jobs
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,15 +30,41 @@ jobs:
       - name: Build Docker image
         run: docker build -t $IMAGE_NAME .
 
+      - name: Save Docker image
+        run: docker save $IMAGE_NAME | gzip > looplia-image.tar.gz
+
+      - name: Upload Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: looplia-image.tar.gz
+          retention-days: 1
+
+  # Test 1: Markdown (summarize + kit)
+  test-markdown:
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker image
+        run: gunzip -c looplia-image.tar.gz | docker load
+
       - name: Create test workspace
-        run: mkdir -p test-workspace
+        run: mkdir -p test-workspace-markdown
 
       - name: Run summarize command
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
-          # Use docker create + start + cp to avoid volume mount conflicts
-          # (bootstrap deletes ~/.looplia which fails if it's a mounted volume)
           CONTAINER_ID=$(docker create \
             -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
             -v "$(pwd)/examples:/examples:ro" \
@@ -48,27 +73,26 @@ jobs:
             --output /home/looplia/.looplia/summary.json)
 
           docker start -a "$CONTAINER_ID"
-          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace/
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-markdown/
           docker rm "$CONTAINER_ID"
 
       - name: Validate summary schema
         run: |
           echo "Validating summary schema..."
-          jq -e '.headline and .tldr and .bullets and .tags' test-workspace/summary.json
+          jq -e '.headline and .tldr and .bullets and .tags' test-workspace-markdown/summary.json
           echo "Summary schema valid"
 
       - name: Validate summary quality
         run: |
           echo "Checking summary quality metrics..."
-          TLDR_WORDS=$(jq -r '.tldr' test-workspace/summary.json | wc -w)
-          BULLET_COUNT=$(jq '.bullets | length' test-workspace/summary.json)
-          TAG_COUNT=$(jq '.tags | length' test-workspace/summary.json)
+          TLDR_WORDS=$(jq -r '.tldr' test-workspace-markdown/summary.json | wc -w)
+          BULLET_COUNT=$(jq '.bullets | length' test-workspace-markdown/summary.json)
+          TAG_COUNT=$(jq '.tags | length' test-workspace-markdown/summary.json)
 
           echo "TLDR words: $TLDR_WORDS (expected: 30-200)"
           echo "Bullet count: $BULLET_COUNT (expected: 3-7)"
           echo "Tag count: $TAG_COUNT (expected: >= 3)"
 
-          # Validate minimum quality thresholds
           [ "$BULLET_COUNT" -ge 3 ] || (echo "Bullet count too low" && exit 1)
           [ "$TAG_COUNT" -ge 3 ] || (echo "Tag count too low" && exit 1)
 
@@ -78,7 +102,6 @@ jobs:
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
-          # Use docker create + start + cp to avoid volume mount conflicts
           CONTAINER_ID=$(docker create \
             -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
             -v "$(pwd)/examples:/examples:ro" \
@@ -89,29 +112,28 @@ jobs:
             --output /home/looplia/.looplia/kit.json)
 
           docker start -a "$CONTAINER_ID"
-          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace/
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-markdown/
           docker rm "$CONTAINER_ID"
 
       - name: Validate kit schema
         run: |
           echo "Validating kit schema..."
-          jq -e '.contentId and .summary and .ideas and .suggestedOutline' test-workspace/kit.json
+          jq -e '.contentId and .summary and .ideas and .suggestedOutline' test-workspace-markdown/kit.json
           echo "Kit schema valid"
 
       - name: Validate kit quality
         run: |
           echo "Checking kit quality metrics..."
-          HOOK_COUNT=$(jq '.ideas.hooks | length' test-workspace/kit.json)
-          ANGLE_COUNT=$(jq '.ideas.angles | length' test-workspace/kit.json)
-          QUESTION_COUNT=$(jq '.ideas.questions | length' test-workspace/kit.json)
-          SECTION_COUNT=$(jq '.suggestedOutline | length' test-workspace/kit.json)
+          HOOK_COUNT=$(jq '.ideas.hooks | length' test-workspace-markdown/kit.json)
+          ANGLE_COUNT=$(jq '.ideas.angles | length' test-workspace-markdown/kit.json)
+          QUESTION_COUNT=$(jq '.ideas.questions | length' test-workspace-markdown/kit.json)
+          SECTION_COUNT=$(jq '.suggestedOutline | length' test-workspace-markdown/kit.json)
 
           echo "Hook count: $HOOK_COUNT (expected: >= 2)"
           echo "Angle count: $ANGLE_COUNT (expected: >= 2)"
           echo "Question count: $QUESTION_COUNT (expected: >= 2)"
           echo "Outline sections: $SECTION_COUNT (expected: >= 3)"
 
-          # Validate minimum quality thresholds
           [ "$HOOK_COUNT" -ge 2 ] || (echo "Hook count too low" && exit 1)
           [ "$SECTION_COUNT" -ge 3 ] || (echo "Outline section count too low" && exit 1)
 
@@ -121,14 +143,132 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: docker-e2e-results
-          path: test-workspace/
+          name: test-results-markdown
+          path: test-workspace-markdown/
+          retention-days: 7
+
+  # Test 2: VTT Caption (kit command)
+  test-vtt:
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker image
+        run: gunzip -c looplia-image.tar.gz | docker load
+
+      - name: Create test workspace
+        run: mkdir -p test-workspace-vtt
+
+      - name: Run kit on VTT caption
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          CONTAINER_ID=$(docker create \
+            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
+            -v "$(pwd)/examples:/examples:ro" \
+            $IMAGE_NAME \
+            kit --file /examples/youtube/Anthropics/captions/EvtPBaaykdo.en.vtt \
+            --topics "ai,claude,developer-tools" \
+            --tone "expert")
+
+          docker start -a "$CONTAINER_ID"
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-vtt/
+          docker rm "$CONTAINER_ID"
+
+      - name: Validate VTT kit
+        run: |
+          echo "Validating VTT kit..."
+          SESSION_DIR=$(find test-workspace-vtt/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
+          echo "Session folder: $SESSION_DIR"
+          jq -e '.contentId and .summary and .ideas and .suggestedOutline' "$SESSION_DIR/writing-kit.json"
+          HOOK_COUNT=$(jq '.ideas.hooks | length' "$SESSION_DIR/writing-kit.json")
+          SECTION_COUNT=$(jq '.suggestedOutline | length' "$SESSION_DIR/writing-kit.json")
+          echo "Hook count: $HOOK_COUNT (expected: >= 2)"
+          echo "Outline sections: $SECTION_COUNT (expected: >= 3)"
+          [ "$HOOK_COUNT" -ge 2 ] || (echo "Hook count too low" && exit 1)
+          [ "$SECTION_COUNT" -ge 3 ] || (echo "Outline section count too low" && exit 1)
+          echo "VTT kit valid"
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-vtt
+          path: test-workspace-vtt/
+          retention-days: 7
+
+  # Test 3: SRT Transcript (kit command)
+  test-srt:
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker image
+        run: gunzip -c looplia-image.tar.gz | docker load
+
+      - name: Create test workspace
+        run: mkdir -p test-workspace-srt
+
+      - name: Run kit on SRT transcript
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          CONTAINER_ID=$(docker create \
+            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
+            -v "$(pwd)/examples:/examples:ro" \
+            $IMAGE_NAME \
+            kit --file /examples/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt \
+            --topics "coding,claude,automation" \
+            --tone "expert")
+
+          docker start -a "$CONTAINER_ID"
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-srt/
+          docker rm "$CONTAINER_ID"
+
+      - name: Validate SRT kit
+        run: |
+          echo "Validating SRT kit..."
+          SESSION_DIR=$(find test-workspace-srt/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
+          echo "Session folder: $SESSION_DIR"
+          jq -e '.contentId and .summary and .ideas and .suggestedOutline' "$SESSION_DIR/writing-kit.json"
+          HOOK_COUNT=$(jq '.ideas.hooks | length' "$SESSION_DIR/writing-kit.json")
+          SECTION_COUNT=$(jq '.suggestedOutline | length' "$SESSION_DIR/writing-kit.json")
+          echo "Hook count: $HOOK_COUNT (expected: >= 2)"
+          echo "Outline sections: $SECTION_COUNT (expected: >= 3)"
+          [ "$HOOK_COUNT" -ge 2 ] || (echo "Hook count too low" && exit 1)
+          [ "$SECTION_COUNT" -ge 3 ] || (echo "Outline section count too low" && exit 1)
+          echo "SRT kit valid"
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-srt
+          path: test-workspace-srt/
           retention-days: 7
 
   # LLM-based semantic evaluation using Claude Code Action (manual trigger only)
   semantic-evaluation:
     runs-on: ubuntu-latest
-    needs: docker-e2e
+    needs: [test-markdown, test-vtt, test-srt]
     if: github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
@@ -138,72 +278,73 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download artifacts
+      - name: Download markdown artifacts
         uses: actions/download-artifact@v4
         with:
-          name: docker-e2e-results
-          path: test-workspace/
+          name: test-results-markdown
+          path: test-workspace/markdown/
+
+      - name: Download VTT artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results-vtt
+          path: test-workspace/vtt/
+
+      - name: Download SRT artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results-srt
+          path: test-workspace/srt/
 
       - name: Evaluate pipeline outputs with Claude Code
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
-            You are an evaluator for a content intelligence pipeline. Your task is to assess the quality of each step's output against the original source content.
+            You are an evaluator for a content intelligence pipeline. Your task is to assess the quality of WritingKit outputs from 3 different source types: Markdown, VTT, and SRT.
 
-            ## Step 1: Read the Source Content
-            First, find and read the original content file:
-            - Look in test-workspace/contentItem/*/content.md (there should be one session folder)
-            - This is the ground truth for all evaluations
+            ## Evaluation Structure
 
-            ## Step 2: Evaluate Summary (test-workspace/contentItem/*/summary.json)
-            Compare against content.md and score using additive criteria (1 point each, max 4):
-            - **Accuracy** (1 pt): Key facts match the source without fabrication
-            - **Completeness** (1 pt): Main themes from each section are captured
-            - **Clarity** (1 pt): Headline and TLDR are well-written
-            - **Faithfulness** (1 pt): No hallucinated information beyond source
+            For each source type, evaluate the WritingKit output using additive criteria (1 point each, max 4):
+            - **Accuracy** (1 pt): Summary key facts match the source without fabrication
+            - **Completeness** (1 pt): Main themes captured in summary and ideas
+            - **Ideas Quality** (1 pt): Hooks, angles, and questions are relevant and engaging
+            - **Outline Quality** (1 pt): Suggested outline has logical structure and realistic word counts
 
-            ## Step 3: Evaluate Ideas (test-workspace/contentItem/*/ideas.json)
-            Score using additive criteria (1 point each, max 4):
-            - **Hooks** (1 pt): At least 3 varied, engaging hooks derived from content
-            - **Angles** (1 pt): At least 3 unique perspectives relevant to source themes
-            - **Questions** (1 pt): Thought-provoking questions that extend the source material
-            - **Grounding** (1 pt): Ideas are traceable to source content
+            ## Source 1: Markdown (test-workspace/markdown/)
+            - Content: test-workspace/markdown/contentItem/*/content.md
+            - Kit: test-workspace/markdown/kit.json
 
-            ## Step 4: Evaluate Outline (test-workspace/contentItem/*/outline.json)
-            Score using additive criteria (1 point each, max 4):
-            - **Structure** (1 pt): Logical flow with clear sections
-            - **Coverage** (1 pt): Addresses main themes from source
-            - **Actionable** (1 pt): Notes provide useful guidance for writing
-            - **Realistic** (1 pt): Word estimates are reasonable (total 1000-3000 words)
+            ## Source 2: VTT Caption (test-workspace/vtt/)
+            - Content: test-workspace/vtt/contentItem/*/content.md
+            - Kit: test-workspace/vtt/contentItem/*/writing-kit.json
+
+            ## Source 3: SRT Transcript (test-workspace/srt/)
+            - Content: test-workspace/srt/contentItem/*/content.md
+            - Kit: test-workspace/srt/contentItem/*/writing-kit.json
 
             ## Output Format
-            Print your evaluation for each step:
+            Print your evaluation:
 
-            === SOURCE CONTENT ===
-            File: [path to content.md]
-            Title: [extracted title]
-            Sections: [list main sections]
-
-            === SUMMARY EVALUATION ===
+            === MARKDOWN EVALUATION ===
             - Accuracy: [0/1] - [reason]
             - Completeness: [0/1] - [reason]
-            - Clarity: [0/1] - [reason]
-            - Faithfulness: [0/1] - [reason]
+            - Ideas Quality: [0/1] - [reason]
+            - Outline Quality: [0/1] - [reason]
             Score: [X]/4
 
-            === IDEAS EVALUATION ===
-            - Hooks: [0/1] - [reason]
-            - Angles: [0/1] - [reason]
-            - Questions: [0/1] - [reason]
-            - Grounding: [0/1] - [reason]
+            === VTT EVALUATION ===
+            - Accuracy: [0/1] - [reason]
+            - Completeness: [0/1] - [reason]
+            - Ideas Quality: [0/1] - [reason]
+            - Outline Quality: [0/1] - [reason]
             Score: [X]/4
 
-            === OUTLINE EVALUATION ===
-            - Structure: [0/1] - [reason]
-            - Coverage: [0/1] - [reason]
-            - Actionable: [0/1] - [reason]
-            - Realistic: [0/1] - [reason]
+            === SRT EVALUATION ===
+            - Accuracy: [0/1] - [reason]
+            - Completeness: [0/1] - [reason]
+            - Ideas Quality: [0/1] - [reason]
+            - Outline Quality: [0/1] - [reason]
             Score: [X]/4
 
             === FINAL RESULT ===
