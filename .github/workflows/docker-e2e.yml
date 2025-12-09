@@ -147,7 +147,7 @@ jobs:
           path: test-workspace-markdown/
           retention-days: 7
 
-  # Test 2: VTT Caption
+  # Test 2: VTT Caption (kit command)
   test-vtt:
     runs-on: ubuntu-latest
     needs: build
@@ -168,7 +168,7 @@ jobs:
       - name: Create test workspace
         run: mkdir -p test-workspace-vtt
 
-      - name: Run summarize on VTT caption
+      - name: Run kit on VTT caption
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
@@ -176,21 +176,27 @@ jobs:
             -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
             -v "$(pwd)/examples:/examples:ro" \
             $IMAGE_NAME \
-            summarize --file /examples/youtube/Anthropics/captions/EvtPBaaykdo.en.vtt)
+            kit --file /examples/youtube/Anthropics/captions/EvtPBaaykdo.en.vtt \
+            --topics "ai,claude,developer-tools" \
+            --tone "expert")
 
           docker start -a "$CONTAINER_ID"
           docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-vtt/
           docker rm "$CONTAINER_ID"
 
-      - name: Validate VTT summary
+      - name: Validate VTT kit
         run: |
-          echo "Validating VTT summary..."
+          echo "Validating VTT kit..."
           SESSION_DIR=$(find test-workspace-vtt/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
           echo "Session folder: $SESSION_DIR"
-          jq -e '.headline and .tldr and .bullets and .tags' "$SESSION_DIR/summary.json"
-          DETECTED=$(jq -r '.detectedSource // "unknown"' "$SESSION_DIR/summary.json")
-          echo "Detected source type: $DETECTED"
-          echo "VTT summary valid"
+          jq -e '.contentId and .summary and .ideas and .suggestedOutline' "$SESSION_DIR/writing-kit.json"
+          HOOK_COUNT=$(jq '.ideas.hooks | length' "$SESSION_DIR/writing-kit.json")
+          SECTION_COUNT=$(jq '.suggestedOutline | length' "$SESSION_DIR/writing-kit.json")
+          echo "Hook count: $HOOK_COUNT (expected: >= 2)"
+          echo "Outline sections: $SECTION_COUNT (expected: >= 3)"
+          [ "$HOOK_COUNT" -ge 2 ] || (echo "Hook count too low" && exit 1)
+          [ "$SECTION_COUNT" -ge 3 ] || (echo "Outline section count too low" && exit 1)
+          echo "VTT kit valid"
 
       - name: Upload test artifacts
         if: always()
@@ -200,7 +206,7 @@ jobs:
           path: test-workspace-vtt/
           retention-days: 7
 
-  # Test 3: SRT Transcript
+  # Test 3: SRT Transcript (kit command)
   test-srt:
     runs-on: ubuntu-latest
     needs: build
@@ -221,7 +227,7 @@ jobs:
       - name: Create test workspace
         run: mkdir -p test-workspace-srt
 
-      - name: Run summarize on SRT transcript
+      - name: Run kit on SRT transcript
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
@@ -229,21 +235,27 @@ jobs:
             -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
             -v "$(pwd)/examples:/examples:ro" \
             $IMAGE_NAME \
-            summarize --file /examples/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt)
+            kit --file /examples/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt \
+            --topics "coding,claude,automation" \
+            --tone "expert")
 
           docker start -a "$CONTAINER_ID"
           docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-srt/
           docker rm "$CONTAINER_ID"
 
-      - name: Validate SRT summary
+      - name: Validate SRT kit
         run: |
-          echo "Validating SRT summary..."
+          echo "Validating SRT kit..."
           SESSION_DIR=$(find test-workspace-srt/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
           echo "Session folder: $SESSION_DIR"
-          jq -e '.headline and .tldr and .bullets and .tags' "$SESSION_DIR/summary.json"
-          DETECTED=$(jq -r '.detectedSource // "unknown"' "$SESSION_DIR/summary.json")
-          echo "Detected source type: $DETECTED"
-          echo "SRT summary valid"
+          jq -e '.contentId and .summary and .ideas and .suggestedOutline' "$SESSION_DIR/writing-kit.json"
+          HOOK_COUNT=$(jq '.ideas.hooks | length' "$SESSION_DIR/writing-kit.json")
+          SECTION_COUNT=$(jq '.suggestedOutline | length' "$SESSION_DIR/writing-kit.json")
+          echo "Hook count: $HOOK_COUNT (expected: >= 2)"
+          echo "Outline sections: $SECTION_COUNT (expected: >= 3)"
+          [ "$HOOK_COUNT" -ge 2 ] || (echo "Hook count too low" && exit 1)
+          [ "$SECTION_COUNT" -ge 3 ] || (echo "Outline section count too low" && exit 1)
+          echo "SRT kit valid"
 
       - name: Upload test artifacts
         if: always()
@@ -289,28 +301,27 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
-            You are an evaluator for a content intelligence pipeline. Your task is to assess the quality of outputs from 3 different source types: Markdown, VTT, and SRT.
+            You are an evaluator for a content intelligence pipeline. Your task is to assess the quality of WritingKit outputs from 3 different source types: Markdown, VTT, and SRT.
 
             ## Evaluation Structure
 
-            For each source type, evaluate the summary output using additive criteria (1 point each, max 4):
-            - **Accuracy** (1 pt): Key facts match the source without fabrication
-            - **Completeness** (1 pt): Main themes from each section are captured
-            - **Clarity** (1 pt): Headline and TLDR are well-written
-            - **Faithfulness** (1 pt): No hallucinated information beyond source
+            For each source type, evaluate the WritingKit output using additive criteria (1 point each, max 4):
+            - **Accuracy** (1 pt): Summary key facts match the source without fabrication
+            - **Completeness** (1 pt): Main themes captured in summary and ideas
+            - **Ideas Quality** (1 pt): Hooks, angles, and questions are relevant and engaging
+            - **Outline Quality** (1 pt): Suggested outline has logical structure and realistic word counts
 
             ## Source 1: Markdown (test-workspace/markdown/)
             - Content: test-workspace/markdown/contentItem/*/content.md
-            - Summary: test-workspace/markdown/summary.json OR test-workspace/markdown/contentItem/*/summary.json
             - Kit: test-workspace/markdown/kit.json
 
             ## Source 2: VTT Caption (test-workspace/vtt/)
             - Content: test-workspace/vtt/contentItem/*/content.md
-            - Summary: test-workspace/vtt/contentItem/*/summary.json
+            - Kit: test-workspace/vtt/contentItem/*/writing-kit.json
 
             ## Source 3: SRT Transcript (test-workspace/srt/)
             - Content: test-workspace/srt/contentItem/*/content.md
-            - Summary: test-workspace/srt/contentItem/*/summary.json
+            - Kit: test-workspace/srt/contentItem/*/writing-kit.json
 
             ## Output Format
             Print your evaluation:
@@ -318,22 +329,22 @@ jobs:
             === MARKDOWN EVALUATION ===
             - Accuracy: [0/1] - [reason]
             - Completeness: [0/1] - [reason]
-            - Clarity: [0/1] - [reason]
-            - Faithfulness: [0/1] - [reason]
+            - Ideas Quality: [0/1] - [reason]
+            - Outline Quality: [0/1] - [reason]
             Score: [X]/4
 
             === VTT EVALUATION ===
             - Accuracy: [0/1] - [reason]
             - Completeness: [0/1] - [reason]
-            - Clarity: [0/1] - [reason]
-            - Faithfulness: [0/1] - [reason]
+            - Ideas Quality: [0/1] - [reason]
+            - Outline Quality: [0/1] - [reason]
             Score: [X]/4
 
             === SRT EVALUATION ===
             - Accuracy: [0/1] - [reason]
             - Completeness: [0/1] - [reason]
-            - Clarity: [0/1] - [reason]
-            - Faithfulness: [0/1] - [reason]
+            - Ideas Quality: [0/1] - [reason]
+            - Outline Quality: [0/1] - [reason]
             Score: [X]/4
 
             === FINAL RESULT ===
