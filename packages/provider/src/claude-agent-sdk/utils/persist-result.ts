@@ -113,7 +113,16 @@ export async function persistResultToWorkspace<T extends { contentId: string }>(
     const outputPath = join(newDir, filename);
     await writeWithMkdir(outputPath, JSON.stringify(data, null, 2));
     return { finalContentId: sessionId, targetDir: newDir };
-  } catch {
+  } catch (err) {
+    const nodeErr = err as NodeError;
+    // Only treat ENOENT as "directory doesn't exist" - re-throw other errors
+    if (nodeErr.code !== "ENOENT") {
+      const contextErr = new Error(
+        `Failed to stat directory (${nodeErr.code || "unknown"}): ${newDir}`
+      );
+      contextErr.cause = err;
+      throw contextErr;
+    }
     // newDir doesn't exist - use tempDir
     data.contentId = contentId;
     const outputPath = join(tempDir, filename);
