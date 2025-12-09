@@ -35,6 +35,7 @@ v0.3.4.1 adds **URL-based input** for automatic transcript extraction from YouTu
 | **--url Input** | New CLI option to accept YouTube/podcast URLs directly |
 | **media-processor Subagent** | Autonomous subagent for downloading and extracting media transcripts |
 | **yt-dlp Skill** | Skill that knows how to use yt-dlp for various extraction tasks |
+| **Auto-Install yt-dlp** | Skill detects missing yt-dlp and installs it automatically |
 | **Multi-Source Support** | Handle YouTube, podcasts, and other yt-dlp compatible sources |
 
 ### 1.3 Design Principles
@@ -197,7 +198,7 @@ Options:
 Note:
   - Either --file, --url, or --session-id is required
   - --file and --url always create new sessions
-  - --url requires yt-dlp to be installed (see: https://github.com/yt-dlp/yt-dlp)
+  - --url will auto-install yt-dlp if not present (requires pip, brew, or curl)
 ```
 
 ### 4.3 URL Validation
@@ -241,11 +242,14 @@ Extract transcripts from YouTube videos, podcasts, and other media URLs.
 ## Task
 
 1. Read URL request from `contentItem/{id}/url-request.json`
-2. Use **yt-dlp** skill to determine extraction strategy
-3. Execute yt-dlp command to download transcript/subtitles
-4. Convert extracted content to markdown format
-5. Write output to: `contentItem/{id}/content.md`
-6. Update url-request.json with status: "completed"
+2. Use **yt-dlp** skill to check if yt-dlp is installed
+   - If not installed, the skill will auto-install it
+   - Verify installation before proceeding
+3. Use **yt-dlp** skill to determine extraction strategy
+4. Execute yt-dlp command to download transcript/subtitles
+5. Convert extracted content to markdown format
+6. Write output to: `contentItem/{id}/content.md`
+7. Update url-request.json with status: "completed"
 
 ## Extraction Strategy Priority
 
@@ -349,6 +353,7 @@ Check the session folder for existing files:
 name: yt-dlp
 description: Expert knowledge for using yt-dlp to extract transcripts,
 subtitles, and metadata from YouTube, podcasts, and 1000+ video/audio sites.
+Includes dependency detection and auto-installation capability.
 ---
 
 # yt-dlp Skill
@@ -357,10 +362,121 @@ Expert knowledge for extracting transcripts and metadata from media URLs.
 
 ## What This Skill Does
 
+- **Detects if yt-dlp is installed** and installs it if missing
 - Knows yt-dlp command syntax and options
 - Selects optimal extraction strategy for each URL type
 - Handles errors and suggests fallback approaches
 - Understands output formats (VTT, SRT, JSON)
+
+## IMPORTANT: Dependency Check (Do This First!)
+
+Before running ANY yt-dlp command, you MUST check if yt-dlp is installed.
+
+### Step 1: Check Installation
+
+```bash
+# Check if yt-dlp exists
+which yt-dlp || command -v yt-dlp
+```
+
+If the command returns a path (e.g., `/usr/local/bin/yt-dlp`), yt-dlp is installed.
+If it returns nothing or an error, proceed to installation.
+
+### Step 2: Detect Operating System
+
+```bash
+# Detect OS for appropriate install method
+uname -s
+```
+
+| Output | OS | Install Method |
+|--------|----|--------------|
+| `Darwin` | macOS | brew or pip |
+| `Linux` | Linux | pip (preferred) or package manager |
+| `MINGW*` / `CYGWIN*` | Windows | pip |
+
+### Step 3: Auto-Install yt-dlp
+
+Choose the appropriate installation method based on OS and available tools:
+
+#### Option A: pip (Preferred - Works on all platforms)
+```bash
+# Check if pip is available
+which pip3 || which pip
+
+# Install via pip
+pip3 install yt-dlp || pip install yt-dlp
+```
+
+#### Option B: brew (macOS only)
+```bash
+# Check if brew is available
+which brew
+
+# Install via Homebrew
+brew install yt-dlp
+```
+
+#### Option C: Download Binary (Fallback)
+```bash
+# Linux/macOS - download directly
+curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
+chmod a+rx /usr/local/bin/yt-dlp
+```
+
+### Step 4: Verify Installation
+
+```bash
+# Confirm yt-dlp is now available
+yt-dlp --version
+```
+
+Expected output: Version string like `2024.12.06`
+
+### Installation Decision Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  yt-dlp Dependency Check Flow                                    │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. Run: which yt-dlp                                           │
+│     │                                                            │
+│     ├── Found? → Skip to extraction commands                     │
+│     │                                                            │
+│     └── Not found? → Continue to install                         │
+│                                                                  │
+│  2. Run: uname -s (detect OS)                                   │
+│     │                                                            │
+│     ├── Darwin (macOS):                                          │
+│     │   ├── Try: pip3 install yt-dlp                            │
+│     │   └── Fallback: brew install yt-dlp                       │
+│     │                                                            │
+│     ├── Linux:                                                   │
+│     │   ├── Try: pip3 install yt-dlp                            │
+│     │   └── Fallback: curl binary download                      │
+│     │                                                            │
+│     └── Windows/Other:                                           │
+│         └── Try: pip install yt-dlp                             │
+│                                                                  │
+│  3. Run: yt-dlp --version (verify)                              │
+│     │                                                            │
+│     ├── Success? → Proceed with extraction                       │
+│     │                                                            │
+│     └── Failed? → Report error, ask user to install manually    │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Error Handling for Installation
+
+| Scenario | Action |
+|----------|--------|
+| pip not available | Try brew (macOS) or curl download |
+| brew not available | Try pip or curl download |
+| Permission denied | Suggest: `pip3 install --user yt-dlp` |
+| Network error | Report and ask user to install manually |
+| All methods fail | Provide manual install instructions in error message |
 
 ## Supported Platforms
 
@@ -557,6 +673,11 @@ After successful processing:
   "url": "https://youtube.com/watch?v=dQw4w9WgXcQ",
   "requestedAt": "2025-12-09T10:30:00.000Z",
   "status": "completed",
+  "ytdlp": {
+    "wasInstalled": false,
+    "installedBy": "pip3",
+    "version": "2024.12.06"
+  },
   "extractionMethod": "subtitles",
   "extractedFiles": ["dQw4w9WgXcQ.en.vtt"],
   "error": null,
@@ -712,7 +833,12 @@ function generateSessionId(url: string): string {
 
 ### 9.1 Prerequisites
 
-Install yt-dlp (required for --url):
+**yt-dlp will be auto-installed** by the media-processor subagent if not already present. The yt-dlp skill handles:
+- Detection of existing installation
+- OS-appropriate installation method (pip, brew, or binary download)
+- Verification after installation
+
+**Optional: Pre-install yt-dlp manually** for faster first run:
 
 ```bash
 # macOS
@@ -730,6 +856,8 @@ Verify installation:
 yt-dlp --version
 # Should output version like: 2024.12.06
 ```
+
+**Note:** If auto-installation fails (e.g., no pip, no internet, permission issues), the agent will provide clear instructions for manual installation.
 
 ### 9.2 Basic Usage
 
@@ -918,3 +1046,4 @@ looplia kit --url "https://youtube.com/watch?v=PRIVATE_VIDEO_ID"
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.3.4.1 | 2025-12-09 | Initial design: --url input, media-processor subagent, yt-dlp skill |
+| 0.3.4.1 | 2025-12-09 | Added: yt-dlp auto-detection and installation capability in skill |
