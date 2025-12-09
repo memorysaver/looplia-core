@@ -1,5 +1,3 @@
-import { appendFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
 import type {
@@ -8,6 +6,7 @@ import type {
   ProviderUsage,
 } from "../config";
 import { resolveConfig } from "../config";
+import { createQueryLogger } from "../logger";
 import { ensureWorkspace } from "../workspace";
 import { mapException, mapSdkError } from "./error-mapper";
 
@@ -273,29 +272,6 @@ function extractContentIdFromPrompt(prompt: string): string | null {
 }
 
 /**
- * Initialize debug log file for SDK execution
- */
-function initDebugLog(logPath: string): void {
-  const timestamp = new Date().toISOString();
-  writeFileSync(
-    logPath,
-    `Agent SDK Execution Log - ${timestamp}\n${"=".repeat(60)}\n\n`
-  );
-}
-
-/**
- * Append message to debug log
- */
-function logSdkMessage(
-  logPath: string,
-  message: Record<string, unknown>
-): void {
-  const timestamp = new Date().toISOString();
-  const logEntry = `[${timestamp}] ${JSON.stringify(message, null, 2)}\n\n`;
-  appendFileSync(logPath, logEntry);
-}
-
-/**
  * Execute a true agentic query (v0.3.1 architecture)
  *
  * Uses minimal prompt with Read and Skill tools enabled.
@@ -341,13 +317,12 @@ export async function executeAgenticQuery<T>(
         resolvedConfig.useFilesystemExtensions
       ));
 
-    // Initialize debug logging for SDK execution
+    // Initialize query logger for SDK execution
     const contentId = extractContentIdFromPrompt(prompt);
-    let debugLogPath: string | null = null;
+    const logger = createQueryLogger(workspace);
     if (contentId) {
-      debugLogPath = join(workspace, "contentItem", contentId, "sdk-debug.log");
-      initDebugLog(debugLogPath);
-      logSdkMessage(debugLogPath, { type: "prompt", content: prompt });
+      logger.init(contentId);
+      logger.log({ type: "prompt", content: prompt });
     }
 
     // Execute SDK query with agentic tools (Read + Skill)
@@ -370,17 +345,20 @@ export async function executeAgenticQuery<T>(
     // Process async generator - query() returns AsyncGenerator<SDKMessage, void>
     for await (const message of result) {
       // Log all messages for debugging
-      if (debugLogPath) {
-        logSdkMessage(debugLogPath, message as Record<string, unknown>);
+      if (contentId) {
+        logger.log(message as Record<string, unknown>);
       }
 
       if (message.type !== "result") {
         continue;
       }
 
+      logger.close();
       const usage = extractUsage(message);
       return processResultMessage<T>(message, usage);
     }
+
+    logger.close();
 
     // No result received
     return {

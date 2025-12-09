@@ -1,0 +1,44 @@
+# Dependencies
+node_modules
+.turbo
+
+# Git
+.git
+.github
+.gitignore
+
+# IDE and local config
+.vscode
+.idea
+.claude
+.ruler
+
+# Build artifacts - keep dist folders for pre-built approach
+**/*.tsbuildinfo
+
+# Test and dev files
+*.test.ts
+*.spec.ts
+coverage
+**/__tests__
+**/__mocks__
+
+# Documentation (not needed in runtime)
+*.md
+!README.md
+apps/docs
+
+# Examples and samples
+examples
+
+# Environment files (secrets)
+.env*
+!.env.example
+
+# Logs
+*.log
+logs
+
+# OS files
+.DS_Store
+Thumbs.db

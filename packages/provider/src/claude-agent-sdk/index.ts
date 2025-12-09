@@ -17,6 +17,9 @@ export { validateConfig } from "./config";
 export { writeContentItem } from "./content-io";
 export type { ClaudeIdeaProvider } from "./idea-generator";
 export { createClaudeIdeaGenerator } from "./idea-generator";
+// Re-export logger
+export type { QueryLogger } from "./logger";
+export { createQueryLogger } from "./logger";
 export type { ClaudeOutlineProvider } from "./outline-generator";
 export { createClaudeOutlineGenerator } from "./outline-generator";
 export { buildIdeasPrompt, IDEAS_SYSTEM_PROMPT } from "./prompts/ideas";

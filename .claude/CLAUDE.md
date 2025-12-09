@@ -14,7 +14,7 @@ Biome (the underlying engine) provides extremely fast Rust-based linting and for
 
 ## Core Principles
 
-Write code that is **accessible, performant, type-safe, and maintainable**. Focus on clarity and explicit intent over brevity.
+Write code that is **accessible, performant, type-safe, and maintainable**. Focus on clarity and explicit intent over brevity. Ask or clarify directly if you have any questions or suggestions.
 
 ### Type Safety & Explicitness
 
