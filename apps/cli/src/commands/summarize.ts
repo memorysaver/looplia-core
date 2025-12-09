@@ -1,10 +1,12 @@
 import { writeFileSync } from "node:fs";
+import type { ContentSummary } from "@looplia-core/core";
 import {
   createMockSummarizer,
   summarizeContent,
   validateContentItem,
 } from "@looplia-core/core";
 import { createClaudeSummarizer } from "@looplia-core/provider/claude-agent-sdk";
+import { renderStreamingQuery } from "../components/index.js";
 import {
   createContentItemFromFile,
   formatSummaryAsMarkdown,
@@ -12,7 +14,8 @@ import {
   hasFlag,
   parseArgs,
   readContentFile,
-} from "../utils";
+} from "../utils/index.js";
+import { isInteractive } from "../utils/terminal.js";
 
 function printSummarizeHelp(): void {
   console.log(`
@@ -22,18 +25,40 @@ Usage:
   looplia summarize --file <path> [options]
 
 Options:
-  --file, -f    Path to content file (required)
-  --format      Output format: json, markdown (default: json)
-  --output, -o  Output file path (default: stdout)
-  --mock, -m    Use mock provider (no API key required)
-  --help, -h    Show this help
+  --file, -f       Path to content file (required)
+  --format         Output format: json, markdown (default: json)
+  --output, -o     Output file path (default: stdout)
+  --no-streaming   Disable streaming UI (use legacy output)
+  --mock, -m       Use mock provider (no API key required)
+  --help, -h       Show this help
+
+Note: Streaming UI is disabled automatically when piping output
 
 Environment:
   ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN  Required unless --mock is specified
 
 Example:
   looplia summarize --file ./article.txt --format markdown
+  looplia summarize --file ./notes.md --no-streaming | jq .headline
 `);
+}
+
+function writeOutput(
+  result: ContentSummary,
+  format: string,
+  outputPath: string | undefined
+): void {
+  const output =
+    format === "markdown"
+      ? formatSummaryAsMarkdown(result)
+      : JSON.stringify(result, null, 2);
+
+  if (outputPath) {
+    writeFileSync(outputPath, output);
+    console.log(`Summary written to: ${outputPath}`);
+  } else {
+    console.log(output);
+  }
 }
 
 export async function runSummarizeCommand(args: string[]): Promise<void> {
@@ -54,9 +79,9 @@ export async function runSummarizeCommand(args: string[]): Promise<void> {
   const format = getArg(parsed, "format") ?? "json";
   const outputPath = getArg(parsed, "output", "o");
   const useMock = hasFlag(parsed, "mock", "m");
+  const noStreaming = hasFlag(parsed, "no-streaming");
 
   // Check for API key unless using mock provider
-  // SDK supports both ANTHROPIC_API_KEY and CLAUDE_CODE_OAUTH_TOKEN
   if (
     !(
       useMock ||
@@ -85,45 +110,72 @@ export async function runSummarizeCommand(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  // Create provider based on --mock flag
-  const provider = useMock ? createMockSummarizer() : createClaudeSummarizer();
-  const result = await summarizeContent(validation.data, undefined, provider);
+  const validatedContent = validation.data;
 
-  if (!result.success) {
-    console.error(`Error: ${result.error.message}`);
-    process.exit(1);
-  }
+  // Determine if we should use streaming UI
+  const useStreamingUI = isInteractive() && !noStreaming && !useMock;
 
-  // Display summary metadata
-  console.log("\n✓ Content summarized successfully\n");
-  if (result.data.contentId) {
-    console.log(`Session ID: ${result.data.contentId}`);
-  }
-  if (result.data.detectedSource) {
-    console.log(`Source Type: ${result.data.detectedSource}`);
-  }
-  console.log(`Saved to: ~/.looplia/contentItem/${result.data.contentId}/\n`);
+  if (useStreamingUI) {
+    // Use streaming UI with real-time progress
+    const provider = createClaudeSummarizer();
 
-  // Display next steps
-  if (result.data.contentId) {
+    const { result, error } = await renderStreamingQuery<ContentSummary>({
+      title: "Content Summarizer",
+      subtitle: validatedContent.title,
+      streamGenerator: () => provider.summarizeStreaming(validatedContent),
+    });
+
+    if (error) {
+      console.error(`Error: ${error.message}`);
+      process.exit(1);
+    }
+
+    if (result) {
+      // Display next steps
+      console.log("");
+      if (result.contentId) {
+        console.log(`Session ID: ${result.contentId}`);
+        console.log(
+          `Saved to: ~/.looplia/contentItem/${result.contentId}/\n`
+        );
+        console.log(`Next step: looplia kit --session-id ${result.contentId}\n`);
+      }
+
+      writeOutput(result, format, outputPath);
+    }
+  } else {
+    // Legacy non-streaming mode
+    console.error("⏳ Summarizing content...");
+
+    const provider = useMock
+      ? createMockSummarizer()
+      : createClaudeSummarizer();
+    const result = await summarizeContent(validatedContent, undefined, provider);
+
+    if (!result.success) {
+      console.error(`Error: ${result.error.message}`);
+      process.exit(1);
+    }
+
+    // Display summary metadata
+    console.log("\n✓ Content summarized successfully\n");
+    if (result.data.contentId) {
+      console.log(`Session ID: ${result.data.contentId}`);
+    }
+    if (result.data.detectedSource) {
+      console.log(`Source Type: ${result.data.detectedSource}`);
+    }
     console.log(
-      `Next step: looplia kit --session-id ${result.data.contentId}\n`
+      `Saved to: ~/.looplia/contentItem/${result.data.contentId}/\n`
     );
-  }
 
-  // Format output
-  let output: string;
-  if (format === "markdown") {
-    output = formatSummaryAsMarkdown(result.data);
-  } else {
-    output = JSON.stringify(result.data, null, 2);
-  }
+    // Display next steps
+    if (result.data.contentId) {
+      console.log(
+        `Next step: looplia kit --session-id ${result.data.contentId}\n`
+      );
+    }
 
-  // Write output
-  if (outputPath) {
-    writeFileSync(outputPath, output);
-    console.log(`Summary written to: ${outputPath}`);
-  } else {
-    console.log(output);
+    writeOutput(result.data, format, outputPath);
   }
 }

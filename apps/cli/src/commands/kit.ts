@@ -5,6 +5,7 @@ import {
   createMockWritingKitProvider,
   type UserProfile,
   type UserTopic,
+  type WritingKit,
   validateContentItem,
   validateUserProfile,
 } from "@looplia-core/core";
@@ -14,7 +15,7 @@ import {
   readUserProfile,
   writeContentItem,
 } from "@looplia-core/provider/claude-agent-sdk";
-import { renderKitBuilder } from "../components/index.js";
+import { renderStreamingQuery } from "../components/index.js";
 import {
   createContentItemFromFile,
   formatKitAsMarkdown,
@@ -319,17 +320,10 @@ export async function runKitCommand(args: string[]): Promise<void> {
 
   if (useStreamingUI) {
     // Use streaming UI with real-time progress
-    const { result, error } = await renderKitBuilder({
-      provider,
-      content,
-      user,
-      format: format as "json" | "markdown",
-      onComplete: () => {
-        /* handled by promise */
-      },
-      onError: () => {
-        /* handled by promise */
-      },
+    const { result, error } = await renderStreamingQuery<WritingKit>({
+      title: "Writing Kit Builder",
+      subtitle: content.title,
+      streamGenerator: () => provider.buildKitStreaming(content, user),
     });
 
     if (error) {

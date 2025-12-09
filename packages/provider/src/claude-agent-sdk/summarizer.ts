@@ -7,6 +7,11 @@ import type {
 
 import type { ClaudeAgentConfig, ProviderResultWithUsage } from "./config";
 import { writeContentItem } from "./content-io";
+import {
+  executeAgenticQueryStreaming,
+  type AgenticQueryResult,
+  type StreamingEvent,
+} from "./streaming";
 import { executeAgenticQuery } from "./utils/query-wrapper";
 import { SUMMARY_OUTPUT_SCHEMA } from "./utils/schema-converter";
 import { ensureWorkspace, writeUserProfile } from "./workspace";
@@ -51,6 +56,21 @@ export type ClaudeSummarizerProvider = SummarizerProvider & {
     content: ContentItem,
     user?: UserProfile
   ): Promise<ProviderResultWithUsage<ContentSummary>>;
+
+  /**
+   * Summarize content with streaming events for UI
+   *
+   * Yields StreamingEvent objects during execution for real-time
+   * progress display. Returns final result on completion.
+   *
+   * @param content - Content item to process
+   * @param user - Optional user profile for preferences
+   * @returns AsyncGenerator yielding events, returning final result
+   */
+  summarizeStreaming(
+    content: ContentItem,
+    user?: UserProfile
+  ): AsyncGenerator<StreamingEvent, AgenticQueryResult<ContentSummary>>;
 };
 
 /**
@@ -121,6 +141,62 @@ export function createClaudeSummarizer(
       }
 
       return result;
+    },
+
+    async *summarizeStreaming(content, user) {
+      // Ensure workspace exists and get path
+      const workspace = await ensureWorkspace({
+        baseDir: config?.workspace,
+      });
+
+      // Write content item to workspace
+      await writeContentItem(content, workspace);
+
+      // Write user profile if provided
+      if (user) {
+        await writeUserProfile(workspace, user);
+      }
+
+      // Build minimal prompt - agent reads CLAUDE.md for full instructions
+      const prompt = buildMinimalSummarizePrompt(content.id);
+
+      // Execute streaming agentic query
+      const generator = executeAgenticQueryStreaming<ContentSummary>(
+        prompt,
+        SUMMARY_OUTPUT_SCHEMA,
+        {
+          ...config,
+          workspace,
+        }
+      );
+
+      // Yield all events and capture final result
+      let finalResult: AgenticQueryResult<ContentSummary>;
+
+      // Use for-await to iterate through all yielded events
+      let iterResult = await generator.next();
+      while (!iterResult.done) {
+        yield iterResult.value;
+        iterResult = await generator.next();
+      }
+
+      // Generator completed, get the return value
+      finalResult = iterResult.value;
+
+      // Persist summary and handle folder relocation
+      if (finalResult.success) {
+        const { persistResultToWorkspace } = await import(
+          "./utils/persist-result"
+        );
+        await persistResultToWorkspace(finalResult.data, {
+          workspace,
+          contentId: content.id,
+          sessionId: finalResult.sessionId,
+          filename: "summary.json",
+        });
+      }
+
+      return finalResult;
     },
   };
 }

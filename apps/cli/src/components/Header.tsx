@@ -6,16 +6,22 @@ import React from "react";
 import { Box, Text } from "ink";
 
 type Props = {
-  sessionId: string;
+  /** Optional title override (defaults to "Looplia") */
+  title?: string;
+  sessionId?: string;
   contentTitle?: string;
 };
 
-export const Header: React.FC<Props> = ({ sessionId, contentTitle }) => {
+export const Header: React.FC<Props> = ({
+  title = "Looplia",
+  sessionId,
+  contentTitle,
+}) => {
   return (
     <Box flexDirection="column" marginBottom={1}>
       <Box>
         <Text bold color="cyan">
-          Looplia Kit Builder
+          {title}
         </Text>
       </Box>
       {sessionId && (
