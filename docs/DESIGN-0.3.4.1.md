@@ -15,10 +15,11 @@
 4. [Feature 1: --url Input Option](#4-feature-1---url-input-option)
 5. [Feature 2: Media Processor Subagent](#5-feature-2-media-processor-subagent)
 6. [Feature 3: yt-dlp Skill](#6-feature-3-yt-dlp-skill)
-7. [Implementation Details](#7-implementation-details)
-8. [File Changes](#8-file-changes)
-9. [Usage Guide](#9-usage-guide)
-10. [Testing Strategy](#10-testing-strategy)
+7. [Whisper Transcription Skill](#7-whisper-transcription-skill)
+8. [Implementation Details](#8-implementation-details)
+9. [File Changes](#9-file-changes)
+10. [Usage Guide](#10-usage-guide)
+11. [Testing Strategy](#11-testing-strategy)
 
 ---
 
@@ -529,6 +530,7 @@ async function installYtDlp(): Promise<{ success: boolean; method: string; error
       await $`pip3 install --user yt-dlp`.quiet();
       return { success: true, method: "pip3", error: null };
     } catch (e) {
+      console.error(`pip3 install failed: ${e}`);
       // Continue to next method
     }
   }
@@ -538,6 +540,7 @@ async function installYtDlp(): Promise<{ success: boolean; method: string; error
       await $`pip install --user yt-dlp`.quiet();
       return { success: true, method: "pip", error: null };
     } catch (e) {
+      console.error(`pip install failed: ${e}`);
       // Continue to next method
     }
   }
@@ -548,6 +551,7 @@ async function installYtDlp(): Promise<{ success: boolean; method: string; error
       await $`brew install yt-dlp`.quiet();
       return { success: true, method: "brew", error: null };
     } catch (e) {
+      console.error(`brew install failed: ${e}`);
       // Continue to next method
     }
   }
@@ -566,6 +570,7 @@ async function installYtDlp(): Promise<{ success: boolean; method: string; error
 
       return { success: true, method: "curl-binary", error: null };
     } catch (e) {
+      console.error(`curl binary install failed: ${e}`);
       // Continue to error
     }
   }
@@ -670,11 +675,20 @@ interface ExtractionResult {
   error: string | null;
 }
 
-function extractVideoId(url: string): string | null {
-  // YouTube patterns
+async function extractVideoId(url: string): Promise<string> {
+  // Try using yt-dlp to robustly extract video ID
+  try {
+    const { stdout } = await $`yt-dlp --get-id ${url}`.quiet();
+    const id = stdout.trim();
+    if (id && id.length === 11) return id;
+  } catch {
+    // Fall through to fallback
+  }
+
+  // Fallback 1: YouTube URL patterns (handles youtube.com, youtu.be, m.youtube.com, live, shorts, etc.)
   const patterns = [
-    /(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-    /(?:embed\/|v\/|shorts\/)([a-zA-Z0-9_-]{11})/
+    /(?:v=|youtu\.be\/|embed\/|v\/|shorts\/|live\/)([a-zA-Z0-9_-]{11})/,
+    /(?:youtube\.com\/.*[?&]v=)([a-zA-Z0-9_-]{11})/
   ];
 
   for (const pattern of patterns) {
@@ -682,22 +696,33 @@ function extractVideoId(url: string): string | null {
     if (match) return match[1];
   }
 
-  // Fallback: generate ID from URL hash
+  // Fallback 2: Generate ID from URL hash
   const hash = url.split("").reduce((a, b) => {
     a = ((a << 5) - a) + b.charCodeAt(0);
-    return a & a;
+    return a & 0xFFFFFFFF;
   }, 0);
   return `url-${Math.abs(hash).toString(36)}`;
 }
 
 async function extractSubtitles(url: string, outputDir: string, videoId: string): Promise<boolean> {
   try {
-    await $`yt-dlp --write-auto-sub --write-sub --sub-lang en,en-US,en-GB --sub-format vtt --skip-download -o ${join(outputDir, videoId)} ${url}`.quiet();
+    const result = await $`yt-dlp --write-auto-sub --write-sub --sub-lang en,en-US,en-GB --sub-format vtt --skip-download -o ${join(outputDir, videoId)} -- ${url}`.nothrow();
+
+    if (result.exitCode !== 0) {
+      // yt-dlp failed to run, log error for debugging
+      console.error(`yt-dlp subtitle extraction failed with exit code ${result.exitCode}`);
+      if (result.stderr) {
+        console.error(`Error: ${result.stderr.toString().trim()}`);
+      }
+      return false;
+    }
 
     // Check if any subtitle file was created
     const files = readdirSync(outputDir);
     return files.some(f => f.includes(videoId) && (f.endsWith(".vtt") || f.endsWith(".srt")));
-  } catch {
+  } catch (err) {
+    // Unexpected error (e.g., filesystem error)
+    console.error(`Unexpected error during subtitle extraction: ${err}`);
     return false;
   }
 }
@@ -755,7 +780,7 @@ async function main(): Promise<void> {
   }
 
   const [url, outputDir] = args;
-  const videoId = extractVideoId(url);
+  const videoId = await extractVideoId(url);
 
   const result: ExtractionResult = {
     success: false,
@@ -767,14 +792,14 @@ async function main(): Promise<void> {
   await $`mkdir -p ${outputDir}`.quiet();
 
   // Strategy 1: Try subtitles first
-  const subtitlesExtracted = await extractSubtitles(url, outputDir, videoId!);
+  const subtitlesExtracted = await extractSubtitles(url, outputDir, videoId);
 
   if (subtitlesExtracted) {
     // Also get metadata
-    await extractInfoJson(url, outputDir, videoId!);
+    await extractInfoJson(url, outputDir, videoId);
 
-    const transcriptFile = findTranscriptFile(outputDir, videoId!);
-    const metadataFile = findMetadataFile(outputDir, videoId!);
+    const transcriptFile = findTranscriptFile(outputDir, videoId);
+    const metadataFile = findMetadataFile(outputDir, videoId);
     const { title, duration } = parseMetadata(metadataFile);
 
     result.success = true;
@@ -791,10 +816,10 @@ async function main(): Promise<void> {
   }
 
   // Strategy 2: Fall back to info.json
-  const infoExtracted = await extractInfoJson(url, outputDir, videoId!);
+  const infoExtracted = await extractInfoJson(url, outputDir, videoId);
 
   if (infoExtracted) {
-    const metadataFile = findMetadataFile(outputDir, videoId!);
+    const metadataFile = findMetadataFile(outputDir, videoId);
     const { title, duration } = parseMetadata(metadataFile);
 
     result.success = true;
@@ -943,7 +968,7 @@ export PATH="$HOME/.local/bin:$PATH"
 
 ---
 
-## 7. Feature 4: Whisper Transcription Skill
+## 7. Whisper Transcription Skill
 
 ### 7.1 Purpose
 
@@ -1213,7 +1238,7 @@ main();
 
 import { $ } from "bun";
 import { existsSync, writeFileSync, readFileSync } from "node:fs";
-import { join, basename } from "node:path";
+import { join, basename, extname } from "node:path";
 
 interface TranscriptionResult {
   success: boolean;
@@ -1234,7 +1259,6 @@ async function transcribeWithGroq(audioFile: string, outputDir: string): Promise
 
   try {
     const audioBuffer = readFileSync(audioFile);
-    const audioBase64 = audioBuffer.toString("base64");
     const fileName = basename(audioFile);
 
     // Create form data for Groq API
@@ -1254,13 +1278,19 @@ async function transcribeWithGroq(audioFile: string, outputDir: string): Promise
 
     if (!response.ok) {
       const errorText = await response.text();
-      return { success: false, data: null, error: `Groq API error: ${errorText}` };
+      return { success: false, data: null, error: `Groq API error (${response.status}): ${errorText}` };
     }
 
     const result = await response.json();
 
-    // Write transcript to file
-    const transcriptFile = join(outputDir, `${basename(audioFile, ".mp3")}.transcript.txt`);
+    // Validate response structure
+    if (!result || typeof result.text !== "string") {
+      return { success: false, data: null, error: "Invalid response format from Groq API" };
+    }
+
+    // Write transcript to file - use extname to handle any audio format
+    const audioExt = extname(audioFile);
+    const transcriptFile = join(outputDir, `${basename(audioFile, audioExt)}.transcript.txt`);
 
     // Format with timestamps if available
     let transcriptContent = "";
@@ -1292,33 +1322,40 @@ async function transcribeWithGroq(audioFile: string, outputDir: string): Promise
 }
 
 async function transcribeWithLocal(audioFile: string, outputDir: string): Promise<TranscriptionResult> {
-  const transcriptFile = join(outputDir, `${basename(audioFile, ".mp3")}.transcript.txt`);
+  const audioExt = extname(audioFile);
+  const transcriptFile = join(outputDir, `${basename(audioFile, audioExt)}.transcript.txt`);
 
   // Try whisperkit first (macOS)
   try {
-    await $`whisperkit transcribe --audio-path ${audioFile} --output-dir ${outputDir}`.quiet();
-    if (existsSync(transcriptFile)) {
+    const result = await $`whisperkit transcribe --audio-path ${audioFile} --output-dir ${outputDir}`.nothrow();
+    if (result.exitCode === 0 && existsSync(transcriptFile)) {
       return {
         success: true,
         data: { transcriptFile, method: "local", durationSeconds: null, language: "en" },
         error: null
       };
     }
-  } catch {}
+    console.error(`WhisperKit failed with exit code ${result.exitCode}: ${result.stderr?.toString().trim()}`);
+  } catch (err) {
+    console.error(`WhisperKit error: ${err}`);
+  }
 
   // Try Python whisper
   try {
-    await $`python3 -m whisper ${audioFile} --output_dir ${outputDir} --output_format txt`.quiet();
-    if (existsSync(transcriptFile)) {
+    const result = await $`python3 -m whisper ${audioFile} --output_dir ${outputDir} --output_format txt --language en`.nothrow();
+    if (result.exitCode === 0 && existsSync(transcriptFile)) {
       return {
         success: true,
         data: { transcriptFile, method: "local", durationSeconds: null, language: "en" },
         error: null
       };
     }
-  } catch {}
+    console.error(`Python Whisper failed with exit code ${result.exitCode}: ${result.stderr?.toString().trim()}`);
+  } catch (err) {
+    console.error(`Python Whisper error: ${err}`);
+  }
 
-  return { success: false, data: null, error: "Local transcription failed. No whisper installation found." };
+  return { success: false, data: null, error: "Local transcription failed. No whisper installation found or transcription failed." };
 }
 
 function formatTimestamp(seconds: number): string {
@@ -1455,7 +1492,9 @@ function detectSourceType(url: string): "youtube" | "podcast" | "video" | "news"
 // Add audio extraction function:
 async function extractAudio(url: string, outputDir: string, videoId: string): Promise<string | null> {
   try {
-    await $`yt-dlp -x --audio-format mp3 --audio-quality 5 -o ${join(outputDir, videoId + ".%(ext)s")} ${url}`.quiet();
+    // Use proper output template for yt-dlp
+    const outputTemplate = `${outputDir}/${videoId}.%(ext)s`;
+    await $`yt-dlp -x --audio-format mp3 --audio-quality 5 -o ${outputTemplate} -- ${url}`.quiet();
 
     const audioFile = join(outputDir, `${videoId}.mp3`);
     if (existsSync(audioFile)) {
@@ -1583,7 +1622,7 @@ The media-processor subagent now chains yt-dlp and whisper skills:
 
 ## 8. Implementation Details
 
-### 7.1 CLI Changes
+### 8.1 CLI Changes
 
 **File:** `apps/cli/src/commands/kit.ts`
 
@@ -1620,7 +1659,7 @@ if (urlArg) {
 }
 ```
 
-### 7.2 URL Request File Format
+### 8.2 URL Request File Format
 
 **File:** `contentItem/{id}/url-request.json`
 
@@ -1654,7 +1693,7 @@ After successful processing:
 }
 ```
 
-### 7.3 Content I/O Updates
+### 8.3 Content I/O Updates
 
 **File:** `packages/provider/src/claude-agent-sdk/content-io.ts`
 
@@ -1705,7 +1744,7 @@ export function createPendingContentItem(
 }
 ```
 
-### 7.4 Updated CLAUDE.md Instructions
+### 8.4 Updated CLAUDE.md Instructions
 
 **Addition to:** `plugins/looplia-writer/README.md`
 
@@ -1727,7 +1766,7 @@ If the session folder contains `url-request.json` but NO `content.md`:
    - content-analyzer → idea-generator → writing-kit-builder
 ```
 
-### 7.5 Session ID Generation for URLs
+### 8.5 Session ID Generation for URLs
 
 ```typescript
 function generateSessionId(url: string): string {
@@ -1745,9 +1784,9 @@ function generateSessionId(url: string): string {
 
 ---
 
-## 8. File Changes
+## 9. File Changes
 
-### 8.1 New Files
+### 9.1 New Files
 
 | File | Purpose |
 |------|---------|
@@ -1769,7 +1808,7 @@ function generateSessionId(url: string): string {
 | `plugins/looplia-writer/skills/whisper/references/whisperkit-setup.md` | Local WhisperKit installation |
 | `docs/DESIGN-0.3.4.1.md` | This document |
 
-### 8.2 Modified Files
+### 9.2 Modified Files
 
 | File | Changes |
 |------|---------|
@@ -1779,7 +1818,7 @@ function generateSessionId(url: string): string {
 | `apps/cli/src/index.ts` | Bump VERSION to "0.3.4.1" |
 | `packages/*/package.json` | Bump version to 0.3.4.1 |
 
-### 8.3 Workspace Structure Changes
+### 9.3 Workspace Structure Changes
 
 ```
 ~/.looplia/
@@ -1830,9 +1869,9 @@ function generateSessionId(url: string): string {
 
 ---
 
-## 9. Usage Guide
+## 10. Usage Guide
 
-### 9.1 Prerequisites
+### 10.1 Prerequisites
 
 **yt-dlp will be auto-installed** by the media-processor subagent if not already present. The yt-dlp skill handles:
 - Detection of existing installation
@@ -1860,7 +1899,7 @@ yt-dlp --version
 
 **Note:** If auto-installation fails (e.g., no pip, no internet, permission issues), the agent will provide clear instructions for manual installation.
 
-### 9.2 Basic Usage
+### 10.2 Basic Usage
 
 ```bash
 # Process YouTube video
@@ -1876,7 +1915,7 @@ looplia kit --url "https://youtube.com/watch?v=xyz" -o output.json
 looplia kit --url "https://youtube.com/watch?v=xyz" --format markdown
 ```
 
-### 9.3 Supported URL Formats
+### 10.3 Supported URL Formats
 
 ```bash
 # YouTube
@@ -1892,7 +1931,7 @@ looplia kit --url "https://vimeo.com/123456"
 looplia kit --url "https://ted.com/talks/speaker_title"
 ```
 
-### 9.4 Session Continuation
+### 10.4 Session Continuation
 
 ```bash
 # First run (creates session, downloads transcript)
@@ -1906,7 +1945,7 @@ looplia kit --session-id yt-abc123
 # Agent detects existing progress and continues
 ```
 
-### 9.5 Debugging
+### 10.5 Debugging
 
 ```bash
 # Check session folder
@@ -1922,9 +1961,9 @@ cat ~/.looplia/contentItem/yt-abc123/logs/query-*.log | tail -50
 
 ---
 
-## 10. Testing Strategy
+## 11. Testing Strategy
 
-### 10.1 Unit Tests
+### 11.1 Unit Tests
 
 ```typescript
 describe("URL Input", () => {
@@ -1952,7 +1991,7 @@ describe("URL Input", () => {
 });
 ```
 
-### 10.2 Integration Tests (Mock Provider)
+### 11.2 Integration Tests (Mock Provider)
 
 ```bash
 # Test URL flow with mock (no API key, no yt-dlp)
@@ -1961,7 +2000,7 @@ looplia kit --url "https://youtube.com/watch?v=test" --mock
 # Should create session and return mock WritingKit
 ```
 
-### 10.3 E2E Tests
+### 11.3 E2E Tests
 
 ```bash
 # Test with real yt-dlp (CI environment)
@@ -1976,7 +2015,7 @@ jq '.contentId' /tmp/output.json | grep -q "yt-jNQXAC9IVRw" && echo "PASS" || ec
 jq '.summary.headline' /tmp/output.json | grep -q "." && echo "PASS" || echo "FAIL"
 ```
 
-### 10.4 Error Cases
+### 11.4 Error Cases
 
 ```bash
 # Test: Invalid URL
@@ -1991,7 +2030,7 @@ looplia kit --url "https://youtube.com/watch?v=PRIVATE_VIDEO_ID"
 # Expected: Agent tries info.json fallback, reports if all methods fail
 ```
 
-### 10.5 CI Pipeline Addition
+### 11.5 CI Pipeline Addition
 
 ```yaml
 # .github/workflows/e2e.yml - Addition
