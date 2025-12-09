@@ -119,13 +119,16 @@ for await (const message of result) {
 
 **SDK Message Types Available:**
 
-| Message Type | Subtype | Content |
-|--------------|---------|---------|
-| `system` | `init` | Session ID, model info |
-| `assistant` | - | Agent thinking, responses |
-| `tool_use` | - | Tool being invoked (Read, Skill) |
-| `tool_result` | - | Tool execution result |
-| `result` | `success`/`error` | Final structured output |
+| Message Type | Subtype/Content | Description |
+|--------------|-----------------|-------------|
+| `system` | `init` | Session ID, model, available tools |
+| `system` | `compact_boundary` | Session compaction marker |
+| `assistant` | `message.content[]` | Contains `TextBlock`, `ThinkingBlock`, `ToolUseBlock` |
+| `user` | `message.content[]` | Contains `ToolResultBlock` with tool outputs |
+| `stream_event` | `event` (delta) | Real-time streaming (requires `includePartialMessages: true`) |
+| `result` | `success`/`error_*` | Final output with metrics |
+
+**Important:** Tool calls and results are NOT top-level message types. They are **content blocks** nested inside `assistant` and `user` messages respectively.
 
 This streaming data is currently **logged but not displayed**.
 
@@ -311,10 +314,16 @@ User Command
 
 /**
  * Events emitted during streaming query execution
+ *
+ * These are PROVIDER events (not SDK messages). The transformer
+ * converts SDK messages into these simplified events for UI consumption.
  */
 export type StreamingEvent =
   | SessionStartEvent
+  | TextEvent
+  | TextDeltaEvent
   | ThinkingEvent
+  | ThinkingDeltaEvent
   | ToolStartEvent
   | ToolEndEvent
   | ProgressEvent
@@ -322,17 +331,38 @@ export type StreamingEvent =
   | CompleteEvent;
 
 /**
- * Session initialized
+ * Session initialized - from SDK system.init message
  */
 export type SessionStartEvent = {
   type: "session_start";
   sessionId: string;
   model: string;
+  /** Tools available for this session */
+  availableTools: string[];
   timestamp: number;
 };
 
 /**
- * Agent is thinking/processing
+ * Text output from agent - from assistant.message.content[].text
+ */
+export type TextEvent = {
+  type: "text";
+  content: string;
+  timestamp: number;
+};
+
+/**
+ * Streaming text delta - from stream_event.content_block_delta.text_delta
+ * Only emitted when includePartialMessages: true
+ */
+export type TextDeltaEvent = {
+  type: "text_delta";
+  text: string;
+  timestamp: number;
+};
+
+/**
+ * Agent thinking/reasoning - from assistant.message.content[].thinking
  */
 export type ThinkingEvent = {
   type: "thinking";
@@ -341,16 +371,30 @@ export type ThinkingEvent = {
 };
 
 /**
- * Tool invocation started
+ * Streaming thinking delta - from stream_event.content_block_delta.thinking_delta
+ * Only emitted when includePartialMessages: true
+ */
+export type ThinkingDeltaEvent = {
+  type: "thinking_delta";
+  thinking: string;
+  timestamp: number;
+};
+
+/**
+ * Tool invocation started - from assistant.message.content[].tool_use block
  */
 export type ToolStartEvent = {
   type: "tool_start";
-  tool: "Read" | "Skill" | "Write" | "Glob" | "Grep";
+  /** Unique ID for correlating with tool_end */
+  toolUseId: string;
+  tool: "Read" | "Skill" | "Write" | "Glob" | "Grep" | string;
   input: {
-    /** For Read: file path */
+    /** For Read/Write: file path */
     path?: string;
     /** For Skill: skill name */
     skill?: string;
+    /** For Glob/Grep: search pattern */
+    pattern?: string;
     /** For other tools: raw input */
     raw?: unknown;
   };
@@ -358,11 +402,13 @@ export type ToolStartEvent = {
 };
 
 /**
- * Tool invocation completed
+ * Tool invocation completed - from user.message.content[].tool_result block
  */
 export type ToolEndEvent = {
   type: "tool_end";
-  tool: "Read" | "Skill" | "Write" | "Glob" | "Grep";
+  /** Correlates with ToolStartEvent.toolUseId */
+  toolUseId: string;
+  tool: "Read" | "Skill" | "Write" | "Glob" | "Grep" | string;
   success: boolean;
   /** Summary of output (truncated for display) */
   summary?: string;
@@ -372,7 +418,7 @@ export type ToolEndEvent = {
 };
 
 /**
- * Pipeline progress update
+ * Pipeline progress update - inferred from skill invocations
  */
 export type ProgressEvent = {
   type: "progress";
@@ -397,145 +443,412 @@ export type ErrorEvent = {
 };
 
 /**
- * Query completed successfully
+ * Query completed - from SDK result message
  */
 export type CompleteEvent<T = unknown> = {
   type: "complete";
+  /** Result subtype from SDK */
+  subtype: "success" | "error_max_turns" | "error_during_execution";
   result: T;
   usage: {
     inputTokens: number;
     outputTokens: number;
     totalCostUsd: number;
   };
+  /** Execution metrics from SDK */
+  metrics: {
+    durationMs: number;
+    durationApiMs?: number;
+    numTurns: number;
+  };
   sessionId: string;
-  durationMs: number;
   timestamp: number;
 };
 ```
 
-### 5.2 SDK Message to StreamingEvent Mapping
+### 5.2 Claude Agent SDK Message Structure (Corrected)
+
+Based on official SDK documentation, the message structure is:
+
+```typescript
+// SDK Message Types (discriminated union)
+type SDKMessage =
+  | SDKSystemMessage          // type: 'system', subtype: 'init' | 'compact_boundary'
+  | SDKAssistantMessage       // type: 'assistant', contains message.content[]
+  | SDKUserMessage            // type: 'user', contains tool results
+  | SDKPartialAssistantMessage // type: 'stream_event' (requires includePartialMessages)
+  | SDKResultMessage          // type: 'result', final output
+
+// SDKSystemMessage (init)
+type SDKSystemMessage = {
+  type: 'system';
+  subtype: 'init';
+  session_id: string;
+  uuid: string;
+  tools: string[];            // Available tools: ['Read', 'Skill', ...]
+  model: string;              // e.g., 'claude-haiku-4-5-20251001'
+  mcp_servers: string[];
+  permissionMode: string;
+};
+
+// SDKAssistantMessage - CONTAINS TOOL CALLS AS CONTENT BLOCKS
+type SDKAssistantMessage = {
+  type: 'assistant';
+  uuid: string;
+  session_id: string;
+  parent_tool_use_id: string | null;
+  message: {
+    content: ContentBlock[];  // Array of text, thinking, or tool_use blocks
+    usage: { input_tokens: number; output_tokens: number };
+    model: string;
+  };
+};
+
+// Content blocks inside assistant.message.content[]
+type ContentBlock =
+  | { type: 'text'; text: string }
+  | { type: 'thinking'; thinking: string }
+  | { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> };
+
+// SDKUserMessage - CONTAINS TOOL RESULTS AS CONTENT BLOCKS
+type SDKUserMessage = {
+  type: 'user';
+  uuid: string;
+  session_id: string;
+  parent_tool_use_id: string | null;
+  message: {
+    content: ToolResultBlock[];
+  };
+};
+
+// Tool result block inside user.message.content[]
+type ToolResultBlock = {
+  type: 'tool_result';
+  tool_use_id: string;        // References the ToolUseBlock.id
+  content: string | unknown;  // Tool output
+  is_error?: boolean;         // Indicates failure
+};
+
+// SDKResultMessage - Final output
+type SDKResultMessage = {
+  type: 'result';
+  subtype: 'success' | 'error_max_turns' | 'error_during_execution';
+  uuid: string;
+  session_id: string;
+  result: string;
+  structured_output?: unknown;  // JSON schema output
+  duration_ms: number;          // Total execution time
+  duration_api_ms?: number;     // API-only time
+  num_turns: number;            // Number of agent iterations
+  total_cost_usd: number;       // Estimated cost
+  usage: {
+    input_tokens: number;
+    output_tokens: number;
+    cache_creation_input_tokens?: number;
+    cache_read_input_tokens?: number;
+  };
+  permission_denials: Array<{
+    tool_name: string;
+    tool_use_id: string;
+    tool_input: unknown;
+  }>;
+};
+
+// SDKPartialAssistantMessage - Real-time streaming
+type SDKPartialAssistantMessage = {
+  type: 'stream_event';
+  uuid: string;
+  session_id: string;
+  parent_tool_use_id: string | null;
+  event: RawMessageStreamEvent;  // From Anthropic SDK
+};
+
+// Stream event deltas
+type RawMessageStreamEvent =
+  | { type: 'content_block_start'; content_block: ContentBlock; index: number }
+  | { type: 'content_block_delta'; delta: ContentBlockDelta; index: number }
+  | { type: 'content_block_stop'; index: number }
+  | { type: 'message_start'; message: Message }
+  | { type: 'message_stop' };
+
+type ContentBlockDelta =
+  | { type: 'text_delta'; text: string }
+  | { type: 'thinking_delta'; thinking: string }
+  | { type: 'input_json_delta'; input_json: string };
+```
+
+### 5.3 SDK Message to StreamingEvent Transformer
 
 ```typescript
 // packages/provider/src/claude-agent-sdk/streaming/transformer.ts
 
-import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
-import type { StreamingEvent } from "./types";
+import type { StreamingEvent, ToolStartEvent, ToolEndEvent } from "./types";
+
+/**
+ * Context maintained across message transformations
+ */
+export type TransformContext = {
+  model: string;
+  sessionId: string;
+  startTime: number;
+  /** Map of tool_use_id -> tool name for correlating results */
+  pendingTools: Map<string, { name: string; startTime: number }>;
+  /** Accumulated usage from assistant messages */
+  cumulativeUsage: { inputTokens: number; outputTokens: number };
+};
 
 /**
  * Transform SDK messages to streaming events
+ *
+ * IMPORTANT: Tool calls and results are NESTED inside assistant/user messages
+ * as content blocks, NOT separate top-level message types.
  */
-export function transformSdkMessage(
-  message: SDKMessage,
+export function* transformSdkMessage(
+  message: Record<string, unknown>,
   context: TransformContext
-): StreamingEvent | null {
+): Generator<StreamingEvent> {
   const timestamp = Date.now();
 
   switch (message.type) {
     case "system":
-      if ((message as { subtype?: string }).subtype === "init") {
-        return {
-          type: "session_start",
-          sessionId: (message as { session_id?: string }).session_id ?? "",
-          model: context.model,
-          timestamp,
-        };
-      }
-      return null;
+      yield* handleSystemMessage(message, context, timestamp);
+      break;
 
     case "assistant":
-      // Extract thinking content if available
-      const content = extractAssistantContent(message);
-      if (content) {
-        return {
-          type: "thinking",
-          content: truncate(content, 200),
-          timestamp,
-        };
-      }
-      return null;
+      yield* handleAssistantMessage(message, context, timestamp);
+      break;
 
-    case "tool_use":
-      return transformToolUse(message, timestamp);
+    case "user":
+      yield* handleUserMessage(message, context, timestamp);
+      break;
 
-    case "tool_result":
-      return transformToolResult(message, context, timestamp);
+    case "stream_event":
+      yield* handleStreamEvent(message, context, timestamp);
+      break;
 
     case "result":
-      return transformResult(message, context, timestamp);
-
-    default:
-      return null;
+      yield* handleResultMessage(message, context, timestamp);
+      break;
   }
 }
 
-function transformToolUse(message: SDKMessage, timestamp: number): ToolStartEvent {
-  const toolUse = message as { tool?: string; input?: unknown };
-  const tool = toolUse.tool as ToolStartEvent["tool"];
-  const input = toolUse.input as Record<string, unknown>;
-
-  return {
-    type: "tool_start",
-    tool,
-    input: {
-      path: input.file_path as string | undefined,
-      skill: input.skill as string | undefined,
-      raw: input,
-    },
-    timestamp,
-  };
-}
-
-function transformToolResult(
-  message: SDKMessage,
+/**
+ * Handle system messages (init, compact_boundary)
+ */
+function* handleSystemMessage(
+  message: Record<string, unknown>,
   context: TransformContext,
   timestamp: number
-): ToolEndEvent {
-  const toolResult = message as {
-    tool?: string;
-    output?: unknown;
-    is_error?: boolean;
-  };
-
-  const tool = context.lastTool ?? "Read";
-  const durationMs = timestamp - (context.lastToolStartTime ?? timestamp);
-
-  return {
-    type: "tool_end",
-    tool: tool as ToolEndEvent["tool"],
-    success: !toolResult.is_error,
-    summary: summarizeToolOutput(toolResult.output),
-    durationMs,
-    timestamp,
-  };
+): Generator<StreamingEvent> {
+  if (message.subtype === "init") {
+    context.sessionId = (message.session_id as string) ?? "";
+    yield {
+      type: "session_start",
+      sessionId: context.sessionId,
+      model: (message.model as string) ?? context.model,
+      availableTools: (message.tools as string[]) ?? [],
+      timestamp,
+    };
+  }
+  // compact_boundary could emit a notification event if needed
 }
 
-function transformResult<T>(
-  message: SDKMessage,
+/**
+ * Handle assistant messages - extract content blocks
+ */
+function* handleAssistantMessage(
+  message: Record<string, unknown>,
   context: TransformContext,
   timestamp: number
-): CompleteEvent<T> {
-  const result = message as {
-    structured_output?: T;
+): Generator<StreamingEvent> {
+  const assistantMessage = message.message as {
+    content?: Array<Record<string, unknown>>;
     usage?: { input_tokens?: number; output_tokens?: number };
-    total_cost_usd?: number;
   };
 
-  return {
+  if (!assistantMessage?.content) return;
+
+  // Update cumulative usage
+  if (assistantMessage.usage) {
+    context.cumulativeUsage.inputTokens += assistantMessage.usage.input_tokens ?? 0;
+    context.cumulativeUsage.outputTokens += assistantMessage.usage.output_tokens ?? 0;
+  }
+
+  // Process each content block
+  for (const block of assistantMessage.content) {
+    switch (block.type) {
+      case "text":
+        yield {
+          type: "text",
+          content: truncate(block.text as string, 200),
+          timestamp,
+        };
+        break;
+
+      case "thinking":
+        yield {
+          type: "thinking",
+          content: truncate(block.thinking as string, 200),
+          timestamp,
+        };
+        break;
+
+      case "tool_use":
+        // Store pending tool for result correlation
+        const toolUseId = block.id as string;
+        const toolName = block.name as string;
+        context.pendingTools.set(toolUseId, { name: toolName, startTime: timestamp });
+
+        yield {
+          type: "tool_start",
+          toolUseId,
+          tool: toolName as ToolStartEvent["tool"],
+          input: extractToolInput(toolName, block.input as Record<string, unknown>),
+          timestamp,
+        };
+        break;
+    }
+  }
+}
+
+/**
+ * Handle user messages - extract tool results
+ */
+function* handleUserMessage(
+  message: Record<string, unknown>,
+  context: TransformContext,
+  timestamp: number
+): Generator<StreamingEvent> {
+  const userMessage = message.message as {
+    content?: Array<Record<string, unknown>>;
+  };
+
+  if (!userMessage?.content) return;
+
+  for (const block of userMessage.content) {
+    if (block.type === "tool_result") {
+      const toolUseId = block.tool_use_id as string;
+      const pendingTool = context.pendingTools.get(toolUseId);
+
+      if (pendingTool) {
+        const durationMs = timestamp - pendingTool.startTime;
+        context.pendingTools.delete(toolUseId);
+
+        yield {
+          type: "tool_end",
+          toolUseId,
+          tool: pendingTool.name as ToolEndEvent["tool"],
+          success: !block.is_error,
+          summary: summarizeToolOutput(block.content),
+          durationMs,
+          timestamp,
+        };
+      }
+    }
+  }
+}
+
+/**
+ * Handle stream events for real-time updates
+ */
+function* handleStreamEvent(
+  message: Record<string, unknown>,
+  context: TransformContext,
+  timestamp: number
+): Generator<StreamingEvent> {
+  const event = message.event as Record<string, unknown>;
+  if (!event) return;
+
+  if (event.type === "content_block_delta") {
+    const delta = event.delta as Record<string, unknown>;
+    if (delta?.type === "text_delta") {
+      yield {
+        type: "text_delta",
+        text: delta.text as string,
+        timestamp,
+      };
+    } else if (delta?.type === "thinking_delta") {
+      yield {
+        type: "thinking_delta",
+        thinking: delta.thinking as string,
+        timestamp,
+      };
+    }
+  }
+}
+
+/**
+ * Handle result message - final output
+ */
+function* handleResultMessage(
+  message: Record<string, unknown>,
+  context: TransformContext,
+  timestamp: number
+): Generator<StreamingEvent> {
+  const usage = message.usage as Record<string, number> | undefined;
+
+  yield {
     type: "complete",
-    result: result.structured_output as T,
+    subtype: message.subtype as "success" | "error_max_turns" | "error_during_execution",
+    result: message.structured_output,
     usage: {
-      inputTokens: result.usage?.input_tokens ?? 0,
-      outputTokens: result.usage?.output_tokens ?? 0,
-      totalCostUsd: result.total_cost_usd ?? 0,
+      inputTokens: usage?.input_tokens ?? 0,
+      outputTokens: usage?.output_tokens ?? 0,
+      totalCostUsd: (message.total_cost_usd as number) ?? 0,
+    },
+    metrics: {
+      durationMs: (message.duration_ms as number) ?? 0,
+      durationApiMs: message.duration_api_ms as number | undefined,
+      numTurns: (message.num_turns as number) ?? 0,
     },
     sessionId: context.sessionId,
-    durationMs: timestamp - context.startTime,
     timestamp,
   };
+}
+
+/**
+ * Extract relevant input fields based on tool type
+ */
+function extractToolInput(
+  toolName: string,
+  input: Record<string, unknown>
+): ToolStartEvent["input"] {
+  switch (toolName) {
+    case "Read":
+      return { path: input.file_path as string };
+    case "Skill":
+      return { skill: input.skill as string };
+    case "Write":
+      return { path: input.file_path as string };
+    case "Glob":
+      return { pattern: input.pattern as string };
+    case "Grep":
+      return { pattern: input.pattern as string };
+    default:
+      return { raw: input };
+  }
+}
+
+/**
+ * Summarize tool output for display
+ */
+function summarizeToolOutput(content: unknown): string {
+  if (typeof content === "string") {
+    return truncate(content, 100);
+  }
+  if (Array.isArray(content)) {
+    return `${content.length} items`;
+  }
+  return "completed";
+}
+
+function truncate(str: string, maxLen: number): string {
+  if (str.length <= maxLen) return str;
+  return str.slice(0, maxLen - 3) + "...";
 }
 ```
 
-### 5.3 Progress Inference
+### 5.4 Progress Inference
 
 The provider infers pipeline progress from skill invocations:
 
@@ -1147,6 +1460,11 @@ import { extractContentIdFromPrompt } from "./query-wrapper";
 
 /**
  * Execute agentic query with streaming events
+ *
+ * Key SDK options:
+ * - includePartialMessages: true - Enables stream_event messages for real-time UI
+ * - allowedTools: ["Read", "Skill"] - Tools the agent can use
+ * - outputFormat: json_schema - Structured output validation
  */
 export async function* executeAgenticQueryStreaming<T>(
   prompt: string,
@@ -1171,15 +1489,16 @@ export async function* executeAgenticQueryStreaming<T>(
   const progressTracker = new ProgressTracker();
 
   // Context for SDK message transformation
+  // Uses Map to correlate tool_use IDs with tool_result messages
   const context: TransformContext = {
     model: resolvedConfig.model,
     sessionId: "",
     startTime: Date.now(),
-    lastTool: undefined,
-    lastToolStartTime: undefined,
+    pendingTools: new Map(),
+    cumulativeUsage: { inputTokens: 0, outputTokens: 0 },
   };
 
-  // Execute SDK query
+  // Execute SDK query with streaming enabled
   const result = query({
     prompt,
     options: {
@@ -1192,48 +1511,64 @@ export async function* executeAgenticQueryStreaming<T>(
         type: "json_schema",
         schema: jsonSchema,
       },
+      // CRITICAL: Enable partial messages for real-time streaming
+      // Without this, we only get complete assistant/user messages
+      includePartialMessages: true,
     },
   });
 
   let finalResult: AgenticQueryResult<T> | undefined;
 
   for await (const message of result) {
-    // Log all messages
+    // Log all messages for debugging
     if (contentId) {
       logger.log(message as Record<string, unknown>);
     }
 
-    // Transform SDK message to streaming event
-    const event = transformSdkMessage(message, context);
-
-    if (event) {
-      // Update context for next transformation
-      if (event.type === "session_start") {
-        context.sessionId = event.sessionId;
-      }
-      if (event.type === "tool_start") {
-        context.lastTool = event.tool;
-        context.lastToolStartTime = event.timestamp;
-
-        // Check for progress update
+    // Transform SDK message to streaming events
+    // Note: Generator function can yield multiple events per message
+    // (e.g., assistant message with multiple content blocks)
+    for (const event of transformSdkMessage(
+      message as Record<string, unknown>,
+      context
+    )) {
+      // Check for progress update on skill invocations
+      if (event.type === "tool_start" && event.tool === "Skill") {
         const progressEvent = progressTracker.onToolStart(event.tool, event.input);
         if (progressEvent) {
           yield progressEvent;
         }
       }
 
-      // Yield the event
+      // Yield the event to UI
       yield event;
 
-      // Handle completion
+      // Capture final result
       if (event.type === "complete") {
         const completeEvent = event as CompleteEvent<T>;
         finalResult = {
-          success: true,
+          success: completeEvent.subtype === "success",
           data: completeEvent.result,
-          usage: completeEvent.usage,
+          usage: {
+            inputTokens: completeEvent.usage.inputTokens,
+            outputTokens: completeEvent.usage.outputTokens,
+            totalCostUsd: completeEvent.usage.totalCostUsd,
+          },
           sessionId: context.sessionId,
         };
+
+        // Handle non-success subtypes
+        if (completeEvent.subtype !== "success") {
+          finalResult = {
+            success: false,
+            error: {
+              type: "unknown",
+              message: `Agent execution ended with: ${completeEvent.subtype}`,
+            },
+            usage: finalResult.usage,
+            sessionId: context.sessionId,
+          };
+        }
       }
     }
   }
@@ -1613,38 +1948,142 @@ $ looplia kit --file ./article.md -o writing-kit.json
 // packages/provider/test/streaming/transformer.test.ts
 
 describe("transformSdkMessage", () => {
-  it("transforms init message to session_start event", () => {
-    const message = { type: "system", subtype: "init", session_id: "abc123" };
-    const event = transformSdkMessage(message, mockContext);
+  let mockContext: TransformContext;
 
-    expect(event).toEqual({
+  beforeEach(() => {
+    mockContext = {
+      model: "claude-haiku-4-5-20251001",
+      sessionId: "",
+      startTime: Date.now(),
+      pendingTools: new Map(),
+      cumulativeUsage: { inputTokens: 0, outputTokens: 0 },
+    };
+  });
+
+  it("transforms system init message to session_start event", () => {
+    const message = {
+      type: "system",
+      subtype: "init",
+      session_id: "abc123",
+      model: "claude-haiku-4-5-20251001",
+      tools: ["Read", "Skill"],
+    };
+    const events = [...transformSdkMessage(message, mockContext)];
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toEqual({
       type: "session_start",
       sessionId: "abc123",
       model: "claude-haiku-4-5-20251001",
+      availableTools: ["Read", "Skill"],
       timestamp: expect.any(Number),
     });
+    expect(mockContext.sessionId).toBe("abc123");
   });
 
-  it("transforms tool_use message to tool_start event", () => {
+  it("extracts tool_use blocks from assistant message", () => {
     const message = {
-      type: "tool_use",
-      tool: "Skill",
-      input: { skill: "content-analyzer" },
+      type: "assistant",
+      message: {
+        content: [
+          { type: "tool_use", id: "toolu_123", name: "Read", input: { file_path: "content.md" } },
+        ],
+        usage: { input_tokens: 100, output_tokens: 50 },
+      },
     };
-    const event = transformSdkMessage(message, mockContext);
+    const events = [...transformSdkMessage(message, mockContext)];
 
-    expect(event).toEqual({
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
       type: "tool_start",
-      tool: "Skill",
-      input: { skill: "content-analyzer" },
-      timestamp: expect.any(Number),
+      toolUseId: "toolu_123",
+      tool: "Read",
+      input: { path: "content.md" },
+    });
+    expect(mockContext.pendingTools.has("toolu_123")).toBe(true);
+  });
+
+  it("extracts tool_result blocks from user message", () => {
+    // Setup: add pending tool
+    mockContext.pendingTools.set("toolu_123", { name: "Read", startTime: Date.now() - 100 });
+
+    const message = {
+      type: "user",
+      message: {
+        content: [
+          { type: "tool_result", tool_use_id: "toolu_123", content: "file contents", is_error: false },
+        ],
+      },
+    };
+    const events = [...transformSdkMessage(message, mockContext)];
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      type: "tool_end",
+      toolUseId: "toolu_123",
+      tool: "Read",
+      success: true,
+    });
+    expect(mockContext.pendingTools.has("toolu_123")).toBe(false);
+  });
+
+  it("handles assistant message with multiple content blocks", () => {
+    const message = {
+      type: "assistant",
+      message: {
+        content: [
+          { type: "thinking", thinking: "Let me analyze this..." },
+          { type: "text", text: "I found the following:" },
+          { type: "tool_use", id: "toolu_456", name: "Skill", input: { skill: "content-analyzer" } },
+        ],
+        usage: { input_tokens: 200, output_tokens: 100 },
+      },
+    };
+    const events = [...transformSdkMessage(message, mockContext)];
+
+    expect(events).toHaveLength(3);
+    expect(events[0].type).toBe("thinking");
+    expect(events[1].type).toBe("text");
+    expect(events[2].type).toBe("tool_start");
+  });
+
+  it("transforms result message with metrics", () => {
+    mockContext.sessionId = "session_123";
+    const message = {
+      type: "result",
+      subtype: "success",
+      structured_output: { summary: "test" },
+      usage: { input_tokens: 1000, output_tokens: 500 },
+      total_cost_usd: 0.015,
+      duration_ms: 5000,
+      duration_api_ms: 4500,
+      num_turns: 3,
+    };
+    const events = [...transformSdkMessage(message, mockContext)];
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      type: "complete",
+      subtype: "success",
+      result: { summary: "test" },
+      usage: {
+        inputTokens: 1000,
+        outputTokens: 500,
+        totalCostUsd: 0.015,
+      },
+      metrics: {
+        durationMs: 5000,
+        durationApiMs: 4500,
+        numTurns: 3,
+      },
+      sessionId: "session_123",
     });
   });
 
-  it("returns null for unknown message types", () => {
-    const message = { type: "unknown" };
-    const event = transformSdkMessage(message, mockContext);
-    expect(event).toBeNull();
+  it("yields no events for unknown message types", () => {
+    const message = { type: "unknown_type" };
+    const events = [...transformSdkMessage(message, mockContext)];
+    expect(events).toHaveLength(0);
   });
 });
 ```
@@ -1756,8 +2195,81 @@ Manual testing checklist for streaming UI:
 
 ---
 
+## Appendix A: Design Review Notes
+
+### A.1 SDK Message Structure Corrections
+
+The initial design incorrectly assumed `tool_use` and `tool_result` were top-level message types. After reviewing the official Claude Agent SDK documentation, the following corrections were made:
+
+| Original Assumption | Corrected Understanding |
+|---------------------|-------------------------|
+| `tool_use` is a message type | `tool_use` is a **content block** inside `assistant.message.content[]` |
+| `tool_result` is a message type | `tool_result` is a **content block** inside `user.message.content[]` |
+| Tool timing is tracked per-message | Tool timing requires correlating `tool_use_id` across messages |
+| Streaming works by default | Requires `includePartialMessages: true` for `stream_event` messages |
+
+### A.2 Key SDK Message Types
+
+The SDK returns these top-level message types:
+
+1. **`system`** (subtypes: `init`, `compact_boundary`) - Session initialization
+2. **`assistant`** - Agent responses containing content blocks (text, thinking, tool_use)
+3. **`user`** - Tool results containing tool_result blocks
+4. **`stream_event`** - Real-time deltas (only with `includePartialMessages: true`)
+5. **`result`** - Final output with structured_output and metrics
+
+### A.3 Tool Correlation Pattern
+
+Tools are correlated across messages using `tool_use_id`:
+
+```
+assistant message:
+  content: [
+    { type: 'tool_use', id: 'toolu_123', name: 'Read', input: {...} }
+  ]
+    ↓ (later)
+user message:
+  content: [
+    { type: 'tool_result', tool_use_id: 'toolu_123', content: '...', is_error: false }
+  ]
+```
+
+The transformer maintains a `pendingTools` Map to track timing and correlate results.
+
+### A.4 Streaming Mode Considerations
+
+| Mode | SDK Option | Events Received |
+|------|------------|-----------------|
+| Batch | (default) | Complete assistant/user messages only |
+| Streaming | `includePartialMessages: true` | Additional `stream_event` messages with deltas |
+
+For real-time UI updates, streaming mode is required. However, batch mode may be sufficient for simpler progress indicators based on tool_use blocks.
+
+### A.5 Result Message Fields
+
+The SDK result message provides rich execution metrics:
+
+```typescript
+{
+  type: 'result',
+  subtype: 'success' | 'error_max_turns' | 'error_during_execution',
+  structured_output: T,        // JSON schema output
+  duration_ms: number,         // Total time including SDK overhead
+  duration_api_ms: number,     // API-only time
+  num_turns: number,           // Agent iterations
+  total_cost_usd: number,      // Estimated cost
+  usage: { input_tokens, output_tokens, cache_* },
+  permission_denials: [...],   // Blocked tool calls
+}
+```
+
+These metrics should be displayed in the UsageStats component.
+
+---
+
 ## Document History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.3.4-rev2 | 2025-12-09 | Design review: Corrected SDK message structure, added `includePartialMessages`, fixed transformer to handle content blocks |
 | 0.3.4 | 2025-12-09 | Initial design: Streaming CLI UI with Ink |
