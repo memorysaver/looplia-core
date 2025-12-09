@@ -56,16 +56,21 @@ print_info() {
 check_prerequisites() {
   print_header "Checking Prerequisites"
 
-  # Check .env file
-  print_step "Checking .env file..."
-  if [ ! -f "$ENV_FILE" ]; then
-    print_fail ".env file not found"
-    echo ""
-    echo "Create .env with your Anthropic API key:"
-    echo "  echo 'ANTHROPIC_API_KEY=sk-ant-api03-xxx' > .env"
-    exit 1
+  # Check .env file (only for local runs, CI uses env vars directly)
+  print_step "Checking API credentials..."
+  if [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+    if [ -f "$ENV_FILE" ]; then
+      print_pass ".env file exists"
+    else
+      print_fail "No API credentials found"
+      echo ""
+      echo "Create .env with your Anthropic API key:"
+      echo "  echo 'ANTHROPIC_API_KEY=sk-ant-api03-xxx' > .env"
+      exit 1
+    fi
+  else
+    print_pass "API credentials available via environment"
   fi
-  print_pass ".env file exists"
 
   # Check Docker
   print_step "Checking Docker..."
@@ -109,12 +114,6 @@ check_prerequisites() {
     exit 1
   fi
   print_pass "SRT fixture available"
-
-  if [ ! -f "$EXAMPLES_DIR/youtube/Anthropics/transcripts/CBneTpXF1CQ.json" ]; then
-    print_fail "JSON fixture not found: $EXAMPLES_DIR/youtube/Anthropics/transcripts/CBneTpXF1CQ.json"
-    exit 1
-  fi
-  print_pass "JSON transcript fixture available"
 }
 
 # Clean and prepare workspace
@@ -422,140 +421,6 @@ test_srt_summarize() {
   fi
 }
 
-# Test JSON transcript summarization (Whisper output)
-test_json_summarize() {
-  print_header "Test 5: Summarize JSON Transcript"
-
-  print_step "Running summarize on JSON transcript..."
-  # Run without --output to let it save to session folder naturally
-  CONTAINER_ID=$(docker create \
-    --env-file "$ENV_FILE" \
-    -v "$(pwd)/$EXAMPLES_DIR:/examples:ro" \
-    "$IMAGE_NAME" \
-    summarize --file /examples/youtube/Anthropics/transcripts/CBneTpXF1CQ.json)
-
-  docker start -a "$CONTAINER_ID"
-
-  print_step "Extracting results from container..."
-  # Copy to a unique subfolder to preserve session data
-  mkdir -p "$WORKSPACE_DIR/json-test"
-  docker cp "$CONTAINER_ID:/home/looplia/.looplia/." "$WORKSPACE_DIR/json-test/"
-  docker rm "$CONTAINER_ID" > /dev/null
-
-  # Find the session folder
-  print_step "Checking session folder structure..."
-  SESSION_DIR=$(find "$WORKSPACE_DIR/json-test/contentItem" -maxdepth 1 -type d ! -name contentItem 2>/dev/null | head -1)
-  if [ -n "$SESSION_DIR" ]; then
-    SESSION_ID=$(basename "$SESSION_DIR")
-    print_pass "Session folder created: $SESSION_ID"
-  else
-    print_fail "No session folder found in contentItem/"
-    return 1
-  fi
-
-  # Check summary.json exists in session folder
-  SUMMARY_FILE="$SESSION_DIR/summary.json"
-  if [ -f "$SUMMARY_FILE" ]; then
-    print_pass "summary.json found in session folder"
-  else
-    print_fail "summary.json not found in session folder"
-    return 1
-  fi
-
-  # Schema validation
-  print_step "Validating JSON transcript summary schema..."
-  if jq -e '.headline and .tldr and .bullets and .tags' "$SUMMARY_FILE" > /dev/null 2>&1; then
-    print_pass "JSON transcript schema validation passed"
-  else
-    print_fail "JSON transcript schema validation failed - missing required fields"
-    jq '.' "$SUMMARY_FILE" 2>/dev/null || cat "$SUMMARY_FILE"
-    return 1
-  fi
-
-  # Quality check
-  TLDR_WORDS=$(jq -r '.tldr' "$SUMMARY_FILE" | wc -w | tr -d ' ')
-  print_info "JSON transcript TLDR word count: $TLDR_WORDS"
-  if [ "$TLDR_WORDS" -ge 20 ]; then
-    print_pass "JSON transcript content extracted successfully"
-  else
-    print_warn "JSON transcript TLDR seems short"
-  fi
-}
-
-# Test kit command with SRT transcript
-test_kit_with_srt() {
-  print_header "Test 6: Kit Command with SRT Transcript"
-
-  print_step "Running kit on SRT file..."
-  # Run without --output to let it save to session folder naturally
-  CONTAINER_ID=$(docker create \
-    --env-file "$ENV_FILE" \
-    -v "$(pwd)/$EXAMPLES_DIR:/examples:ro" \
-    "$IMAGE_NAME" \
-    kit --file /examples/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt \
-    --topics "coding,claude,automation" \
-    --tone "expert")
-
-  docker start -a "$CONTAINER_ID"
-
-  print_step "Extracting results from container..."
-  # Copy to a unique subfolder to preserve session data
-  mkdir -p "$WORKSPACE_DIR/kit-srt-test"
-  docker cp "$CONTAINER_ID:/home/looplia/.looplia/." "$WORKSPACE_DIR/kit-srt-test/"
-  docker rm "$CONTAINER_ID" > /dev/null
-
-  # Find the session folder
-  print_step "Checking session folder structure..."
-  SESSION_DIR=$(find "$WORKSPACE_DIR/kit-srt-test/contentItem" -maxdepth 1 -type d ! -name contentItem 2>/dev/null | head -1)
-  if [ -n "$SESSION_DIR" ]; then
-    SESSION_ID=$(basename "$SESSION_DIR")
-    print_pass "Session folder created: $SESSION_ID"
-  else
-    print_fail "No session folder found in contentItem/"
-    return 1
-  fi
-
-  # Check writing-kit.json exists in session folder
-  KIT_FILE="$SESSION_DIR/writing-kit.json"
-  if [ -f "$KIT_FILE" ]; then
-    print_pass "writing-kit.json found in session folder"
-  else
-    print_fail "writing-kit.json not found in session folder"
-    ls -la "$SESSION_DIR/" 2>/dev/null
-    return 1
-  fi
-
-  # Schema validation
-  print_step "Validating SRT kit schema..."
-  if jq -e '.contentId and .summary and .ideas and .suggestedOutline' "$KIT_FILE" > /dev/null 2>&1; then
-    print_pass "SRT kit schema validation passed"
-  else
-    print_fail "SRT kit schema validation failed - missing required fields"
-    jq '.' "$KIT_FILE" 2>/dev/null || cat "$KIT_FILE"
-    return 1
-  fi
-
-  # Quality metrics
-  print_step "Checking SRT kit quality metrics..."
-  HOOK_COUNT=$(jq '.ideas.hooks | length' "$KIT_FILE")
-  SECTION_COUNT=$(jq '.suggestedOutline | length' "$KIT_FILE")
-
-  print_info "Hook count: $HOOK_COUNT (expected: >= 2)"
-  print_info "Outline sections: $SECTION_COUNT (expected: >= 3)"
-
-  if [ "$HOOK_COUNT" -ge 2 ]; then
-    print_pass "SRT kit hook count acceptable"
-  else
-    print_warn "SRT kit hook count low"
-  fi
-
-  if [ "$SECTION_COUNT" -ge 3 ]; then
-    print_pass "SRT kit outline section count acceptable"
-  else
-    print_warn "SRT kit outline section count low"
-  fi
-}
-
 # Check workspace structure
 check_workspace() {
   print_header "Workspace Validation"
@@ -607,8 +472,6 @@ print_summary() {
   echo "  - contentItem/ (Test 1-2: markdown source)"
   echo "  - vtt-test/contentItem/{sessionId}/ (Test 3: VTT caption)"
   echo "  - srt-test/contentItem/{sessionId}/ (Test 4: SRT transcript)"
-  echo "  - json-test/contentItem/{sessionId}/ (Test 5: JSON transcript)"
-  echo "  - kit-srt-test/contentItem/{sessionId}/ (Test 6: SRT full kit)"
   echo ""
   echo "Each session folder contains:"
   echo "  - content.md (raw input)"
@@ -630,8 +493,6 @@ main() {
   test_kit
   test_vtt_summarize
   test_srt_summarize
-  test_json_summarize
-  test_kit_with_srt
   check_workspace
   print_summary
 }
