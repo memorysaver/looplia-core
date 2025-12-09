@@ -9,32 +9,26 @@ Usage:
   looplia bootstrap [options]
 
 Options:
-  --yes, -y      Skip confirmation prompt (for automation/Docker)
-  --no-clean     Initialize without deleting existing workspace (for Docker volumes)
+  --yes, -y    Skip confirmation prompt (for automation/Docker)
 
 Description:
   Performs a destructive refresh of the ~/.looplia/ workspace from the
   looplia-writer plugin. This will:
 
-  1. DELETE existing ~/.looplia/ directory (unless --no-clean)
+  1. DELETE existing ~/.looplia/ directory
   2. Copy agents and skills from plugins/looplia-writer/
   3. Create fresh CLAUDE.md and user-profile.json
 
-  ⚠️  WARNING: This removes ALL customizations in ~/.looplia/ (unless --no-clean)
+  ⚠️  WARNING: This removes ALL customizations in ~/.looplia/
 
   Use this when:
   - Setting up looplia for the first time
   - Required workspace files are missing
   - You want to reset to plugin defaults
 
-  Use --no-clean when:
-  - Running in Docker with mounted volume
-  - You want to update files without deleting the workspace
-
 Examples:
   looplia bootstrap
   looplia bootstrap --yes
-  looplia bootstrap --yes --no-clean
 `);
 }
 
