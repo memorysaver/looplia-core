@@ -1,4 +1,4 @@
-import { mkdir, rename, writeFile } from "node:fs/promises";
+import { mkdir, rename, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 /** Pattern to detect temporary CLI-generated IDs */
@@ -62,7 +62,16 @@ async function writeWithMkdir(path: string, content: string): Promise<void> {
       // Directory doesn't exist, create it and retry
       const dir = path.substring(0, path.lastIndexOf("/"));
       await mkdir(dir, { recursive: true });
-      await writeFile(path, content, "utf-8");
+      try {
+        await writeFile(path, content, "utf-8");
+      } catch (retryErr) {
+        const retryNodeErr = retryErr as NodeError;
+        const contextErr = new Error(
+          `Write failed after mkdir (${retryNodeErr.code || "unknown"}): ${path}`
+        );
+        contextErr.cause = retryErr;
+        throw contextErr;
+      }
       return;
     }
     throw err;
@@ -106,7 +115,6 @@ export async function persistResultToWorkspace<T extends { contentId: string }>(
   // Rename failed - determine best target location
   // Check if newDir exists (target may have been created by concurrent process)
   try {
-    const { stat } = await import("node:fs/promises");
     await stat(newDir);
     // newDir exists - use it
     data.contentId = sessionId;
