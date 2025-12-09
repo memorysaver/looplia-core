@@ -14,6 +14,7 @@ import {
   readUserProfile,
   writeContentItem,
 } from "@looplia-core/provider/claude-agent-sdk";
+import { renderKitBuilder } from "../components/index.js";
 import {
   createContentItemFromFile,
   formatKitAsMarkdown,
@@ -21,7 +22,8 @@ import {
   hasFlag,
   parseArgs,
   readContentFile,
-} from "../utils";
+} from "../utils/index.js";
+import { isInteractive } from "../utils/terminal.js";
 
 const VALID_TONES = ["beginner", "intermediate", "expert", "mixed"] as const;
 type Tone = (typeof VALID_TONES)[number];
@@ -49,12 +51,14 @@ Options:
   --topics           Comma-separated topics of interest
   --tone             Writing tone: beginner, intermediate, expert, mixed (default: intermediate)
   --word-count       Target word count (default: 1000, range: 100-10000)
+  --no-streaming     Disable streaming UI (use legacy output)
   --mock, -m         Use mock providers (no API key required)
   --help, -h         Show this help
 
 Note: Either --file or --session-id is required (but not both)
       --file always creates a new session
       --session-id continues from existing session (smart continuation)
+      Streaming UI is disabled automatically when piping output
 
 Environment:
   ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN  Required unless --mock is specified
@@ -62,6 +66,7 @@ Environment:
 Example:
   looplia kit --file ./article.txt --topics "ai,productivity" --tone expert
   looplia kit --session-id article-2025-12-08-abc123 --tone expert
+  looplia kit --file ./notes.md --no-streaming | jq .summary
 `);
 }
 
@@ -308,18 +313,52 @@ export async function runKitCommand(args: string[]): Promise<void> {
 
   const provider = createProvider(useMock, workspace);
 
-  console.error("⏳ Building writing kit...");
-  const result = await provider.buildKit(content, user);
+  // Determine if we should use streaming UI
+  const noStreaming = hasFlag(parsed, "no-streaming");
+  const useStreamingUI = isInteractive() && !noStreaming && !useMock;
 
-  if (!result.success) {
-    console.error(`Error: ${result.error.message}`);
-    process.exit(1);
+  if (useStreamingUI) {
+    // Use streaming UI with real-time progress
+    const { result, error } = await renderKitBuilder({
+      provider,
+      content,
+      user,
+      format: format as "json" | "markdown",
+      onComplete: () => {
+        /* handled by promise */
+      },
+      onError: () => {
+        /* handled by promise */
+      },
+    });
+
+    if (error) {
+      console.error(`Error: ${error.message}`);
+      process.exit(1);
+    }
+
+    if (result) {
+      const output =
+        format === "markdown"
+          ? formatKitAsMarkdown(result)
+          : JSON.stringify(result, null, 2);
+      writeOutput(output, outputPath);
+    }
+  } else {
+    // Legacy non-streaming mode
+    console.error("⏳ Building writing kit...");
+    const result = await provider.buildKit(content, user);
+
+    if (!result.success) {
+      console.error(`Error: ${result.error.message}`);
+      process.exit(1);
+    }
+
+    const output =
+      format === "markdown"
+        ? formatKitAsMarkdown(result.data)
+        : JSON.stringify(result.data, null, 2);
+
+    writeOutput(output, outputPath);
   }
-
-  const output =
-    format === "markdown"
-      ? formatKitAsMarkdown(result.data)
-      : JSON.stringify(result.data, null, 2);
-
-  writeOutput(output, outputPath);
 }

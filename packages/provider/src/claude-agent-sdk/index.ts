@@ -52,6 +52,24 @@ export {
 // Re-export v0.3.1 writing kit provider
 export type { WritingKitProvider } from "./writing-kit-provider";
 export { createClaudeWritingKitProvider } from "./writing-kit-provider";
+// Re-export streaming types and utilities (v0.3.4)
+export type {
+  StreamingEvent,
+  SessionStartEvent,
+  TextEvent,
+  TextDeltaEvent,
+  ThinkingEvent,
+  ThinkingDeltaEvent,
+  ToolStartEvent,
+  ToolEndEvent,
+  ProgressEvent,
+  ErrorEvent,
+  CompleteEvent,
+} from "./streaming";
+export {
+  executeAgenticQueryStreaming,
+  type AgenticQueryResult,
+} from "./streaming";
 
 /**
  * Claude-powered providers bundle with usage tracking
