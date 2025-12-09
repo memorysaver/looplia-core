@@ -125,97 +125,89 @@ jobs:
           path: test-workspace/
           retention-days: 7
 
-  # LLM-based semantic evaluation (manual trigger only)
+  # LLM-based semantic evaluation using Claude Code Action (manual trigger only)
   semantic-evaluation:
     runs-on: ubuntu-latest
     needs: docker-e2e
     if: github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: docker-e2e-results
           path: test-workspace/
 
-      - name: Evaluate summary quality with LLM
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-        run: |
-          echo "Running LLM-based semantic evaluation..."
+      - name: Evaluate pipeline outputs with Claude Code
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            You are an evaluator for a content intelligence pipeline. Your task is to assess the quality of each step's output against the original source content.
 
-          # Read summary content
-          SUMMARY_CONTENT=$(cat test-workspace/summary.json | jq -c '.')
+            ## Step 1: Read the Source Content
+            First, find and read the original content file:
+            - Look in test-workspace/contentItem/*/content.md (there should be one session folder)
+            - This is the ground truth for all evaluations
 
-          # Evaluate with Claude
-          RESPONSE=$(curl -s -X POST "https://api.anthropic.com/v1/messages" \
-            -H "Content-Type: application/json" \
-            -H "x-api-key: $ANTHROPIC_API_KEY" \
-            -H "anthropic-version: 2023-06-01" \
-            -d '{
-              "model": "claude-haiku-4-5-20251001",
-              "max_tokens": 500,
-              "messages": [{
-                "role": "user",
-                "content": "Evaluate this content summary for quality. Consider:\n1. Accuracy - Does the summary capture the main points?\n2. Completeness - Are key themes included?\n3. Clarity - Is it well-written and easy to understand?\n4. Usefulness - Would this help a writer create new content?\n\nScore from 1-10 (7+ is passing).\n\nSummary JSON:\n'"$SUMMARY_CONTENT"'\n\nRespond ONLY with valid JSON: {\"score\": N, \"reasoning\": \"brief explanation\", \"suggestions\": \"optional improvements\"}"
-              }]
-            }')
+            ## Step 2: Evaluate Summary (test-workspace/contentItem/*/summary.json)
+            Compare against content.md and score using additive criteria (1 point each, max 4):
+            - **Accuracy** (1 pt): Key facts match the source without fabrication
+            - **Completeness** (1 pt): Main themes from each section are captured
+            - **Clarity** (1 pt): Headline and TLDR are well-written
+            - **Faithfulness** (1 pt): No hallucinated information beyond source
 
-          echo "LLM Evaluation Response:"
-          echo "$RESPONSE" | jq -r '.content[0].text'
+            ## Step 3: Evaluate Ideas (test-workspace/contentItem/*/ideas.json)
+            Score using additive criteria (1 point each, max 4):
+            - **Hooks** (1 pt): At least 3 varied, engaging hooks derived from content
+            - **Angles** (1 pt): At least 3 unique perspectives relevant to source themes
+            - **Questions** (1 pt): Thought-provoking questions that extend the source material
+            - **Grounding** (1 pt): Ideas are traceable to source content
 
-          # Extract and validate score
-          EVALUATION=$(echo "$RESPONSE" | jq -r '.content[0].text')
-          SCORE=$(echo "$EVALUATION" | jq -r '.score')
+            ## Step 4: Evaluate Outline (test-workspace/contentItem/*/outline.json)
+            Score using additive criteria (1 point each, max 4):
+            - **Structure** (1 pt): Logical flow with clear sections
+            - **Coverage** (1 pt): Addresses main themes from source
+            - **Actionable** (1 pt): Notes provide useful guidance for writing
+            - **Realistic** (1 pt): Word estimates are reasonable (total 1000-3000 words)
 
-          echo ""
-          echo "Quality Score: $SCORE/10"
+            ## Output Format
+            Print your evaluation for each step:
 
-          if [ "$SCORE" -lt 7 ]; then
-            echo "Quality score below threshold (7)"
-            echo "Reasoning: $(echo "$EVALUATION" | jq -r '.reasoning')"
-            exit 1
-          fi
+            === SOURCE CONTENT ===
+            File: [path to content.md]
+            Title: [extracted title]
+            Sections: [list main sections]
 
-          echo "Semantic evaluation passed"
+            === SUMMARY EVALUATION ===
+            - Accuracy: [0/1] - [reason]
+            - Completeness: [0/1] - [reason]
+            - Clarity: [0/1] - [reason]
+            - Faithfulness: [0/1] - [reason]
+            Score: [X]/4
 
-      - name: Evaluate kit quality with LLM
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-        run: |
-          echo "Running LLM-based kit evaluation..."
+            === IDEAS EVALUATION ===
+            - Hooks: [0/1] - [reason]
+            - Angles: [0/1] - [reason]
+            - Questions: [0/1] - [reason]
+            - Grounding: [0/1] - [reason]
+            Score: [X]/4
 
-          # Read kit content (just ideas and outline, not full summary)
-          KIT_IDEAS=$(cat test-workspace/kit.json | jq -c '{ideas: .ideas, outline: .suggestedOutline}')
+            === OUTLINE EVALUATION ===
+            - Structure: [0/1] - [reason]
+            - Coverage: [0/1] - [reason]
+            - Actionable: [0/1] - [reason]
+            - Realistic: [0/1] - [reason]
+            Score: [X]/4
 
-          # Evaluate with Claude
-          RESPONSE=$(curl -s -X POST "https://api.anthropic.com/v1/messages" \
-            -H "Content-Type: application/json" \
-            -H "x-api-key: $ANTHROPIC_API_KEY" \
-            -H "anthropic-version: 2023-06-01" \
-            -d '{
-              "model": "claude-haiku-4-5-20251001",
-              "max_tokens": 500,
-              "messages": [{
-                "role": "user",
-                "content": "Evaluate this writing kit for quality. Consider:\n1. Hooks - Are they engaging and varied?\n2. Angles - Do they offer unique perspectives?\n3. Questions - Are they thought-provoking?\n4. Outline - Is the structure logical and comprehensive?\n\nScore from 1-10 (7+ is passing).\n\nWriting Kit:\n'"$KIT_IDEAS"'\n\nRespond ONLY with valid JSON: {\"score\": N, \"reasoning\": \"brief explanation\"}"
-              }]
-            }')
+            === FINAL RESULT ===
+            Total: [X]/12
+            Status: [PASS if >= 9, FAIL if < 9]
 
-          echo "LLM Evaluation Response:"
-          echo "$RESPONSE" | jq -r '.content[0].text'
-
-          # Extract and validate score
-          EVALUATION=$(echo "$RESPONSE" | jq -r '.content[0].text')
-          SCORE=$(echo "$EVALUATION" | jq -r '.score')
-
-          echo ""
-          echo "Kit Quality Score: $SCORE/10"
-
-          if [ "$SCORE" -lt 7 ]; then
-            echo "Kit quality score below threshold (7)"
-            echo "Reasoning: $(echo "$EVALUATION" | jq -r '.reasoning')"
-            exit 1
-          fi
-
-          echo "Kit semantic evaluation passed"
+            If FAIL, use Bash to exit with code 1.

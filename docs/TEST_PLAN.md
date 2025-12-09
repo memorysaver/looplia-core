@@ -355,25 +355,139 @@ fi
 
 #### Level 3: LLM-Based Semantic Evaluation
 
-Use Claude to evaluate output quality:
+Uses Claude Code Action to evaluate the entire pipeline against the source content. This is triggered only on manual workflow dispatch.
 
-```bash
-# Extract summary for evaluation
-SUMMARY=$(cat test-workspace/summary.json)
+##### LLM-as-a-Judge: Concept and Best Practices
 
-# Use Claude API to evaluate (example with curl)
-curl -X POST "https://api.anthropic.com/v1/messages" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $ANTHROPIC_API_KEY" \
-  -H "anthropic-version: 2023-06-01" \
-  -d '{
-    "model": "claude-haiku-4-5-20251001",
-    "max_tokens": 500,
-    "messages": [{
-      "role": "user",
-      "content": "Evaluate this summary for quality. Score 1-10 and explain.\n\nSummary:\n'"$SUMMARY"'\n\nRespond with JSON: {\"score\": N, \"reasoning\": \"...\"}"
-    }]
-  }' | jq -e '.content[0].text | fromjson | .score >= 7'
+**What is LLM-as-a-Judge?**
+
+LLM-as-a-Judge is a technique where a language model evaluates the outputs of another AI system. This approach was introduced in [Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena](https://huggingface.co/papers/2306.05685) and has become a standard practice for evaluating AI-generated content when traditional metrics (ROUGE, BLEU) are insufficient.
+
+**Why use it?**
+- Human evaluation is time-consuming and expensive
+- Traditional metrics don't capture semantic quality
+- LLM judges can correlate with human judgment up to 85% (higher than human-to-human agreement at 81%)
+
+##### Best Practices We Follow
+
+Based on research from [Hugging Face](https://huggingface.co/learn/cookbook/en/llm_judge), [Monte Carlo](https://www.montecarlodata.com/blog-llm-as-judge/), and [Evidently AI](https://www.evidentlyai.com/llm-guide/llm-as-a-judge):
+
+| Practice | Why | Our Implementation |
+|----------|-----|-------------------|
+| **Small integer scale (1-4)** | LLMs struggle with continuous ranges; discrete scores are more reliable | 0/1 per criterion, max 4 per step |
+| **Additive scoring** | Breaking into atomic criteria improves accuracy | 4 criteria per step (Summary, Ideas, Outline) |
+| **Require reasoning before score** | Forces the model to "think" before judging | Evaluation section printed before final score |
+| **Provide ground truth** | Reference content significantly improves accuracy | Always read `content.md` first as source of truth |
+| **Source-grounded evaluation** | Prevents hallucination in judgment | All evaluations traced back to original content |
+| **Clear rubric** | Explicit criteria reduce ambiguity | Each criterion has specific definition |
+
+##### Our Evaluation Strategy
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    GROUND TRUTH                             │
+│                   content.md                                │
+│            (Original source content)                        │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│  STEP 1: Summary Evaluation (4 pts)                        │
+│  ├─ Accuracy: Facts match source? (1 pt)                   │
+│  ├─ Completeness: All themes captured? (1 pt)              │
+│  ├─ Clarity: Well-written? (1 pt)                          │
+│  └─ Faithfulness: No hallucination? (1 pt)                 │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│  STEP 2: Ideas Evaluation (4 pts)                          │
+│  ├─ Hooks: Engaging & varied? (1 pt)                       │
+│  ├─ Angles: Unique perspectives? (1 pt)                    │
+│  ├─ Questions: Thought-provoking? (1 pt)                   │
+│  └─ Grounding: Traceable to source? (1 pt)                 │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│  STEP 3: Outline Evaluation (4 pts)                        │
+│  ├─ Structure: Logical flow? (1 pt)                        │
+│  ├─ Coverage: Main themes addressed? (1 pt)                │
+│  ├─ Actionable: Useful guidance? (1 pt)                    │
+│  └─ Realistic: Reasonable word counts? (1 pt)              │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│  FINAL SCORE: X/12                                         │
+│  PASS: >= 9 (75%)  |  FAIL: < 9                           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+##### References
+
+- [Hugging Face: Using LLM-as-a-judge](https://huggingface.co/learn/cookbook/en/llm_judge) - Shows 30% improvement with structured prompts
+- [Monte Carlo: LLM-As-Judge Templates](https://www.montecarlodata.com/blog-llm-as-judge/) - Evaluation templates for relevance, task completion
+- [Evidently AI: LLM-as-a-judge Guide](https://www.evidentlyai.com/llm-guide/llm-as-a-judge) - Comprehensive best practices
+- [Agenta: LLM as a Judge Guide](https://agenta.ai/blog/llm-as-a-judge-guide-to-llm-evaluation-best-practices) - Temperature and few-shot guidance
+- [Towards Data Science: LLM-as-a-Judge Practical Guide](https://towardsdatascience.com/llm-as-a-judge-a-practical-guide/) - Implementation patterns
+
+**Evaluation Flow:**
+1. Read the original source content (`contentItem/*/content.md`)
+2. Evaluate each pipeline step against the source
+
+**Pipeline Output Structure:**
+```
+test-workspace/contentItem/{sessionId}/
+├── content.md        ← Original source (ground truth)
+├── summary.json      ← Step 1: Content analysis
+├── ideas.json        ← Step 2: Idea generation
+├── outline.json      ← Step 3: Article outline
+└── writing-kit.json  ← Final assembled kit
+```
+
+**Evaluation Criteria (Additive Scoring):**
+
+| Step | Criteria | Points |
+|------|----------|--------|
+| **Summary** | Accuracy, Completeness, Clarity, Faithfulness | 4 pts |
+| **Ideas** | Hooks, Angles, Questions, Grounding | 4 pts |
+| **Outline** | Structure, Coverage, Actionable, Realistic | 4 pts |
+| **Total** | | **12 pts** |
+
+**Pass Threshold:** 9/12 (75%)
+
+**Example Output:**
+```
+=== SOURCE CONTENT ===
+File: test-workspace/contentItem/test-ai-healthcare/content.md
+Title: The Future of AI in Healthcare
+Sections: Diagnostic Revolution, Drug Discovery, Personalized Medicine, Challenges, Path Forward
+
+=== SUMMARY EVALUATION ===
+- Accuracy: 1/1 - Key facts about 95% cancer detection accuracy correctly captured
+- Completeness: 1/1 - All 5 main themes included in bullets
+- Clarity: 1/1 - Headline is concise and informative
+- Faithfulness: 1/1 - No hallucinated information
+Score: 4/4
+
+=== IDEAS EVALUATION ===
+- Hooks: 1/1 - 5 varied hooks (curiosity, statistic, story, controversy, emotional)
+- Angles: 1/1 - 5 unique perspectives with relevance scores 0.83-0.92
+- Questions: 1/1 - Mix of philosophical, analytical, and practical questions
+- Grounding: 1/1 - All ideas traceable to source content
+Score: 4/4
+
+=== OUTLINE EVALUATION ===
+- Structure: 1/1 - 7 logical sections with clear progression
+- Coverage: 1/1 - Addresses diagnostics, drug discovery, personalized medicine, challenges
+- Actionable: 1/1 - Notes provide specific guidance for each section
+- Realistic: 1/1 - Total ~2,800 words, reasonable estimates
+Score: 4/4
+
+=== FINAL RESULT ===
+Total: 12/12
+Status: PASS
 ```
 
 ### 4.7 Test Script
@@ -623,60 +737,62 @@ jobs:
           path: test-workspace/
           retention-days: 7
 
-  # Optional: LLM-based semantic evaluation
+  # LLM-based semantic evaluation using Claude Code Action (manual trigger only)
   semantic-evaluation:
     runs-on: ubuntu-latest
     needs: docker-e2e
-    if: github.event_name == 'workflow_dispatch'  # Only on manual trigger
+    if: github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: docker-e2e-results
           path: test-workspace/
 
-      - name: Evaluate summary quality with LLM
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          SUMMARY=$(cat test-workspace/summary.json)
+      - name: Evaluate pipeline outputs with Claude Code
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            You are an evaluator for a content intelligence pipeline.
 
-          RESPONSE=$(curl -s -X POST "https://api.anthropic.com/v1/messages" \
-            -H "Content-Type: application/json" \
-            -H "x-api-key: $ANTHROPIC_API_KEY" \
-            -H "anthropic-version: 2023-06-01" \
-            -d '{
-              "model": "claude-haiku-4-5-20251001",
-              "max_tokens": 500,
-              "messages": [{
-                "role": "user",
-                "content": "Evaluate this content summary for quality. Consider: accuracy, completeness, clarity, and usefulness. Score 1-10.\n\nSummary:\n'"$(echo "$SUMMARY" | jq -Rs .)"'\n\nRespond ONLY with JSON: {\"score\": N, \"reasoning\": \"brief explanation\"}"
-              }]
-            }')
+            ## Step 1: Read Source Content
+            Find and read: test-workspace/contentItem/*/content.md
 
-          echo "LLM Evaluation Response:"
-          echo "$RESPONSE" | jq '.content[0].text'
+            ## Step 2: Evaluate Summary (summary.json)
+            Score (1 pt each): Accuracy, Completeness, Clarity, Faithfulness
 
-          SCORE=$(echo "$RESPONSE" | jq -r '.content[0].text' | jq -r '.score')
-          echo "Quality Score: $SCORE/10"
+            ## Step 3: Evaluate Ideas (ideas.json)
+            Score (1 pt each): Hooks, Angles, Questions, Grounding
 
-          if [ "$SCORE" -lt 6 ]; then
-            echo "Quality score below threshold (6)"
-            exit 1
-          fi
+            ## Step 4: Evaluate Outline (outline.json)
+            Score (1 pt each): Structure, Coverage, Actionable, Realistic
+
+            ## Output Format
+            Print scores for each step, total X/12.
+            Status: PASS if >= 9, FAIL if < 9.
+            If FAIL, exit with code 1.
 ```
 
 #### Required GitHub Secrets
 
 Configure in repository Settings > Secrets and variables > Actions:
-- `ANTHROPIC_API_KEY` - Your Anthropic API key
+- `CLAUDE_CODE_OAUTH_TOKEN` - OAuth token for Claude Code Action (used for both Docker commands and LLM evaluation)
 
 #### Cost Considerations
 
-- **Estimated cost per run**: ~$0.02-0.10 USD
-- **Recommended frequency**: On merge to main + manual trigger
-- **Model used**: claude-haiku-4-5 (cost-effective)
+- **Estimated cost per run**: ~$0.05-0.20 USD (Docker E2E) + ~$0.10-0.30 USD (semantic evaluation)
+- **Recommended frequency**: On merge to main (basic tests) + manual trigger (with semantic evaluation)
+- **Models used**:
+  - Docker commands: claude-sonnet-4-5 (via Claude Agent SDK)
+  - Semantic evaluation: Claude Code Action (full model)
 
 ---
 
