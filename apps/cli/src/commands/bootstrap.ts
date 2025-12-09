@@ -6,7 +6,10 @@ function printBootstrapHelp(): void {
 looplia bootstrap - Initialize or refresh workspace
 
 Usage:
-  looplia bootstrap
+  looplia bootstrap [options]
+
+Options:
+  --yes, -y    Skip confirmation prompt (for automation/Docker)
 
 Description:
   Performs a destructive refresh of the ~/.looplia/ workspace from the
@@ -25,6 +28,7 @@ Description:
 
 Examples:
   looplia bootstrap
+  looplia bootstrap --yes
 `);
 }
 
@@ -48,13 +52,19 @@ export async function runBootstrapCommand(args: string[]): Promise<void> {
     process.exit(0);
   }
 
+  // Check for --yes or -y flag to skip confirmation
+  const skipConfirmation = args.includes("--yes") || args.includes("-y");
+
   console.log(
     "⚠️  Bootstrap will DELETE ~/.looplia/ and recreate it from plugin."
   );
   console.log("   All customizations will be lost.");
   console.log("");
 
-  const confirmed = await promptConfirmation("Continue?");
+  let confirmed = skipConfirmation;
+  if (!skipConfirmation) {
+    confirmed = await promptConfirmation("Continue?");
+  }
 
   if (!confirmed) {
     console.log("Aborted.");

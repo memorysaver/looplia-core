@@ -1,0 +1,13 @@
+{
+  "name": "looplia-docker",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.1.60",
+    "@looplia-core/core": "file:./packages/core",
+    "@looplia-core/provider": "file:./packages/provider",
+    "zod": "^3.24.2",
+    "commander": "^13.1.0",
+    "chalk": "^5.4.1"
+  }
+}
