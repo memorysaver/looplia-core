@@ -36,12 +36,12 @@ jobs:
 
       - name: Run summarize command
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
           # Use docker create + start + cp to avoid volume mount conflicts
           # (bootstrap deletes ~/.looplia which fails if it's a mounted volume)
           CONTAINER_ID=$(docker create \
-            -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
             -v "$(pwd)/examples:/examples:ro" \
             $IMAGE_NAME \
             summarize --file /examples/ai-healthcare.md \
@@ -76,11 +76,11 @@ jobs:
 
       - name: Run kit command
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
           # Use docker create + start + cp to avoid volume mount conflicts
           CONTAINER_ID=$(docker create \
-            -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
             -v "$(pwd)/examples:/examples:ro" \
             $IMAGE_NAME \
             kit --file /examples/ai-healthcare.md \

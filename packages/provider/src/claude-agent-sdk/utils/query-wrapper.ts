@@ -140,7 +140,11 @@ export async function executeQuery<T>(
     const resolvedConfig = resolveConfig(config);
 
     // Validate API key before making request
-    const apiKey = config?.apiKey ?? process.env.ANTHROPIC_API_KEY;
+    // SDK supports both ANTHROPIC_API_KEY and CLAUDE_CODE_OAUTH_TOKEN
+    const apiKey =
+      config?.apiKey ??
+      process.env.ANTHROPIC_API_KEY ??
+      process.env.CLAUDE_CODE_OAUTH_TOKEN;
     if (!apiKey) {
       return {
         success: false,
@@ -148,7 +152,7 @@ export async function executeQuery<T>(
           type: "validation_error",
           field: "apiKey",
           message:
-            "API key is required. Set ANTHROPIC_API_KEY environment variable or provide apiKey in config",
+            "API key is required. Set ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN environment variable, or provide apiKey in config",
         },
       };
     }
@@ -296,7 +300,11 @@ export async function executeAgenticQuery<T>(
     const resolvedConfig = resolveConfig(config);
 
     // Validate API key before making request
-    const apiKey = config?.apiKey ?? process.env.ANTHROPIC_API_KEY;
+    // SDK supports both ANTHROPIC_API_KEY and CLAUDE_CODE_OAUTH_TOKEN
+    const apiKey =
+      config?.apiKey ??
+      process.env.ANTHROPIC_API_KEY ??
+      process.env.CLAUDE_CODE_OAUTH_TOKEN;
     if (!apiKey) {
       return {
         success: false,
@@ -304,7 +312,7 @@ export async function executeAgenticQuery<T>(
           type: "validation_error",
           field: "apiKey",
           message:
-            "API key is required. Set ANTHROPIC_API_KEY environment variable or provide apiKey in config",
+            "API key is required. Set ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN environment variable, or provide apiKey in config",
         },
       };
     }

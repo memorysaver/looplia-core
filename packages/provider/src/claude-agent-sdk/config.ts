@@ -7,7 +7,7 @@ export type ClaudeAgentConfig = {
   /** Model to use (default: claude-haiku-4-5-20251001) */
   model?: string;
 
-  /** API key (default: ANTHROPIC_API_KEY env) */
+  /** API key (default: ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN env) */
   apiKey?: string;
 
   /** Workspace directory (default: ~/.looplia) */
@@ -109,11 +109,14 @@ export function validateConfig(
 ): ConfigValidationResult {
   const errors: string[] = [];
 
-  // Check API key
-  const apiKey = config?.apiKey ?? process.env.ANTHROPIC_API_KEY;
+  // Check API key (SDK supports both ANTHROPIC_API_KEY and CLAUDE_CODE_OAUTH_TOKEN)
+  const apiKey =
+    config?.apiKey ??
+    process.env.ANTHROPIC_API_KEY ??
+    process.env.CLAUDE_CODE_OAUTH_TOKEN;
   if (!apiKey) {
     errors.push(
-      "API key is required. Set ANTHROPIC_API_KEY environment variable or provide apiKey in config"
+      "API key is required. Set ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN environment variable, or provide apiKey in config"
     );
   }
 
