@@ -29,7 +29,7 @@ Options:
   --help, -h    Show this help
 
 Environment:
-  ANTHROPIC_API_KEY  Required unless --mock is specified
+  ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN  Required unless --mock is specified
 
 Example:
   looplia summarize --file ./article.txt --format markdown
@@ -56,8 +56,17 @@ export async function runSummarizeCommand(args: string[]): Promise<void> {
   const useMock = hasFlag(parsed, "mock", "m");
 
   // Check for API key unless using mock provider
-  if (!(useMock || process.env.ANTHROPIC_API_KEY)) {
-    console.error("Error: ANTHROPIC_API_KEY environment variable is required");
+  // SDK supports both ANTHROPIC_API_KEY and CLAUDE_CODE_OAUTH_TOKEN
+  if (
+    !(
+      useMock ||
+      process.env.ANTHROPIC_API_KEY ||
+      process.env.CLAUDE_CODE_OAUTH_TOKEN
+    )
+  ) {
+    console.error(
+      "Error: ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN environment variable is required"
+    );
     console.error("Get your API key from: https://console.anthropic.com");
     console.error("Or use --mock flag to run without API key");
     process.exit(1);
