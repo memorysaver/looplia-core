@@ -1,0 +1,221 @@
+name: Docker E2E Tests
+
+on:
+  workflow_dispatch: # Manual trigger
+  push:
+    branches: [main] # Trigger on merge to main
+
+env:
+  IMAGE_NAME: looplia:test
+
+jobs:
+  docker-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build project
+        run: bun run build
+
+      - name: Build Docker image
+        run: docker build -t $IMAGE_NAME .
+
+      - name: Create test workspace
+        run: mkdir -p test-workspace
+
+      - name: Run summarize command
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          # Use docker create + start + cp to avoid volume mount conflicts
+          # (bootstrap deletes ~/.looplia which fails if it's a mounted volume)
+          CONTAINER_ID=$(docker create \
+            -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+            -v "$(pwd)/examples:/examples:ro" \
+            $IMAGE_NAME \
+            summarize --file /examples/ai-healthcare.md \
+            --output /home/looplia/.looplia/summary.json)
+
+          docker start -a "$CONTAINER_ID"
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace/
+          docker rm "$CONTAINER_ID"
+
+      - name: Validate summary schema
+        run: |
+          echo "Validating summary schema..."
+          jq -e '.headline and .tldr and .bullets and .tags' test-workspace/summary.json
+          echo "Summary schema valid"
+
+      - name: Validate summary quality
+        run: |
+          echo "Checking summary quality metrics..."
+          TLDR_WORDS=$(jq -r '.tldr' test-workspace/summary.json | wc -w)
+          BULLET_COUNT=$(jq '.bullets | length' test-workspace/summary.json)
+          TAG_COUNT=$(jq '.tags | length' test-workspace/summary.json)
+
+          echo "TLDR words: $TLDR_WORDS (expected: 30-200)"
+          echo "Bullet count: $BULLET_COUNT (expected: 3-7)"
+          echo "Tag count: $TAG_COUNT (expected: >= 3)"
+
+          # Validate minimum quality thresholds
+          [ "$BULLET_COUNT" -ge 3 ] || (echo "Bullet count too low" && exit 1)
+          [ "$TAG_COUNT" -ge 3 ] || (echo "Tag count too low" && exit 1)
+
+          echo "Summary quality acceptable"
+
+      - name: Run kit command
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          # Use docker create + start + cp to avoid volume mount conflicts
+          CONTAINER_ID=$(docker create \
+            -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+            -v "$(pwd)/examples:/examples:ro" \
+            $IMAGE_NAME \
+            kit --file /examples/ai-healthcare.md \
+            --topics "ai,healthcare,technology" \
+            --tone "expert" \
+            --output /home/looplia/.looplia/kit.json)
+
+          docker start -a "$CONTAINER_ID"
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace/
+          docker rm "$CONTAINER_ID"
+
+      - name: Validate kit schema
+        run: |
+          echo "Validating kit schema..."
+          jq -e '.contentId and .summary and .ideas and .suggestedOutline' test-workspace/kit.json
+          echo "Kit schema valid"
+
+      - name: Validate kit quality
+        run: |
+          echo "Checking kit quality metrics..."
+          HOOK_COUNT=$(jq '.ideas.hooks | length' test-workspace/kit.json)
+          ANGLE_COUNT=$(jq '.ideas.angles | length' test-workspace/kit.json)
+          QUESTION_COUNT=$(jq '.ideas.questions | length' test-workspace/kit.json)
+          SECTION_COUNT=$(jq '.suggestedOutline | length' test-workspace/kit.json)
+
+          echo "Hook count: $HOOK_COUNT (expected: >= 2)"
+          echo "Angle count: $ANGLE_COUNT (expected: >= 2)"
+          echo "Question count: $QUESTION_COUNT (expected: >= 2)"
+          echo "Outline sections: $SECTION_COUNT (expected: >= 3)"
+
+          # Validate minimum quality thresholds
+          [ "$HOOK_COUNT" -ge 2 ] || (echo "Hook count too low" && exit 1)
+          [ "$SECTION_COUNT" -ge 3 ] || (echo "Outline section count too low" && exit 1)
+
+          echo "Kit quality acceptable"
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-e2e-results
+          path: test-workspace/
+          retention-days: 7
+
+  # LLM-based semantic evaluation (manual trigger only)
+  semantic-evaluation:
+    runs-on: ubuntu-latest
+    needs: docker-e2e
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-e2e-results
+          path: test-workspace/
+
+      - name: Evaluate summary quality with LLM
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          echo "Running LLM-based semantic evaluation..."
+
+          # Read summary content
+          SUMMARY_CONTENT=$(cat test-workspace/summary.json | jq -c '.')
+
+          # Evaluate with Claude
+          RESPONSE=$(curl -s -X POST "https://api.anthropic.com/v1/messages" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -d '{
+              "model": "claude-haiku-4-5-20251001",
+              "max_tokens": 500,
+              "messages": [{
+                "role": "user",
+                "content": "Evaluate this content summary for quality. Consider:\n1. Accuracy - Does the summary capture the main points?\n2. Completeness - Are key themes included?\n3. Clarity - Is it well-written and easy to understand?\n4. Usefulness - Would this help a writer create new content?\n\nScore from 1-10 (7+ is passing).\n\nSummary JSON:\n'"$SUMMARY_CONTENT"'\n\nRespond ONLY with valid JSON: {\"score\": N, \"reasoning\": \"brief explanation\", \"suggestions\": \"optional improvements\"}"
+              }]
+            }')
+
+          echo "LLM Evaluation Response:"
+          echo "$RESPONSE" | jq -r '.content[0].text'
+
+          # Extract and validate score
+          EVALUATION=$(echo "$RESPONSE" | jq -r '.content[0].text')
+          SCORE=$(echo "$EVALUATION" | jq -r '.score')
+
+          echo ""
+          echo "Quality Score: $SCORE/10"
+
+          if [ "$SCORE" -lt 7 ]; then
+            echo "Quality score below threshold (7)"
+            echo "Reasoning: $(echo "$EVALUATION" | jq -r '.reasoning')"
+            exit 1
+          fi
+
+          echo "Semantic evaluation passed"
+
+      - name: Evaluate kit quality with LLM
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          echo "Running LLM-based kit evaluation..."
+
+          # Read kit content (just ideas and outline, not full summary)
+          KIT_IDEAS=$(cat test-workspace/kit.json | jq -c '{ideas: .ideas, outline: .suggestedOutline}')
+
+          # Evaluate with Claude
+          RESPONSE=$(curl -s -X POST "https://api.anthropic.com/v1/messages" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -d '{
+              "model": "claude-haiku-4-5-20251001",
+              "max_tokens": 500,
+              "messages": [{
+                "role": "user",
+                "content": "Evaluate this writing kit for quality. Consider:\n1. Hooks - Are they engaging and varied?\n2. Angles - Do they offer unique perspectives?\n3. Questions - Are they thought-provoking?\n4. Outline - Is the structure logical and comprehensive?\n\nScore from 1-10 (7+ is passing).\n\nWriting Kit:\n'"$KIT_IDEAS"'\n\nRespond ONLY with valid JSON: {\"score\": N, \"reasoning\": \"brief explanation\"}"
+              }]
+            }')
+
+          echo "LLM Evaluation Response:"
+          echo "$RESPONSE" | jq -r '.content[0].text'
+
+          # Extract and validate score
+          EVALUATION=$(echo "$RESPONSE" | jq -r '.content[0].text')
+          SCORE=$(echo "$EVALUATION" | jq -r '.score')
+
+          echo ""
+          echo "Kit Quality Score: $SCORE/10"
+
+          if [ "$SCORE" -lt 7 ]; then
+            echo "Kit quality score below threshold (7)"
+            echo "Reasoning: $(echo "$EVALUATION" | jq -r '.reasoning')"
+            exit 1
+          fi
+
+          echo "Kit semantic evaluation passed"

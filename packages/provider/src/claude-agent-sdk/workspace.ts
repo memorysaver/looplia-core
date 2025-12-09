@@ -17,6 +17,9 @@ export type WorkspaceOptions = {
 
   /** Skip plugin bootstrap - creates empty structure (for testing) */
   skipPluginBootstrap?: boolean;
+
+  /** Initialize without deleting workspace (for Docker mounted volumes) */
+  noClean?: boolean;
 };
 
 /**
@@ -134,29 +137,53 @@ async function createTestWorkspace(
 
 /**
  * Bootstrap workspace from plugin directory
+ *
+ * @param noClean - If true, don't delete existing workspace (for mounted volumes)
  */
 async function bootstrapFromPlugin(
   workspaceDir: string,
-  pluginDir: string
+  pluginDir: string,
+  noClean = false
 ): Promise<void> {
   const workspaceExists = await pathExists(workspaceDir);
-  if (workspaceExists) {
+
+  // Only delete if noClean is false
+  if (workspaceExists && !noClean) {
     await rm(workspaceDir, { recursive: true, force: true });
   }
 
+  // Create directories (recursive: true handles existing dirs)
   await mkdir(workspaceDir, { recursive: true });
   await mkdir(join(workspaceDir, ".claude"), { recursive: true });
   await mkdir(join(workspaceDir, "contentItem"), { recursive: true });
 
-  await cp(join(pluginDir, "agents"), join(workspaceDir, ".claude", "agents"), {
+  // Copy plugin files (force overwrite existing)
+  const agentsDir = join(workspaceDir, ".claude", "agents");
+  const skillsDir = join(workspaceDir, ".claude", "skills");
+
+  // Remove existing agent/skill dirs if they exist (to get clean copy)
+  if (!noClean) {
+    if (await pathExists(agentsDir)) {
+      await rm(agentsDir, { recursive: true, force: true });
+    }
+    if (await pathExists(skillsDir)) {
+      await rm(skillsDir, { recursive: true, force: true });
+    }
+  }
+
+  await cp(join(pluginDir, "agents"), agentsDir, {
     recursive: true,
+    force: true,
   });
 
-  await cp(join(pluginDir, "skills"), join(workspaceDir, ".claude", "skills"), {
+  await cp(join(pluginDir, "skills"), skillsDir, {
     recursive: true,
+    force: true,
   });
 
-  await cp(join(pluginDir, "README.md"), join(workspaceDir, "CLAUDE.md"));
+  await cp(join(pluginDir, "README.md"), join(workspaceDir, "CLAUDE.md"), {
+    force: true,
+  });
 
   await writeFile(
     join(workspaceDir, "user-profile.json"),
@@ -195,6 +222,7 @@ export async function ensureWorkspace(
   const force = options?.force ?? false;
   const requireFiles = options?.requireFiles ?? false;
   const skipPluginBootstrap = options?.skipPluginBootstrap ?? false;
+  const noClean = options?.noClean ?? false;
 
   const workspaceDir = expandPath(baseDir);
 
@@ -223,7 +251,7 @@ export async function ensureWorkspace(
     force || !workspaceExists || (requireFiles && !requiredFilesPresent);
 
   if (needsBootstrap) {
-    await bootstrapFromPlugin(workspaceDir, pluginDir);
+    await bootstrapFromPlugin(workspaceDir, pluginDir, noClean);
   }
 
   return workspaceDir;
