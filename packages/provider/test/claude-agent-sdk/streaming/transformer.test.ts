@@ -11,17 +11,19 @@ describe("streaming/transformer", () => {
 
       expect(context.model).toBe("claude-sonnet-4");
       expect(context.sessionId).toBe("");
-      expect(context.toolUseMap.size).toBe(0);
+      expect(context.pendingTools.size).toBe(0);
     });
   });
 
   describe("transformSdkMessage", () => {
     it("should transform system.init to session_start event", () => {
       const context = createTransformContext("claude-sonnet-4");
+      // SDK uses snake_case for message properties
       const message = {
         type: "system",
         subtype: "init",
-        sessionId: "test-session-123",
+        session_id: "test-session-123",
+        model: "claude-sonnet-4",
         tools: ["Read", "Skill"],
       };
 
@@ -39,15 +41,17 @@ describe("streaming/transformer", () => {
 
     it("should transform assistant message with text content", () => {
       const context = createTransformContext("claude-sonnet-4");
+      // SDK wraps content in a `message` property for assistant messages
       const message = {
         type: "assistant",
-        subtype: "message",
-        content: [
-          {
-            type: "text",
-            text: "Hello, world!",
-          },
-        ],
+        message: {
+          content: [
+            {
+              type: "text",
+              text: "Hello, world!",
+            },
+          ],
+        },
       };
 
       const events = Array.from(transformSdkMessage(message, context));
@@ -63,13 +67,14 @@ describe("streaming/transformer", () => {
       const context = createTransformContext("claude-sonnet-4");
       const message = {
         type: "assistant",
-        subtype: "message",
-        content: [
-          {
-            type: "thinking",
-            thinking: "I need to analyze this...",
-          },
-        ],
+        message: {
+          content: [
+            {
+              type: "thinking",
+              thinking: "I need to analyze this...",
+            },
+          ],
+        },
       };
 
       const events = Array.from(transformSdkMessage(message, context));
@@ -85,15 +90,16 @@ describe("streaming/transformer", () => {
       const context = createTransformContext("claude-sonnet-4");
       const message = {
         type: "assistant",
-        subtype: "message",
-        content: [
-          {
-            type: "tool_use",
-            id: "tool-123",
-            name: "Read",
-            input: { path: "/path/to/file.txt" },
-          },
-        ],
+        message: {
+          content: [
+            {
+              type: "tool_use",
+              id: "tool-123",
+              name: "Read",
+              input: { file_path: "/path/to/file.txt" },
+            },
+          ],
+        },
       };
 
       const events = Array.from(transformSdkMessage(message, context));
@@ -111,22 +117,24 @@ describe("streaming/transformer", () => {
       const context = createTransformContext("claude-sonnet-4");
       const toolUseId = "tool-123";
 
-      // First register the tool start
-      context.toolUseMap.set(toolUseId, {
-        tool: "Read",
+      // First register the tool start using pendingTools (not toolUseMap)
+      context.pendingTools.set(toolUseId, {
+        name: "Read",
         startTime: Date.now(),
       });
 
+      // SDK wraps tool_result in user message
       const message = {
         type: "user",
-        subtype: "message",
-        content: [
-          {
-            type: "tool_result",
-            tool_use_id: toolUseId,
-            content: "File contents here",
-          },
-        ],
+        message: {
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: toolUseId,
+              content: "File contents here",
+            },
+          ],
+        },
       };
 
       const events = Array.from(transformSdkMessage(message, context));
@@ -145,17 +153,18 @@ describe("streaming/transformer", () => {
       const context = createTransformContext("claude-sonnet-4");
       context.sessionId = "test-session";
 
+      // SDK uses snake_case for result properties
       const message = {
         type: "result",
         subtype: "success",
-        result: { data: "test result" },
+        structured_output: { data: "test result" },
         usage: {
-          inputTokens: 100,
-          outputTokens: 200,
-          totalCostUsd: 0.05,
+          input_tokens: 100,
+          output_tokens: 200,
         },
-        durationMs: 5000,
-        numTurns: 3,
+        total_cost_usd: 0.05,
+        duration_ms: 5000,
+        num_turns: 3,
       };
 
       const events = Array.from(transformSdkMessage(message, context));
@@ -180,10 +189,10 @@ describe("streaming/transformer", () => {
         type: "result",
         subtype: "error_max_turns",
         usage: {
-          inputTokens: 50,
-          outputTokens: 100,
-          totalCostUsd: 0.02,
+          input_tokens: 50,
+          output_tokens: 100,
         },
+        total_cost_usd: 0.02,
       };
 
       const events = Array.from(transformSdkMessage(message, context));
@@ -200,13 +209,14 @@ describe("streaming/transformer", () => {
       const longText = "a".repeat(300);
       const message = {
         type: "assistant",
-        subtype: "message",
-        content: [
-          {
-            type: "text",
-            text: longText,
-          },
-        ],
+        message: {
+          content: [
+            {
+              type: "text",
+              text: longText,
+            },
+          ],
+        },
       };
 
       const events = Array.from(transformSdkMessage(message, context));
@@ -234,23 +244,24 @@ describe("streaming/transformer", () => {
       const context = createTransformContext("claude-sonnet-4");
       const message = {
         type: "assistant",
-        subtype: "message",
-        content: [
-          {
-            type: "thinking",
-            thinking: "Let me think...",
-          },
-          {
-            type: "text",
-            text: "Here is the answer",
-          },
-          {
-            type: "tool_use",
-            id: "tool-456",
-            name: "Skill",
-            input: { skill: "test-skill" },
-          },
-        ],
+        message: {
+          content: [
+            {
+              type: "thinking",
+              thinking: "Let me think...",
+            },
+            {
+              type: "text",
+              text: "Here is the answer",
+            },
+            {
+              type: "tool_use",
+              id: "tool-456",
+              name: "Skill",
+              input: { skill: "test-skill" },
+            },
+          ],
+        },
       };
 
       const events = Array.from(transformSdkMessage(message, context));
