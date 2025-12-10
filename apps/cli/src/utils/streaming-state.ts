@@ -18,6 +18,7 @@ export type StreamingState<T = unknown> = {
   activities: Activity[];
   agentText: string;
   agentThinking: string;
+  commandPrompt: string;
   usage: {
     inputTokens: number;
     outputTokens: number;
@@ -39,6 +40,7 @@ export function createInitialState<T>(): StreamingState<T> {
     activities: [],
     agentText: "",
     agentThinking: "",
+    commandPrompt: "",
     usage: { inputTokens: 0, outputTokens: 0, totalCostUsd: 0 },
     result: null,
     error: null,
@@ -91,6 +93,9 @@ export function processStreamingEvent<T>(
   context: EventHandlerContext
 ): Partial<StreamingState<T>> | null {
   switch (event.type) {
+    case "prompt":
+      return handlePrompt(event) as Partial<StreamingState<T>>;
+
     case "session_start":
       return handleSessionStart(event) as Partial<StreamingState<T>>;
 
@@ -117,12 +122,19 @@ export function processStreamingEvent<T>(
     case "progress":
       return handleProgress(event) as Partial<StreamingState<T>>;
 
+    case "usage":
+      return handleUsage(event) as Partial<StreamingState<T>>;
+
     case "error":
       return handleError(event) as Partial<StreamingState<T>>;
 
     default:
       return null;
   }
+}
+
+function handlePrompt(event: { content: string }): Partial<StreamingState> {
+  return { commandPrompt: event.content };
 }
 
 function handleSessionStart(event: {
@@ -201,6 +213,19 @@ function handleProgress(event: {
   return {
     progress: event.percent,
     currentStep: event.message,
+  };
+}
+
+function handleUsage(event: {
+  inputTokens: number;
+  outputTokens: number;
+}): Partial<StreamingState> {
+  return {
+    usage: {
+      inputTokens: event.inputTokens,
+      outputTokens: event.outputTokens,
+      totalCostUsd: 0, // Cost is calculated at the end in the complete event
+    },
   };
 }
 

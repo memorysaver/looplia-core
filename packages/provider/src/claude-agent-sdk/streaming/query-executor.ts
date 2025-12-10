@@ -139,6 +139,13 @@ export async function* executeAgenticQueryStreaming<T>(
       logger.log({ type: "prompt", content: prompt });
     }
 
+    // Emit prompt event for UI display
+    yield {
+      type: "prompt",
+      content: prompt,
+      timestamp: Date.now(),
+    };
+
     const progressTracker = new ProgressTracker();
     yield {
       type: "progress",

@@ -170,7 +170,20 @@ export class LoopliaRuntime {
         };
       }
 
-      return result as AgenticQueryResult<T>;
+      // renderStreamingQuery returns the data directly, wrap it in AgenticQueryResult
+      if (result) {
+        return {
+          success: true,
+          data: result,
+          sessionId: "", // TODO: capture sessionId from streaming state
+        };
+      }
+
+      return {
+        success: false,
+        error: { type: "unknown", message: "No result received" },
+        sessionId: "",
+      };
     }
 
     return this.executeBatch(generator);

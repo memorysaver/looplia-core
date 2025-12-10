@@ -44,9 +44,16 @@ export function renderSummarizeResult(
 function displaySessionInfo(data: ContentSummary): void {
   console.log("");
   if (data.contentId) {
-    console.log(`Session ID: ${data.contentId}`);
-    console.log(`Saved to: ~/.looplia/contentItem/${data.contentId}/\n`);
-    console.log(`Next step: looplia kit --session-id ${data.contentId}\n`);
+    console.log("\x1b[32m✓\x1b[0m Summary complete");
+    console.log(`  \x1b[90mSession:\x1b[0m ${data.contentId}`);
+    console.log(
+      `  \x1b[90mSaved to:\x1b[0m ~/.looplia/contentItem/${data.contentId}/summary.json`
+    );
+    console.log("");
+    console.log(
+      `\x1b[36mNext step:\x1b[0m looplia kit --session-id ${data.contentId}`
+    );
+    console.log("");
   }
 }
 
@@ -64,13 +71,13 @@ function formatOutput(
 }
 
 /**
- * Write output to file or stdout
+ * Write output to file if path provided
+ * (Summary is already saved in contentItem folder by the agent)
  */
 function writeOutput(output: string, outputPath: string | undefined): void {
   if (outputPath) {
     writeFileSync(outputPath, output);
-    console.log(`Summary written to: ${outputPath}`);
-  } else {
-    console.log(output);
+    console.log(`Also written to: ${outputPath}`);
   }
+  // No stdout dump - summary is already in contentItem folder
 }

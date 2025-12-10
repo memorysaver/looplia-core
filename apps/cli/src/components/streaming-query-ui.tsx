@@ -3,12 +3,26 @@
  *
  * Works with any provider that returns an AsyncGenerator<StreamingEvent>.
  * Shows real-time progress, agent output, tool invocations, and usage stats.
+ *
+ * Layout:
+ * ┌─────────────────────────────────────────┐
+ * │ Workspace: ~/.looplia                   │
+ * │ Session:   ~/.looplia/contentItem/abc   │
+ * ├─────────────────────────────────────────┤
+ * │ ┌─ Agent ──────────────────────────────┐│
+ * │ │ ▶ Agent                              ││
+ * │ │   Agent text output...               ││
+ * │ │   ├─ ✦ content-analyzer (complete)   ││
+ * │ │   └─ ✦ summarizer (running)          ││
+ * │ └──────────────────────────────────────┘│
+ * │ Tokens: 1,234 (800 in / 434 out) | $0.02│
+ * └─────────────────────────────────────────┘
  */
 
 import type { StreamingEvent } from "@looplia-core/provider/claude-agent-sdk";
 import { Box, render, Text } from "ink";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createInitialState,
   type EventHandlerContext,
@@ -17,11 +31,10 @@ import {
   type StreamingState,
 } from "../utils/streaming-state";
 import type { Activity } from "./activity-item";
-import { ActivityLog } from "./activity-log";
-import { AgentOutput } from "./agent-output";
-import { Header } from "./header";
-import { ProgressSection } from "./progress-section";
-import { UsageStats } from "./usage-stats";
+import { type AgentNode, AgentTree } from "./agent-tree";
+import { BoxedArea } from "./boxed-area";
+import { TokenStats } from "./token-stats";
+import { WorkspaceHeader } from "./workspace-header";
 
 type StreamingResult<T> = {
   success: boolean;
@@ -47,7 +60,40 @@ type Props<T> = {
   onError?: (error: Error) => void;
   /** Optional result formatter for display */
   formatResult?: (result: T) => string;
+  /** Workspace path to display */
+  workspacePath?: string;
+  /** Session path to display */
+  sessionPath?: string;
+  /** Command prompt to display in top box */
+  commandPrompt?: string;
 };
+
+/**
+ * Map activity status to agent node status
+ */
+function mapActivityStatus(status: Activity["status"]): AgentNode["status"] {
+  if (status === "complete") {
+    return "complete";
+  }
+  if (status === "error") {
+    return "error";
+  }
+  return "running";
+}
+
+/**
+ * Convert activities to agent tree nodes
+ */
+function activitiesToNodes(activities: Activity[]): AgentNode[] {
+  return activities.map((activity) => ({
+    id: activity.id,
+    type: activity.type === "skill" ? "skill" : "tool",
+    name: activity.label,
+    status: mapActivityStatus(activity.status),
+    detail: activity.detail,
+    durationMs: activity.durationMs,
+  }));
+}
 
 /**
  * Hook to consume streaming events with simplified state management
@@ -132,11 +178,13 @@ function useStreamingState<T>(
 
 function StreamingQueryUIInner<T>({
   title,
-  subtitle,
   streamGenerator,
   onComplete,
   onError,
   formatResult,
+  workspacePath,
+  sessionPath,
+  commandPrompt,
 }: Props<T>): React.ReactElement {
   const state = useStreamingState(streamGenerator);
 
@@ -150,55 +198,66 @@ function StreamingQueryUIInner<T>({
     }
   }, [state.status, state.result, state.error, onComplete, onError]);
 
-  const showProgress = state.status !== "complete" && state.status !== "error";
-  const showAgentOutput =
-    (state.agentText || state.agentThinking) && state.status === "running";
+  const isRunning = state.status === "running";
+  const isComplete = state.status === "complete";
+  const isError = state.status === "error";
+
+  // Convert activities to tree nodes
+  const treeNodes = activitiesToNodes(state.activities);
+
+  // Determine border color based on status
+  const borderColor = useMemo(() => {
+    if (isError) {
+      return "red";
+    }
+    if (isComplete) {
+      return "green";
+    }
+    return "cyan";
+  }, [isError, isComplete]);
+
+  // Check if we should show result section
+  const showResult = isComplete && state.result !== undefined;
+  const showError = isError && state.error !== undefined;
 
   return (
     <Box flexDirection="column" padding={1}>
-      {/* Header */}
-      <Header contentTitle={subtitle} sessionId={state.sessionId} />
+      {/* 1. Workspace Header */}
+      <WorkspaceHeader
+        sessionPath={sessionPath || state.sessionId}
+        workspacePath={workspacePath}
+      />
 
-      {/* Progress */}
-      {showProgress ? (
-        <ProgressSection
-          isRunning={state.status === "running"}
-          percent={state.progress}
-          step={state.currentStep}
-        />
+      {/* 2. Command Prompt (from props or state) */}
+      {commandPrompt || state.commandPrompt ? (
+        <BoxedArea borderColor="gray" title="Command Prompt">
+          <Text color="white">{commandPrompt || state.commandPrompt}</Text>
+        </BoxedArea>
       ) : null}
 
-      {/* Agent Output */}
-      {showAgentOutput ? (
-        <AgentOutput
-          maxLines={2}
-          text={state.agentText}
-          thinking={state.agentThinking}
+      {/* 3. Main Display Area (Boxed) */}
+      <BoxedArea borderColor={borderColor} title={title}>
+        <AgentTree
+          agentText={state.agentText}
+          maxTextLines={4}
+          nodes={treeNodes}
+          thinkingText={state.agentThinking}
         />
-      ) : null}
+      </BoxedArea>
 
-      {/* Activity Log */}
-      <ActivityLog activities={state.activities} maxVisible={8} />
+      {/* 4. Token Stats (below the box) */}
+      <TokenStats isRunning={isRunning} usage={state.usage} />
 
-      {/* Usage Stats */}
-      <UsageStats usage={state.usage} />
-
-      {/* Result */}
-      {state.status === "complete" && state.result ? (
+      {/* 5. Result formatter (if provided) */}
+      {showResult === true && formatResult !== undefined ? (
         <Box flexDirection="column" marginTop={1}>
-          <Box marginBottom={1}>
-            <Text bold color="green">
-              {"\u2713"} {title} Complete
-            </Text>
-          </Box>
-          {formatResult ? <Text>{formatResult(state.result)}</Text> : null}
+          <Text>{formatResult(state.result as T)}</Text>
         </Box>
       ) : null}
 
-      {/* Error */}
-      {state.status === "error" && state.error ? (
+      {showError ? (
         <Box marginTop={1}>
-          <Text color="red">Error: {state.error.message}</Text>
+          <Text color="red">Error: {state.error?.message}</Text>
         </Box>
       ) : null}
     </Box>

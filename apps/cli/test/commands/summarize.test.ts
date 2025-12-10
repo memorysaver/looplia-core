@@ -79,7 +79,7 @@ describe("runSummarizeCommand", () => {
     expect(mockExit).toHaveBeenCalledWith(1);
   });
 
-  it("should process file and output JSON", async () => {
+  it("should process file and show completion message", async () => {
     const inputFile = createTestFile(
       tempDir.path,
       "test.txt",
@@ -91,16 +91,12 @@ describe("runSummarizeCommand", () => {
     expect(mockExit).not.toHaveBeenCalled();
     expect(consoleLogSpy).toHaveBeenCalled();
 
-    // Verify JSON output
-    const output = consoleLogSpy.mock.calls.at(-1)?.[0];
-    const summary = JSON.parse(output);
-    expect(summary).toHaveProperty("headline");
-    expect(summary).toHaveProperty("tldr");
-    expect(summary).toHaveProperty("bullets");
-    expect(summary).toHaveProperty("tags");
-    expect(summary).toHaveProperty("sentiment");
-    expect(summary).toHaveProperty("category");
-    expect(summary).toHaveProperty("score");
+    // Verify completion message is shown (not JSON dump)
+    const output = consoleLogSpy.mock.calls.map((c) => c.join(" ")).join("\n");
+    expect(output).toContain("Summary complete");
+    expect(output).toContain("Session:");
+    expect(output).toContain("Saved to:");
+    expect(output).toContain("Next step:");
   });
 
   it("should process file with short flag -f", async () => {
@@ -116,7 +112,7 @@ describe("runSummarizeCommand", () => {
     expect(consoleLogSpy).toHaveBeenCalled();
   });
 
-  it("should output markdown when --format markdown", async () => {
+  it("should show completion message with --format markdown", async () => {
     const inputFile = createTestFile(
       tempDir.path,
       "test.txt",
@@ -134,10 +130,10 @@ describe("runSummarizeCommand", () => {
     expect(mockExit).not.toHaveBeenCalled();
     expect(consoleLogSpy).toHaveBeenCalled();
 
+    // Now only shows completion message, not markdown dump
     const output = consoleLogSpy.mock.calls.map((c) => c.join(" ")).join("\n");
-    expect(output).toContain("#");
-    expect(output).toContain("TL;DR");
-    expect(output).toContain("Key Points");
+    expect(output).toContain("Summary complete");
+    expect(output).toContain("Session:");
   });
 
   it("should write output to file when --output is specified", async () => {
@@ -158,7 +154,7 @@ describe("runSummarizeCommand", () => {
 
     expect(mockExit).not.toHaveBeenCalled();
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining(`Summary written to: ${outputFile}`)
+      expect.stringContaining("Also written to:")
     );
 
     // Verify file was created with valid JSON

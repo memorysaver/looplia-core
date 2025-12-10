@@ -9,6 +9,7 @@
  * Union type of all streaming events
  */
 export type StreamingEvent =
+  | PromptEvent
   | SessionStartEvent
   | TextEvent
   | TextDeltaEvent
@@ -17,8 +18,28 @@ export type StreamingEvent =
   | ToolStartEvent
   | ToolEndEvent
   | ProgressEvent
+  | UsageEvent
   | ErrorEvent
   | CompleteEvent;
+
+/**
+ * Initial prompt sent to the agent
+ */
+export type PromptEvent = {
+  type: "prompt";
+  content: string;
+  timestamp: number;
+};
+
+/**
+ * Incremental usage update - emitted after each assistant message
+ */
+export type UsageEvent = {
+  type: "usage";
+  inputTokens: number;
+  outputTokens: number;
+  timestamp: number;
+};
 
 /**
  * Session initialized - from SDK system.init message

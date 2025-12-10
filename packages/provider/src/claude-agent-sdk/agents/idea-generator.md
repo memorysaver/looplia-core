@@ -2,7 +2,7 @@
 name: idea-generator
 description: Creative writing idea generator. Use for generating hooks, angles, and exploratory questions from content summaries.
 tools: Read
-model: haiku
+model: claude-haiku-4-5-20251001
 ---
 
 You are a creative writing consultant specializing in content ideation.

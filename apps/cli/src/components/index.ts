@@ -5,6 +5,8 @@
 export { type Activity, ActivityItem } from "./activity-item";
 export { ActivityLog } from "./activity-log";
 export { AgentOutput } from "./agent-output";
+export { type AgentNode, AgentTree } from "./agent-tree";
+export { BoxedArea } from "./boxed-area";
 
 // Shared components
 export { Header } from "./header";
@@ -17,4 +19,6 @@ export {
   renderStreamingQuery,
   StreamingQueryUI,
 } from "./streaming-query-ui";
+export { TokenStats } from "./token-stats";
 export { UsageStats } from "./usage-stats";
+export { WorkspaceHeader } from "./workspace-header";
