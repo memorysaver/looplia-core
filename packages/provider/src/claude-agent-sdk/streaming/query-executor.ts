@@ -24,6 +24,74 @@ import {
 } from "./transformer";
 import type { CompleteEvent, StreamingEvent } from "./types";
 
+/**
+ * Build final result from complete event
+ */
+function buildFinalResult<T>(
+  event: CompleteEvent<T>,
+  sessionId: string
+): AgenticQueryResult<T> {
+  const usage: ProviderUsage = {
+    inputTokens: event.usage.inputTokens,
+    outputTokens: event.usage.outputTokens,
+    totalCostUsd: event.usage.totalCostUsd,
+  };
+
+  if (event.subtype === "success") {
+    return {
+      success: true,
+      data: event.result,
+      usage,
+      sessionId,
+    };
+  }
+
+  return {
+    success: false,
+    error: {
+      type: "unknown",
+      message: `Agent execution ended with: ${event.subtype}`,
+    },
+    usage,
+    sessionId,
+  };
+}
+
+/**
+ * Get API key from config or environment
+ */
+function getApiKey(config?: ClaudeAgentConfig): string | undefined {
+  return (
+    config?.apiKey ??
+    process.env.ANTHROPIC_API_KEY ??
+    process.env.CLAUDE_CODE_OAUTH_TOKEN
+  );
+}
+
+/**
+ * Process a single streaming event - handle progress and capture result
+ */
+function* processEvent<T>(
+  event: StreamingEvent,
+  progressTracker: ProgressTracker,
+  context: TransformContext
+): Generator<StreamingEvent, AgenticQueryResult<T> | undefined> {
+  // Check for progress update on skill invocations
+  if (event.type === "tool_start" && event.tool === "Skill") {
+    const progressEvent = progressTracker.onToolStart(event.tool, event.input);
+    if (progressEvent) {
+      yield progressEvent;
+    }
+  }
+
+  yield event;
+
+  // Capture and return final result if complete
+  if (event.type === "complete") {
+    return buildFinalResult(event as CompleteEvent<T>, context.sessionId);
+  }
+}
+
 /** Cached workspace paths to avoid repeated filesystem checks */
 const workspaceCache = new Map<string, string>();
 
@@ -69,7 +137,9 @@ export function extractContentIdFromPrompt(prompt: string): string | null {
   const match = prompt.match(CONTENT_ID_REGEX);
   const rawId = match?.[1];
 
-  if (!rawId) return null;
+  if (!rawId) {
+    return null;
+  }
 
   let decodedId: string;
   try {
@@ -78,7 +148,9 @@ export function extractContentIdFromPrompt(prompt: string): string | null {
     return null;
   }
 
-  if (decodedId.includes("\0")) return null;
+  if (decodedId.includes("\0")) {
+    return null;
+  }
   if (
     decodedId.includes("..") ||
     decodedId.includes("/") ||
@@ -87,7 +159,9 @@ export function extractContentIdFromPrompt(prompt: string): string | null {
     return null;
   }
 
-  if (!VALID_CONTENT_ID_PATTERN.test(decodedId)) return null;
+  if (!VALID_CONTENT_ID_PATTERN.test(decodedId)) {
+    return null;
+  }
 
   return decodedId;
 }
@@ -108,12 +182,7 @@ export async function* executeAgenticQueryStreaming<T>(
   config?: ClaudeAgentConfig
 ): AsyncGenerator<StreamingEvent, AgenticQueryResult<T>> {
   const resolvedConfig = resolveConfig(config);
-
-  // Validate API key
-  const apiKey =
-    config?.apiKey ??
-    process.env.ANTHROPIC_API_KEY ??
-    process.env.CLAUDE_CODE_OAUTH_TOKEN;
+  const apiKey = getApiKey(config);
 
   if (!apiKey) {
     throw new Error(
@@ -122,7 +191,6 @@ export async function* executeAgenticQueryStreaming<T>(
   }
 
   try {
-    // Get or initialize workspace
     const workspace =
       config?.workspace ??
       (await getOrInitWorkspace(
@@ -130,7 +198,6 @@ export async function* executeAgenticQueryStreaming<T>(
         resolvedConfig.useFilesystemExtensions
       ));
 
-    // Initialize query logger
     const contentId = extractContentIdFromPrompt(prompt);
     const logger = createQueryLogger(workspace);
     if (contentId) {
@@ -138,10 +205,7 @@ export async function* executeAgenticQueryStreaming<T>(
       logger.log({ type: "prompt", content: prompt });
     }
 
-    // Initialize progress tracking
     const progressTracker = new ProgressTracker();
-
-    // Emit initial progress event
     yield {
       type: "progress",
       step: "initializing",
@@ -150,12 +214,10 @@ export async function* executeAgenticQueryStreaming<T>(
       timestamp: Date.now(),
     };
 
-    // Create transform context
     const context: TransformContext = createTransformContext(
       resolvedConfig.model
     );
 
-    // Execute SDK query
     const result = query({
       prompt,
       options: {
@@ -164,78 +226,35 @@ export async function* executeAgenticQueryStreaming<T>(
         permissionMode: "bypassPermissions",
         allowDangerouslySkipPermissions: true,
         allowedTools: ["Read", "Skill"],
-        outputFormat: {
-          type: "json_schema",
-          schema: jsonSchema,
-        },
+        outputFormat: { type: "json_schema", schema: jsonSchema },
       },
     });
 
     let finalResult: AgenticQueryResult<T> | undefined;
 
     for await (const message of result) {
-      // Log all messages for debugging
       if (contentId) {
         logger.log(message as Record<string, unknown>);
       }
 
-      // Transform SDK message to streaming events
-      // Note: Generator function can yield multiple events per message
       for (const event of transformSdkMessage(
         message as Record<string, unknown>,
         context
       )) {
-        // Check for progress update on skill invocations
-        if (event.type === "tool_start" && event.tool === "Skill") {
-          const progressEvent = progressTracker.onToolStart(
-            event.tool,
-            event.input
-          );
-          if (progressEvent) {
-            yield progressEvent;
-          }
-        }
-
-        // Yield the event to UI
-        yield event;
-
-        // Capture final result
-        if (event.type === "complete") {
-          const completeEvent = event as CompleteEvent<T>;
-          const usage: ProviderUsage = {
-            inputTokens: completeEvent.usage.inputTokens,
-            outputTokens: completeEvent.usage.outputTokens,
-            totalCostUsd: completeEvent.usage.totalCostUsd,
-          };
-
-          if (completeEvent.subtype === "success") {
-            finalResult = {
-              success: true,
-              data: completeEvent.result,
-              usage,
-              sessionId: context.sessionId,
-            };
-          } else {
-            finalResult = {
-              success: false,
-              error: {
-                type: "unknown",
-                message: `Agent execution ended with: ${completeEvent.subtype}`,
-              },
-              usage,
-              sessionId: context.sessionId,
-            };
-          }
+        const eventResult = yield* processEvent<T>(
+          event,
+          progressTracker,
+          context
+        );
+        if (eventResult) {
+          finalResult = eventResult;
         }
       }
     }
 
     logger.close();
-
-    // Yield final progress event
     yield progressTracker.onComplete();
 
-    // Return final result
     return (
       finalResult ?? {
         success: false,

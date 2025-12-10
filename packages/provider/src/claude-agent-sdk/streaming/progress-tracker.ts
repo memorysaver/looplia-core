@@ -45,7 +45,9 @@ export class ProgressTracker {
     tool: string,
     input: ToolStartEvent["input"]
   ): ProgressEvent | null {
-    if (tool !== "Skill" || !input.skill) return null;
+    if (tool !== "Skill" || !input.skill) {
+      return null;
+    }
 
     const step = SKILL_TO_STEP[input.skill];
     if (step) {

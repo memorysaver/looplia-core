@@ -69,6 +69,10 @@ export function* transformSdkMessage(
     case "result":
       yield* handleResultMessage(message, context, timestamp);
       break;
+
+    default:
+      // Unknown message types are silently ignored
+      break;
   }
 }
 
@@ -102,11 +106,13 @@ function* handleAssistantMessage(
   timestamp: number
 ): Generator<StreamingEvent> {
   const assistantMessage = message.message as {
-    content?: Array<Record<string, unknown>>;
+    content?: Record<string, unknown>[];
     usage?: { input_tokens?: number; output_tokens?: number };
   };
 
-  if (!assistantMessage?.content) return;
+  if (!assistantMessage?.content) {
+    return;
+  }
 
   // Update cumulative usage
   if (assistantMessage.usage) {
@@ -156,6 +162,10 @@ function* handleAssistantMessage(
         };
         break;
       }
+
+      default:
+        // Unknown content block types are silently ignored
+        break;
     }
   }
 }
@@ -169,10 +179,12 @@ function* handleUserMessage(
   timestamp: number
 ): Generator<StreamingEvent> {
   const userMessage = message.message as {
-    content?: Array<Record<string, unknown>>;
+    content?: Record<string, unknown>[];
   };
 
-  if (!userMessage?.content) return;
+  if (!userMessage?.content) {
+    return;
+  }
 
   for (const block of userMessage.content) {
     if (block.type === "tool_result") {
@@ -205,7 +217,9 @@ function* handleStreamEvent(
   timestamp: number
 ): Generator<StreamingEvent> {
   const event = message.event as Record<string, unknown>;
-  if (!event) return;
+  if (!event) {
+    return;
+  }
 
   if (event.type === "content_block_delta") {
     const delta = event.delta as Record<string, unknown>;
@@ -294,6 +308,8 @@ function summarizeToolOutput(content: unknown): string {
  * Truncate string to max length with ellipsis
  */
 function truncate(str: string, maxLen: number): string {
-  if (str.length <= maxLen) return str;
+  if (str.length <= maxLen) {
+    return str;
+  }
   return `${str.slice(0, maxLen - 3)}...`;
 }
