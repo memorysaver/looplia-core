@@ -23,13 +23,13 @@ export const Header: React.FC<Props> = ({
         {title}
       </Text>
     </Box>
-    {sessionId && (
+    {!!sessionId && (
       <Box>
         <Text color="gray">Session: </Text>
         <Text color="white">{sessionId}</Text>
       </Box>
     )}
-    {contentTitle && (
+    {!!contentTitle && (
       <Box>
         <Text color="gray">Content: </Text>
         <Text color="white">{contentTitle}</Text>

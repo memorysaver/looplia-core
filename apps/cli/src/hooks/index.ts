@@ -2,4 +2,4 @@
  * CLI Hooks exports
  */
 
-export { useStreamingQuery } from "./useStreamingQuery.js";
+export { useStreamingQuery } from "./use-streaming-query";

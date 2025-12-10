@@ -1,4 +1,14 @@
-export { getArg, hasFlag, parseArgs, parseFlags } from "./args.js";
-export { createContentItemFromFile, readContentFile } from "./file.js";
-export { formatKitAsMarkdown, formatSummaryAsMarkdown } from "./format.js";
-export { getTerminalSize, isInteractive, supportsColor } from "./terminal.js";
+export { getArg, hasFlag, parseArgs, parseFlags } from "./args";
+export { createContentItemFromFile, readContentFile } from "./file";
+export { formatKitAsMarkdown, formatSummaryAsMarkdown } from "./format";
+export {
+  createInitialState,
+  type EventHandlerContext,
+  formatToolLabel,
+  generateActivityId,
+  processResult,
+  processStreamingEvent,
+  processStreamingGenerator,
+  type StreamingState,
+} from "./streaming-state";
+export { getTerminalSize, isInteractive, supportsColor } from "./terminal";

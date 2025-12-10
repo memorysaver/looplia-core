@@ -4,7 +4,7 @@
 
 import { Box, Text } from "ink";
 import type React from "react";
-import { Spinner } from "./Spinner.js";
+import { Spinner } from "./spinner";
 
 export type Activity = {
   id: string;
@@ -29,6 +29,8 @@ function getStatusIcon(status: Activity["status"]): string {
       return "\u2713"; // ✓
     case "error":
       return "\u2717"; // ✗
+    default:
+      return "\u25CB"; // ○
   }
 }
 
@@ -42,6 +44,8 @@ function getStatusColor(status: Activity["status"]): string {
       return "green";
     case "error":
       return "red";
+    default:
+      return "gray";
   }
 }
 
@@ -59,7 +63,7 @@ export const ActivityItem: React.FC<Props> = ({ activity }) => {
         )}
       </Box>
       <Text color={color}>{activity.label}</Text>
-      {activity.detail && (
+      {!!activity.detail && (
         <Text color="gray" dimColor>
           {" "}
           ({activity.detail})

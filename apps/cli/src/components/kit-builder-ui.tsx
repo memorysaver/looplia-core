@@ -3,16 +3,16 @@
  */
 
 import type { ContentItem, UserProfile, WritingKit } from "@looplia-core/core";
-import type { WritingKitProvider } from "@looplia-core/provider";
+import type { WritingKitProvider } from "@looplia-core/provider/claude-agent-sdk";
 import { Box, render, Text } from "ink";
 import type React from "react";
 import { useEffect } from "react";
-import { useStreamingQuery } from "../hooks/useStreamingQuery.js";
-import { ActivityLog } from "./ActivityLog.js";
-import { Header } from "./Header.js";
-import { ProgressSection } from "./ProgressSection.js";
-import { ResultSection } from "./ResultSection.js";
-import { UsageStats } from "./UsageStats.js";
+import { useStreamingQuery } from "../hooks/use-streaming-query";
+import { ActivityLog } from "./activity-log";
+import { Header } from "./header";
+import { ProgressSection } from "./progress-section";
+import { ResultSection } from "./result-section";
+import { UsageStats } from "./usage-stats";
 
 type Props = {
   provider: WritingKitProvider;
@@ -73,16 +73,16 @@ export const KitBuilderUI: React.FC<Props> = ({
       <UsageStats usage={usage} />
 
       {/* Result */}
-      {status === "complete" && result && (
+      {status === "complete" && result ? (
         <ResultSection format={format} result={result} />
-      )}
+      ) : null}
 
       {/* Error */}
-      {status === "error" && error && (
+      {status === "error" && error ? (
         <Box marginTop={1}>
           <Text color="red">Error: {error.message}</Text>
         </Box>
-      )}
+      ) : null}
     </Box>
   );
 };

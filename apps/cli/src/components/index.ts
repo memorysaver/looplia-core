@@ -2,21 +2,21 @@
  * CLI Component exports
  */
 
-export { type Activity, ActivityItem } from "./ActivityItem.js";
-export { ActivityLog } from "./ActivityLog.js";
-export { AgentOutput } from "./AgentOutput.js";
+export { type Activity, ActivityItem } from "./activity-item";
+export { ActivityLog } from "./activity-log";
+export { AgentOutput } from "./agent-output";
 
 // Shared components
-export { Header } from "./Header.js";
+export { Header } from "./header";
 // Legacy kit-specific UI (kept for backward compatibility)
-export { KitBuilderUI, renderKitBuilder } from "./KitBuilderUI.js";
-export { ProgressBar } from "./ProgressBar.js";
-export { ProgressSection } from "./ProgressSection.js";
-export { ResultSection } from "./ResultSection.js";
-export { Spinner } from "./Spinner.js";
+export { KitBuilderUI, renderKitBuilder } from "./kit-builder-ui";
+export { ProgressBar } from "./progress-bar";
+export { ProgressSection } from "./progress-section";
+export { ResultSection } from "./result-section";
+export { Spinner } from "./spinner";
 // Generic streaming UI (v0.3.4 - universal)
 export {
   renderStreamingQuery,
   StreamingQueryUI,
-} from "./StreamingQueryUI.js";
-export { UsageStats } from "./UsageStats.js";
+} from "./streaming-query-ui";
+export { UsageStats } from "./usage-stats";

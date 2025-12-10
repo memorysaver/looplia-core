@@ -4,7 +4,7 @@
 
 import { Box, Static, Text } from "ink";
 import type React from "react";
-import { type Activity, ActivityItem } from "./ActivityItem.js";
+import { type Activity, ActivityItem } from "./activity-item";
 
 type Props = {
   activities: Activity[];

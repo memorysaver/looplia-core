@@ -7,6 +7,8 @@ import { describe, expect, it } from "bun:test";
  * These tests focus on the logic and helper functions used by the hook.
  */
 
+const ACTIVITY_ID_PATTERN = /^activity-\d+-[a-z0-9]+$/;
+
 describe("useStreamingQuery", () => {
   describe("activity ID generation", () => {
     it("should generate unique activity IDs", () => {
@@ -25,7 +27,7 @@ describe("useStreamingQuery", () => {
     it("should have consistent ID format", () => {
       const id = `activity-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-      expect(id).toMatch(/^activity-\d+-[a-z0-9]+$/);
+      expect(id).toMatch(ACTIVITY_ID_PATTERN);
     });
   });
 

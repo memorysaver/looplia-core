@@ -77,7 +77,7 @@ describe("terminal utilities", () => {
         writable: true,
         configurable: true,
       });
-      delete process.env.CI;
+      process.env.CI = undefined;
       process.env.TERM = "dumb";
 
       const result = isInteractive();
@@ -96,7 +96,7 @@ describe("terminal utilities", () => {
         writable: true,
         configurable: true,
       });
-      delete process.env.CI;
+      process.env.CI = undefined;
       process.env.TERM = "xterm-256color";
 
       const result = isInteractive();
@@ -186,7 +186,7 @@ describe("terminal utilities", () => {
     });
 
     it("should return true when FORCE_COLOR=1", () => {
-      delete process.env.NO_COLOR;
+      process.env.NO_COLOR = undefined;
       process.env.FORCE_COLOR = "1";
 
       const result = supportsColor();
@@ -194,7 +194,7 @@ describe("terminal utilities", () => {
     });
 
     it("should return true when FORCE_COLOR=true", () => {
-      delete process.env.NO_COLOR;
+      process.env.NO_COLOR = undefined;
       process.env.FORCE_COLOR = "true";
 
       const result = supportsColor();
@@ -202,8 +202,8 @@ describe("terminal utilities", () => {
     });
 
     it("should return false when stdout is not TTY", () => {
-      delete process.env.NO_COLOR;
-      delete process.env.FORCE_COLOR;
+      process.env.NO_COLOR = undefined;
+      process.env.FORCE_COLOR = undefined;
       Object.defineProperty(process.stdout, "isTTY", {
         value: false,
         writable: true,
@@ -221,8 +221,8 @@ describe("terminal utilities", () => {
     });
 
     it("should return false when TERM=dumb", () => {
-      delete process.env.NO_COLOR;
-      delete process.env.FORCE_COLOR;
+      process.env.NO_COLOR = undefined;
+      process.env.FORCE_COLOR = undefined;
       Object.defineProperty(process.stdout, "isTTY", {
         value: true,
         writable: true,
@@ -241,8 +241,8 @@ describe("terminal utilities", () => {
     });
 
     it("should return true when TTY and TERM is not dumb", () => {
-      delete process.env.NO_COLOR;
-      delete process.env.FORCE_COLOR;
+      process.env.NO_COLOR = undefined;
+      process.env.FORCE_COLOR = undefined;
       Object.defineProperty(process.stdout, "isTTY", {
         value: true,
         writable: true,

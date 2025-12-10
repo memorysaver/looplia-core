@@ -29,7 +29,7 @@ describe("StreamingQueryUI", () => {
       const id = `activity-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const after = Date.now();
 
-      const timestamp = Number.parseInt(id.split("-")[1]);
+      const timestamp = Number.parseInt(id.split("-")[1], 10);
       expect(timestamp).toBeGreaterThanOrEqual(before);
       expect(timestamp).toBeLessThanOrEqual(after);
     });

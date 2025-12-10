@@ -38,14 +38,14 @@ function formatAsMarkdown(kit: WritingKit): string {
 
   // Summary
   lines.push("## Summary");
-  lines.push(kit.summary.longSummary);
+  lines.push(kit.summary.overview || kit.summary.tldr);
   lines.push("");
 
-  // Key insights
-  if (kit.summary.keyInsights.length > 0) {
-    lines.push("## Key Insights");
-    for (const insight of kit.summary.keyInsights) {
-      lines.push(`- ${insight}`);
+  // Key points
+  if (kit.summary.bullets.length > 0) {
+    lines.push("## Key Points");
+    for (const bullet of kit.summary.bullets) {
+      lines.push(`- ${bullet}`);
     }
     lines.push("");
   }
@@ -63,8 +63,11 @@ function formatAsMarkdown(kit: WritingKit): string {
   if (kit.suggestedOutline.length > 0) {
     lines.push("## Suggested Outline");
     for (const section of kit.suggestedOutline) {
-      lines.push(`### ${section.heading} (${section.wordCount} words)`);
-      lines.push(section.keyPoints.join(", "));
+      const wordEstimate = section.estimatedWords
+        ? ` (${section.estimatedWords} words)`
+        : "";
+      lines.push(`### ${section.heading}${wordEstimate}`);
+      lines.push(section.notes);
       lines.push("");
     }
   }

@@ -22,9 +22,13 @@ export const AgentOutput: React.FC<Props> = ({
   maxLines = 3,
 }) => {
   const truncate = (str: string | undefined, lines: number): string => {
-    if (!str) return "";
+    if (!str) {
+      return "";
+    }
     const allLines = str.split("\n");
-    if (allLines.length <= lines) return str;
+    if (allLines.length <= lines) {
+      return str;
+    }
     return `${allLines.slice(0, lines).join("\n")}...`;
   };
 
@@ -34,14 +38,14 @@ export const AgentOutput: React.FC<Props> = ({
 
   return (
     <Box flexDirection="column" marginY={1}>
-      {thinking && (
+      {!!thinking && (
         <Box flexDirection="column" marginBottom={1}>
           <Text color="gray" dimColor italic>
             {truncate(thinking, maxLines)}
           </Text>
         </Box>
       )}
-      {text && (
+      {!!text && (
         <Box flexDirection="column">
           <Text color="white">{truncate(text, maxLines)}</Text>
         </Box>

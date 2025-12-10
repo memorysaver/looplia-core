@@ -4,8 +4,8 @@
 
 import { Box, Text } from "ink";
 import type React from "react";
-import { ProgressBar } from "./ProgressBar.js";
-import { Spinner } from "./Spinner.js";
+import { ProgressBar } from "./progress-bar";
+import { Spinner } from "./spinner";
 
 type Props = {
   percent: number;
@@ -24,11 +24,11 @@ export const ProgressSection: React.FC<Props> = ({
       <ProgressBar percent={percent} width={30} />
     </Box>
     <Box>
-      {isRunning && (
+      {isRunning ? (
         <Box marginRight={1}>
           <Spinner color="cyan" />
         </Box>
-      )}
+      ) : null}
       <Text color="white">{step}</Text>
     </Box>
   </Box>
