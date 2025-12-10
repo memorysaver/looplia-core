@@ -56,9 +56,11 @@ export type SessionPrepareOptions = {
  */
 export class SessionManager {
   private workspace: string;
+  private readonly mock: boolean;
 
-  constructor(workspace: string) {
+  constructor(workspace: string, mock = false) {
     this.workspace = workspace;
+    this.mock = mock;
   }
 
   /**
@@ -68,7 +70,9 @@ export class SessionManager {
    * @returns ContentItem for provider API
    */
   async prepare(config: SessionPrepareOptions): Promise<ContentItem> {
-    this.workspace = await ensureWorkspace();
+    this.workspace = await ensureWorkspace({
+      skipPluginBootstrap: this.mock,
+    });
 
     if (config.file) {
       return this.createNewSession(config.file);
@@ -85,7 +89,9 @@ export class SessionManager {
    * Prepare ContentItem from file (for summarize command)
    */
   async prepareFromFile(filePath: string): Promise<ContentItem> {
-    this.workspace = await ensureWorkspace();
+    this.workspace = await ensureWorkspace({
+      skipPluginBootstrap: this.mock,
+    });
     return this.createNewSession(filePath);
   }
 

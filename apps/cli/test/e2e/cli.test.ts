@@ -67,14 +67,14 @@ describe("CLI E2E Tests", () => {
       const result = await execCLI(["--version"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia 0.3.3");
+      expect(result.stdout).toContain("looplia 0.3.4");
     });
 
     it("should show version with -v flag", async () => {
       const result = await execCLI(["-v"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia 0.3.3");
+      expect(result.stdout).toContain("looplia 0.3.4");
     });
 
     it("should error on unknown command", async () => {
@@ -101,7 +101,9 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stderr).toBe("");
+      // Progress messages are printed to stderr, which is expected behavior
+      // Verify no ERROR messages in stderr
+      expect(result.stderr).not.toContain("Error:");
 
       // Extract JSON from stdout (metadata is printed before JSON)
       const jsonMatch = result.stdout.match(JSON_OBJECT_PATTERN);

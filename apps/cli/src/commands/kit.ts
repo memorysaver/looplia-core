@@ -34,8 +34,12 @@ export async function runKitCommand(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  const runtime = createRuntime(config);
-  const result = await runtime.executeKit(config);
-
-  renderKitResult(result, config);
+  try {
+    const runtime = createRuntime(config);
+    const result = await runtime.executeKit(config);
+    renderKitResult(result, config);
+  } catch (error) {
+    console.error(`Error: ${(error as Error).message}`);
+    process.exit(1);
+  }
 }

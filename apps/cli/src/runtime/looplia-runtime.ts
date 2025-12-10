@@ -43,7 +43,10 @@ export class LoopliaRuntime {
   constructor(config: BaseConfig) {
     this.validateEnvironment(config);
     this.context = this.buildContext(config);
-    this.sessionManager = new SessionManager(this.context.workspace);
+    this.sessionManager = new SessionManager(
+      this.context.workspace,
+      config.mock
+    );
   }
 
   /**
