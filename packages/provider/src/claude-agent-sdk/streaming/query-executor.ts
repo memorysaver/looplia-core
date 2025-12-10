@@ -7,15 +7,23 @@
 
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
-import type {
-  ClaudeAgentConfig,
-  ProviderResultWithUsage,
-  ProviderUsage,
-} from "../config";
+import type { ClaudeAgentConfig, ProviderUsage } from "../config";
 import { resolveConfig } from "../config";
 import { createQueryLogger } from "../logger";
 import { mapException } from "../utils/error-mapper";
-import { ensureWorkspace } from "../workspace";
+import type { AgenticQueryResult } from "../utils/shared";
+import {
+  extractContentIdFromPrompt,
+  getOrInitWorkspace,
+} from "../utils/shared";
+
+// Re-export for backward compatibility - intentional to maintain API surface
+// biome-ignore lint/performance/noBarrelFile: intentional re-export for backward compatibility
+export {
+  type AgenticQueryResult,
+  extractContentIdFromPrompt,
+} from "../utils/shared";
+
 import { ProgressTracker } from "./progress-tracker";
 import {
   createTransformContext,
@@ -90,80 +98,6 @@ function* processEvent<T>(
   if (event.type === "complete") {
     return buildFinalResult(event as CompleteEvent<T>, context.sessionId);
   }
-}
-
-/** Cached workspace paths to avoid repeated filesystem checks */
-const workspaceCache = new Map<string, string>();
-
-/** Regex to extract content ID from prompt */
-const CONTENT_ID_REGEX = /contentItem\/([^\s/]+)/;
-
-/** Whitelist pattern for valid content IDs */
-const VALID_CONTENT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
-
-/**
- * Result type that includes session ID from SDK
- */
-export type AgenticQueryResult<T> = ProviderResultWithUsage<T> & {
-  sessionId?: string;
-};
-
-/**
- * Get or initialize workspace with caching
- */
-async function getOrInitWorkspace(
-  baseDir: string,
-  useFilesystemExtensions: boolean
-): Promise<string> {
-  const cacheKey = `${baseDir}:${useFilesystemExtensions}`;
-
-  const cached = workspaceCache.get(cacheKey);
-  if (cached) {
-    return cached;
-  }
-
-  const workspace = await ensureWorkspace({
-    baseDir,
-    skipPluginBootstrap: !useFilesystemExtensions,
-  });
-  workspaceCache.set(cacheKey, workspace);
-  return workspace;
-}
-
-/**
- * Extract content ID from agentic prompt with path traversal protection
- */
-export function extractContentIdFromPrompt(prompt: string): string | null {
-  const match = prompt.match(CONTENT_ID_REGEX);
-  const rawId = match?.[1];
-
-  if (!rawId) {
-    return null;
-  }
-
-  let decodedId: string;
-  try {
-    decodedId = decodeURIComponent(rawId);
-  } catch {
-    return null;
-  }
-
-  if (decodedId.includes("\0")) {
-    return null;
-  }
-  if (
-    decodedId.includes("..") ||
-    decodedId.includes("/") ||
-    decodedId.includes("\\")
-  ) {
-    return null;
-  }
-
-  if (!VALID_CONTENT_ID_PATTERN.test(decodedId)) {
-    return null;
-  }
-
-  return decodedId;
 }
 
 /**

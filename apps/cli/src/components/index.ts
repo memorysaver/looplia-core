@@ -8,8 +8,6 @@ export { AgentOutput } from "./agent-output";
 
 // Shared components
 export { Header } from "./header";
-// Legacy kit-specific UI (kept for backward compatibility)
-export { KitBuilderUI, renderKitBuilder } from "./kit-builder-ui";
 export { ProgressBar } from "./progress-bar";
 export { ProgressSection } from "./progress-section";
 export { ResultSection } from "./result-section";
