@@ -1,7 +1,7 @@
 {
   "name": "looplia-core",
-  "version": "0.3.0",
-  "description": "Looplia content intelligence framework",
+  "version": "0.4.0",
+  "description": "Universal agentic workflow CLI — compose AI agents and skills for any task",
   "author": "Looplia",
-  "homepage": "https://github.com/looplia/looplia-core"
+  "homepage": "https://github.com/memorysaver/looplia-core"
 }

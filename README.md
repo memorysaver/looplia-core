@@ -1,155 +1,156 @@
 # Looplia Core
 
+> **Universal agentic workflow CLI — compose AI agents and skills for any task.**
 
-Looplia Core is a vendor-neutral, stateless content-intelligence engine that transforms raw long-form content into structured writing materials.
+Looplia Core is an agentic workflow platform powered by the Claude Agent SDK. It provides a composable architecture of subagents and skills that can be extended to any domain.
 
-It provides a clean, composable pipeline for:
+**Current focus:** Content writing workflows (summarization, idea generation, writing kit construction)
 
-Summarization – turn transcripts/articles into structured summaries
+**Vision:** A universal swiss knife for AI-powered workflows — one CLI, many domains, powered by the same agent infrastructure.
 
-Idea Generation – produce hooks, angles, and reflective questions
+## How It Works
 
-Writing Kit Construction – assemble summaries + ideas + outlines for human writing workflows
-
-Looplia Core defines the canonical domain models and pure engines behind the Looplia ecosystem.
-It does not fetch content, call LLMs, store data, schedule jobs, or manage users.
-
-All LLM interaction is injected through Providers, enabling support for Claude Agents, OpenAI, DeepSeek, local models, and any future ecosystem.
-
-This repository contains only the open-source core.
-Scheduling, storage, UI, publishing, and agent orchestration are implemented in Looplia Cloud and other downstream applications.
+```
+┌─────────────────────────────────────────────────────────────┐
+│  CLI Commands (Workflows)                                   │
+│  └─ looplia kit → Writing workflow                          │
+│  └─ looplia [domain] → Future workflows                     │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  CommandDefinition<T> + AgentExecutor                       │
+│  • One prompt per command                                   │
+│  • Typed output schemas (Zod)                               │
+│  • Real-time streaming events                               │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Subagents & Skills (Composable Capabilities)               │
+│  • Domain-specific subagents (content-analyzer, etc.)       │
+│  • Reusable skills (SKILL.md files)                         │
+│  • File-based state & smart continuation                    │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ## Features
 
-- **TypeScript** - For type safety and improved developer experience
-- **Husky** - Git hooks for code quality
-- **Starlight** - Documentation site with Astro
+- **Claude Agent SDK** - Agentic runtime with subagents and skills
+- **Clean Architecture** - CLI → Core → Provider separation
+- **Streaming TUI** - Real-time progress with tool execution display
+- **Smart Continuation** - Resume workflows from where they left off
+- **TypeScript** - Full type safety with Zod schemas
 - **Turborepo** - Optimized monorepo build system
 
-## Getting Started
-
-First, install the dependencies:
+## Quick Start
 
 ```bash
+# 1. Install dependencies
 bun install
-```
 
-
-Then, run the development server:
-
-```bash
-bun run dev
-```
-
-
-
-
-
-
-
-
-
-## Project Structure
-
-```
-looplia-core/
-├── apps/
-│   ├── docs/        # Documentation site (Astro Starlight)
-```
-
-## Available Scripts
-
-- `bun run dev`: Start all applications in development mode
-- `bun run build`: Build all applications
-- `bun run dev:web`: Start only the web application
-- `bun run check-types`: Check TypeScript types across all apps
-- `cd apps/docs && bun run dev`: Start documentation site
-- `cd apps/docs && bun run build`: Build documentation site
-
-## CLI Usage
-
-The `looplia` CLI provides content intelligence tools from the command line.
-
-### Commands
-
-| Command | Description |
-|---------|-------------|
-| `looplia bootstrap` | Initialize workspace with plugin files (agents, skills, CLAUDE.md) |
-| `looplia summarize` | Summarize content from a file into structured output |
-| `looplia kit` | Build a complete writing kit (summary + ideas + outline) |
-
-### Quick Start
-
-```bash
-# 1. Build the project
+# 2. Build the project
 bun run build
 
-# 2. Bootstrap workspace (creates ~/.looplia/ with agents and skills)
+# 3. Bootstrap workspace (creates ~/.looplia/ with agents and skills)
 bun run apps/cli/dist/index.js bootstrap
 
-# 3. Build a writing kit from content
+# 4. Run a workflow
 export ANTHROPIC_API_KEY=sk-ant-...
 bun run apps/cli/dist/index.js kit --file ./examples/ai-healthcare.md
 ```
 
-### Example Output
+## CLI Commands
 
-The `kit` command produces a complete WritingKit with:
+| Command | Description |
+|---------|-------------|
+| `looplia bootstrap` | Initialize workspace with plugin files (agents, skills, CLAUDE.md) |
+| `looplia summarize` | Summarize content into structured output |
+| `looplia kit` | Build a complete writing kit (summary + ideas + outline) |
+
+### Writing Kit Workflow
+
+The `kit` command produces a complete WritingKit:
+
 - **Summary**: Headline, TL;DR, key bullets, tags, themes, core ideas, quotes
-- **Ideas**: 5 hooks (emotional, curiosity, controversy, statistic, story), 5 angles, 5 questions
-- **Outline**: 7 sections with word estimates (~2,500 words total)
+- **Ideas**: 5 hooks, 5 angles, 5 reflective questions
+- **Outline**: Structured sections with word estimates
 - **Meta**: Relevance score, estimated reading time
+
+```bash
+# Build kit from content
+looplia kit --file ./article.md
+
+# With options
+looplia kit --file ./article.md --topics "ai,productivity" --tone expert --word-count 2000
+
+# Resume existing session
+looplia kit --session-id article-2024-12-09-abc123
+
+# Output formats
+looplia kit --file ./article.md --format markdown --output kit.md
+```
 
 ### Session Management
 
 Each `--file` creates a new session. Use `--session-id` to resume:
 
 ```bash
-# Create new session from file
+# Create new session
 looplia kit --file ./article.md
 # Output: ✓ New session created: article-2024-12-09-abc123
 
-# Resume existing session (skips completed steps)
+# Resume (skips completed steps via smart continuation)
 looplia kit --session-id article-2024-12-09-abc123
-# Output: ✓ Resuming session: article-2024-12-09-abc123
 ```
 
-Smart continuation automatically detects existing files (`summary.json`, `ideas.json`) and skips already-completed analysis steps.
+## Architecture
 
-### All Options
-
-```bash
-# Summarize command
-looplia summarize --file <path>        # Summarize content
-looplia summarize --file <path> --mock # Use mock provider (no API key)
-looplia summarize --file <path> --format markdown --output summary.md
-
-# Kit command
-looplia kit --file <path>              # Build kit from new file
-looplia kit --session-id <id>          # Resume existing session
-looplia kit --file <path> --topics "ai,productivity" --tone expert
-looplia kit --file <path> --word-count 2000
-looplia kit --file <path> --format markdown --output kit.md
-looplia kit --file <path> --mock       # Use mock provider (no API key)
+```
+looplia-core/
+├── apps/
+│   ├── cli/           # CLI application
+│   └── docs/          # Documentation (Astro Starlight)
+├── packages/
+│   ├── core/          # Domain models, command framework
+│   └── provider/      # Claude Agent SDK integration
+└── docs/              # Architecture documentation
+    ├── DESIGN-0.4.0.md
+    ├── AGENTIC_CONCEPT-0.2.md
+    ├── GLOSSARY.md
+    └── TEST_PLAN-0.2.md
 ```
 
-### Local Development
-
-After building the project, you can link the CLI globally:
+## Development
 
 ```bash
-# Build the project
-bun run build
+# Start development
+bun run dev
 
-# Link CLI globally (run once)
+# Run tests
+bun test
+
+# Type check
+bun run check-types
+
+# Link CLI globally
 cd apps/cli && bun link
-
-# Now 'looplia' command is available anywhere
 looplia --help
 ```
 
-### Environment Variables
+## Environment Variables
 
 | Variable | Description |
 |----------|-------------|
-| `ANTHROPIC_API_KEY` | Required for Claude API calls (skip with `--mock` flag) |
+| `ANTHROPIC_API_KEY` | Required for Claude API (skip with `--mock` flag) |
+
+## Documentation
+
+- [DESIGN-0.4.0.md](./docs/DESIGN-0.4.0.md) - Architecture overview
+- [AGENTIC_CONCEPT-0.2.md](./docs/AGENTIC_CONCEPT-0.2.md) - Agent system design
+- [GLOSSARY.md](./docs/GLOSSARY.md) - Ubiquitous language reference
+- [TEST_PLAN-0.2.md](./docs/TEST_PLAN-0.2.md) - Test strategy
+
+## License
+
+MIT
