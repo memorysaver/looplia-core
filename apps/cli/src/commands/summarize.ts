@@ -29,7 +29,8 @@ export async function runSummarizeCommand(args: string[]): Promise<void> {
   try {
     validateSummarizeInput(config);
   } catch (error) {
-    console.error(`Error: ${(error as Error).message}`);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Error: ${message}`);
     printSummarizeHelp();
     process.exit(1);
   }
@@ -39,7 +40,8 @@ export async function runSummarizeCommand(args: string[]): Promise<void> {
     const result = await runtime.executeSummarize(config);
     renderSummarizeResult(result, config);
   } catch (error) {
-    console.error(`Error: ${(error as Error).message}`);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Error: ${message}`);
     process.exit(1);
   }
 }

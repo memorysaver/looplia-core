@@ -149,7 +149,10 @@ export class SessionManager {
 
       const titleMatch = frontmatter.match(TITLE_REGEX);
       if (titleMatch?.[1]) {
-        title = titleMatch[1].trim();
+        const extractedTitle = titleMatch[1].trim();
+        if (extractedTitle.length > 0) {
+          title = extractedTitle;
+        }
       }
     }
 

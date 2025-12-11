@@ -8,6 +8,9 @@ const FRONTMATTER_REGEX = /^---\n([\s\S]*?)\n---\n/;
 /** Regex to parse YAML key-value pairs */
 const YAML_KEYVALUE_REGEX = /^(\w+):\s*"?([^"]*)"?$/;
 
+/** Maximum frontmatter size to prevent ReDoS attacks */
+const MAX_FRONTMATTER_SIZE = 10_000;
+
 /**
  * Read content from a file path with proper error handling
  */
@@ -32,6 +35,11 @@ function extractFrontmatter(content: string): Record<string, string> {
   }
 
   const yaml = match[1] ?? "";
+
+  // Prevent ReDoS attacks by limiting frontmatter size
+  if (yaml.length > MAX_FRONTMATTER_SIZE) {
+    return {};
+  }
   const frontmatter: Record<string, string> = {};
 
   // Parse simple YAML fields (key: "value" or key: value)

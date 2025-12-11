@@ -404,7 +404,7 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain(`Writing kit written to: ${outputFile}`);
+      expect(result.stdout).toContain(`Writing kit saved to: ${outputFile}`);
 
       const outputContent = readTestFile(outputFile);
       const kit = JSON.parse(outputContent);

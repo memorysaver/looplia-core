@@ -125,14 +125,16 @@ const TreeNode: React.FC<{
       </Box>
 
       {/* Render children */}
-      {node.children?.map((child, idx) => (
-        <TreeNode
-          isLast={idx === (node.children?.length ?? 0) - 1}
-          key={child.id}
-          node={child}
-          prefix={`${prefix}${isLast ? "  " : `${TREE_CHARS.vertical} `}`}
-        />
-      ))}
+      {(node.children?.length ?? 0) > 0
+        ? node.children?.map((child, idx) => (
+            <TreeNode
+              isLast={idx === (node.children?.length ?? 0) - 1}
+              key={child.id}
+              node={child}
+              prefix={`${prefix}${isLast ? "  " : `${TREE_CHARS.vertical} `}`}
+            />
+          ))
+        : null}
     </Box>
   );
 };

@@ -29,7 +29,8 @@ export async function runKitCommand(args: string[]): Promise<void> {
   try {
     validateKitInput(config);
   } catch (error) {
-    console.error(`Error: ${(error as Error).message}`);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Error: ${message}`);
     printKitHelp();
     process.exit(1);
   }
@@ -39,7 +40,8 @@ export async function runKitCommand(args: string[]): Promise<void> {
     const result = await runtime.executeKit(config);
     renderKitResult(result, config);
   } catch (error) {
-    console.error(`Error: ${(error as Error).message}`);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Error: ${message}`);
     process.exit(1);
   }
 }

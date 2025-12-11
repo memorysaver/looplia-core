@@ -59,7 +59,7 @@ function formatOutput(data: WritingKit, format: "json" | "markdown"): string {
 function writeOutput(output: string, outputPath: string | undefined): void {
   if (outputPath) {
     writeFileSync(outputPath, output);
-    console.log(`Writing kit written to: ${outputPath}`);
+    console.log(`Writing kit saved to: ${outputPath}`);
   } else {
     console.log(output);
   }
