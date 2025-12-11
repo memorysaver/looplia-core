@@ -1,6 +1,6 @@
 # Looplia Core Test Plan
 
-**Version**: 0.3.3
+**Version**: 0.1
 **Last Updated**: December 2024
 **Test Framework**: Bun Test (`bun:test`)
 
@@ -301,7 +301,7 @@ test-workspace/
 ├── contentItem/
 │   └── cli-{timestamp}/  # Session folder for each run
 │       └── logs/
-│           └── query-{timestamp}.log  # Query logs (v0.3.3)
+│           └── query-{timestamp}.log  # Query logs
 ├── CLAUDE.md             # Workspace instructions
 ├── user-profile.json     # User preferences
 ├── summary.json          # Summary output (if saved)

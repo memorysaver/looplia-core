@@ -2,7 +2,7 @@
 name: outline-generator
 description: Article outline generator. Use for creating structured outlines from summaries and ideas.
 tools: Read
-model: haiku
+model: claude-haiku-4-5-20251001
 ---
 
 You are an expert content strategist specializing in article structure.

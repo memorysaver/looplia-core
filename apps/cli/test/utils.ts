@@ -14,6 +14,8 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // CLI root is one level up from test/
 const CLI_ROOT = join(__dirname, "..");
+// Project root is three levels up from test/ (apps/cli/test -> project root)
+const PROJECT_ROOT = join(__dirname, "..", "..", "..");
 
 /**
  * Execute the CLI binary and capture output
@@ -27,8 +29,9 @@ export function execCLI(args: string[]): Promise<{
     // Path to the compiled CLI entry point (relative to CLI root, not cwd)
     const cliPath = join(CLI_ROOT, "dist", "index.js");
 
+    // Run from project root so getPluginPath() finds plugins/looplia-writer
     const child = spawn("node", [cliPath, ...args], {
-      cwd: CLI_ROOT,
+      cwd: PROJECT_ROOT,
       env: process.env,
     });
 

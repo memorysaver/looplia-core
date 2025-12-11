@@ -1,6 +1,6 @@
 {
   "name": "@looplia-core/cli",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "type": "module",
   "bin": {
     "looplia": "./dist/index.js"
@@ -17,11 +17,14 @@
   },
   "dependencies": {
     "@looplia-core/core": "workspace:*",
-    "@looplia-core/provider": "workspace:*"
+    "@looplia-core/provider": "workspace:*",
+    "ink": "^6.5.1",
+    "react": "^19.2.1"
   },
   "devDependencies": {
     "@looplia-core/config": "workspace:*",
     "@types/node": "^22.0.0",
+    "@types/react": "^19.2.7",
     "tsup": "^8.5.1",
     "typescript": "^5.0.0"
   }

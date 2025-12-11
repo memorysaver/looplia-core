@@ -7,6 +7,11 @@ import type {
 
 import type { ClaudeAgentConfig, ProviderResultWithUsage } from "./config";
 import { writeContentItem } from "./content-io";
+import {
+  type AgenticQueryResult,
+  executeAgenticQueryStreaming,
+  type StreamingEvent,
+} from "./streaming";
 import { executeAgenticQuery } from "./utils/query-wrapper";
 import { WRITING_KIT_OUTPUT_SCHEMA } from "./utils/schema-converter";
 import { ensureWorkspace, writeUserProfile } from "./workspace";
@@ -86,6 +91,21 @@ export type WritingKitProvider = {
     content: ContentItem,
     user: UserProfile
   ): Promise<ProviderResultWithUsage<WritingKit>>;
+
+  /**
+   * Build complete writing kit with streaming events for UI
+   *
+   * Yields StreamingEvent objects during execution for real-time
+   * progress display. Returns final result on completion.
+   *
+   * @param content - Content item to process
+   * @param user - User profile for preferences
+   * @returns AsyncGenerator yielding events, returning final result
+   */
+  buildKitStreaming(
+    content: ContentItem,
+    user: UserProfile
+  ): AsyncGenerator<StreamingEvent, AgenticQueryResult<WritingKit>>;
 };
 
 /**
@@ -160,6 +180,63 @@ export function createClaudeWritingKitProvider(
       }
 
       return result;
+    },
+
+    async *buildKitStreaming(content, user) {
+      // Ensure workspace exists and get path
+      const workspace = await ensureWorkspace({
+        baseDir: config?.workspace,
+      });
+
+      // Write content item to workspace
+      await writeContentItem(content, workspace);
+
+      // Write user profile
+      await writeUserProfile(workspace, user);
+
+      // Build minimal prompt - agent reads CLAUDE.md for full instructions
+      const prompt = buildMinimalKitPrompt(content.id);
+
+      // Execute streaming agentic query
+      const generator = executeAgenticQueryStreaming<WritingKit>(
+        prompt,
+        WRITING_KIT_OUTPUT_SCHEMA,
+        {
+          ...config,
+          workspace,
+        }
+      );
+
+      // Yield all events and capture final result
+      let finalResult: AgenticQueryResult<WritingKit> = {
+        success: false,
+        error: { type: "unknown", message: "No result received" },
+      };
+
+      // Use for-await to iterate through all yielded events
+      let iterResult = await generator.next();
+      while (!iterResult.done) {
+        yield iterResult.value;
+        iterResult = await generator.next();
+      }
+
+      // Generator completed, get the return value
+      finalResult = iterResult.value;
+
+      // Persist WritingKit and handle folder relocation
+      if (finalResult.success) {
+        const { persistResultToWorkspace } = await import(
+          "./utils/persist-result"
+        );
+        await persistResultToWorkspace(finalResult.data, {
+          workspace,
+          contentId: content.id,
+          sessionId: finalResult.sessionId,
+          filename: "writing-kit.json",
+        });
+      }
+
+      return finalResult;
     },
   };
 }

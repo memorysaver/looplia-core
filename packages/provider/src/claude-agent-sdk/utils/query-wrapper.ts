@@ -7,42 +7,22 @@ import type {
 } from "../config";
 import { resolveConfig } from "../config";
 import { createQueryLogger } from "../logger";
-import { ensureWorkspace } from "../workspace";
 import { mapException, mapSdkError } from "./error-mapper";
+import type { AgenticQueryResult } from "./shared";
+import { extractContentIdFromPrompt, getOrInitWorkspace } from "./shared";
+
+// Re-export for backward compatibility - intentional to maintain API surface
+// biome-ignore lint/performance/noBarrelFile: intentional re-export for backward compatibility
+export {
+  type AgenticQueryResult,
+  extractContentIdFromPrompt,
+} from "./shared";
 
 /** Base delay for exponential backoff (ms) */
 const RETRY_BASE_DELAY_MS = 1000;
 
 /** Maximum delay between retries (ms) */
 const RETRY_MAX_DELAY_MS = 30_000;
-
-/** Cached workspace paths to avoid repeated filesystem checks */
-const workspaceCache = new Map<string, string>();
-
-/** Regex to extract content ID from prompt */
-const CONTENT_ID_REGEX = /contentItem\/([^\s/]+)/;
-
-/**
- * Get or initialize workspace with caching
- */
-async function getOrInitWorkspace(
-  baseDir: string,
-  useFilesystemExtensions: boolean
-): Promise<string> {
-  const cacheKey = `${baseDir}:${useFilesystemExtensions}`;
-
-  const cached = workspaceCache.get(cacheKey);
-  if (cached) {
-    return cached;
-  }
-
-  const workspace = await ensureWorkspace({
-    baseDir,
-    skipPluginBootstrap: !useFilesystemExtensions,
-  });
-  workspaceCache.set(cacheKey, workspace);
-  return workspace;
-}
 
 /**
  * Extract usage metrics from SDK result message
@@ -57,13 +37,6 @@ function extractUsage(resultMessage: {
     totalCostUsd: resultMessage.total_cost_usd ?? 0,
   };
 }
-
-/**
- * Result type that includes session ID from SDK
- */
-export type AgenticQueryResult<T> = ProviderResultWithUsage<T> & {
-  sessionId?: string;
-};
 
 /**
  * Process SDK result message and return appropriate provider result
@@ -125,204 +98,6 @@ function processResultMessage<T>(
     ),
     usage,
   };
-}
-
-/**
- * Execute a query against the Claude Agent SDK with structured output
- *
- * @deprecated Use executeAgenticQuery for v0.3.1 agentic architecture
- * @param prompt - User prompt to send
- * @param systemPrompt - System prompt for context
- * @param jsonSchema - JSON Schema for structured output
- * @param config - Provider configuration
- * @returns Provider result with usage metrics
- */
-export async function executeQuery<T>(
-  prompt: string,
-  systemPrompt: string,
-  jsonSchema: Record<string, unknown>,
-  config?: ClaudeAgentConfig
-): Promise<ProviderResultWithUsage<T>> {
-  try {
-    const resolvedConfig = resolveConfig(config);
-
-    // Validate API key before making request
-    // SDK supports both ANTHROPIC_API_KEY and CLAUDE_CODE_OAUTH_TOKEN
-    const apiKey =
-      config?.apiKey ??
-      process.env.ANTHROPIC_API_KEY ??
-      process.env.CLAUDE_CODE_OAUTH_TOKEN;
-    if (!apiKey) {
-      return {
-        success: false,
-        error: {
-          type: "validation_error",
-          field: "apiKey",
-          message:
-            "API key is required. Set ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN environment variable, or provide apiKey in config",
-        },
-      };
-    }
-
-    // Get workspace (cached after first init)
-    const workspace = await getOrInitWorkspace(
-      resolvedConfig.workspace,
-      resolvedConfig.useFilesystemExtensions
-    );
-
-    // Execute SDK query
-    const result = query({
-      prompt,
-      options: {
-        model: resolvedConfig.model,
-        cwd: workspace,
-        systemPrompt: config?.systemPrompt ?? systemPrompt,
-        permissionMode: "bypassPermissions",
-        allowDangerouslySkipPermissions: true,
-        allowedTools: resolvedConfig.useFilesystemExtensions ? ["Skill"] : [],
-        outputFormat: {
-          type: "json_schema",
-          schema: jsonSchema,
-        },
-      },
-    });
-
-    // Process async generator - query() returns AsyncGenerator<SDKMessage, void>
-    for await (const message of result) {
-      if (message.type !== "result") {
-        continue;
-      }
-
-      const usage = extractUsage(message);
-      return processResultMessage<T>(message, usage);
-    }
-
-    // No result received
-    return {
-      success: false,
-      error: {
-        type: "unknown",
-        message: "No result received from SDK",
-      },
-    };
-  } catch (error) {
-    return mapException(error);
-  }
-}
-
-/**
- * Execute a query with retry logic for transient errors
- *
- * @deprecated Use executeAgenticQueryWithRetry for v0.3.1 agentic architecture
- * @param prompt - User prompt to send
- * @param systemPrompt - System prompt for context
- * @param jsonSchema - JSON Schema for structured output
- * @param config - Provider configuration
- * @returns Provider result with usage metrics
- */
-export async function executeQueryWithRetry<T>(
-  prompt: string,
-  systemPrompt: string,
-  jsonSchema: Record<string, unknown>,
-  config?: ClaudeAgentConfig
-): Promise<ProviderResultWithUsage<T>> {
-  const resolvedConfig = resolveConfig(config);
-  const maxRetries = resolvedConfig.maxRetries;
-
-  let lastResult: ProviderResultWithUsage<T> | undefined;
-
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const result = await executeQuery<T>(
-      prompt,
-      systemPrompt,
-      jsonSchema,
-      config
-    );
-
-    // Return immediately on success
-    if (result.success) {
-      return result;
-    }
-
-    lastResult = result;
-
-    // Check if error is retryable
-    const isRetryable =
-      result.error.type === "network_error" ||
-      result.error.type === "rate_limit";
-
-    if (!isRetryable || attempt === maxRetries) {
-      return result;
-    }
-
-    // Wait before retry (exponential backoff)
-    const delay = Math.min(
-      RETRY_BASE_DELAY_MS * 2 ** attempt,
-      RETRY_MAX_DELAY_MS
-    );
-    await new Promise((resolve) => setTimeout(resolve, delay));
-  }
-
-  return (
-    lastResult ?? {
-      success: false,
-      error: {
-        type: "unknown",
-        message: "Max retries exceeded",
-      },
-    }
-  );
-}
-
-/** Whitelist pattern for valid content IDs (alphanumeric, hyphens, underscores) */
-const VALID_CONTENT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
-
-/**
- * Extract content ID from agentic prompt with comprehensive path traversal protection
- *
- * Security measures:
- * - URL decodes input to catch encoded attacks (%2e%2e = ..)
- * - Checks for null bytes that could bypass validation
- * - Whitelist validation (only alphanumeric, hyphens, underscores)
- * - Rejects any path separators or traversal sequences
- */
-export function extractContentIdFromPrompt(prompt: string): string | null {
-  const match = prompt.match(CONTENT_ID_REGEX);
-  const rawId = match?.[1];
-
-  if (!rawId) {
-    return null;
-  }
-
-  // Decode URL-encoded characters to catch bypass attempts
-  let decodedId: string;
-  try {
-    decodedId = decodeURIComponent(rawId);
-  } catch {
-    // Invalid encoding - reject
-    return null;
-  }
-
-  // Check for null bytes (can bypass string checks in some systems)
-  if (decodedId.includes("\0")) {
-    return null;
-  }
-
-  // Reject path traversal and separator characters
-  if (
-    decodedId.includes("..") ||
-    decodedId.includes("/") ||
-    decodedId.includes("\\")
-  ) {
-    return null;
-  }
-
-  // Whitelist validation - only safe characters allowed
-  if (!VALID_CONTENT_ID_PATTERN.test(decodedId)) {
-    return null;
-  }
-
-  return decodedId;
 }
 
 /**

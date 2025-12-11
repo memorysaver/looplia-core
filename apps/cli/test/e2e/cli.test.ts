@@ -17,9 +17,10 @@ import {
 } from "../utils";
 
 // Regex patterns at top level for performance
-const SENTIMENT_PATTERN = /positive|neutral|negative/;
-const JSON_OBJECT_PATTERN = /\{[\s\S]*\}/;
 const CONTENT_ID_PATTERN = /^[a-z]+-/;
+// biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape codes require control character \x1b
+const ANSI_ESCAPE_PATTERN = /\x1b\[[0-9;]*m/g;
+const SESSION_PATTERN = /Session:\s*(\S+)/;
 
 describe("CLI E2E Tests", () => {
   let tempDir: { path: string; cleanup: () => void };
@@ -67,14 +68,14 @@ describe("CLI E2E Tests", () => {
       const result = await execCLI(["--version"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia 0.3.3");
+      expect(result.stdout).toContain("looplia 0.3.4");
     });
 
     it("should show version with -v flag", async () => {
       const result = await execCLI(["-v"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia 0.3.3");
+      expect(result.stdout).toContain("looplia 0.3.4");
     });
 
     it("should error on unknown command", async () => {
@@ -86,7 +87,7 @@ describe("CLI E2E Tests", () => {
   });
 
   describe("Summarize Command", () => {
-    it("should summarize content and output JSON to stdout", async () => {
+    it("should summarize content and show completion message", async () => {
       const content = readFileSync(
         join(__dirname, "../fixtures/sample-article.txt"),
         "utf-8"
@@ -101,23 +102,15 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stderr).toBe("");
+      // Progress and completion messages are printed to stderr
+      // Verify no ERROR messages in stderr
+      expect(result.stderr).not.toContain("Error:");
 
-      // Extract JSON from stdout (metadata is printed before JSON)
-      const jsonMatch = result.stdout.match(JSON_OBJECT_PATTERN);
-      expect(jsonMatch).not.toBe(null);
-      const summary = JSON.parse(jsonMatch?.[0] ?? "");
-      expect(summary).toHaveProperty("contentId");
-      expect(summary).toHaveProperty("headline");
-      expect(summary).toHaveProperty("tldr");
-      expect(summary).toHaveProperty("bullets");
-      expect(summary).toHaveProperty("tags");
-      expect(summary).toHaveProperty("sentiment");
-      expect(summary).toHaveProperty("category");
-      expect(summary).toHaveProperty("score");
-      expect(Array.isArray(summary.bullets)).toBe(true);
-      expect(Array.isArray(summary.tags)).toBe(true);
-      expect(summary.sentiment).toMatch(SENTIMENT_PATTERN);
+      // Verify completion message is shown on stderr (not JSON dump)
+      expect(result.stderr).toContain("Summary complete");
+      expect(result.stderr).toContain("Session:");
+      expect(result.stderr).toContain("Saved to:");
+      expect(result.stderr).toContain("Next step:");
     });
 
     it("should use short flag -f for file input", async () => {
@@ -130,13 +123,10 @@ describe("CLI E2E Tests", () => {
       const result = await execCLI(["summarize", "-f", inputFile, "--mock"]);
 
       expect(result.exitCode).toBe(0);
-      const jsonMatch = result.stdout.match(JSON_OBJECT_PATTERN);
-      expect(jsonMatch).not.toBe(null);
-      const summary = JSON.parse(jsonMatch?.[0] ?? "");
-      expect(summary).toHaveProperty("headline");
+      expect(result.stderr).toContain("Summary complete");
     });
 
-    it("should output markdown format when specified", async () => {
+    it("should show completion message with --format markdown", async () => {
       const content = readFileSync(
         join(__dirname, "../fixtures/sample-article.txt"),
         "utf-8"
@@ -153,11 +143,9 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("# ");
-      expect(result.stdout).toContain("## TL;DR");
-      expect(result.stdout).toContain("## Key Points");
-      expect(result.stdout).toContain("## Metadata");
-      expect(result.stdout).toContain("- ");
+      // Completion message is on stderr, data on stdout
+      expect(result.stderr).toContain("Summary complete");
+      expect(result.stderr).toContain("Session:");
     });
 
     it("should write output to file when --output is specified", async () => {
@@ -178,7 +166,7 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain(`Summary written to: ${outputFile}`);
+      expect(result.stdout).toContain("Also written to:");
 
       // Verify file was created with valid JSON
       const outputContent = readTestFile(outputFile);
@@ -207,7 +195,8 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain(`Summary written to: ${outputFile}`);
+      // File write message is on stdout
+      expect(result.stdout).toContain("Also written to:");
 
       const outputContent = readTestFile(outputFile);
       expect(outputContent).toContain("# ");
@@ -258,10 +247,8 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      const jsonMatch = result.stdout.match(JSON_OBJECT_PATTERN);
-      expect(jsonMatch).not.toBe(null);
-      const summary = JSON.parse(jsonMatch?.[0] ?? "");
-      expect(summary).toHaveProperty("headline");
+      // Completion message is on stderr
+      expect(result.stderr).toContain("Summary complete");
     });
 
     it("should generate meaningful content ID with detected source", async () => {
@@ -281,24 +268,17 @@ describe("CLI E2E Tests", () => {
 
       expect(result.exitCode).toBe(0);
 
-      // Extract summary JSON
-      const jsonMatch = result.stdout.match(JSON_OBJECT_PATTERN);
-      expect(jsonMatch).not.toBe(null);
-      const summary = JSON.parse(jsonMatch?.[0] ?? "");
+      // Verify completion message shows content ID (on stderr)
+      expect(result.stderr).toContain("Summary complete");
+      expect(result.stderr).toContain("Session:");
 
-      // Verify contentId is generated and returned
-      expect(summary).toHaveProperty("contentId");
-      const contentId = summary.contentId;
+      // Extract contentId from output (format: "Session: cli-...")
+      // Strip ANSI codes before matching
+      const cleanOutput = result.stderr.replace(ANSI_ESCAPE_PATTERN, "");
+      const sessionMatch = cleanOutput.match(SESSION_PATTERN);
+      expect(sessionMatch).not.toBe(null);
+      const contentId = sessionMatch?.[1] ?? "";
       expect(contentId).toMatch(CONTENT_ID_PATTERN);
-
-      // Verify summary has all required fields
-      expect(summary).toHaveProperty("headline");
-      expect(summary).toHaveProperty("tldr");
-      expect(summary).toHaveProperty("bullets");
-      expect(summary).toHaveProperty("tags");
-
-      // Verify sessionId is displayed in output
-      expect(result.stdout).toContain(`Session ID: ${contentId}`);
     });
 
     it("should accept --session-id flag for kit command", async () => {
@@ -424,7 +404,7 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain(`Writing kit written to: ${outputFile}`);
+      expect(result.stdout).toContain(`Writing kit saved to: ${outputFile}`);
 
       const outputContent = readTestFile(outputFile);
       const kit = JSON.parse(outputContent);

@@ -292,7 +292,7 @@ describe("runKitCommand", () => {
 
     expect(mockExit).not.toHaveBeenCalled();
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining(`Writing kit written to: ${outputFile}`)
+      expect.stringContaining(`Writing kit saved to: ${outputFile}`)
     );
 
     // Verify file was created with valid JSON

@@ -1,4 +1,4 @@
-# Looplia-Core: Agentic Architecture & Design (v0.3.2)
+# Looplia-Core: Agentic Architecture & Design (v0.1)
 
 ## Executive Summary
 
