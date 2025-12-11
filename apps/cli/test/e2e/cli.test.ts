@@ -102,15 +102,15 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      // Progress messages are printed to stderr, which is expected behavior
+      // Progress and completion messages are printed to stderr
       // Verify no ERROR messages in stderr
       expect(result.stderr).not.toContain("Error:");
 
-      // Verify completion message is shown (not JSON dump)
-      expect(result.stdout).toContain("Summary complete");
-      expect(result.stdout).toContain("Session:");
-      expect(result.stdout).toContain("Saved to:");
-      expect(result.stdout).toContain("Next step:");
+      // Verify completion message is shown on stderr (not JSON dump)
+      expect(result.stderr).toContain("Summary complete");
+      expect(result.stderr).toContain("Session:");
+      expect(result.stderr).toContain("Saved to:");
+      expect(result.stderr).toContain("Next step:");
     });
 
     it("should use short flag -f for file input", async () => {
@@ -123,7 +123,7 @@ describe("CLI E2E Tests", () => {
       const result = await execCLI(["summarize", "-f", inputFile, "--mock"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("Summary complete");
+      expect(result.stderr).toContain("Summary complete");
     });
 
     it("should show completion message with --format markdown", async () => {
@@ -143,9 +143,9 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      // Now only shows completion message, not markdown dump
-      expect(result.stdout).toContain("Summary complete");
-      expect(result.stdout).toContain("Session:");
+      // Completion message is on stderr, data on stdout
+      expect(result.stderr).toContain("Summary complete");
+      expect(result.stderr).toContain("Session:");
     });
 
     it("should write output to file when --output is specified", async () => {
@@ -195,6 +195,7 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
+      // File write message is on stdout
       expect(result.stdout).toContain("Also written to:");
 
       const outputContent = readTestFile(outputFile);
@@ -246,7 +247,8 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("Summary complete");
+      // Completion message is on stderr
+      expect(result.stderr).toContain("Summary complete");
     });
 
     it("should generate meaningful content ID with detected source", async () => {
@@ -266,13 +268,13 @@ describe("CLI E2E Tests", () => {
 
       expect(result.exitCode).toBe(0);
 
-      // Verify completion message shows content ID
-      expect(result.stdout).toContain("Summary complete");
-      expect(result.stdout).toContain("Session:");
+      // Verify completion message shows content ID (on stderr)
+      expect(result.stderr).toContain("Summary complete");
+      expect(result.stderr).toContain("Session:");
 
       // Extract contentId from output (format: "Session: cli-...")
       // Strip ANSI codes before matching
-      const cleanOutput = result.stdout.replace(ANSI_ESCAPE_PATTERN, "");
+      const cleanOutput = result.stderr.replace(ANSI_ESCAPE_PATTERN, "");
       const sessionMatch = cleanOutput.match(SESSION_PATTERN);
       expect(sessionMatch).not.toBe(null);
       const contentId = sessionMatch?.[1] ?? "";

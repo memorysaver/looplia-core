@@ -1,33 +1,36 @@
 /**
  * Looplia Runtime
  *
- * Encapsulates execution context and provides unified interface for all commands.
- * Handles environment validation, session management, and streaming/batch execution.
+ * Clean Architecture: Runtime uses CommandDefinition from core
+ * and AgentExecutor from provider to execute commands.
  */
 
 import type {
+  AgentExecutor,
+  CommandDefinition,
+  CommandResult,
   ContentSummary,
+  PromptContext,
+  StreamingEvent,
   UserProfile,
   WritingKit,
 } from "@looplia-core/core";
 import {
   createMockSummarizer,
   createMockWritingKitProvider,
+  getCommand,
 } from "@looplia-core/core";
 import {
-  createClaudeSummarizer,
-  createClaudeWritingKitProvider,
+  createClaudeAgentExecutor,
   readUserProfile,
 } from "@looplia-core/provider/claude-agent-sdk";
 import { renderStreamingQuery } from "../components";
 import { isInteractive } from "../utils/terminal";
 import { SessionManager } from "./session-manager";
 import type {
-  AgenticQueryResult,
   BaseConfig,
   ExecutionContext,
   KitConfig,
-  StreamingEvent,
   SummarizeConfig,
 } from "./types";
 
@@ -39,6 +42,7 @@ import type {
 export class LoopliaRuntime {
   private readonly context: ExecutionContext;
   private readonly sessionManager: SessionManager;
+  private executor: AgentExecutor;
 
   constructor(config: BaseConfig) {
     this.validateEnvironment(config);
@@ -47,37 +51,74 @@ export class LoopliaRuntime {
       this.context.workspace,
       config.mock
     );
+    this.executor = createClaudeAgentExecutor();
+  }
+
+  /**
+   * Execute a command by name using the command registry
+   *
+   * Clean Architecture: Command definition comes from core,
+   * execution is delegated to the executor.
+   */
+  async executeCommand<T>(
+    commandName: string,
+    contentId: string,
+    contentTitle: string
+  ): Promise<CommandResult<T>> {
+    const command = getCommand<T>(commandName);
+    if (!command) {
+      return {
+        success: false,
+        error: {
+          type: "not_found",
+          message: `Command "${commandName}" not found`,
+        },
+        sessionId: "",
+      };
+    }
+
+    const promptContext: PromptContext = {
+      contentId,
+      contentPath: `contentItem/${contentId}/content.md`,
+      workspace: this.context.workspace,
+    };
+
+    const prompt = command.promptTemplate(promptContext);
+
+    if (this.context.mode === "streaming") {
+      return await this.executeStreaming<T>(
+        command,
+        prompt,
+        contentId,
+        contentTitle
+      );
+    }
+
+    return await this.executeBatch<T>(command, prompt, contentId);
   }
 
   /**
    * Execute kit building workflow
-   *
-   * Provider API: buildKitStreaming(content: ContentItem, user: UserProfile)
    */
-  async executeKit(config: KitConfig): Promise<AgenticQueryResult<WritingKit>> {
+  async executeKit(config: KitConfig): Promise<CommandResult<WritingKit>> {
     const content = await this.sessionManager.prepare({
       file: config.file,
       sessionId: config.sessionId,
     });
 
-    // Update context workspace after session preparation
     this.context.workspace = this.sessionManager.getWorkspace();
-
-    const userProfile = await this.loadUserProfile(config);
 
     // Mock mode uses non-streaming provider
     if (this.context.mock) {
-      return this.executeKitMock(content, userProfile);
+      return this.executeKitMock(content, await this.loadUserProfile(config));
     }
 
-    const provider = createClaudeWritingKitProvider({
+    // Update executor workspace
+    this.executor = createClaudeAgentExecutor({
       workspace: this.context.workspace,
     });
 
-    return this.execute<WritingKit>(
-      () => provider.buildKitStreaming(content, userProfile),
-      { title: "Writing Kit Builder", subtitle: content.title }
-    );
+    return this.executeCommand<WritingKit>("kit", content.id, content.title);
   }
 
   /**
@@ -88,27 +129,28 @@ export class LoopliaRuntime {
       ReturnType<typeof createMockWritingKitProvider>["buildKit"]
     >[0],
     userProfile: UserProfile
-  ): Promise<AgenticQueryResult<WritingKit>> {
+  ): Promise<CommandResult<WritingKit>> {
     console.error("⏳ Processing (mock)...");
     const provider = createMockWritingKitProvider();
     const result = await provider.buildKit(content, userProfile);
     return {
-      ...result,
+      success: result.success,
+      data: result.success ? result.data : undefined,
+      error: result.success
+        ? undefined
+        : { type: "mock", message: result.error?.message ?? "Mock error" },
       sessionId: `mock-${content.id}`,
     };
   }
 
   /**
    * Execute summarization workflow
-   *
-   * Provider API: summarizeStreaming(content: ContentItem, user?: UserProfile)
    */
   async executeSummarize(
     config: SummarizeConfig
-  ): Promise<AgenticQueryResult<ContentSummary>> {
+  ): Promise<CommandResult<ContentSummary>> {
     const content = await this.sessionManager.prepareFromFile(config.file);
 
-    // Update context workspace after session preparation
     this.context.workspace = this.sessionManager.getWorkspace();
 
     // Mock mode uses non-streaming provider
@@ -116,13 +158,15 @@ export class LoopliaRuntime {
       return this.executeSummarizeMock(content);
     }
 
-    const provider = createClaudeSummarizer({
+    // Update executor workspace
+    this.executor = createClaudeAgentExecutor({
       workspace: this.context.workspace,
     });
 
-    return this.execute<ContentSummary>(
-      () => provider.summarizeStreaming(content),
-      { title: "Content Summarizer", subtitle: content.title }
+    return this.executeCommand<ContentSummary>(
+      "summarize",
+      content.id,
+      content.title
     );
   }
 
@@ -131,79 +175,85 @@ export class LoopliaRuntime {
    */
   private async executeSummarizeMock(
     content: Parameters<ReturnType<typeof createMockSummarizer>["summarize"]>[0]
-  ): Promise<AgenticQueryResult<ContentSummary>> {
+  ): Promise<CommandResult<ContentSummary>> {
     console.error("⏳ Processing (mock)...");
     const provider = createMockSummarizer();
     const result = await provider.summarize(content);
     return {
-      ...result,
+      success: result.success,
+      data: result.success ? result.data : undefined,
+      error: result.success
+        ? undefined
+        : { type: "mock", message: result.error?.message ?? "Mock error" },
       sessionId: `mock-${content.id}`,
     };
   }
 
   /**
-   * Get the prepared content item (for renderer access)
+   * Get the session manager (for renderer access)
    */
   getSessionManager(): SessionManager {
     return this.sessionManager;
   }
 
   /**
-   * Generic execute method - handles streaming vs batch
+   * Execute command with streaming UI
    */
-  private async execute<T>(
-    generator: () => AsyncGenerator<StreamingEvent, AgenticQueryResult<T>>,
-    options: { title: string; subtitle?: string }
-  ): Promise<AgenticQueryResult<T>> {
-    if (this.context.mode === "streaming") {
-      const { result, error } = await renderStreamingQuery<T>({
-        title: options.title,
-        subtitle: options.subtitle,
-        streamGenerator: generator,
-      });
+  private async executeStreaming<T>(
+    command: CommandDefinition<T>,
+    prompt: string,
+    contentId: string,
+    contentTitle: string
+  ): Promise<CommandResult<T>> {
+    const { result, error } = await renderStreamingQuery<T>({
+      title: command.displayConfig.title,
+      subtitle: contentTitle,
+      streamGenerator: () =>
+        this.executor.executeStreaming(prompt, command.outputSchema, {
+          workspace: this.context.workspace,
+          contentId,
+        }) as AsyncGenerator<
+          StreamingEvent,
+          { success: boolean; data?: T; error?: { message: string } }
+        >,
+    });
 
-      if (error) {
-        return {
-          success: false,
-          error: { type: "unknown", message: error.message },
-          sessionId: "",
-        };
-      }
-
-      // renderStreamingQuery returns the data directly, wrap it in AgenticQueryResult
-      if (result) {
-        return {
-          success: true,
-          data: result,
-          sessionId: "", // TODO: capture sessionId from streaming state
-        };
-      }
-
+    if (error) {
       return {
         success: false,
-        error: { type: "unknown", message: "No result received" },
-        sessionId: "",
+        error: { type: "unknown", message: error.message },
+        sessionId: contentId,
       };
     }
 
-    return this.executeBatch(generator);
+    if (result) {
+      return {
+        success: true,
+        data: result,
+        sessionId: contentId,
+      };
+    }
+
+    return {
+      success: false,
+      error: { type: "unknown", message: "No result received" },
+      sessionId: contentId,
+    };
   }
 
   /**
-   * Execute in batch mode (non-streaming)
+   * Execute command in batch mode (non-streaming)
    */
   private async executeBatch<T>(
-    generator: () => AsyncGenerator<StreamingEvent, AgenticQueryResult<T>>
-  ): Promise<AgenticQueryResult<T>> {
+    command: CommandDefinition<T>,
+    prompt: string,
+    contentId: string
+  ): Promise<CommandResult<T>> {
     console.error("⏳ Processing...");
-    const stream = generator();
-    let result = await stream.next();
-
-    while (!result.done) {
-      result = await stream.next();
-    }
-
-    return result.value;
+    return await this.executor.execute(prompt, command.outputSchema, {
+      workspace: this.context.workspace,
+      contentId,
+    });
   }
 
   /**
@@ -233,7 +283,7 @@ export class LoopliaRuntime {
     const shouldStream = isInteractive() && !config.noStreaming && !config.mock;
 
     return {
-      workspace: "", // Will be set by ensureWorkspace in SessionManager
+      workspace: "",
       mode: shouldStream ? "streaming" : "batch",
       mock: config.mock,
     };
@@ -259,7 +309,6 @@ export class LoopliaRuntime {
       };
     }
 
-    // Apply CLI overrides
     if (config.topics) {
       profile.topics = config.topics.map((t) => ({
         topic: t,

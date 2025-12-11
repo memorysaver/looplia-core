@@ -45,14 +45,50 @@ export type ExecutionContext = {
 };
 
 /**
- * Re-export AgenticQueryResult from provider for type compatibility
- *
- * Type chain:
- * - ProviderResult<T> = { success: true; data: T } | { success: false; error: ProviderError }
- * - ProviderResultWithUsage<T> = ProviderResult<T> & { usage?: ProviderUsage }
- * - AgenticQueryResult<T> = ProviderResultWithUsage<T> & { sessionId?: string }
+ * TUI display configuration for streaming commands
+ */
+export type CommandDisplayConfig = {
+  /** Title shown in the main TUI box header */
+  title: string;
+  /** Command name for logging/debugging */
+  commandName: string;
+};
+
+/**
+ * Post-completion configuration for renderers
+ */
+export type PostCompletionConfig = {
+  /** Success message to display */
+  successMessage: string;
+  /** Session info display format (placeholder: {contentId}) */
+  sessionInfoFormat?: string;
+  /** Optional next step hint (null = no next step) */
+  nextStep?: {
+    /** Description label */
+    description: string;
+    /** Command template (placeholder: {contentId}) */
+    commandTemplate: string;
+  } | null;
+};
+
+/**
+ * Complete command configuration combining display and completion
+ */
+export type CommandConfig = {
+  display: CommandDisplayConfig;
+  postCompletion: PostCompletionConfig;
+};
+
+/**
+ * Re-export types from core for Clean Architecture
+ */
+/**
+ * Backward compatibility alias
+ * @deprecated Use CommandResult from @looplia-core/core instead
  */
 export type {
-  AgenticQueryResult,
+  CommandResult,
+  CommandResult as AgenticQueryResult,
+  DisplayConfig,
   StreamingEvent,
-} from "@looplia-core/provider/claude-agent-sdk";
+} from "@looplia-core/core";

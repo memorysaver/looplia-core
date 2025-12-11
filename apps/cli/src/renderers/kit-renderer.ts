@@ -2,13 +2,16 @@
  * Kit Result Renderer
  *
  * Handles output formatting and display for kit command results.
+ * Uses CommandDefinition from core (Clean Architecture).
  * Target complexity: ≤8
  */
 
 import { writeFileSync } from "node:fs";
-import type { WritingKit } from "@looplia-core/core";
-import type { AgenticQueryResult, KitConfig } from "../runtime/types";
+import type { CommandResult, WritingKit } from "@looplia-core/core";
+import { getCommand } from "@looplia-core/core";
+import type { KitConfig } from "../runtime/types";
 import { formatKitAsMarkdown } from "../utils/format";
+import { displayPostCompletion } from "./post-completion";
 
 /**
  * Render kit execution result
@@ -16,7 +19,7 @@ import { formatKitAsMarkdown } from "../utils/format";
  * Handles success/error cases, output formatting, and file writing.
  */
 export function renderKitResult(
-  result: AgenticQueryResult<WritingKit>,
+  result: CommandResult<WritingKit>,
   config: KitConfig
 ): void {
   if (!result.success) {
@@ -28,6 +31,12 @@ export function renderKitResult(
   if (!data) {
     console.error("Error: No data in result");
     process.exit(1);
+  }
+
+  // Display post-completion info using command definition from core
+  const command = getCommand<WritingKit>("kit");
+  if (command) {
+    displayPostCompletion(command.displayConfig, data.contentId);
   }
 
   const output = formatOutput(data, config.format);

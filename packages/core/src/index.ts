@@ -8,6 +8,27 @@ export {
   createMockWritingKitProvider,
 } from "./adapters/mock";
 export type {
+  AgentExecutor,
+  CommandDefinition,
+  CommandResult,
+  DisplayConfig,
+  ExecutorOptions,
+  PromptContext,
+  StreamingEvent,
+} from "./commands";
+// Command Framework
+export {
+  // Registry
+  clearCommands,
+  getCommand,
+  getCommandNames,
+  hasCommand,
+  // Command Definitions
+  kitCommand,
+  registerCommand,
+  summarizeCommand,
+} from "./commands";
+export type {
   ContentItem,
   ContentMetadata,
   Source,
@@ -47,7 +68,6 @@ export {
   buildWritingKit,
   type WritingKitProviders,
 } from "./services/writing-kit-engine";
-
 // Validation
 export {
   ContentItemSchema,
@@ -58,4 +78,5 @@ export {
   validateUserProfile,
   validateWritingIdeas,
   WritingIdeasSchema,
+  WritingKitSchema,
 } from "./validation/schemas";

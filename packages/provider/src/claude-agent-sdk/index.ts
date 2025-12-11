@@ -8,6 +8,8 @@ export type {
 export { validateConfig } from "./config";
 // Re-export content I/O utilities
 export { writeContentItem } from "./content-io";
+// Re-export executor (Clean Architecture)
+export { createClaudeAgentExecutor } from "./executor";
 // Re-export logger
 export type { QueryLogger } from "./logger";
 export { createQueryLogger } from "./logger";

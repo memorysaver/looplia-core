@@ -89,10 +89,12 @@ describe("runSummarizeCommand", () => {
     await runSummarizeCommand(["--file", inputFile, "--mock"]);
 
     expect(mockExit).not.toHaveBeenCalled();
-    expect(consoleLogSpy).toHaveBeenCalled();
+    expect(consoleErrorSpy).toHaveBeenCalled();
 
-    // Verify completion message is shown (not JSON dump)
-    const output = consoleLogSpy.mock.calls.map((c) => c.join(" ")).join("\n");
+    // Verify completion message is shown on stderr (not JSON dump)
+    const output = consoleErrorSpy.mock.calls
+      .map((c) => c.join(" "))
+      .join("\n");
     expect(output).toContain("Summary complete");
     expect(output).toContain("Session:");
     expect(output).toContain("Saved to:");
@@ -109,7 +111,7 @@ describe("runSummarizeCommand", () => {
     await runSummarizeCommand(["-f", inputFile, "--mock"]);
 
     expect(mockExit).not.toHaveBeenCalled();
-    expect(consoleLogSpy).toHaveBeenCalled();
+    expect(consoleErrorSpy).toHaveBeenCalled();
   });
 
   it("should show completion message with --format markdown", async () => {
@@ -128,10 +130,12 @@ describe("runSummarizeCommand", () => {
     ]);
 
     expect(mockExit).not.toHaveBeenCalled();
-    expect(consoleLogSpy).toHaveBeenCalled();
+    expect(consoleErrorSpy).toHaveBeenCalled();
 
-    // Now only shows completion message, not markdown dump
-    const output = consoleLogSpy.mock.calls.map((c) => c.join(" ")).join("\n");
+    // Now only shows completion message on stderr, not markdown dump
+    const output = consoleErrorSpy.mock.calls
+      .map((c) => c.join(" "))
+      .join("\n");
     expect(output).toContain("Summary complete");
     expect(output).toContain("Session:");
   });

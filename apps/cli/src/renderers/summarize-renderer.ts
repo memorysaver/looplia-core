@@ -2,13 +2,16 @@
  * Summarize Result Renderer
  *
  * Handles output formatting and display for summarize command results.
+ * Uses CommandDefinition from core (Clean Architecture).
  * Target complexity: ≤8
  */
 
 import { writeFileSync } from "node:fs";
-import type { ContentSummary } from "@looplia-core/core";
-import type { AgenticQueryResult, SummarizeConfig } from "../runtime/types";
+import type { CommandResult, ContentSummary } from "@looplia-core/core";
+import { getCommand } from "@looplia-core/core";
+import type { SummarizeConfig } from "../runtime/types";
 import { formatSummaryAsMarkdown } from "../utils/format";
+import { displayPostCompletion } from "./post-completion";
 
 /**
  * Render summarize execution result
@@ -16,7 +19,7 @@ import { formatSummaryAsMarkdown } from "../utils/format";
  * Handles success/error cases, output formatting, session info, and file writing.
  */
 export function renderSummarizeResult(
-  result: AgenticQueryResult<ContentSummary>,
+  result: CommandResult<ContentSummary>,
   config: SummarizeConfig
 ): void {
   if (!result.success) {
@@ -30,31 +33,15 @@ export function renderSummarizeResult(
     process.exit(1);
   }
 
-  // Display session info
-  displaySessionInfo(data);
+  // Display post-completion info using command definition from core
+  const command = getCommand<ContentSummary>("summarize");
+  if (command) {
+    displayPostCompletion(command.displayConfig, data.contentId);
+  }
 
   // Format and write output
   const output = formatOutput(data, config.format);
   writeOutput(output, config.outputPath);
-}
-
-/**
- * Display session information and next steps
- */
-function displaySessionInfo(data: ContentSummary): void {
-  console.log("");
-  if (data.contentId) {
-    console.log("\x1b[32m✓\x1b[0m Summary complete");
-    console.log(`  \x1b[90mSession:\x1b[0m ${data.contentId}`);
-    console.log(
-      `  \x1b[90mSaved to:\x1b[0m ~/.looplia/contentItem/${data.contentId}/summary.json`
-    );
-    console.log("");
-    console.log(
-      `\x1b[36mNext step:\x1b[0m looplia kit --session-id ${data.contentId}`
-    );
-    console.log("");
-  }
 }
 
 /**

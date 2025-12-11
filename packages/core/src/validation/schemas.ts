@@ -129,6 +129,36 @@ export const WritingIdeasSchema = z.object({
 });
 
 // ─────────────────────────────────────────────────────────────
+// Writing Kit Schemas
+// ─────────────────────────────────────────────────────────────
+
+export const WritingKitSourceSchema = z.object({
+  id: z.string().min(1),
+  label: z.string(),
+  url: z.string(),
+});
+
+export const OutlineSectionSchema = z.object({
+  heading: z.string().min(1),
+  notes: z.string(),
+  estimatedWords: z.number().positive().optional(),
+});
+
+export const WritingKitMetaSchema = z.object({
+  relevanceToUser: z.number().min(0).max(1),
+  estimatedReadingTimeMinutes: z.number().positive(),
+});
+
+export const WritingKitSchema = z.object({
+  contentId: z.string().min(1),
+  source: WritingKitSourceSchema,
+  summary: ContentSummarySchema,
+  ideas: WritingIdeasSchema,
+  suggestedOutline: z.array(OutlineSectionSchema).min(1),
+  meta: WritingKitMetaSchema,
+});
+
+// ─────────────────────────────────────────────────────────────
 // User Profile Schemas
 // ─────────────────────────────────────────────────────────────
 
