@@ -715,7 +715,7 @@ Agent:
 
 - **Ubiquitous Language**: See [GLOSSARY.md](./GLOSSARY.md) for term definitions
 - **Architecture Details**: See [DESIGN-0.4.0.md](./DESIGN-0.4.0.md) for folder structure and implementation
-- **Original Concept**: See [AGENTIC_CONCEPT.md](./AGENTIC_CONCEPT.md) for problem/solution background
+- **Original Concept**: See [AGENTIC_CONCEPT-0.1.md](./AGENTIC_CONCEPT-0.1.md) for problem/solution background
 
 ---
 
