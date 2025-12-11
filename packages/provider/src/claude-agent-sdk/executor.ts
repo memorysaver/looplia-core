@@ -92,7 +92,7 @@ export function createClaudeAgentExecutor(
         result = await generator.next();
       }
 
-      return result.value;
+      return result.value as CommandResult<T>;
     },
   };
 }

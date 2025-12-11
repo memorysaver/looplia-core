@@ -13,7 +13,7 @@
     },
     "apps/cli": {
       "name": "@looplia-core/cli",
-      "version": "0.3.4",
+      "version": "0.4.0",
       "bin": {
         "looplia": "./dist/index.js",
       },
@@ -46,7 +46,7 @@
     },
     "packages/core": {
       "name": "@looplia-core/core",
-      "version": "0.3.3",
+      "version": "0.4.0",
       "dependencies": {
         "zod": "^3.23.0",
       },
@@ -59,10 +59,11 @@
     },
     "packages/provider": {
       "name": "@looplia-core/provider",
-      "version": "0.3.3",
+      "version": "0.4.0",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "^0.1.60",
         "@looplia-core/core": "workspace:*",
+        "zod": "^3.24.0",
         "zod-to-json-schema": "^3.23.0",
       },
       "devDependencies": {
