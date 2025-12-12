@@ -9,30 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Session Manifest System** - New `session.json` file tracks session lifecycle with step states, content hashes, and schema versions
+- **Session Manifest System** - New `session.json` file tracks step completion status
   - `SessionManifest` type in `packages/core/src/domain/session.ts`
-  - `SessionService` for manifest manipulation in `packages/core/src/services/session-service.ts`
-  - `session-io.ts` for file operations in provider layer
-  - Auto-migration for legacy sessions without manifest
-- **Intermediate Artifact Validation** - Zod validation after each artifact write
-  - `ArtifactValidation` service in `packages/core/src/services/artifact-validation.ts`
-  - `ValidationInterceptor` in provider streaming layer
-  - Enhanced `ErrorEvent` with `retryHint`, `validationErrors`, and `artifact` fields
-- **CLI Display Configuration** - New `apps/cli/src/config/display-config.ts` for TUI presentation settings
+  - `StepName` type for pipeline steps
+  - Minimal design: binary "done" status per step, no hashes
+- **CLI Display Configuration** - New `apps/cli/src/config/display-config.ts`
+  - `DisplayConfig` type moved from core to CLI layer
+  - `getDisplayConfig(commandName)` lookup function
 
 ### Changed
 
-- **Smart Continuation** - Now uses manifest-based state tracking instead of file-existence checks
-  - Agent reads `session.json` to determine step states
-  - Detects source content changes via `sourceHash` comparison
-  - More reliable continuation with validation hashes
+- **Smart Continuation** - Now uses manifest-based state tracking
+  - Agent reads `session.json` to check which steps are "done"
+  - Skips steps marked done AND with artifact file present
+  - Agent manages manifest updates (agent-first philosophy)
 - **CommandDefinition** - Removed `displayConfig` property (moved to CLI layer)
-- **Prompt Templates** - Updated to instruct agent on manifest usage
+- **Prompt Templates** - Updated with session state management instructions
 
 ### Removed
 
 - `DisplayConfig` export from `@looplia-core/core` (moved to CLI layer)
 - `displayConfig` property from `CommandDefinition` type
+
+### Design Decisions
+
+> See [DESIGN-0.5.0.md § Deferred Decisions](./docs/DESIGN-0.5.0.md#7-deferred-decisions) for rationale.
+
+The following were considered but **intentionally deferred** to v0.6+:
+- Content hash verification (adds complexity without proven need)
+- Intermediate artifact validation (final output validation suffices)
+- Provider-side manifest reconciliation (contradicts agent-first philosophy)
+- Tool/path safety policies (security hardening is separate concern)
+- Plugin compatibility versioning (only one plugin exists)
 
 ## [0.4.0] - 2025-12-12
 

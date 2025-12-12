@@ -369,20 +369,8 @@ Token usage update.
 Non-fatal error occurred.
 
 ```typescript
-{
-  type: "error";
-  code: string;
-  message: string;
-  recoverable: boolean;
-  timestamp: number;
-  // v0.5.0 additions for validation errors:
-  retryHint?: string;          // Guidance for fixing the error
-  validationErrors?: string[]; // Specific field failures
-  artifact?: string;           // Path to failed artifact
-}
+{ type: "error"; code: string; message: string; recoverable: boolean; timestamp: number }
 ```
-
-> **v0.5.0 Addition:** New optional fields (`retryHint`, `validationErrors`, `artifact`) for artifact validation errors.
 
 ### CompleteEvent\<T\>
 Final result with metrics.
@@ -508,46 +496,24 @@ The `~/.looplia/` directory. Persistent filesystem for sessions, plugins, and co
 ### SessionManifest (v0.5.0)
 **Type:** `packages/core/src/domain/session.ts`
 
-Tracks session lifecycle and artifact validity. Replaces file-existence checks for Smart Continuation.
+Minimal manifest tracking step completion. Agent manages this file.
 
 ```typescript
 type SessionManifest = {
-  version: 1;                    // Manifest format version
-  contentId: string;             // Session ID
-  createdAt: string;             // ISO timestamp
-  updatedAt: string;             // ISO timestamp
-  steps: {
-    analyzing?: StepState;       // → summary.json
-    generating_ideas?: StepState; // → ideas.json
-    building_outline?: StepState; // → outline.json
-    assembling_kit?: StepState;   // → writing-kit.json
-  };
-  sourceHash: string;            // SHA-256 of content.md (16 chars)
+  version: 1;
+  contentId: string;
+  updatedAt: string;
+  steps: Partial<Record<StepName, "done">>;
 };
 ```
 
-### StepState (v0.5.0)
-**Type:** `packages/core/src/domain/session.ts`
-
-Individual step state with validation metadata.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `status` | `StepStatus` | Current execution status |
-| `contentHash` | `string?` | SHA-256 hash of artifact (16 chars) |
-| `completedAt` | `string?` | ISO timestamp when completed |
-| `errorMessage` | `string?` | Error message if failed |
-| `schemaVersion` | `string?` | Schema version used (for migrations) |
-
-### StepStatus (v0.5.0)
-**Type:** `packages/core/src/domain/session.ts`
-
-```typescript
-type StepStatus = "pending" | "in_progress" | "completed" | "failed";
-```
+**Design Decisions:**
+- Binary "done" or absent (no `pending`/`in_progress` states)
+- No content hashes (file timestamps suffice)
+- Agent-managed (TypeScript only provides types)
 
 ### StepName (v0.5.0)
-**Type:** `packages/core/src/services/session-service.ts`
+**Type:** `packages/core/src/domain/session.ts`
 
 Named pipeline steps with artifact mappings:
 
@@ -557,6 +523,8 @@ Named pipeline steps with artifact mappings:
 | `generating_ideas` | `ideas.json` | idea-generator |
 | `building_outline` | `outline.json` | writing-kit-builder |
 | `assembling_kit` | `writing-kit.json` | writing-kit-builder |
+
+**Note:** `writing-kit-builder` produces both `outline.json` and `writing-kit.json`. Both steps are marked done together.
 
 ### Session
 A work session with unique ID. Contains all input/output files for one execution.
@@ -616,54 +584,7 @@ Result type that includes token usage metrics.
 
 ---
 
-## 10. Artifact Validation (v0.5.0)
-
-### ArtifactType
-**Type:** `packages/core/src/services/artifact-validation.ts`
-
-Types of artifacts that can be validated:
-
-```typescript
-type ArtifactType = "summary" | "ideas" | "outline" | "writing-kit";
-```
-
-### ValidationResult
-**Type:** `packages/core/src/services/artifact-validation.ts`
-
-Result of artifact validation against Zod schema.
-
-```typescript
-type ValidationResult =
-  | { valid: true; data: unknown }
-  | { valid: false; errors: string[]; retryHint: string };
-```
-
-### validateArtifact
-**Location:** `packages/core/src/services/artifact-validation.ts`
-
-Validates artifact JSON content against its Zod schema.
-
-```typescript
-function validateArtifact(type: ArtifactType, content: string): ValidationResult;
-```
-
-### ValidationInterceptor
-**Location:** `packages/provider/src/claude-agent-sdk/streaming/validation-interceptor.ts`
-
-Intercepts Write tool operations and validates artifact content. Emits `ErrorEvent` with retry hints if validation fails.
-
-### Artifact-to-Schema Mapping
-
-| Artifact | Schema | Required Fields |
-|----------|--------|-----------------|
-| `summary.json` | `ContentSummarySchema` | headline, tldr, bullets, tags, etc. (15+ fields) |
-| `ideas.json` | `WritingIdeasSchema` | contentId, hooks, angles, questions |
-| `outline.json` | `OutlineSectionSchema[]` | heading, notes per section |
-| `writing-kit.json` | `WritingKitSchema` | contentId, source, summary, ideas, outline, meta |
-
----
-
-## 11. Writing Domain
+## 10. Writing Domain
 
 ### WritingHook
 **Type:** `packages/core/src/domain/ideas.ts`
@@ -762,12 +683,8 @@ A topic the user is interested in.
 | Command framework | `packages/core/src/commands/` |
 | Port interfaces | `packages/core/src/ports/` |
 | Services | `packages/core/src/services/` |
-| Session service | `packages/core/src/services/session-service.ts` (v0.5.0) |
-| Artifact validation | `packages/core/src/services/artifact-validation.ts` (v0.5.0) |
 | Mock adapters | `packages/core/src/adapters/mock/` |
 | Provider (SDK) | `packages/provider/src/claude-agent-sdk/` |
-| Session I/O | `packages/provider/src/claude-agent-sdk/session-io.ts` (v0.5.0) |
-| Validation interceptor | `packages/provider/src/claude-agent-sdk/streaming/validation-interceptor.ts` (v0.5.0) |
 | CLI commands | `apps/cli/src/commands/` |
 | Display config | `apps/cli/src/config/display-config.ts` (v0.5.0) |
 | Runtime | `apps/cli/src/runtime/` |
