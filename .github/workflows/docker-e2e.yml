@@ -73,9 +73,32 @@ jobs:
             --topics "ai,healthcare,technology" \
             --tone "expert")
 
-          docker start -a "$CONTAINER_ID"
-          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-markdown/
+          # Run container and capture exit code
+          docker start -a "$CONTAINER_ID" || EXIT_CODE=$?
+
+          # Always copy files for debugging (even on failure)
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-markdown/ || true
           docker rm "$CONTAINER_ID"
+
+          # Exit with original code
+          exit ${EXIT_CODE:-0}
+
+      - name: Debug - List workspace contents
+        if: always()
+        run: |
+          echo "=== Workspace Structure ==="
+          find test-workspace-markdown -type f 2>/dev/null | head -50 || echo "No files found"
+          echo ""
+          echo "=== Session folder contents ==="
+          SESSION_DIR=$(find test-workspace-markdown/contentItem -maxdepth 1 -type d ! -name contentItem 2>/dev/null | head -1)
+          if [ -n "$SESSION_DIR" ]; then
+            ls -la "$SESSION_DIR" || true
+            echo ""
+            echo "=== Query logs (if any) ==="
+            cat "$SESSION_DIR/query.log" 2>/dev/null | tail -100 || echo "No query logs"
+          else
+            echo "No session directory found"
+          fi
 
       - name: Validate session manifest (v0.5.0)
         run: |
@@ -153,9 +176,15 @@ jobs:
             --topics "ai,claude,developer-tools" \
             --tone "expert")
 
-          docker start -a "$CONTAINER_ID"
-          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-vtt/
+          # Run container and capture exit code
+          docker start -a "$CONTAINER_ID" || EXIT_CODE=$?
+
+          # Always copy files for debugging (even on failure)
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-vtt/ || true
           docker rm "$CONTAINER_ID"
+
+          # Exit with original code
+          exit ${EXIT_CODE:-0}
 
       - name: Validate session manifest (v0.5.0)
         run: |
@@ -220,9 +249,15 @@ jobs:
             --topics "coding,claude,automation" \
             --tone "expert")
 
-          docker start -a "$CONTAINER_ID"
-          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-srt/
+          # Run container and capture exit code
+          docker start -a "$CONTAINER_ID" || EXIT_CODE=$?
+
+          # Always copy files for debugging (even on failure)
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-srt/ || true
           docker rm "$CONTAINER_ID"
+
+          # Exit with original code
+          exit ${EXIT_CODE:-0}
 
       - name: Validate session manifest (v0.5.0)
         run: |
