@@ -77,6 +77,14 @@ jobs:
           docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-markdown/
           docker rm "$CONTAINER_ID"
 
+      - name: Validate session manifest (v0.5.0)
+        run: |
+          echo "Validating session manifest..."
+          SESSION_DIR=$(find test-workspace-markdown/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
+          echo "Session folder: $SESSION_DIR"
+          jq -e '.version == 1 and .contentId and .pipeline == "writing-kit"' "$SESSION_DIR/session.json"
+          echo "Session manifest valid"
+
       - name: Validate kit schema
         run: |
           echo "Validating kit schema..."
@@ -149,9 +157,17 @@ jobs:
           docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-vtt/
           docker rm "$CONTAINER_ID"
 
-      - name: Validate VTT kit
+      - name: Validate session manifest (v0.5.0)
         run: |
-          echo "Validating VTT kit..."
+          echo "Validating session manifest..."
+          SESSION_DIR=$(find test-workspace-vtt/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
+          echo "Session folder: $SESSION_DIR"
+          jq -e '.version == 1 and .contentId and .pipeline == "writing-kit"' "$SESSION_DIR/session.json"
+          echo "Session manifest valid"
+
+      - name: Validate VTT kit schema
+        run: |
+          echo "Validating VTT kit schema..."
           SESSION_DIR=$(find test-workspace-vtt/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
           echo "Session folder: $SESSION_DIR"
           jq -e '.contentId and .summary and .ideas and .suggestedOutline' "$SESSION_DIR/writing-kit.json"
@@ -208,9 +224,17 @@ jobs:
           docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-srt/
           docker rm "$CONTAINER_ID"
 
-      - name: Validate SRT kit
+      - name: Validate session manifest (v0.5.0)
         run: |
-          echo "Validating SRT kit..."
+          echo "Validating session manifest..."
+          SESSION_DIR=$(find test-workspace-srt/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
+          echo "Session folder: $SESSION_DIR"
+          jq -e '.version == 1 and .contentId and .pipeline == "writing-kit"' "$SESSION_DIR/session.json"
+          echo "Session manifest valid"
+
+      - name: Validate SRT kit schema
+        run: |
+          echo "Validating SRT kit schema..."
           SESSION_DIR=$(find test-workspace-srt/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
           echo "Session folder: $SESSION_DIR"
           jq -e '.contentId and .summary and .ideas and .suggestedOutline' "$SESSION_DIR/writing-kit.json"
