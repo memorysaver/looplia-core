@@ -1,0 +1,26 @@
+# Writing Kit Pipeline
+# Transform content into a structured writing kit
+
+name: writing-kit
+description: Transform content into a structured writing kit with summary, ideas, and outline
+
+outputs:
+  summary:
+    artifact: summary.json
+    agent: content-analyzer
+
+  ideas:
+    artifact: ideas.json
+    agent: idea-generator
+    requires: [summary]
+
+  outline:
+    artifact: outline.json
+    agent: writing-kit-builder
+    requires: [ideas]
+
+  writing-kit:
+    artifact: writing-kit.json
+    agent: writing-kit-builder
+    requires: [outline]
+    final: true

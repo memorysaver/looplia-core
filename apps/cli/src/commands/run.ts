@@ -1,7 +1,7 @@
 /**
- * Kit Command
+ * Run Command
  *
- * Build a complete writing kit from content.
+ * Run a pipeline to build writing kit from content.
  * Target complexity: ≤5
  */
 
@@ -14,11 +14,11 @@ import { renderKitResult } from "../renderers/kit-renderer";
 import { createRuntime } from "../runtime";
 
 /**
- * Run the kit command
+ * Run the pipeline command
  *
  * Parse → Validate → Execute → Render
  */
-export async function runKitCommand(args: string[]): Promise<void> {
+export async function runRunCommand(args: string[]): Promise<void> {
   const config = parseKitArgs(args);
 
   if (config.help) {

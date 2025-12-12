@@ -11,7 +11,6 @@ export type {
   AgentExecutor,
   CommandDefinition,
   CommandResult,
-  DisplayConfig,
   ExecutorOptions,
   PromptContext,
   StreamingEvent,
@@ -26,7 +25,6 @@ export {
   // Command Definitions
   kitCommand,
   registerCommand,
-  summarizeCommand,
 } from "./commands";
 export type {
   ContentItem,
@@ -42,6 +40,8 @@ export type {
   WritingIdeas,
   WritingQuestion,
 } from "./domain/ideas";
+export type { PipelineDefinition, PipelineOutput } from "./domain/pipeline";
+export type { SessionManifest } from "./domain/session";
 export type { ContentSummary, SummaryScore } from "./domain/summary";
 export type {
   UserProfile,
@@ -72,6 +72,9 @@ export {
 export {
   ContentItemSchema,
   ContentSummarySchema,
+  PipelineDefinitionSchema,
+  PipelineOutputSchema,
+  SessionManifestSchema,
   UserProfileSchema,
   validateContentItem,
   validateContentSummary,

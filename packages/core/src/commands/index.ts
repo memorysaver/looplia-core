@@ -15,14 +15,13 @@ export {
   hasCommand,
   registerCommand,
 } from "./registry";
-export { summarizeCommand } from "./summarize";
+
 // Types
 export type {
   AgentExecutor,
   CommandDefinition,
   CommandResult,
   CompleteEvent,
-  DisplayConfig,
   ErrorEvent,
   ExecutorOptions,
   ProgressEvent,
@@ -39,10 +38,8 @@ export type {
   UsageEvent,
 } from "./types";
 
-import { kitCommand } from "./kit";
 // Auto-register commands on import
+import { kitCommand } from "./kit";
 import { registerCommand } from "./registry";
-import { summarizeCommand } from "./summarize";
 
-registerCommand(summarizeCommand);
 registerCommand(kitCommand);

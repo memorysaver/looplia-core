@@ -9,8 +9,6 @@ tools: Read, Write
 
 Create article outline and assemble the complete WritingKit.
 
-**Note:** This agent assumes `summary.json` and `ideas.json` already exist in the session folder (created by content-analyzer and idea-generator subagents).
-
 ## Input
 
 Session folder: `contentItem/{id}/`
@@ -24,73 +22,83 @@ Session folder: `contentItem/{id}/`
 
 1. Read `contentItem/{id}/summary.json` for content analysis
 2. Read `contentItem/{id}/ideas.json` for writing ideas
-3. Read `user-profile.json` for target word count preference
+3. Read `user-profile.json` for target word count preference (default: 1000)
 
-### Step 2: Generate article outline
+### Step 2: Generate outline array
 
-Create a structured outline based on:
-- Content themes and narrative flow from summary
-- Best angles and hooks from ideas
-- User's target word count
+Create `suggestedOutline` array with 4-7 sections:
 
-Outline structure:
 ```json
 [
-  {
-    "heading": "Introduction",
-    "notes": "Hook with [best hook]. Introduce [main theme].",
-    "estimatedWords": 150
-  },
-  {
-    "heading": "Section 1: [Key Theme]",
-    "notes": "Explore [core idea]. Use [quote] for impact.",
-    "estimatedWords": 300
-  },
-  ...
+  { "heading": "Introduction", "notes": "Hook and main theme intro", "estimatedWords": 150 },
+  { "heading": "Section Title", "notes": "Key points to cover", "estimatedWords": 250 },
+  { "heading": "Conclusion", "notes": "Summary and call to action", "estimatedWords": 100 }
 ]
 ```
 
-Word count distribution:
-- Introduction: ~15% of target
-- Background/Context: ~20% of target
-- Main sections: ~35% of target
-- Implications/Applications: ~20% of target
-- Conclusion: ~10% of target
-
-Write outline to: `contentItem/{id}/outline.json`
+Write to: `contentItem/{id}/outline.json`
 
 ### Step 3: Assemble WritingKit
 
-Combine all components into final WritingKit:
+**CRITICAL: Use EXACTLY this schema. No extra fields allowed.**
 
 ```json
 {
-  "contentId": "{id}",
+  "contentId": "the-content-id",
   "source": {
-    "id": "{source.id}",
-    "label": "{summary.headline}",
-    "url": ""
+    "id": "source-id",
+    "label": "Content title or headline",
+    "url": "source URL or empty string"
   },
-  "summary": { /* from summary.json */ },
-  "ideas": { /* from ideas.json */ },
-  "suggestedOutline": [ /* from Step 2 */ ],
+  "summary": {
+    "contentId": "the-content-id",
+    "headline": "Main headline (10-200 chars)",
+    "tldr": "Brief summary (20-500 chars)",
+    "bullets": ["Key point 1", "Key point 2", "Key point 3"],
+    "tags": ["tag1", "tag2", "tag3"],
+    "sentiment": "positive|neutral|negative",
+    "category": "article|podcast|video|other",
+    "score": { "relevanceToUser": 0.75 },
+    "overview": "Comprehensive overview (50+ chars)",
+    "keyThemes": ["theme1", "theme2", "theme3"],
+    "detailedAnalysis": "Detailed analysis (100+ chars)",
+    "narrativeFlow": "How content progresses (50+ chars)",
+    "coreIdeas": [{ "concept": "Main idea", "explanation": "Explanation text" }],
+    "importantQuotes": [{ "text": "Quote text" }],
+    "context": "Background context (20+ chars)",
+    "relatedConcepts": ["concept1", "concept2"]
+  },
+  "ideas": {
+    "contentId": "the-content-id",
+    "hooks": [{ "text": "Hook text (5+ chars)", "type": "curiosity|emotional|controversy|statistic|story" }],
+    "angles": [{ "title": "Angle title", "description": "Description (10+ chars)", "relevanceScore": 0.8 }],
+    "questions": [{ "question": "Question text (10+ chars)", "type": "analytical|practical|philosophical|comparative" }]
+  },
+  "suggestedOutline": [
+    { "heading": "Section heading", "notes": "Section notes" }
+  ],
   "meta": {
-    "relevanceToUser": 0.0-1.0,
-    "estimatedReadingTimeMinutes": wordCount / 200
+    "relevanceToUser": 0.75,
+    "estimatedReadingTimeMinutes": 5
   }
 }
 ```
 
-Calculate metadata:
-- `relevanceToUser`: Use score from summary.json
-- `estimatedReadingTimeMinutes`: Total outline words / 200
+**FORBIDDEN fields (do NOT include):**
+- version
+- title
+- pipeline
+- metadata
+- status
+- createdAt
+
+**Calculate meta values:**
+- `relevanceToUser`: Copy from summary.json score.relevanceToUser (0.0-1.0)
+- `estimatedReadingTimeMinutes`: Total outline estimatedWords / 200, minimum 1
 
 Write to: `contentItem/{id}/writing-kit.json`
 
 ## Output
 
-Two files written:
-1. `contentItem/{id}/outline.json` - Article outline
-2. `contentItem/{id}/writing-kit.json` - Complete WritingKit
-
-Return the complete WritingKit JSON.
+1. Write `contentItem/{id}/outline.json` - The outline array
+2. Write `contentItem/{id}/writing-kit.json` - Complete WritingKit with EXACT schema above

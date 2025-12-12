@@ -160,35 +160,17 @@ export type PromptContext = {
 };
 
 /**
- * TUI display configuration
- */
-export type DisplayConfig = {
-  /** Title shown in the main TUI box header */
-  title: string;
-  /** Success message after completion */
-  successMessage: string;
-  /** Session info format (placeholder: {contentId}) */
-  sessionInfoFormat?: string;
-  /** Next step hint (null = no next step) */
-  nextStep?: {
-    description: string;
-    commandTemplate: string;
-  } | null;
-};
-
-/**
  * Command Definition - the core abstraction
  *
  * Defines everything needed to execute a command:
- * - How to display it (displayConfig)
  * - What prompt to send (promptTemplate)
  * - What output to expect (outputSchema)
+ *
+ * Note: Display configuration moved to CLI layer (Clean Architecture)
  */
 export type CommandDefinition<TOutput = unknown> = {
   /** Unique command name */
   name: string;
-  /** Display configuration for CLI */
-  displayConfig: DisplayConfig;
   /** Function that generates the prompt from context */
   promptTemplate: (context: PromptContext) => string;
   /** Zod schema for output validation */

@@ -2,7 +2,7 @@
 
 > Ubiquitous Language Reference for Domain-Driven Design
 >
-> **Version:** 0.4.0
+> **Version:** 0.5.0
 > **Last Updated:** 2025-12-12
 
 This glossary defines the shared vocabulary used throughout Looplia-Core. Consistent terminology enables clear communication between code, documentation, and team discussions.
@@ -163,12 +163,13 @@ Core abstraction for defining commands. Everything needed to execute a command.
 
 ```typescript
 type CommandDefinition<TOutput> = {
-  name: string;                              // Unique command name
-  displayConfig: DisplayConfig;              // TUI configuration
-  promptTemplate: (context: PromptContext) => string;  // Generates prompt
-  outputSchema: z.ZodType<TOutput>;         // Zod validation schema
+  name: string;                                       // Unique command name
+  promptTemplate: (context: PromptContext) => string; // Generates prompt
+  outputSchema: z.ZodType<TOutput>;                  // Zod validation schema
 };
 ```
+
+> **v0.5.0 Change:** `displayConfig` removed from CommandDefinition. Display configuration is now managed by CLI layer via `getDisplayConfig(commandName)`.
 
 ### CommandRegistry
 **Location:** `packages/core/src/commands/registry.ts`
@@ -207,9 +208,9 @@ Context passed to `promptTemplate` function.
 | `workspace` | `string` | Workspace root path |
 
 ### DisplayConfig
-**Type:** `packages/core/src/commands/types.ts`
+**Type:** `apps/cli/src/config/display-config.ts` (moved from core in v0.5.0)
 
-TUI display configuration for a command.
+TUI display configuration for a command. Now lives in CLI layer for Clean Architecture purity.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -217,6 +218,8 @@ TUI display configuration for a command.
 | `successMessage` | `string` | Message after completion |
 | `sessionInfoFormat` | `string?` | Session info format (uses `{contentId}`) |
 | `nextStep` | `{description, commandTemplate}?` | Follow-up command hint |
+
+> **v0.5.0 Change:** Moved from `packages/core/` to `apps/cli/src/config/`. Use `getDisplayConfig(commandName)` to retrieve.
 
 ### promptTemplate
 A function that generates the minimal prompt sent to the agent from a `PromptContext`. The prompt tells the agent **what** to accomplish, not **how**.
@@ -267,9 +270,16 @@ Markdown files that define agent behavior. Located in `plugins/looplia-writer/`.
 - `skills/*/SKILL.md` → Skill definitions
 
 ### Smart Continuation
-Agent-controlled flow where the agent checks session state (existing files) and skips completed steps.
+Agent-controlled flow where the agent checks session state and skips completed steps.
 
-**Decision tree:**
+**v0.5.0 (Manifest-based):**
+The agent reads `session.json` to determine step states:
+- Check `steps.analyzing.status === "completed"` → Skip content-analyzer
+- Check `steps.generating_ideas.status === "completed"` → Skip idea-generator
+- Check `steps.assembling_kit.status === "completed"` → Return directly
+- If `sourceHash` changed → Restart from analyzing step
+
+**v0.4.0 (File-based, deprecated):**
 - Only `content.md` → Run full workflow
 - `+ summary.json` → Skip content-analyzer
 - `+ ideas.json` → Skip idea-generator
@@ -473,8 +483,48 @@ The `~/.looplia/` directory. Persistent filesystem for sessions, plugins, and co
 ├── CLAUDE.md           # Main agent instructions
 ├── user-profile.json   # User preferences
 ├── contentItem/        # Session storage
+│   └── {session-id}/
+│       ├── content.md      # Input content
+│       ├── session.json    # Session manifest (v0.5.0)
+│       ├── summary.json    # ContentSummary
+│       ├── ideas.json      # WritingIdeas
+│       ├── outline.json    # OutlineSection[]
+│       └── writing-kit.json # WritingKit
 └── .claude/            # Plugins (agents, skills)
 ```
+
+### SessionManifest (v0.5.0)
+**Type:** `packages/core/src/domain/session.ts`
+
+Minimal manifest tracking step completion. Agent manages this file.
+
+```typescript
+type SessionManifest = {
+  version: 1;
+  contentId: string;
+  updatedAt: string;
+  steps: Partial<Record<StepName, "done">>;
+};
+```
+
+**Design Decisions:**
+- Binary "done" or absent (no `pending`/`in_progress` states)
+- No content hashes (file timestamps suffice)
+- Agent-managed (TypeScript only provides types)
+
+### StepName (v0.5.0)
+**Type:** `packages/core/src/domain/session.ts`
+
+Named pipeline steps with artifact mappings:
+
+| StepName | Artifact | Subagent |
+|----------|----------|----------|
+| `analyzing` | `summary.json` | content-analyzer |
+| `generating_ideas` | `ideas.json` | idea-generator |
+| `building_outline` | `outline.json` | writing-kit-builder |
+| `assembling_kit` | `writing-kit.json` | writing-kit-builder |
+
+**Note:** `writing-kit-builder` produces both `outline.json` and `writing-kit.json`. Both steps are marked done together.
 
 ### Session
 A work session with unique ID. Contains all input/output files for one execution.
@@ -487,6 +537,7 @@ Session file storage at `~/.looplia/contentItem/{session-id}/`.
 
 Files:
 - `content.md` - Input content
+- `session.json` - Session manifest (v0.5.0)
 - `summary.json` - From content-analyzer
 - `ideas.json` - From idea-generator
 - `outline.json` - From writing-kit-builder
@@ -628,12 +679,14 @@ A topic the user is interested in.
 | Concept | Location |
 |---------|----------|
 | Domain entities | `packages/core/src/domain/` |
+| Session manifest types | `packages/core/src/domain/session.ts` (v0.5.0) |
 | Command framework | `packages/core/src/commands/` |
 | Port interfaces | `packages/core/src/ports/` |
 | Services | `packages/core/src/services/` |
 | Mock adapters | `packages/core/src/adapters/mock/` |
 | Provider (SDK) | `packages/provider/src/claude-agent-sdk/` |
 | CLI commands | `apps/cli/src/commands/` |
+| Display config | `apps/cli/src/config/display-config.ts` (v0.5.0) |
 | Runtime | `apps/cli/src/runtime/` |
 | TUI components | `apps/cli/src/components/` |
 | Plugins | `plugins/looplia-writer/` |

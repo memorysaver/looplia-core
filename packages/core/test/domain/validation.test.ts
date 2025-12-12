@@ -2,6 +2,9 @@ import { describe, expect, it } from "bun:test";
 import {
   validateContentItem,
   validateContentSummary,
+  validatePipelineDefinition,
+  validatePipelineOutput,
+  validateSessionManifest,
   validateUserProfile,
   validateWritingIdeas,
 } from "../../src/validation/schemas";
@@ -219,5 +222,251 @@ describe("WritingIdeas validation", () => {
 
     const result = validateWritingIdeas(invalid);
     expect(result.success).toBe(false);
+  });
+});
+
+describe("SessionManifest validation", () => {
+  it("should accept valid session manifest", () => {
+    const valid = {
+      version: 1,
+      contentId: "article-2025-12-12-a1b2c3",
+      pipeline: "writing-kit",
+      desiredOutput: "writing-kit.json",
+      updatedAt: "2025-12-12T10:35:42.000Z",
+      steps: {},
+    };
+
+    const result = validateSessionManifest(valid);
+    expect(result.success).toBe(true);
+  });
+
+  it("should accept manifest with done steps", () => {
+    const valid = {
+      version: 1,
+      contentId: "article-2025-12-12-a1b2c3",
+      pipeline: "writing-kit",
+      desiredOutput: "writing-kit.json",
+      updatedAt: "2025-12-12T10:35:42.000Z",
+      steps: {
+        analyzing: "done",
+        generating_ideas: "done",
+      },
+    };
+
+    const result = validateSessionManifest(valid);
+    expect(result.success).toBe(true);
+  });
+
+  it("should reject invalid version (not 1)", () => {
+    const invalid = {
+      version: 2,
+      contentId: "article-2025-12-12-a1b2c3",
+      pipeline: "writing-kit",
+      desiredOutput: "writing-kit.json",
+      updatedAt: "2025-12-12T10:35:42.000Z",
+      steps: {},
+    };
+
+    const result = validateSessionManifest(invalid);
+    expect(result.success).toBe(false);
+  });
+
+  it("should reject missing contentId", () => {
+    const invalid = {
+      version: 1,
+      pipeline: "writing-kit",
+      desiredOutput: "writing-kit.json",
+      updatedAt: "2025-12-12T10:35:42.000Z",
+      steps: {},
+    };
+
+    const result = validateSessionManifest(invalid);
+    expect(result.success).toBe(false);
+  });
+
+  it("should reject missing pipeline", () => {
+    const invalid = {
+      version: 1,
+      contentId: "article-2025-12-12-a1b2c3",
+      desiredOutput: "writing-kit.json",
+      updatedAt: "2025-12-12T10:35:42.000Z",
+      steps: {},
+    };
+
+    const result = validateSessionManifest(invalid);
+    expect(result.success).toBe(false);
+  });
+
+  it("should reject missing desiredOutput", () => {
+    const invalid = {
+      version: 1,
+      contentId: "article-2025-12-12-a1b2c3",
+      pipeline: "writing-kit",
+      updatedAt: "2025-12-12T10:35:42.000Z",
+      steps: {},
+    };
+
+    const result = validateSessionManifest(invalid);
+    expect(result.success).toBe(false);
+  });
+
+  it("should reject invalid step values (not 'done')", () => {
+    const invalid = {
+      version: 1,
+      contentId: "article-2025-12-12-a1b2c3",
+      pipeline: "writing-kit",
+      desiredOutput: "writing-kit.json",
+      updatedAt: "2025-12-12T10:35:42.000Z",
+      steps: {
+        analyzing: "in_progress",
+      },
+    };
+
+    const result = validateSessionManifest(invalid);
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("PipelineDefinition validation", () => {
+  it("should accept valid pipeline definition", () => {
+    const valid = {
+      name: "writing-kit",
+      description: "Build a complete writing kit from source content",
+      outputs: {
+        summary: {
+          artifact: "summary.json",
+          agent: "content-analyzer",
+        },
+      },
+    };
+
+    const result = validatePipelineDefinition(valid);
+    expect(result.success).toBe(true);
+  });
+
+  it("should reject missing name", () => {
+    const invalid = {
+      description: "Build a complete writing kit from source content",
+      outputs: {
+        summary: {
+          artifact: "summary.json",
+          agent: "content-analyzer",
+        },
+      },
+    };
+
+    const result = validatePipelineDefinition(invalid);
+    expect(result.success).toBe(false);
+  });
+
+  it("should reject missing description", () => {
+    const invalid = {
+      name: "writing-kit",
+      outputs: {
+        summary: {
+          artifact: "summary.json",
+          agent: "content-analyzer",
+        },
+      },
+    };
+
+    const result = validatePipelineDefinition(invalid);
+    expect(result.success).toBe(false);
+  });
+
+  it("should reject missing outputs", () => {
+    const invalid = {
+      name: "writing-kit",
+      description: "Build a complete writing kit from source content",
+    };
+
+    const result = validatePipelineDefinition(invalid);
+    expect(result.success).toBe(false);
+  });
+
+  it("should accept output with requires array", () => {
+    const valid = {
+      name: "writing-kit",
+      description: "Build a complete writing kit from source content",
+      outputs: {
+        ideas: {
+          artifact: "ideas.json",
+          agent: "idea-generator",
+          requires: ["summary"],
+        },
+      },
+    };
+
+    const result = validatePipelineDefinition(valid);
+    expect(result.success).toBe(true);
+  });
+
+  it("should accept output with final flag", () => {
+    const valid = {
+      name: "writing-kit",
+      description: "Build a complete writing kit from source content",
+      outputs: {
+        kit: {
+          artifact: "writing-kit.json",
+          agent: "writing-kit-builder",
+          final: true,
+        },
+      },
+    };
+
+    const result = validatePipelineDefinition(valid);
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("PipelineOutput validation", () => {
+  it("should accept valid output with artifact and agent", () => {
+    const valid = {
+      artifact: "summary.json",
+      agent: "content-analyzer",
+    };
+
+    const result = validatePipelineOutput(valid);
+    expect(result.success).toBe(true);
+  });
+
+  it("should reject missing artifact", () => {
+    const invalid = {
+      agent: "content-analyzer",
+    };
+
+    const result = validatePipelineOutput(invalid);
+    expect(result.success).toBe(false);
+  });
+
+  it("should reject missing agent", () => {
+    const invalid = {
+      artifact: "summary.json",
+    };
+
+    const result = validatePipelineOutput(invalid);
+    expect(result.success).toBe(false);
+  });
+
+  it("should accept output with optional requires", () => {
+    const valid = {
+      artifact: "ideas.json",
+      agent: "idea-generator",
+      requires: ["summary"],
+    };
+
+    const result = validatePipelineOutput(valid);
+    expect(result.success).toBe(true);
+  });
+
+  it("should accept output with optional final flag", () => {
+    const valid = {
+      artifact: "writing-kit.json",
+      agent: "writing-kit-builder",
+      final: true,
+    };
+
+    const result = validatePipelineOutput(valid);
+    expect(result.success).toBe(true);
   });
 });

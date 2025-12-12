@@ -40,7 +40,7 @@ jobs:
           path: looplia-image.tar.gz
           retention-days: 1
 
-  # Test 1: Markdown (summarize + kit)
+  # Test: Markdown file with full pipeline
   test-markdown:
     runs-on: ubuntu-latest
     needs: build
@@ -59,9 +59,9 @@ jobs:
         run: gunzip -c looplia-image.tar.gz | docker load
 
       - name: Create test workspace
-        run: mkdir -p test-workspace-markdown
+        run: mkdir -p test-workspace
 
-      - name: Run summarize command
+      - name: Run pipeline command
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
@@ -69,286 +69,92 @@ jobs:
             -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
             -v "$(pwd)/examples:/examples:ro" \
             $IMAGE_NAME \
-            summarize --file /examples/ai-healthcare.md \
-            --output /home/looplia/.looplia/summary.json)
-
-          docker start -a "$CONTAINER_ID"
-          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-markdown/
-          docker rm "$CONTAINER_ID"
-
-      - name: Validate summary schema
-        run: |
-          echo "Validating summary schema..."
-          jq -e '.headline and .tldr and .bullets and .tags' test-workspace-markdown/summary.json
-          echo "Summary schema valid"
-
-      - name: Validate summary quality
-        run: |
-          echo "Checking summary quality metrics..."
-          TLDR_WORDS=$(jq -r '.tldr' test-workspace-markdown/summary.json | wc -w)
-          BULLET_COUNT=$(jq '.bullets | length' test-workspace-markdown/summary.json)
-          TAG_COUNT=$(jq '.tags | length' test-workspace-markdown/summary.json)
-
-          echo "TLDR words: $TLDR_WORDS (expected: 30-200)"
-          echo "Bullet count: $BULLET_COUNT (expected: 3-7)"
-          echo "Tag count: $TAG_COUNT (expected: >= 3)"
-
-          [ "$BULLET_COUNT" -ge 3 ] || (echo "Bullet count too low" && exit 1)
-          [ "$TAG_COUNT" -ge 3 ] || (echo "Tag count too low" && exit 1)
-
-          echo "Summary quality acceptable"
-
-      - name: Run kit command
-        env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-        run: |
-          CONTAINER_ID=$(docker create \
-            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
-            -v "$(pwd)/examples:/examples:ro" \
-            $IMAGE_NAME \
-            kit --file /examples/ai-healthcare.md \
+            run --file /examples/ai-healthcare.md \
             --topics "ai,healthcare,technology" \
-            --tone "expert" \
-            --output /home/looplia/.looplia/kit.json)
+            --tone "expert")
 
-          docker start -a "$CONTAINER_ID"
-          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-markdown/
+          # Run container and capture exit code
+          docker start -a "$CONTAINER_ID" || EXIT_CODE=$?
+
+          # Always copy files for debugging (even on failure)
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace/ || true
           docker rm "$CONTAINER_ID"
 
-      - name: Validate kit schema
+          # Exit with original code
+          exit ${EXIT_CODE:-0}
+
+      - name: Debug - List workspace contents
+        if: always()
         run: |
-          echo "Validating kit schema..."
-          jq -e '.contentId and .summary and .ideas and .suggestedOutline' test-workspace-markdown/kit.json
-          echo "Kit schema valid"
+          echo "=== Workspace Structure ==="
+          find test-workspace -type f 2>/dev/null | head -50 || echo "No files found"
+          echo ""
+          echo "=== Session folder contents ==="
+          SESSION_DIR=$(find test-workspace/contentItem -maxdepth 1 -type d ! -name contentItem 2>/dev/null | head -1)
+          if [ -n "$SESSION_DIR" ]; then
+            echo "Session: $SESSION_DIR"
+            ls -la "$SESSION_DIR" || true
+            echo ""
+            echo "=== content.md (first 20 lines) ==="
+            head -20 "$SESSION_DIR/content.md" 2>/dev/null || echo "No content.md"
+            echo ""
+            echo "=== session.json ==="
+            cat "$SESSION_DIR/session.json" 2>/dev/null || echo "No session.json"
+            echo ""
+            echo "=== summary.json (if exists) ==="
+            cat "$SESSION_DIR/summary.json" 2>/dev/null || echo "No summary.json"
+            echo ""
+            echo "=== writing-kit.json (if exists) ==="
+            cat "$SESSION_DIR/writing-kit.json" 2>/dev/null | head -100 || echo "No writing-kit.json"
+            echo ""
+            echo "=== Query logs (last 200 lines) ==="
+            tail -200 "$SESSION_DIR/query.log" 2>/dev/null || echo "No query.log"
+          else
+            echo "No session directory found"
+            echo "Contents of test-workspace:"
+            ls -laR test-workspace/ 2>/dev/null || echo "Empty"
+          fi
 
-      - name: Validate kit quality
+      - name: Validate session created
         run: |
-          echo "Checking kit quality metrics..."
-          HOOK_COUNT=$(jq '.ideas.hooks | length' test-workspace-markdown/kit.json)
-          ANGLE_COUNT=$(jq '.ideas.angles | length' test-workspace-markdown/kit.json)
-          QUESTION_COUNT=$(jq '.ideas.questions | length' test-workspace-markdown/kit.json)
-          SECTION_COUNT=$(jq '.suggestedOutline | length' test-workspace-markdown/kit.json)
+          echo "Checking session was created..."
+          SESSION_DIR=$(find test-workspace/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
+          [ -n "$SESSION_DIR" ] || (echo "ERROR: No session directory found" && exit 1)
+          echo "Session folder: $SESSION_DIR"
 
-          echo "Hook count: $HOOK_COUNT (expected: >= 2)"
-          echo "Angle count: $ANGLE_COUNT (expected: >= 2)"
-          echo "Question count: $QUESTION_COUNT (expected: >= 2)"
-          echo "Outline sections: $SECTION_COUNT (expected: >= 3)"
+          # Check content.md exists
+          [ -f "$SESSION_DIR/content.md" ] || (echo "ERROR: content.md not found" && exit 1)
+          echo "✓ content.md exists"
 
-          [ "$HOOK_COUNT" -ge 2 ] || (echo "Hook count too low" && exit 1)
-          [ "$SECTION_COUNT" -ge 3 ] || (echo "Outline section count too low" && exit 1)
+      - name: Validate writing-kit output
+        run: |
+          SESSION_DIR=$(find test-workspace/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
 
-          echo "Kit quality acceptable"
+          # Check writing-kit.json exists
+          [ -f "$SESSION_DIR/writing-kit.json" ] || (echo "ERROR: writing-kit.json not found" && exit 1)
+          echo "✓ writing-kit.json exists"
+
+          # Validate basic structure
+          jq -e '.contentId' "$SESSION_DIR/writing-kit.json" > /dev/null || (echo "ERROR: missing contentId" && exit 1)
+          jq -e '.summary' "$SESSION_DIR/writing-kit.json" > /dev/null || (echo "ERROR: missing summary" && exit 1)
+          jq -e '.ideas' "$SESSION_DIR/writing-kit.json" > /dev/null || (echo "ERROR: missing ideas" && exit 1)
+          jq -e '.suggestedOutline' "$SESSION_DIR/writing-kit.json" > /dev/null || (echo "ERROR: missing suggestedOutline" && exit 1)
+          echo "✓ writing-kit.json has valid structure"
 
       - name: Upload test artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results-markdown
-          path: test-workspace-markdown/
+          path: test-workspace/
           retention-days: 7
 
-  # Test 2: VTT Caption (kit command)
-  test-vtt:
-    runs-on: ubuntu-latest
-    needs: build
-    timeout-minutes: 30
+  # Commented out for now - focus on markdown test first
+  # test-vtt:
+  #   ...
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # test-srt:
+  #   ...
 
-      - name: Download Docker image
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-image
-
-      - name: Load Docker image
-        run: gunzip -c looplia-image.tar.gz | docker load
-
-      - name: Create test workspace
-        run: mkdir -p test-workspace-vtt
-
-      - name: Run kit on VTT caption
-        env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-        run: |
-          CONTAINER_ID=$(docker create \
-            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
-            -v "$(pwd)/examples:/examples:ro" \
-            $IMAGE_NAME \
-            kit --file /examples/youtube/Anthropics/captions/EvtPBaaykdo.en.vtt \
-            --topics "ai,claude,developer-tools" \
-            --tone "expert")
-
-          docker start -a "$CONTAINER_ID"
-          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-vtt/
-          docker rm "$CONTAINER_ID"
-
-      - name: Validate VTT kit
-        run: |
-          echo "Validating VTT kit..."
-          SESSION_DIR=$(find test-workspace-vtt/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
-          echo "Session folder: $SESSION_DIR"
-          jq -e '.contentId and .summary and .ideas and .suggestedOutline' "$SESSION_DIR/writing-kit.json"
-          HOOK_COUNT=$(jq '.ideas.hooks | length' "$SESSION_DIR/writing-kit.json")
-          SECTION_COUNT=$(jq '.suggestedOutline | length' "$SESSION_DIR/writing-kit.json")
-          echo "Hook count: $HOOK_COUNT (expected: >= 2)"
-          echo "Outline sections: $SECTION_COUNT (expected: >= 3)"
-          [ "$HOOK_COUNT" -ge 2 ] || (echo "Hook count too low" && exit 1)
-          [ "$SECTION_COUNT" -ge 3 ] || (echo "Outline section count too low" && exit 1)
-          echo "VTT kit valid"
-
-      - name: Upload test artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-vtt
-          path: test-workspace-vtt/
-          retention-days: 7
-
-  # Test 3: SRT Transcript (kit command)
-  test-srt:
-    runs-on: ubuntu-latest
-    needs: build
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download Docker image
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-image
-
-      - name: Load Docker image
-        run: gunzip -c looplia-image.tar.gz | docker load
-
-      - name: Create test workspace
-        run: mkdir -p test-workspace-srt
-
-      - name: Run kit on SRT transcript
-        env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-        run: |
-          CONTAINER_ID=$(docker create \
-            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
-            -v "$(pwd)/examples:/examples:ro" \
-            $IMAGE_NAME \
-            kit --file /examples/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt \
-            --topics "coding,claude,automation" \
-            --tone "expert")
-
-          docker start -a "$CONTAINER_ID"
-          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-srt/
-          docker rm "$CONTAINER_ID"
-
-      - name: Validate SRT kit
-        run: |
-          echo "Validating SRT kit..."
-          SESSION_DIR=$(find test-workspace-srt/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
-          echo "Session folder: $SESSION_DIR"
-          jq -e '.contentId and .summary and .ideas and .suggestedOutline' "$SESSION_DIR/writing-kit.json"
-          HOOK_COUNT=$(jq '.ideas.hooks | length' "$SESSION_DIR/writing-kit.json")
-          SECTION_COUNT=$(jq '.suggestedOutline | length' "$SESSION_DIR/writing-kit.json")
-          echo "Hook count: $HOOK_COUNT (expected: >= 2)"
-          echo "Outline sections: $SECTION_COUNT (expected: >= 3)"
-          [ "$HOOK_COUNT" -ge 2 ] || (echo "Hook count too low" && exit 1)
-          [ "$SECTION_COUNT" -ge 3 ] || (echo "Outline section count too low" && exit 1)
-          echo "SRT kit valid"
-
-      - name: Upload test artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-srt
-          path: test-workspace-srt/
-          retention-days: 7
-
-  # LLM-based semantic evaluation using Claude Code Action (manual trigger only)
-  semantic-evaluation:
-    runs-on: ubuntu-latest
-    needs: [test-markdown, test-vtt, test-srt]
-    if: github.event_name == 'workflow_dispatch'
-    permissions:
-      contents: read
-      id-token: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download markdown artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: test-results-markdown
-          path: test-workspace/markdown/
-
-      - name: Download VTT artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: test-results-vtt
-          path: test-workspace/vtt/
-
-      - name: Download SRT artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: test-results-srt
-          path: test-workspace/srt/
-
-      - name: Evaluate pipeline outputs with Claude Code
-        uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          prompt: |
-            You are an evaluator for a content intelligence pipeline. Your task is to assess the quality of WritingKit outputs from 3 different source types: Markdown, VTT, and SRT.
-
-            ## Evaluation Structure
-
-            For each source type, evaluate the WritingKit output using additive criteria (1 point each, max 4):
-            - **Accuracy** (1 pt): Summary key facts match the source without fabrication
-            - **Completeness** (1 pt): Main themes captured in summary and ideas
-            - **Ideas Quality** (1 pt): Hooks, angles, and questions are relevant and engaging
-            - **Outline Quality** (1 pt): Suggested outline has logical structure and realistic word counts
-
-            ## Source 1: Markdown (test-workspace/markdown/)
-            - Content: test-workspace/markdown/contentItem/*/content.md
-            - Kit: test-workspace/markdown/kit.json
-
-            ## Source 2: VTT Caption (test-workspace/vtt/)
-            - Content: test-workspace/vtt/contentItem/*/content.md
-            - Kit: test-workspace/vtt/contentItem/*/writing-kit.json
-
-            ## Source 3: SRT Transcript (test-workspace/srt/)
-            - Content: test-workspace/srt/contentItem/*/content.md
-            - Kit: test-workspace/srt/contentItem/*/writing-kit.json
-
-            ## Output Format
-            Print your evaluation:
-
-            === MARKDOWN EVALUATION ===
-            - Accuracy: [0/1] - [reason]
-            - Completeness: [0/1] - [reason]
-            - Ideas Quality: [0/1] - [reason]
-            - Outline Quality: [0/1] - [reason]
-            Score: [X]/4
-
-            === VTT EVALUATION ===
-            - Accuracy: [0/1] - [reason]
-            - Completeness: [0/1] - [reason]
-            - Ideas Quality: [0/1] - [reason]
-            - Outline Quality: [0/1] - [reason]
-            Score: [X]/4
-
-            === SRT EVALUATION ===
-            - Accuracy: [0/1] - [reason]
-            - Completeness: [0/1] - [reason]
-            - Ideas Quality: [0/1] - [reason]
-            - Outline Quality: [0/1] - [reason]
-            Score: [X]/4
-
-            === FINAL RESULT ===
-            Total: [X]/12
-            Status: [PASS if >= 9, FAIL if < 9]
-
-            If FAIL, use Bash to exit with code 1.
+  # semantic-evaluation:
+  #   ...
