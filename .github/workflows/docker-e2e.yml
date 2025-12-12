@@ -40,7 +40,7 @@ jobs:
           path: looplia-image.tar.gz
           retention-days: 1
 
-  # Test 1: Markdown (summarize + kit)
+  # Test 1: Markdown (run command)
   test-markdown:
     runs-on: ubuntu-latest
     needs: build
@@ -61,7 +61,7 @@ jobs:
       - name: Create test workspace
         run: mkdir -p test-workspace-markdown
 
-      - name: Run summarize command
+      - name: Run pipeline command
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
@@ -69,47 +69,9 @@ jobs:
             -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
             -v "$(pwd)/examples:/examples:ro" \
             $IMAGE_NAME \
-            summarize --file /examples/ai-healthcare.md \
-            --output /home/looplia/.looplia/summary.json)
-
-          docker start -a "$CONTAINER_ID"
-          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-markdown/
-          docker rm "$CONTAINER_ID"
-
-      - name: Validate summary schema
-        run: |
-          echo "Validating summary schema..."
-          jq -e '.headline and .tldr and .bullets and .tags' test-workspace-markdown/summary.json
-          echo "Summary schema valid"
-
-      - name: Validate summary quality
-        run: |
-          echo "Checking summary quality metrics..."
-          TLDR_WORDS=$(jq -r '.tldr' test-workspace-markdown/summary.json | wc -w)
-          BULLET_COUNT=$(jq '.bullets | length' test-workspace-markdown/summary.json)
-          TAG_COUNT=$(jq '.tags | length' test-workspace-markdown/summary.json)
-
-          echo "TLDR words: $TLDR_WORDS (expected: 30-200)"
-          echo "Bullet count: $BULLET_COUNT (expected: 3-7)"
-          echo "Tag count: $TAG_COUNT (expected: >= 3)"
-
-          [ "$BULLET_COUNT" -ge 3 ] || (echo "Bullet count too low" && exit 1)
-          [ "$TAG_COUNT" -ge 3 ] || (echo "Tag count too low" && exit 1)
-
-          echo "Summary quality acceptable"
-
-      - name: Run kit command
-        env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-        run: |
-          CONTAINER_ID=$(docker create \
-            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
-            -v "$(pwd)/examples:/examples:ro" \
-            $IMAGE_NAME \
-            kit --file /examples/ai-healthcare.md \
+            run --file /examples/ai-healthcare.md \
             --topics "ai,healthcare,technology" \
-            --tone "expert" \
-            --output /home/looplia/.looplia/kit.json)
+            --tone "expert")
 
           docker start -a "$CONTAINER_ID"
           docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace-markdown/
@@ -118,16 +80,19 @@ jobs:
       - name: Validate kit schema
         run: |
           echo "Validating kit schema..."
-          jq -e '.contentId and .summary and .ideas and .suggestedOutline' test-workspace-markdown/kit.json
+          SESSION_DIR=$(find test-workspace-markdown/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
+          echo "Session folder: $SESSION_DIR"
+          jq -e '.contentId and .summary and .ideas and .suggestedOutline' "$SESSION_DIR/writing-kit.json"
           echo "Kit schema valid"
 
       - name: Validate kit quality
         run: |
           echo "Checking kit quality metrics..."
-          HOOK_COUNT=$(jq '.ideas.hooks | length' test-workspace-markdown/kit.json)
-          ANGLE_COUNT=$(jq '.ideas.angles | length' test-workspace-markdown/kit.json)
-          QUESTION_COUNT=$(jq '.ideas.questions | length' test-workspace-markdown/kit.json)
-          SECTION_COUNT=$(jq '.suggestedOutline | length' test-workspace-markdown/kit.json)
+          SESSION_DIR=$(find test-workspace-markdown/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
+          HOOK_COUNT=$(jq '.ideas.hooks | length' "$SESSION_DIR/writing-kit.json")
+          ANGLE_COUNT=$(jq '.ideas.angles | length' "$SESSION_DIR/writing-kit.json")
+          QUESTION_COUNT=$(jq '.ideas.questions | length' "$SESSION_DIR/writing-kit.json")
+          SECTION_COUNT=$(jq '.suggestedOutline | length' "$SESSION_DIR/writing-kit.json")
 
           echo "Hook count: $HOOK_COUNT (expected: >= 2)"
           echo "Angle count: $ANGLE_COUNT (expected: >= 2)"
@@ -147,7 +112,7 @@ jobs:
           path: test-workspace-markdown/
           retention-days: 7
 
-  # Test 2: VTT Caption (kit command)
+  # Test 2: VTT Caption (run command)
   test-vtt:
     runs-on: ubuntu-latest
     needs: build
@@ -168,7 +133,7 @@ jobs:
       - name: Create test workspace
         run: mkdir -p test-workspace-vtt
 
-      - name: Run kit on VTT caption
+      - name: Run pipeline on VTT caption
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
@@ -176,7 +141,7 @@ jobs:
             -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
             -v "$(pwd)/examples:/examples:ro" \
             $IMAGE_NAME \
-            kit --file /examples/youtube/Anthropics/captions/EvtPBaaykdo.en.vtt \
+            run --file /examples/youtube/Anthropics/captions/EvtPBaaykdo.en.vtt \
             --topics "ai,claude,developer-tools" \
             --tone "expert")
 
@@ -206,7 +171,7 @@ jobs:
           path: test-workspace-vtt/
           retention-days: 7
 
-  # Test 3: SRT Transcript (kit command)
+  # Test 3: SRT Transcript (run command)
   test-srt:
     runs-on: ubuntu-latest
     needs: build
@@ -227,7 +192,7 @@ jobs:
       - name: Create test workspace
         run: mkdir -p test-workspace-srt
 
-      - name: Run kit on SRT transcript
+      - name: Run pipeline on SRT transcript
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
@@ -235,7 +200,7 @@ jobs:
             -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
             -v "$(pwd)/examples:/examples:ro" \
             $IMAGE_NAME \
-            kit --file /examples/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt \
+            run --file /examples/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt \
             --topics "coding,claude,automation" \
             --tone "expert")
 
@@ -313,7 +278,7 @@ jobs:
 
             ## Source 1: Markdown (test-workspace/markdown/)
             - Content: test-workspace/markdown/contentItem/*/content.md
-            - Kit: test-workspace/markdown/kit.json
+            - Kit: test-workspace/markdown/contentItem/*/writing-kit.json
 
             ## Source 2: VTT Caption (test-workspace/vtt/)
             - Content: test-workspace/vtt/contentItem/*/content.md
