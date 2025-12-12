@@ -32,15 +32,6 @@ export const DISPLAY_CONFIGS: Record<string, DisplayConfig> = {
     sessionInfoFormat: "~/.looplia/contentItem/{contentId}/writing-kit.json",
     nextStep: null,
   },
-  summarize: {
-    title: "Content Summarizer",
-    successMessage: "Summary complete",
-    sessionInfoFormat: "~/.looplia/contentItem/{contentId}/summary.json",
-    nextStep: {
-      description: "Next step:",
-      commandTemplate: "looplia kit --session-id {contentId}",
-    },
-  },
 };
 
 /**

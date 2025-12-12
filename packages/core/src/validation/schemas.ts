@@ -263,3 +263,33 @@ export function validateUserProfile(
   }
   return { success: false, error: { message: result.error.message } };
 }
+
+export function validateSessionManifest(
+  data: unknown
+): ValidationResult<z.infer<typeof SessionManifestSchema>> {
+  const result = SessionManifestSchema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+  return { success: false, error: { message: result.error.message } };
+}
+
+export function validatePipelineDefinition(
+  data: unknown
+): ValidationResult<z.infer<typeof PipelineDefinitionSchema>> {
+  const result = PipelineDefinitionSchema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+  return { success: false, error: { message: result.error.message } };
+}
+
+export function validatePipelineOutput(
+  data: unknown
+): ValidationResult<z.infer<typeof PipelineOutputSchema>> {
+  const result = PipelineOutputSchema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+  return { success: false, error: { message: result.error.message } };
+}

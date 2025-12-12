@@ -80,6 +80,69 @@ describe("CLI E2E Tests", () => {
     });
   });
 
+  describe("Init Command", () => {
+    it("should show init help with --help flag", async () => {
+      const result = await execCLI(["init", "--help"]);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain("looplia init");
+      expect(result.stdout).toContain("--yes");
+      expect(result.stdout).toContain("Initialize or refresh workspace");
+    });
+
+    it("should show init help with -h flag", async () => {
+      const result = await execCLI(["init", "-h"]);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain("looplia init");
+    });
+
+    // Note: Testing `looplia init` without --yes would hang waiting for stdin input.
+    // Testing `looplia init --yes` would destructively modify ~/.looplia/.
+    // These cases require integration test environment with isolated HOME.
+  });
+
+  describe("Config Command", () => {
+    it("should show config help with --help flag", async () => {
+      const result = await execCLI(["config", "--help"]);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain("looplia config");
+      expect(result.stdout).toContain("topics");
+      expect(result.stdout).toContain("style");
+      expect(result.stdout).toContain("show");
+    });
+
+    it("should show config help with -h flag", async () => {
+      const result = await execCLI(["config", "-h"]);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain("looplia config");
+    });
+
+    it("should show config help when no subcommand provided", async () => {
+      const result = await execCLI(["config"]);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain("looplia config");
+      expect(result.stdout).toContain("Subcommands:");
+    });
+
+    it("should error on unknown config subcommand", async () => {
+      const result = await execCLI(["config", "unknown-subcommand"]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain("Unknown subcommand: unknown-subcommand");
+    });
+
+    it("should error when topics subcommand has no arguments", async () => {
+      const result = await execCLI(["config", "topics"]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain("Error: Topics required");
+    });
+  });
+
   describe("Run Command", () => {
     it("should build writing kit with all options", async () => {
       const content = readFileSync(
@@ -329,7 +392,7 @@ describe("CLI E2E Tests", () => {
       const result = await execCLI(["run", "--help"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia kit");
+      expect(result.stdout).toContain("looplia run");
       expect(result.stdout).toContain("--file");
       expect(result.stdout).toContain("--topics");
       expect(result.stdout).toContain("--tone");

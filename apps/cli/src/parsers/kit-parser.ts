@@ -52,11 +52,11 @@ export function validateKitInput(config: KitConfig): void {
  */
 export function printKitHelp(): void {
   console.log(`
-looplia kit - Build a complete writing kit from content
+looplia run - Build a complete writing kit from content
 
 Usage:
-  looplia kit --file <path> [options]
-  looplia kit --session-id <id> [options]
+  looplia run --file <path> [options]
+  looplia run --session-id <id> [options]
 
 Options:
   --file, -f         Path to content file (creates new session)
@@ -79,9 +79,9 @@ Environment:
   ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN  Required unless --mock is specified
 
 Example:
-  looplia kit --file ./article.txt --topics "ai,productivity" --tone expert
-  looplia kit --session-id article-2025-12-08-abc123 --tone expert
-  looplia kit --file ./notes.md --no-streaming | jq .summary
+  looplia run --file ./article.txt --topics "ai,productivity" --tone expert
+  looplia run --session-id article-2025-12-08-abc123 --tone expert
+  looplia run --file ./notes.md --no-streaming | jq .summary
 `);
 }
 
