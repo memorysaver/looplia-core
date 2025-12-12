@@ -20,9 +20,6 @@ import type { CommandDefinition, PromptContext } from "./types";
 function buildPrompt(ctx: PromptContext): string {
   return `Task: Build WritingKit for session: contentItem/${ctx.contentId}
 
-## Pipeline: writing-kit
-Reference: ~/.looplia/pipelines/writing-kit.yaml
-
 ## Session State
 Check session.json in contentItem/${ctx.contentId}/ for completed steps.
 If missing, create with: { "version": 1, "contentId": "${ctx.contentId}", "pipeline": "writing-kit", "desiredOutput": "writing-kit", "updatedAt": "<ISO timestamp>", "steps": {} }
