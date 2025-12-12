@@ -13,28 +13,36 @@ These are the current, authoritative documents for the v0.5.0 architecture:
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
-| [DESIGN-0.5.0.md](./DESIGN-0.5.0.md) | v0.5.0 improvements: Session Manifest, Validation, DisplayConfig decoupling | Developers, Architects |
+| [AGENTIC_CONCEPT-0.3.md](./AGENTIC_CONCEPT-0.3.md) | Claude Agent SDK design, Pipeline-as-Configuration, Session Manifest | Architects, System Designers |
+| [TEST_PLAN-0.3.md](./TEST_PLAN-0.3.md) | Test architecture, Husky workflow, CI/CD, LLM-as-Judge | QA, Developers |
 | [DESIGN-0.4.0.md](./DESIGN-0.4.0.md) | Base architecture: folder structure, command framework, streaming events | Developers, Architects |
-| [AGENTIC_CONCEPT-0.2.md](./AGENTIC_CONCEPT-0.2.md) | Claude Agent SDK conceptual design, execution cycle, call stack, Skills | Architects, System Designers |
 | [GLOSSARY.md](./GLOSSARY.md) | Ubiquitous language reference (domain terms + TypeScript types) | All team members |
 | [AGENT-SKILLS.md](./AGENT-SKILLS.md) | Anthropic official Agent Skills documentation (reference) | Developers |
-| [TEST_PLAN-0.2.md](./TEST_PLAN-0.2.md) | Test architecture, Husky workflow, CI/CD, LLM-as-Judge | QA, Developers |
 
 ---
 
 ## Document Overview
 
-### DESIGN-0.5.0.md
+### AGENTIC_CONCEPT-0.3.md
 
-The v0.5.0 architecture improvements document covering:
+The v0.5.0 agent system design document covering:
 
-- **Problem Analysis** - Friction points from v0.4.0 (continuation fragility, missing validation, architecture leak)
-- **Session Manifest System** - `session.json` for reliable state tracking with content hashes
-- **Intermediate Artifact Validation** - Zod validation after each artifact write with retry hints
-- **DisplayConfig Decoupling** - Moving presentation config from core to CLI layer
-- **Updated Architecture Overview** - New files and layer responsibilities
-- **Migration Strategy** - Legacy session migration and breaking change handling
-- **Implementation Plan** - Phased approach with file-level details
+- **Pipeline-as-Configuration** - Declarative YAML workflow definitions
+- **Session Manifest** - `session.json` for manifest-based state tracking
+- **Execution Cycle** - 7-layer flow with pipeline awareness
+- **Call Stack Concept** - Hierarchical execution with 4 stack frames
+- **Skills** - Filesystem-based capabilities (SDK convention: `.claude/skills/`)
+- **Smart Continuation** - Manifest-based state tracking with dual verification
+
+### TEST_PLAN-0.3.md
+
+The v0.5.0 test strategy document covering:
+
+- **Test Architecture** - Test pyramid aligned with Clean Architecture
+- **Test Inventory** - 18 test files across CLI, Core, Provider packages
+- **CLI Commands** - Updated for `init`, `run`, `config` commands
+- **Docker E2E** - Container testing with real API calls
+- **LLM-as-Judge** - Semantic evaluation with Claude
 
 ### DESIGN-0.4.0.md
 
@@ -49,58 +57,13 @@ The base architecture document covering:
 - **Streaming Event System** - 12 event types for real-time TUI
 - **Adding a New Command** - Step-by-step guide
 
-### AGENTIC_CONCEPT-0.2.md
-
-Conceptual design document focused on the Claude Agent SDK runtime model:
-
-1. **Introduction** - SDK-based agent runtime vs traditional API
-2. **Workspace** - File-based runtime environment (`~/.looplia/`)
-3. **Execution Cycle** - 7-layer flow (CLI → Provider → Main Agent → Subagent → Skill → Return → CLI)
-4. **Call Stack Concept** - Hierarchical execution with 4 stack frames
-5. **Skills** - Filesystem-based capabilities (SKILL.md artifacts)
-6. **Agent-to-Agent Communication** - File-based communication patterns
-7. **Smart Continuation** - Agent-controlled flow with state checking
-8. **Reference** - Anthropic official documentation summary
-
 ### GLOSSARY.md
 
-Ubiquitous language reference organized into 10 categories:
-
-1. Core Domain Concepts (ContentItem, WritingKit, etc.)
-2. Architecture Layers (CLI, Core, Provider)
-3. Command Framework (CommandDefinition, PromptContext, etc.)
-4. Agent System (Main Agent, Subagent, Skill, Plugin)
-5. Streaming Events (12 event types)
-6. Runtime Concepts (Workspace, Session, CLAUDE.md)
-7. Provider Concepts (AgentExecutor, SDK Config)
-8. Workspace & Session (contentItem folder, Smart Continuation)
-9. Result Patterns (CommandResult, Success/Error)
-10. Writing Domain (WritingIdeas, OutlineSection, etc.)
+Ubiquitous language reference organized into 10 categories covering domain concepts, architecture layers, command framework, agent system, streaming events, and more.
 
 ### AGENT-SKILLS.md
 
-Reference document containing the official Anthropic documentation for Agent Skills:
-
-- Why use Skills (benefits, use cases)
-- How Skills work (progressive disclosure, three-level loading)
-- Skill structure (SKILL.md format, YAML frontmatter)
-- SDK integration (TypeScript and Python examples)
-- Skill locations and discovery
-- Security considerations
-- Troubleshooting guide
-
-### TEST_PLAN-0.2.md
-
-Comprehensive test strategy document aligned with v0.4.0 architecture:
-
-1. **Test Architecture Overview** - Test pyramid, layer mapping
-2. **Test Inventory** - All 20 test files documented
-3. **Local Development & Husky** - Pre-commit workflow, running tests
-4. **CI/CD Pipeline** - GitHub Actions workflows (ci.yml, docker-e2e.yml)
-5. **Docker E2E Testing** - Container setup, validation levels
-6. **LLM-as-Judge Evaluation** - Semantic evaluation with Claude
-7. **Test Patterns** - Mock patterns, StreamingEvent testing, security tests
-8. **Troubleshooting** - Common issues and solutions
+Reference document containing the official Anthropic documentation for Agent Skills, including skill structure, SDK integration, and discovery mechanisms.
 
 ---
 
@@ -110,6 +73,8 @@ Previous versions are preserved for reference:
 
 | Document | Version | Notes |
 |----------|---------|-------|
+| [AGENTIC_CONCEPT-0.2.md](./AGENTIC_CONCEPT-0.2.md) | v0.2 | Pre-pipeline agent design |
+| [TEST_PLAN-0.2.md](./TEST_PLAN-0.2.md) | v0.2 | Pre-v0.5.0 test plan |
 | [DESIGN-0.4.0.md](./DESIGN-0.4.0.md) | v0.4.0 | CommandDefinition abstraction, Clean Architecture |
 | [TEST_PLAN-0.1.md](./TEST_PLAN-0.1.md) | v0.1 | Original test plan (pre-v0.4.0) |
 | [AGENTIC_CONCEPT-0.1.md](./AGENTIC_CONCEPT-0.1.md) | v0.1 | Original agentic architecture concept |
@@ -130,22 +95,21 @@ Previous versions are preserved for reference:
 
 1. Start with [GLOSSARY.md](./GLOSSARY.md) to understand the terminology
 2. Read [DESIGN-0.4.0.md](./DESIGN-0.4.0.md) for base architecture overview
-3. Read [DESIGN-0.5.0.md](./DESIGN-0.5.0.md) for latest improvements
-4. Review [AGENTIC_CONCEPT-0.2.md](./AGENTIC_CONCEPT-0.2.md) for the agent system design
+3. Review [AGENTIC_CONCEPT-0.3.md](./AGENTIC_CONCEPT-0.3.md) for the agent system design
 
 ### For Developers
 
 - Adding a new command? See [DESIGN-0.4.0.md § Adding a New Command](./DESIGN-0.4.0.md#9-adding-a-new-command-step-by-step)
-- Understanding Session Manifest? See [DESIGN-0.5.0.md § Session Manifest](./DESIGN-0.5.0.md#3-session-manifest-system)
+- Understanding Pipeline-as-Configuration? See [AGENTIC_CONCEPT-0.3.md § Pipeline-as-Configuration](./AGENTIC_CONCEPT-0.3.md#3-pipeline-as-configuration)
 - Understanding Skills? See [AGENT-SKILLS.md](./AGENT-SKILLS.md)
-- Running tests? See [TEST_PLAN-0.2.md](./TEST_PLAN-0.2.md)
+- Running tests? See [TEST_PLAN-0.3.md](./TEST_PLAN-0.3.md)
 
 ### For Architects
 
-- Session state management: [DESIGN-0.5.0.md § Session Manifest](./DESIGN-0.5.0.md#3-session-manifest-system)
-- Artifact validation: [DESIGN-0.5.0.md § Intermediate Validation](./DESIGN-0.5.0.md#4-intermediate-artifact-validation)
-- Execution cycle: [AGENTIC_CONCEPT-0.2.md § The Execution Cycle](./AGENTIC_CONCEPT-0.2.md#3-the-execution-cycle)
-- Call stack concept: [AGENTIC_CONCEPT-0.2.md § The Call Stack Concept](./AGENTIC_CONCEPT-0.2.md#4-the-call-stack-concept)
+- Pipeline-as-Configuration: [AGENTIC_CONCEPT-0.3.md § Pipeline-as-Configuration](./AGENTIC_CONCEPT-0.3.md#3-pipeline-as-configuration)
+- Session state management: [AGENTIC_CONCEPT-0.3.md § Smart Continuation](./AGENTIC_CONCEPT-0.3.md#8-smart-continuation-manifest-based-state-tracking)
+- Execution cycle: [AGENTIC_CONCEPT-0.3.md § The Execution Cycle](./AGENTIC_CONCEPT-0.3.md#4-the-execution-cycle)
+- Call stack concept: [AGENTIC_CONCEPT-0.3.md § The Call Stack Concept](./AGENTIC_CONCEPT-0.3.md#5-the-call-stack-concept)
 - Clean Architecture mapping: [DESIGN-0.4.0.md § Clean Architecture Mapping](./DESIGN-0.4.0.md#8-clean-architecture-mapping)
 
 ---
@@ -166,30 +130,23 @@ Previous versions are preserved for reference:
               │                      │                      │
               ▼                      ▼                      ▼
     ┌─────────────────┐    ┌─────────────────┐    ┌───────────────┐
-    │ DESIGN-0.5.0.md │    │ AGENTIC_        │    │TEST_PLAN-0.2 │
-    │ (Improvements)  │    │ CONCEPT-0.2     │    │  (Testing)   │
-    └────────┬────────┘    │ (Agent Design)  │    └──────────────┘
-             │             └────────┬────────┘
+    │ AGENTIC_        │    │ DESIGN-0.4.0.md │    │TEST_PLAN-0.3 │
+    │ CONCEPT-0.3     │    │ (Architecture)  │    │  (Testing)   │
+    │ (Agent Design)  │    └────────┬────────┘    └──────────────┘
+    └────────┬────────┘             │
              │                      │
-             ▼                      │
-    ┌─────────────────┐             │
-    │ DESIGN-0.4.0.md │             │
-    │ (Architecture)  │◄────────────┘
-    └────────┬────────┘
-             │
-             ▼
-    ┌─────────────────┐
-    │ AGENT-SKILLS.md │
-    │ (SDK Reference) │
-    └─────────────────┘
+             │                      ▼
+             │             ┌─────────────────┐
+             └────────────►│ AGENT-SKILLS.md │
+                           │ (SDK Reference) │
+                           └─────────────────┘
 ```
 
 - **GLOSSARY.md** defines terms used across all documents
-- **DESIGN-0.5.0.md** documents v0.5.0 improvements (builds on v0.4.0)
+- **AGENTIC_CONCEPT-0.3.md** documents the agent design with Pipeline-as-Configuration
 - **DESIGN-0.4.0.md** documents the base implementation architecture
-- **AGENTIC_CONCEPT-0.2.md** documents the conceptual agent design
 - **AGENT-SKILLS.md** provides the Anthropic SDK reference
-- **TEST_PLAN-0.2.md** covers testing strategy
+- **TEST_PLAN-0.3.md** covers testing strategy for v0.5.0
 
 ---
 

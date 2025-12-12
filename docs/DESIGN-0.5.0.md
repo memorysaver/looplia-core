@@ -428,7 +428,7 @@ These items were considered but intentionally deferred to keep v0.5.0 focused:
 
 - **Previous Version:** See [DESIGN-0.4.0.md](./DESIGN-0.4.0.md) for v0.4.0 architecture
 - **Ubiquitous Language:** See [GLOSSARY.md](./GLOSSARY.md) for term definitions
-- **Agentic Concept:** See [AGENTIC_CONCEPT-0.2.md](./AGENTIC_CONCEPT-0.2.md) for agent system design
+- **Agentic Concept:** See [AGENTIC_CONCEPT-0.3.md](./AGENTIC_CONCEPT-0.3.md) for agent system design
 
 ---
 

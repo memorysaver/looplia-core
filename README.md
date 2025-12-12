@@ -12,25 +12,26 @@ Looplia Core is an agentic workflow platform powered by the Claude Agent SDK. It
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  CLI Commands (Workflows)                                   │
-│  └─ looplia kit → Writing workflow                          │
-│  └─ looplia [domain] → Future workflows                     │
+│  CLI Commands                                               │
+│  └─ looplia init   → Initialize workspace                   │
+│  └─ looplia run    → Execute pipeline workflow              │
+│  └─ looplia config → Manage user settings                   │
 └─────────────────────────────────────────────────────────────┘
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  CommandDefinition<T> + AgentExecutor                       │
-│  • One prompt per command                                   │
-│  • Typed output schemas (Zod)                               │
+│  Pipeline-as-Configuration + AgentExecutor                  │
+│  • YAML workflow definitions (pipelines/)                   │
+│  • Session manifest for smart continuation                  │
 │  • Real-time streaming events                               │
 └─────────────────────────────────────────────────────────────┘
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  Subagents & Skills (Composable Capabilities)               │
-│  • Domain-specific subagents (content-analyzer, etc.)       │
-│  • Reusable skills (SKILL.md files)                         │
-│  • File-based state & smart continuation                    │
+│  • Domain-specific subagents (.claude/agents/)              │
+│  • Reusable skills (.claude/skills/)                        │
+│  • Manifest-based state & smart continuation                │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -52,25 +53,25 @@ bun install
 # 2. Build the project
 bun run build
 
-# 3. Bootstrap workspace (creates ~/.looplia/ with agents and skills)
-bun run apps/cli/dist/index.js bootstrap
+# 3. Initialize workspace (creates ~/.looplia/ with agents, skills, pipelines)
+bun run apps/cli/dist/index.js init --yes
 
 # 4. Run a workflow
 export ANTHROPIC_API_KEY=sk-ant-...
-bun run apps/cli/dist/index.js kit --file ./examples/ai-healthcare.md
+bun run apps/cli/dist/index.js run --file ./examples/ai-healthcare.md
 ```
 
 ## CLI Commands
 
 | Command | Description |
 |---------|-------------|
-| `looplia bootstrap` | Initialize workspace with plugin files (agents, skills, CLAUDE.md) |
-| `looplia summarize` | Summarize content into structured output |
-| `looplia kit` | Build a complete writing kit (summary + ideas + outline) |
+| `looplia init` | Initialize workspace with plugin files (agents, skills, pipelines, CLAUDE.md) |
+| `looplia run` | Execute pipeline to build a complete writing kit |
+| `looplia config` | Manage user profile settings |
 
 ### Writing Kit Workflow
 
-The `kit` command produces a complete WritingKit:
+The `run` command executes the writing-kit pipeline and produces a complete WritingKit:
 
 - **Summary**: Headline, TL;DR, key bullets, tags, themes, core ideas, quotes
 - **Ideas**: 5 hooks, 5 angles, 5 reflective questions
@@ -79,29 +80,29 @@ The `kit` command produces a complete WritingKit:
 
 ```bash
 # Build kit from content
-looplia kit --file ./article.md
+looplia run --file ./article.md
 
 # With options
-looplia kit --file ./article.md --topics "ai,productivity" --tone expert --word-count 2000
+looplia run --file ./article.md --topics "ai,productivity" --tone expert --word-count 2000
 
 # Resume existing session
-looplia kit --session-id article-2024-12-09-abc123
+looplia run --session-id article-2024-12-09-abc123
 
 # Output formats
-looplia kit --file ./article.md --format markdown --output kit.md
+looplia run --file ./article.md --format markdown --output kit.md
 ```
 
 ### Session Management
 
-Each `--file` creates a new session. Use `--session-id` to resume:
+Each `--file` creates a new session with a `session.json` manifest. Use `--session-id` to resume:
 
 ```bash
 # Create new session
-looplia kit --file ./article.md
+looplia run --file ./article.md
 # Output: ✓ New session created: article-2024-12-09-abc123
 
-# Resume (skips completed steps via smart continuation)
-looplia kit --session-id article-2024-12-09-abc123
+# Resume (skips completed steps via manifest-based smart continuation)
+looplia run --session-id article-2024-12-09-abc123
 ```
 
 ## Architecture
@@ -116,9 +117,9 @@ looplia-core/
 │   └── provider/      # Claude Agent SDK integration
 └── docs/              # Architecture documentation
     ├── DESIGN-0.4.0.md
-    ├── AGENTIC_CONCEPT-0.2.md
+    ├── AGENTIC_CONCEPT-0.3.md
     ├── GLOSSARY.md
-    └── TEST_PLAN-0.2.md
+    └── TEST_PLAN-0.3.md
 ```
 
 ## Development
@@ -147,10 +148,10 @@ looplia --help
 ## Documentation
 
 - [DESIGN-0.4.0.md](./docs/DESIGN-0.4.0.md) - Architecture overview
-- [AGENTIC_CONCEPT-0.2.md](./docs/AGENTIC_CONCEPT-0.2.md) - Agent system design
+- [AGENTIC_CONCEPT-0.3.md](./docs/AGENTIC_CONCEPT-0.3.md) - Agent system design
 - [GLOSSARY.md](./docs/GLOSSARY.md) - Ubiquitous language reference
-- [TEST_PLAN-0.2.md](./docs/TEST_PLAN-0.2.md) - Test strategy
+- [TEST_PLAN-0.3.md](./docs/TEST_PLAN-0.3.md) - Test strategy
 
 ## License
 
-MIT
+[Elastic License 2.0](./LICENSE)

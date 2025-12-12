@@ -159,6 +159,36 @@ export const WritingKitSchema = z.object({
 });
 
 // ─────────────────────────────────────────────────────────────
+// Pipeline Schemas
+// ─────────────────────────────────────────────────────────────
+
+export const PipelineOutputSchema = z.object({
+  artifact: z.string().min(1),
+  agent: z.string().min(1),
+  requires: z.array(z.string()).optional(),
+  final: z.boolean().optional(),
+});
+
+export const PipelineDefinitionSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().min(1),
+  outputs: z.record(z.string(), PipelineOutputSchema),
+});
+
+// ─────────────────────────────────────────────────────────────
+// Session Manifest Schemas
+// ─────────────────────────────────────────────────────────────
+
+export const SessionManifestSchema = z.object({
+  version: z.literal(1),
+  contentId: z.string().min(1),
+  pipeline: z.string().min(1),
+  desiredOutput: z.string().min(1),
+  updatedAt: z.string(),
+  steps: z.record(z.string(), z.literal("done")),
+});
+
+// ─────────────────────────────────────────────────────────────
 // User Profile Schemas
 // ─────────────────────────────────────────────────────────────
 

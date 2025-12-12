@@ -5,13 +5,16 @@ All notable changes to Looplia-Core will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.5.0] - 2025-12-12
 
 ### Added
 
+- **Pipeline-as-Configuration** - Declarative YAML workflow definitions
+  - `PipelineDefinition` and `PipelineOutput` types in `packages/core/src/domain/pipeline.ts`
+  - `PipelineDefinitionSchema` and `PipelineOutputSchema` for validation
+  - Default pipeline: `plugins/looplia-writer/pipelines/writing-kit.yaml`
 - **Session Manifest System** - New `session.json` file tracks step completion status
   - `SessionManifest` type in `packages/core/src/domain/session.ts`
-  - `StepName` type for pipeline steps
   - Minimal design: binary "done" status per step, no hashes
 - **CLI Display Configuration** - New `apps/cli/src/config/display-config.ts`
   - `DisplayConfig` type moved from core to CLI layer
@@ -19,21 +22,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **CLI Simplification** - Streamlined to three commands: `init`, `run`, `config`
+  - `bootstrap` renamed to `init` (standard CLI convention)
+  - `kit` renamed to `run` (generic pipeline executor)
+  - Version bumped to 0.5.0
 - **Smart Continuation** - Now uses manifest-based state tracking
   - Agent reads `session.json` to check which steps are "done"
   - Skips steps marked done AND with artifact file present
   - Agent manages manifest updates (agent-first philosophy)
 - **CommandDefinition** - Removed `displayConfig` property (moved to CLI layer)
-- **Prompt Templates** - Updated with session state management instructions
+- **Prompt Templates** - Updated with pipeline-as-configuration approach
 
 ### Removed
 
+- `summarize` command from CLI (consolidated into `run` pipeline)
+- `summarizeCommand` export from `@looplia-core/core`
 - `DisplayConfig` export from `@looplia-core/core` (moved to CLI layer)
 - `displayConfig` property from `CommandDefinition` type
 
-### Design Decisions
+### Documentation
 
-> See [DESIGN-0.5.0.md § Deferred Decisions](./docs/DESIGN-0.5.0.md#7-deferred-decisions) for rationale.
+- **AGENTIC_CONCEPT-0.3.md** - New agent system design document
+  - Added Pipeline-as-Configuration section
+  - Updated workspace structure with `pipelines/` and `session.json`
+  - Updated Smart Continuation for manifest-based approach
+- **TEST_PLAN-0.3.md** - Updated test plan for v0.5.0
+  - Updated CLI command references (`init`, `run`, `config`)
+  - Added Pipeline/SessionManifest validation test examples
+- **GLOSSARY.md** - Updated to v0.5.0 with new terms
+  - Added `SessionManifest`, `StepName`, `PipelineDefinition`
+  - Updated `DisplayConfig` location to CLI layer
+- **README.md** - Updated for v0.5.0
+  - Updated "How It Works" diagram with new CLI commands
+  - Updated Quick Start, CLI Commands, and Session Management sections
+- **docs/README.md** - Updated document references to v0.3 versions
+
+### Design Decisions
 
 The following were considered but **intentionally deferred** to v0.6+:
 - Content hash verification (adds complexity without proven need)
@@ -145,7 +169,8 @@ The following were considered but **intentionally deferred** to v0.6+:
 
 ---
 
-[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/memorysaver/looplia-core/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/memorysaver/looplia-core/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/memorysaver/looplia-core/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/memorysaver/looplia-core/compare/v0.3.1...v0.3.2

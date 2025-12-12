@@ -205,8 +205,13 @@ export class LoopliaRuntime {
     contentId: string,
     contentTitle: string
   ): Promise<CommandResult<T>> {
+    // DisplayConfig now lives in CLI layer (Clean Architecture)
+    const { getDisplayConfig } = await import("../config/display-config");
+    const displayConfig = getDisplayConfig(command.name);
+    const title = displayConfig?.title ?? command.name;
+
     const { result, error } = await renderStreamingQuery<T>({
-      title: command.displayConfig.title,
+      title,
       subtitle: contentTitle,
       streamGenerator: () =>
         this.executor.executeStreaming(prompt, command.outputSchema, {
