@@ -1,12 +1,12 @@
 import { createInterface } from "node:readline";
 import { ensureWorkspace } from "@looplia-core/provider/claude-agent-sdk";
 
-function printBootstrapHelp(): void {
+function printInitHelp(): void {
   console.log(`
-looplia bootstrap - Initialize or refresh workspace
+looplia init - Initialize or refresh workspace
 
 Usage:
-  looplia bootstrap [options]
+  looplia init [options]
 
 Options:
   --yes, -y    Skip confirmation prompt (for automation/Docker)
@@ -16,10 +16,10 @@ Description:
   looplia-writer plugin. This will:
 
   1. DELETE existing ~/.looplia/ directory
-  2. Copy agents and skills from plugins/looplia-writer/
+  2. Copy agents, skills, and pipelines from plugins/looplia-writer/
   3. Create fresh CLAUDE.md and user-profile.json
 
-  ⚠️  WARNING: This removes ALL customizations in ~/.looplia/
+  WARNING: This removes ALL customizations in ~/.looplia/
 
   Use this when:
   - Setting up looplia for the first time
@@ -27,8 +27,8 @@ Description:
   - You want to reset to plugin defaults
 
 Examples:
-  looplia bootstrap
-  looplia bootstrap --yes
+  looplia init
+  looplia init --yes
 `);
 }
 
@@ -46,9 +46,9 @@ function promptConfirmation(message: string): Promise<boolean> {
   });
 }
 
-export async function runBootstrapCommand(args: string[]): Promise<void> {
+export async function runInitCommand(args: string[]): Promise<void> {
   if (args.includes("--help") || args.includes("-h")) {
-    printBootstrapHelp();
+    printInitHelp();
     process.exit(0);
   }
 
@@ -56,7 +56,7 @@ export async function runBootstrapCommand(args: string[]): Promise<void> {
   const skipConfirmation = args.includes("--yes") || args.includes("-y");
 
   console.log(
-    "⚠️  Bootstrap will DELETE ~/.looplia/ and recreate it from plugin."
+    "WARNING: init will DELETE ~/.looplia/ and recreate it from plugin."
   );
   console.log("   All customizations will be lost.");
   console.log("");
@@ -73,15 +73,15 @@ export async function runBootstrapCommand(args: string[]): Promise<void> {
 
   try {
     await ensureWorkspace({ force: true });
-    console.log("✓ Workspace bootstrapped from looplia-writer plugin");
+    console.log("Workspace initialized from looplia-writer plugin");
     console.log(
-      "✓ Fresh agents, skills, CLAUDE.md, and user-profile.json created"
+      "Fresh agents, skills, pipelines, CLAUDE.md, and user-profile.json created"
     );
     console.log("");
     console.log('Next steps: Configure your profile with "looplia config"');
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("Error during bootstrap:", message);
+    console.error("Error during init:", message);
     process.exit(1);
   }
 }

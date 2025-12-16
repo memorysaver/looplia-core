@@ -159,6 +159,36 @@ export const WritingKitSchema = z.object({
 });
 
 // ─────────────────────────────────────────────────────────────
+// Pipeline Schemas
+// ─────────────────────────────────────────────────────────────
+
+export const PipelineOutputSchema = z.object({
+  artifact: z.string().min(1),
+  agent: z.string().min(1),
+  requires: z.array(z.string()).optional(),
+  final: z.boolean().optional(),
+});
+
+export const PipelineDefinitionSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().min(1),
+  outputs: z.record(z.string(), PipelineOutputSchema),
+});
+
+// ─────────────────────────────────────────────────────────────
+// Session Manifest Schemas
+// ─────────────────────────────────────────────────────────────
+
+export const SessionManifestSchema = z.object({
+  version: z.literal(1),
+  contentId: z.string().min(1),
+  pipeline: z.string().min(1),
+  desiredOutput: z.string().min(1),
+  updatedAt: z.string(),
+  steps: z.record(z.string(), z.literal("done")),
+});
+
+// ─────────────────────────────────────────────────────────────
 // User Profile Schemas
 // ─────────────────────────────────────────────────────────────
 
@@ -228,6 +258,36 @@ export function validateUserProfile(
   data: unknown
 ): ValidationResult<z.infer<typeof UserProfileSchema>> {
   const result = UserProfileSchema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+  return { success: false, error: { message: result.error.message } };
+}
+
+export function validateSessionManifest(
+  data: unknown
+): ValidationResult<z.infer<typeof SessionManifestSchema>> {
+  const result = SessionManifestSchema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+  return { success: false, error: { message: result.error.message } };
+}
+
+export function validatePipelineDefinition(
+  data: unknown
+): ValidationResult<z.infer<typeof PipelineDefinitionSchema>> {
+  const result = PipelineDefinitionSchema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+  return { success: false, error: { message: result.error.message } };
+}
+
+export function validatePipelineOutput(
+  data: unknown
+): ValidationResult<z.infer<typeof PipelineOutputSchema>> {
+  const result = PipelineOutputSchema.safeParse(data);
   if (result.success) {
     return { success: true, data: result.data };
   }

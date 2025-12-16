@@ -89,6 +89,8 @@ export type CommandConfig = {
 export type {
   CommandResult,
   CommandResult as AgenticQueryResult,
-  DisplayConfig,
   StreamingEvent,
 } from "@looplia-core/core";
+
+// DisplayConfig is now in CLI layer
+export type { DisplayConfig } from "../config/display-config";

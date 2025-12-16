@@ -2,13 +2,13 @@
  * Kit Result Renderer
  *
  * Handles output formatting and display for kit command results.
- * Uses CommandDefinition from core (Clean Architecture).
+ * Clean Architecture: Uses DisplayConfig from CLI layer.
  * Target complexity: ≤8
  */
 
 import { writeFileSync } from "node:fs";
 import type { CommandResult, WritingKit } from "@looplia-core/core";
-import { getCommand } from "@looplia-core/core";
+import { getDisplayConfig } from "../config/display-config";
 import type { KitConfig } from "../runtime/types";
 import { formatKitAsMarkdown } from "../utils/format";
 import { displayPostCompletion } from "./post-completion";
@@ -33,10 +33,10 @@ export function renderKitResult(
     process.exit(1);
   }
 
-  // Display post-completion info using command definition from core
-  const command = getCommand<WritingKit>("kit");
-  if (command) {
-    displayPostCompletion(command.displayConfig, data.contentId);
+  // Display post-completion info using CLI display config
+  const displayConfig = getDisplayConfig("kit");
+  if (displayConfig) {
+    displayPostCompletion(displayConfig, data.contentId);
   }
 
   const output = formatOutput(data, config.format);

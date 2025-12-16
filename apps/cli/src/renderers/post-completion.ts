@@ -4,10 +4,10 @@
  * Shared utility for displaying success message, session info, and next step hints
  * after command execution completes.
  *
- * Uses DisplayConfig from core (Clean Architecture).
+ * Clean Architecture: DisplayConfig is now in CLI layer.
  */
 
-import type { DisplayConfig } from "@looplia-core/core";
+import type { DisplayConfig } from "../config/display-config";
 
 /**
  * Display post-completion information

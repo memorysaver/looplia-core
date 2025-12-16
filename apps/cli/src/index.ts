@@ -1,32 +1,29 @@
-import { runBootstrapCommand } from "./commands/bootstrap";
 import { runConfigCommand } from "./commands/config";
-import { runKitCommand } from "./commands/kit";
-import { runSummarizeCommand } from "./commands/summarize";
+import { runInitCommand } from "./commands/init";
+import { runRunCommand } from "./commands/run";
 
-const VERSION = "0.3.4";
+const VERSION = "0.5.0";
 
 function printHelp(): void {
   console.log(`
-looplia - Content intelligence CLI
+looplia - Content intelligence CLI (v${VERSION})
 
 Usage:
   looplia <command> [options]
 
 Commands:
+  init         Initialize or refresh workspace
+  run          Run a pipeline to build writing kit
   config       Manage user profile settings
-  bootstrap    Initialize or refresh workspace
-  kit          Build a complete writing kit
-  summarize    Summarize content from a file
 
 Options:
   --help, -h     Show this help
   --version, -v  Show version
 
 Examples:
+  looplia init
+  looplia run --file ./article.txt
   looplia config topics "ai,productivity,writing"
-  looplia config style --tone expert --word-count 1500
-  looplia bootstrap
-  looplia kit --file ./article.txt
 
 For command-specific help:
   looplia <command> --help
@@ -37,7 +34,6 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const [command, ...rest] = args;
 
-  // Show global help only if no command or help is requested without a command
   if (
     !command ||
     (args.length === 1 && (args[0] === "--help" || args[0] === "-h"))
@@ -52,17 +48,14 @@ async function main(): Promise<void> {
   }
 
   switch (command) {
+    case "init":
+      await runInitCommand(rest);
+      break;
+    case "run":
+      await runRunCommand(rest);
+      break;
     case "config":
       await runConfigCommand(rest);
-      break;
-    case "bootstrap":
-      await runBootstrapCommand(rest);
-      break;
-    case "kit":
-      await runKitCommand(rest);
-      break;
-    case "summarize":
-      await runSummarizeCommand(rest);
       break;
     default:
       console.error(`Unknown command: ${command}`);
