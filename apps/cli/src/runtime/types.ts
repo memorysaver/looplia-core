@@ -28,6 +28,19 @@ export type KitConfig = BaseConfig & {
 };
 
 /**
+ * Workflow command configuration (v0.5.1)
+ */
+export type WorkflowConfig = BaseConfig & {
+  help: boolean;
+  workflowId?: string;
+  file?: string;
+  sessionId?: string;
+  topics?: string[];
+  tone?: string;
+  wordCount?: number;
+};
+
+/**
  * Summarize command configuration
  */
 export type SummarizeConfig = BaseConfig & {

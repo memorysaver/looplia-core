@@ -72,7 +72,7 @@ async function checkRequiredFiles(workspaceDir: string): Promise<boolean> {
     join(workspaceDir, "CLAUDE.md"),
     join(workspaceDir, ".claude", "agents"),
     join(workspaceDir, ".claude", "skills"),
-    join(workspaceDir, "pipelines"),
+    join(workspaceDir, "workflows"),
   ];
 
   for (const path of requiredPaths) {
@@ -119,7 +119,7 @@ async function createTestWorkspace(
   await mkdir(join(workspaceDir, ".claude", "agents"), { recursive: true });
   await mkdir(join(workspaceDir, ".claude", "skills"), { recursive: true });
   await mkdir(join(workspaceDir, "contentItem"), { recursive: true });
-  await mkdir(join(workspaceDir, "pipelines"), { recursive: true });
+  await mkdir(join(workspaceDir, "workflows"), { recursive: true });
 
   await writeFile(
     join(workspaceDir, "CLAUDE.md"),
@@ -158,7 +158,7 @@ async function bootstrapFromPlugin(
     recursive: true,
   });
 
-  await cp(join(pluginDir, "pipelines"), join(workspaceDir, "pipelines"), {
+  await cp(join(pluginDir, "workflows"), join(workspaceDir, "workflows"), {
     recursive: true,
   });
 

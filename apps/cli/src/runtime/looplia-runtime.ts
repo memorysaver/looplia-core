@@ -5,6 +5,7 @@
  * and AgentExecutor from provider to execute commands.
  */
 
+import { join } from "node:path";
 import type {
   AgentExecutor,
   CommandDefinition,
@@ -16,9 +17,13 @@ import type {
   WritingKit,
 } from "@looplia-core/core";
 import {
+  buildWorkflowPrompt,
   createMockSummarizer,
   createMockWritingKitProvider,
+  generateValidationManifest,
   getCommand,
+  parseWorkflow,
+  workflowCommand,
 } from "@looplia-core/core";
 import {
   createClaudeAgentExecutor,
@@ -32,6 +37,7 @@ import type {
   ExecutionContext,
   KitConfig,
   SummarizeConfig,
+  WorkflowConfig,
 } from "./types";
 
 /**
@@ -194,6 +200,164 @@ export class LoopliaRuntime {
    */
   getSessionManager(): SessionManager {
     return this.sessionManager;
+  }
+
+  /**
+   * Execute workflow (v0.5.1)
+   *
+   * Uses workflow-as-markdown pattern:
+   * 1. Parse workflow definition from workflows/{id}.md
+   * 2. Generate validation.json from frontmatter
+   * 3. Build prompt with workflow context
+   * 4. Execute workflow command
+   */
+  async executeWorkflow(
+    config: WorkflowConfig
+  ): Promise<CommandResult<unknown>> {
+    if (!config.workflowId) {
+      return {
+        success: false,
+        error: { type: "validation", message: "Workflow ID is required" },
+        sessionId: "",
+      };
+    }
+
+    const content = await this.sessionManager.prepare({
+      file: config.file,
+      sessionId: config.sessionId,
+    });
+
+    this.context.workspace = this.sessionManager.getWorkspace();
+
+    // Mock mode not supported for workflows yet
+    if (this.context.mock) {
+      return {
+        success: false,
+        error: {
+          type: "unsupported",
+          message: "Mock mode not yet supported for workflows",
+        },
+        sessionId: content.id,
+      };
+    }
+
+    // Load and parse workflow
+    const workflowPath = `workflows/${config.workflowId}.md`;
+    const workflowFullPath = join(this.context.workspace, workflowPath);
+
+    let workflowContent: string;
+    try {
+      const { readFile } = await import("node:fs/promises");
+      workflowContent = await readFile(workflowFullPath, "utf-8");
+    } catch {
+      return {
+        success: false,
+        error: {
+          type: "not_found",
+          message: `Workflow not found: ${workflowPath}`,
+        },
+        sessionId: content.id,
+      };
+    }
+
+    const { definition, instructions } = parseWorkflow(workflowContent);
+
+    // Generate validation.json
+    const validationManifest = generateValidationManifest(definition);
+    const validationPath = join(
+      this.context.workspace,
+      `contentItem/${content.id}/validation.json`
+    );
+
+    try {
+      const { writeFile, mkdir } = await import("node:fs/promises");
+      const { dirname } = await import("node:path");
+      await mkdir(dirname(validationPath), { recursive: true });
+      await writeFile(
+        validationPath,
+        JSON.stringify(validationManifest, null, 2)
+      );
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          type: "io",
+          message: `Failed to write validation.json: ${error}`,
+        },
+        sessionId: content.id,
+      };
+    }
+
+    // Build prompt context
+    const promptContext: PromptContext = {
+      contentId: content.id,
+      contentPath: `contentItem/${content.id}/content.md`,
+      workspace: this.context.workspace,
+      workflowName: config.workflowId,
+      workflowPath,
+      workflowDefinition: this.serializeWorkflowDefinition(definition),
+      workflowInstructions: instructions,
+    };
+
+    const prompt = buildWorkflowPrompt(promptContext);
+
+    // Update executor workspace
+    this.executor = createClaudeAgentExecutor({
+      workspace: this.context.workspace,
+    });
+
+    if (this.context.mode === "streaming") {
+      return await this.executeStreaming<unknown>(
+        workflowCommand,
+        prompt,
+        content.id,
+        content.title
+      );
+    }
+
+    return await this.executeBatch<unknown>(
+      workflowCommand,
+      prompt,
+      content.id
+    );
+  }
+
+  /**
+   * Serialize workflow definition to YAML-like string for prompt
+   */
+  private serializeWorkflowDefinition(definition: {
+    name: string;
+    description: string;
+    outputs: Record<string, unknown>;
+  }): string {
+    const lines: string[] = [];
+    lines.push(`name: ${definition.name}`);
+    lines.push(`description: ${definition.description}`);
+    lines.push("outputs:");
+
+    for (const [name, output] of Object.entries(definition.outputs)) {
+      const out = output as Record<string, unknown>;
+      lines.push(`  ${name}:`);
+      if (out.artifact) lines.push(`    artifact: ${out.artifact}`);
+      if (out.agent) lines.push(`    agent: ${out.agent}`);
+      if (out.requires)
+        lines.push(`    requires: [${(out.requires as string[]).join(", ")}]`);
+      if (out.final) lines.push("    final: true");
+      if (out.validate) {
+        lines.push("    validate:");
+        for (const [key, val] of Object.entries(
+          out.validate as Record<string, unknown>
+        )) {
+          if (Array.isArray(val)) {
+            lines.push(`      ${key}: [${val.join(", ")}]`);
+          } else {
+            lines.push(`      ${key}: ${val}`);
+          }
+        }
+      }
+    }
+
+    return lines.join("\n");
   }
 
   /**

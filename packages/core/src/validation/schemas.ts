@@ -159,7 +159,7 @@ export const WritingKitSchema = z.object({
 });
 
 // ─────────────────────────────────────────────────────────────
-// Pipeline Schemas
+// Pipeline Schemas (v0.5.0 - deprecated, kept for backward compat)
 // ─────────────────────────────────────────────────────────────
 
 export const PipelineOutputSchema = z.object({
@@ -173,6 +173,78 @@ export const PipelineDefinitionSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1),
   outputs: z.record(z.string(), PipelineOutputSchema),
+});
+
+// ─────────────────────────────────────────────────────────────
+// Workflow Schemas (v0.5.1)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Validation criteria for workflow outputs
+ * Extensible with custom keys via passthrough()
+ */
+export const ValidationCriteriaSchema = z
+  .object({
+    required_fields: z.array(z.string()).optional(),
+    min_quotes: z.number().int().positive().optional(),
+    min_key_points: z.number().int().positive().optional(),
+    min_outline_sections: z.number().int().positive().optional(),
+    has_hooks: z.boolean().optional(),
+  })
+  .passthrough();
+
+/**
+ * Single output in a workflow definition
+ */
+export const WorkflowOutputSchema = z.object({
+  artifact: z.string().min(1),
+  agent: z.string().min(1),
+  requires: z.array(z.string()).optional(),
+  final: z.boolean().optional(),
+  validate: ValidationCriteriaSchema.optional(),
+});
+
+/**
+ * Complete workflow definition from YAML frontmatter
+ */
+export const WorkflowDefinitionSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().min(1),
+  outputs: z.record(z.string(), WorkflowOutputSchema),
+});
+
+/**
+ * Validation state for a single output
+ */
+export const OutputValidationStateSchema = z.object({
+  artifact: z.string().min(1),
+  criteria: ValidationCriteriaSchema,
+  validated: z.boolean(),
+});
+
+/**
+ * Validation manifest stored in contentItem/{id}/validation.json
+ */
+export const ValidationManifestSchema = z.object({
+  workflow: z.string().min(1),
+  outputs: z.record(z.string(), OutputValidationStateSchema),
+});
+
+/**
+ * Single validation check result
+ */
+export const ValidationCheckSchema = z.object({
+  name: z.string().min(1),
+  passed: z.boolean(),
+  message: z.string(),
+});
+
+/**
+ * Result from validation script
+ */
+export const ValidationResultSchema = z.object({
+  passed: z.boolean(),
+  checks: z.array(ValidationCheckSchema),
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -288,6 +360,40 @@ export function validatePipelineOutput(
   data: unknown
 ): ValidationResult<z.infer<typeof PipelineOutputSchema>> {
   const result = PipelineOutputSchema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+  return { success: false, error: { message: result.error.message } };
+}
+
+// ─────────────────────────────────────────────────────────────
+// Workflow Validation Helpers (v0.5.1)
+// ─────────────────────────────────────────────────────────────
+
+export function validateWorkflowDefinition(
+  data: unknown
+): ValidationResult<z.infer<typeof WorkflowDefinitionSchema>> {
+  const result = WorkflowDefinitionSchema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+  return { success: false, error: { message: result.error.message } };
+}
+
+export function validateValidationManifest(
+  data: unknown
+): ValidationResult<z.infer<typeof ValidationManifestSchema>> {
+  const result = ValidationManifestSchema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+  return { success: false, error: { message: result.error.message } };
+}
+
+export function validateValidationResult(
+  data: unknown
+): ValidationResult<z.infer<typeof ValidationResultSchema>> {
+  const result = ValidationResultSchema.safeParse(data);
   if (result.success) {
     return { success: true, data: result.data };
   }

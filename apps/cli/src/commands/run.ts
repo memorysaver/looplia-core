@@ -1,44 +1,47 @@
 /**
- * Run Command
+ * Run Command (v0.5.1)
  *
- * Run a pipeline to build writing kit from content.
+ * Execute a workflow on content.
+ * Supports: looplia run <workflow-id> --file <path>
+ *
  * Target complexity: ≤5
  */
 
 import {
-  parseKitArgs,
-  printKitHelp,
-  validateKitInput,
-} from "../parsers/kit-parser";
+  parseWorkflowArgs,
+  printWorkflowHelp,
+  validateWorkflowInput,
+} from "../parsers/workflow-parser";
 import { renderKitResult } from "../renderers/kit-renderer";
 import { createRuntime } from "../runtime";
 
 /**
- * Run the pipeline command
+ * Run the workflow command
  *
  * Parse → Validate → Execute → Render
  */
 export async function runRunCommand(args: string[]): Promise<void> {
-  const config = parseKitArgs(args);
+  const config = parseWorkflowArgs(args);
 
   if (config.help) {
-    printKitHelp();
+    printWorkflowHelp();
     return;
   }
 
   try {
-    validateKitInput(config);
+    validateWorkflowInput(config);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`Error: ${message}`);
-    printKitHelp();
+    printWorkflowHelp();
     process.exit(1);
   }
 
   try {
     const runtime = createRuntime(config);
-    const result = await runtime.executeKit(config);
-    renderKitResult(result, config);
+    const result = await runtime.executeWorkflow(config);
+    // Cast to WritingKit for now - future: create generic workflow renderer
+    renderKitResult(result as Parameters<typeof renderKitResult>[0], config);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`Error: ${message}`);

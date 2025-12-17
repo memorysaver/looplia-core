@@ -17,6 +17,8 @@ export type {
 } from "./commands";
 // Command Framework
 export {
+  // Workflow Command (v0.5.1)
+  buildWorkflowPrompt,
   // Registry
   clearCommands,
   getCommand,
@@ -25,6 +27,7 @@ export {
   // Command Definitions
   kitCommand,
   registerCommand,
+  workflowCommand,
 } from "./commands";
 export type {
   ContentItem,
@@ -48,6 +51,25 @@ export type {
   UserTopic,
   WritingStyle,
 } from "./domain/user-profile";
+// Workflow Types (v0.5.1)
+export type {
+  OutputValidationState,
+  ParsedWorkflow,
+  ValidationCheck,
+  ValidationCriteria,
+  ValidationManifest,
+  ValidationResult,
+  WorkflowDefinition,
+  WorkflowOutput,
+} from "./domain/workflow";
+// Workflow Parser (v0.5.1)
+export {
+  generateValidationManifest,
+  getExecutionOrder,
+  getFinalOutput,
+  parseFrontmatter,
+  parseWorkflow,
+} from "./domain/workflow-parser";
 export type {
   OutlineSection,
   WritingKit,
@@ -72,14 +94,25 @@ export {
 export {
   ContentItemSchema,
   ContentSummarySchema,
+  // Workflow Validation (v0.5.1)
+  OutputValidationStateSchema,
   PipelineDefinitionSchema,
   PipelineOutputSchema,
   SessionManifestSchema,
   UserProfileSchema,
+  ValidationCheckSchema,
+  ValidationCriteriaSchema,
+  ValidationManifestSchema,
+  ValidationResultSchema,
   validateContentItem,
   validateContentSummary,
   validateUserProfile,
+  validateValidationManifest,
+  validateValidationResult,
+  validateWorkflowDefinition,
   validateWritingIdeas,
+  WorkflowDefinitionSchema,
+  WorkflowOutputSchema,
   WritingIdeasSchema,
   WritingKitSchema,
 } from "./validation/schemas";

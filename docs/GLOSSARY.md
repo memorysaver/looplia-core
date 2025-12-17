@@ -2,8 +2,8 @@
 
 > Ubiquitous Language Reference for Domain-Driven Design
 >
-> **Version:** 0.5.0
-> **Last Updated:** 2025-12-12
+> **Version:** 0.5.1
+> **Last Updated:** 2025-12-17
 
 This glossary defines the shared vocabulary used throughout Looplia-Core. Consistent terminology enables clear communication between code, documentation, and team discussions.
 
@@ -674,22 +674,172 @@ A topic the user is interested in.
 
 ---
 
+## 11. Workflow System (v0.5.1)
+
+### Workflow
+A configuration-driven task orchestration unit. Replaces "Pipeline" terminology from v0.5.0.
+
+**v0.5.0:** `pipelines/*.yaml` (YAML only)
+**v0.5.1:** `workflows/*.md` (YAML frontmatter + markdown instructions)
+
+### Workflow.md
+A single markdown file defining a complete workflow:
+- **YAML frontmatter**: Declarative output definitions with validation criteria
+- **Markdown body**: Custom instructions for this specific workflow
+
+**Location:** `~/.looplia/workflows/{workflow-id}.md`
+
+### WorkflowDefinition
+**Type:** `packages/core/src/domain/workflow.ts`
+
+Complete workflow definition parsed from YAML frontmatter.
+
+```typescript
+type WorkflowDefinition = {
+  name: string;           // Unique workflow identifier
+  description: string;    // Human-readable description
+  outputs: Record<string, WorkflowOutput>;
+};
+```
+
+### WorkflowOutput
+**Type:** `packages/core/src/domain/workflow.ts`
+
+Single output configuration within a workflow.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `artifact` | `string` | Output filename (e.g., `summary.json`) |
+| `agent` | `string` | Subagent responsible for producing this output |
+| `requires` | `string[]?` | Dependencies - other output names |
+| `final` | `boolean?` | Marks this as the final output |
+| `validate` | `ValidationCriteria?` | Validation criteria |
+
+### ValidationCriteria
+**Type:** `packages/core/src/domain/workflow.ts`
+
+Criteria for validating workflow outputs. Used by the workflow-validator skill.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `required_fields` | `string[]?` | Required top-level fields |
+| `min_quotes` | `number?` | Minimum number of quotes |
+| `min_key_points` | `number?` | Minimum key points |
+| `min_outline_sections` | `number?` | Minimum outline sections |
+| `has_hooks` | `boolean?` | Must have hooks array |
+
+Extensible with custom keys for workflow-specific validation.
+
+### validation.json (v0.5.1)
+**Location:** `contentItem/{id}/validation.json`
+
+Replaces `session.json` from v0.5.0. Generated from workflow frontmatter. Tracks validation state per output.
+
+```json
+{
+  "workflow": "writing-kit",
+  "outputs": {
+    "summary": {
+      "artifact": "summary.json",
+      "criteria": { "required_fields": [...], "min_quotes": 3 },
+      "validated": false
+    },
+    "writing-kit": {
+      "artifact": "writing-kit.json",
+      "criteria": { "required_fields": [...], "has_hooks": true },
+      "validated": false
+    }
+  }
+}
+```
+
+**Key Difference from session.json:**
+- v0.5.0 `session.json`: Binary "done" status tracking
+- v0.5.1 `validation.json`: Criteria + validated boolean
+
+### workflow-validator Skill
+**Location:** `.claude/skills/workflow-validator/`
+
+New skill in v0.5.1 for validating workflow outputs against criteria.
+
+**Structure:**
+```
+workflow-validator/
+├── SKILL.md              # Level 2: Instructions
+└── scripts/
+    └── validate.ts       # Level 3: Deterministic script
+```
+
+**Progressive Disclosure:**
+- Level 1 (always): Skill metadata (~100 tokens)
+- Level 2 (on use): SKILL.md instructions (<5k tokens)
+- Level 3 (on use): Script execution (0 LLM tokens)
+
+The validation script runs **outside the LLM context**, providing deterministic validation without consuming tokens.
+
+### Generic Workflow Interpreter
+**v0.5.1 Concept**
+
+CLAUDE.md becomes a generic interpreter that can execute ANY workflow defined in `workflows/*.md`. It no longer contains workflow-specific instructions.
+
+**Key Behaviors:**
+1. Read workflow.md (frontmatter + body)
+2. Read validation.json for state
+3. Execute outputs in dependency order
+4. Validate each output using workflow-validator skill
+5. Return final artifact when validation passes
+
+### Validation-Driven Completion
+**v0.5.1 Pattern**
+
+A step is complete when its output **passes validation**, not when it's marked "done".
+
+**v0.5.0:** Status-based (`steps.analyzing === "done"`)
+**v0.5.1:** Validation-based (`outputs.summary.validated === true` + criteria checks pass)
+
+---
+
 ## Quick Reference: File Locations
 
 | Concept | Location |
 |---------|----------|
 | Domain entities | `packages/core/src/domain/` |
-| Session manifest types | `packages/core/src/domain/session.ts` (v0.5.0) |
+| Workflow types | `packages/core/src/domain/workflow.ts` (v0.5.1) |
+| Workflow parser | `packages/core/src/domain/workflow-parser.ts` (v0.5.1) |
+| Session manifest types | `packages/core/src/domain/session.ts` (v0.5.0, deprecated) |
 | Command framework | `packages/core/src/commands/` |
+| Workflow command | `packages/core/src/commands/workflow.ts` (v0.5.1) |
 | Port interfaces | `packages/core/src/ports/` |
 | Services | `packages/core/src/services/` |
 | Mock adapters | `packages/core/src/adapters/mock/` |
 | Provider (SDK) | `packages/provider/src/claude-agent-sdk/` |
 | CLI commands | `apps/cli/src/commands/` |
-| Display config | `apps/cli/src/config/display-config.ts` (v0.5.0) |
+| Display config | `apps/cli/src/config/display-config.ts` |
 | Runtime | `apps/cli/src/runtime/` |
 | TUI components | `apps/cli/src/components/` |
 | Plugins | `plugins/looplia-writer/` |
+| Workflows | `plugins/looplia-writer/workflows/` (v0.5.1) |
+| Validation skill | `plugins/looplia-writer/skills/workflow-validator/` (v0.5.1) |
+
+### Workspace Structure (v0.5.1)
+
+```
+~/.looplia/
+├── CLAUDE.md                    # Generic workflow interpreter
+├── user-profile.json            # User preferences
+├── workflows/                   # Workflow definitions (v0.5.1)
+│   └── writing-kit.md             YAML frontmatter + instructions
+├── .claude/
+│   ├── agents/*.md              # Subagent definitions
+│   └── skills/
+│       └── workflow-validator/  # Validation skill (v0.5.1)
+│           ├── SKILL.md
+│           └── scripts/validate.ts
+└── contentItem/{id}/
+    ├── content.md               # Input content
+    ├── validation.json          # Validation state (v0.5.1)
+    └── *.json                   # Output artifacts
+```
 
 ---
 
