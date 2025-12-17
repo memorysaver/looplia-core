@@ -158,7 +158,7 @@ export async function executeAgenticQuery<T>(
       logger.log({ type: "prompt", content: prompt });
     }
 
-    // Execute SDK query with agentic tools (Read + Skill)
+    // Execute SDK query with agentic tools
     const result = query({
       prompt,
       options: {
@@ -166,8 +166,10 @@ export async function executeAgenticQuery<T>(
         cwd: workspace,
         permissionMode: "bypassPermissions",
         allowDangerouslySkipPermissions: true,
-        // v0.3.1: Enable Read and Skill tools for true agentic behavior
-        allowedTools: ["Read", "Skill"],
+        // v0.5.2: Enable subagent & skill discovery from .claude/ directories
+        settingSources: ["project"],
+        // v0.5.2: Enable Task for subagent spawning, Write/Glob for file operations
+        allowedTools: ["Read", "Write", "Glob", "Task", "Skill"],
         outputFormat: {
           type: "json_schema",
           schema: jsonSchema,

@@ -1,12 +1,12 @@
 /**
- * Kit Command Parser
+ * Workflow Command Parser (v0.5.1)
  *
- * Parses and validates arguments for the kit command.
- * Target complexity: ≤8
+ * Parses and validates arguments for the workflow-based run command.
+ * Supports: looplia run <workflow-id> --file <path>
  */
 
-import type { KitConfig } from "../runtime/types";
-import { getArg, hasFlag, parseArgs } from "../utils/args";
+import type { WorkflowConfig } from "../runtime/types";
+import { getArg, hasFlag, type ParsedArgs, parseArgs } from "../utils/args";
 
 const VALID_TONES = ["beginner", "intermediate", "expert", "mixed"] as const;
 const MIN_WORD_COUNT = 100;
@@ -14,19 +14,24 @@ const MAX_WORD_COUNT = 10_000;
 const DEFAULT_WORD_COUNT = 1000;
 
 /**
- * Parse kit command arguments into typed config
+ * Parse workflow command arguments into typed config
+ *
+ * Usage: looplia run <workflow-id> --file <path> [options]
  */
-export function parseKitArgs(args: string[]): KitConfig {
+export function parseWorkflowArgs(args: string[]): WorkflowConfig {
   const parsed = parseArgs(args);
+
+  // Extract workflow ID from positional argument
+  const workflowId = extractWorkflowId(parsed);
 
   return {
     help: hasFlag(parsed, "help", "h"),
+    workflowId,
     file: getArg(parsed, "file", "f"),
     sessionId: getArg(parsed, "session-id"),
     topics: parseTopics(getArg(parsed, "topics")),
     tone: parseTone(getArg(parsed, "tone")),
     wordCount: parseWordCount(getArg(parsed, "word-count")),
-    format: (getArg(parsed, "format") ?? "json") as "json" | "markdown",
     outputPath: getArg(parsed, "output", "o"),
     noStreaming: hasFlag(parsed, "no-streaming"),
     mock: hasFlag(parsed, "mock", "m"),
@@ -34,10 +39,29 @@ export function parseKitArgs(args: string[]): KitConfig {
 }
 
 /**
- * Validate kit input configuration
+ * Extract workflow ID from positional arguments
+ *
+ * First non-flag argument that doesn't follow a flag expecting a value
+ */
+function extractWorkflowId(parsed: ParsedArgs): string | undefined {
+  // Check for positional argument (first item in positionals array)
+  if (parsed._ && parsed._.length > 0) {
+    return parsed._[0];
+  }
+  return;
+}
+
+/**
+ * Validate workflow input configuration
  * @throws Error if validation fails
  */
-export function validateKitInput(config: KitConfig): void {
+export function validateWorkflowInput(config: WorkflowConfig): void {
+  if (!config.workflowId) {
+    throw new Error(
+      "Workflow ID is required: looplia run <workflow-id> --file <path>"
+    );
+  }
+
   if (!(config.file || config.sessionId)) {
     throw new Error("Either --file or --session-id is required");
   }
@@ -48,20 +72,28 @@ export function validateKitInput(config: KitConfig): void {
 }
 
 /**
- * Print kit command help
+ * Print workflow command help
  */
-export function printKitHelp(): void {
+export function printWorkflowHelp(availableWorkflows: string[] = []): void {
+  const workflowList =
+    availableWorkflows.length > 0
+      ? `\nAvailable workflows:\n  ${availableWorkflows.join(", ")}`
+      : "";
+
   console.log(`
-looplia run - Build a complete writing kit from content
+looplia run - Execute a workflow on content
 
 Usage:
-  looplia run --file <path> [options]
-  looplia run --session-id <id> [options]
+  looplia run <workflow-id> --file <path> [options]
+  looplia run <workflow-id> --session-id <id> [options]
+
+Arguments:
+  <workflow-id>      Workflow to execute (e.g., writing-kit)
+${workflowList}
 
 Options:
   --file, -f         Path to content file (creates new session)
   --session-id       Session ID to continue (resumes existing session)
-  --format           Output format: json, markdown (default: json)
   --output, -o       Output file path (default: stdout)
   --topics           Comma-separated topics of interest
   --tone             Writing tone: beginner, intermediate, expert, mixed (default: intermediate)
@@ -79,9 +111,9 @@ Environment:
   ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN  Required unless --mock is specified
 
 Example:
-  looplia run --file ./article.txt --topics "ai,productivity" --tone expert
-  looplia run --session-id article-2025-12-08-abc123 --tone expert
-  looplia run --file ./notes.md --no-streaming | jq .summary
+  looplia run writing-kit --file ./article.txt --topics "ai,productivity" --tone expert
+  looplia run writing-kit --session-id article-2025-12-08-abc123 --tone expert
+  looplia run writing-kit --file ./notes.md --no-streaming | jq .summary
 `);
 }
 

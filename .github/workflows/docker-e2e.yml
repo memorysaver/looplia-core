@@ -40,7 +40,7 @@ jobs:
           path: looplia-image.tar.gz
           retention-days: 1
 
-  # Test: Markdown file with full pipeline
+  # Test: Markdown file with full 3-stage pipeline
   test-markdown:
     runs-on: ubuntu-latest
     needs: build
@@ -61,7 +61,7 @@ jobs:
       - name: Create test workspace
         run: mkdir -p test-workspace
 
-      - name: Run pipeline command
+      - name: Run writing-kit workflow
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
@@ -69,7 +69,7 @@ jobs:
             -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
             -v "$(pwd)/examples:/examples:ro" \
             $IMAGE_NAME \
-            run --file /examples/ai-healthcare.md \
+            run writing-kit --file /examples/ai-healthcare.md \
             --topics "ai,healthcare,technology" \
             --tone "expert")
 
@@ -98,8 +98,8 @@ jobs:
             echo "=== content.md (first 20 lines) ==="
             head -20 "$SESSION_DIR/content.md" 2>/dev/null || echo "No content.md"
             echo ""
-            echo "=== session.json ==="
-            cat "$SESSION_DIR/session.json" 2>/dev/null || echo "No session.json"
+            echo "=== validation.json ==="
+            cat "$SESSION_DIR/validation.json" 2>/dev/null || echo "No validation.json"
             echo ""
             echo "=== summary.json (if exists) ==="
             cat "$SESSION_DIR/summary.json" 2>/dev/null || echo "No summary.json"
@@ -108,7 +108,12 @@ jobs:
             cat "$SESSION_DIR/writing-kit.json" 2>/dev/null | head -100 || echo "No writing-kit.json"
             echo ""
             echo "=== Query logs (last 200 lines) ==="
-            tail -200 "$SESSION_DIR/query.log" 2>/dev/null || echo "No query.log"
+            LOG_FILE=$(ls "$SESSION_DIR/logs/"*.log 2>/dev/null | head -1)
+            if [ -n "$LOG_FILE" ]; then
+              tail -200 "$LOG_FILE"
+            else
+              echo "No query log found"
+            fi
           else
             echo "No session directory found"
             echo "Contents of test-workspace:"
@@ -126,13 +131,23 @@ jobs:
           [ -f "$SESSION_DIR/content.md" ] || (echo "ERROR: content.md not found" && exit 1)
           echo "✓ content.md exists"
 
-      - name: Validate writing-kit output
+      - name: Validate pipeline artifacts
         run: |
           SESSION_DIR=$(find test-workspace/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
 
-          # Check writing-kit.json exists
-          [ -f "$SESSION_DIR/writing-kit.json" ] || (echo "ERROR: writing-kit.json not found" && exit 1)
-          echo "✓ writing-kit.json exists"
+          # Check all 3 stage artifacts exist
+          [ -f "$SESSION_DIR/summary.json" ] || (echo "ERROR: summary.json not found (Stage 1)" && exit 1)
+          echo "✓ summary.json exists (Stage 1)"
+
+          [ -f "$SESSION_DIR/ideas.json" ] || (echo "ERROR: ideas.json not found (Stage 2)" && exit 1)
+          echo "✓ ideas.json exists (Stage 2)"
+
+          [ -f "$SESSION_DIR/writing-kit.json" ] || (echo "ERROR: writing-kit.json not found (Stage 3)" && exit 1)
+          echo "✓ writing-kit.json exists (Stage 3)"
+
+      - name: Validate writing-kit output
+        run: |
+          SESSION_DIR=$(find test-workspace/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
 
           # Validate basic structure
           jq -e '.contentId' "$SESSION_DIR/writing-kit.json" > /dev/null || (echo "ERROR: missing contentId" && exit 1)
@@ -140,6 +155,67 @@ jobs:
           jq -e '.ideas' "$SESSION_DIR/writing-kit.json" > /dev/null || (echo "ERROR: missing ideas" && exit 1)
           jq -e '.suggestedOutline' "$SESSION_DIR/writing-kit.json" > /dev/null || (echo "ERROR: missing suggestedOutline" && exit 1)
           echo "✓ writing-kit.json has valid structure"
+
+      - name: Validate pipeline completion
+        run: |
+          SESSION_DIR=$(find test-workspace/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
+
+          # Check validation.json exists
+          [ -f "$SESSION_DIR/validation.json" ] || (echo "ERROR: validation.json not found" && exit 1)
+          echo "✓ validation.json exists"
+
+          # Check all outputs are validated
+          for output in summary ideas writing-kit; do
+            VALIDATED=$(jq -r ".outputs.\"$output\".validated // false" "$SESSION_DIR/validation.json")
+            if [ "$VALIDATED" = "true" ]; then
+              echo "✓ $output: validated"
+            else
+              echo "⚠ $output: NOT validated (may be expected if validation skill not yet implemented)"
+            fi
+          done
+
+      - name: Verify subagent execution
+        run: |
+          SESSION_DIR=$(find test-workspace/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
+          LOG_FILE=$(ls "$SESSION_DIR/logs/"*.log 2>/dev/null | head -1)
+
+          if [ -z "$LOG_FILE" ]; then
+            echo "⚠ No log file found, skipping subagent verification"
+            exit 0
+          fi
+
+          echo "=== Checking subagent types ==="
+
+          # Check for custom subagent types
+          if grep -q '"subagent_type".*"content-analyzer"' "$LOG_FILE"; then
+            echo "✓ content-analyzer subagent used"
+          else
+            echo "✗ content-analyzer NOT found"
+          fi
+
+          if grep -q '"subagent_type".*"idea-generator"' "$LOG_FILE"; then
+            echo "✓ idea-generator subagent used"
+          else
+            echo "✗ idea-generator NOT found"
+          fi
+
+          if grep -q '"subagent_type".*"writing-kit-builder"' "$LOG_FILE"; then
+            echo "✓ writing-kit-builder subagent used"
+          else
+            echo "✗ writing-kit-builder NOT found"
+          fi
+
+          # CRITICAL: Check for general-purpose (should NOT exist)
+          if grep -q '"subagent_type".*"general-purpose"' "$LOG_FILE"; then
+            echo "✗ FAIL: general-purpose subagent detected!"
+            exit 1
+          else
+            echo "✓ No general-purpose fallback"
+          fi
+
+          # Count Task tool invocations
+          TASK_COUNT=$(grep -c '"name".*"Task"' "$LOG_FILE" 2>/dev/null || echo "0")
+          echo "Task tool invocations: $TASK_COUNT (expected >= 3)"
 
       - name: Upload test artifacts
         if: always()

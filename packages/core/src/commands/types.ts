@@ -157,6 +157,16 @@ export type PromptContext = {
   contentPath: string;
   /** Workspace root path */
   workspace: string;
+
+  // v0.5.1 Workflow fields
+  /** Workflow name (e.g., "writing-kit") */
+  workflowName?: string;
+  /** Path to workflow file relative to workspace (e.g., "workflows/writing-kit.md") */
+  workflowPath?: string;
+  /** Workflow definition as YAML string for embedding in prompt */
+  workflowDefinition?: string;
+  /** Custom instructions from workflow markdown body */
+  workflowInstructions?: string;
 };
 
 /**

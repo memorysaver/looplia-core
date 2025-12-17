@@ -5,6 +5,7 @@
  * and AgentExecutor from provider to execute commands.
  */
 
+import { join } from "node:path";
 import type {
   AgentExecutor,
   CommandDefinition,
@@ -16,9 +17,12 @@ import type {
   WritingKit,
 } from "@looplia-core/core";
 import {
+  buildWorkflowPrompt,
   createMockSummarizer,
   createMockWritingKitProvider,
+  generateValidationManifest,
   getCommand,
+  workflowCommand,
 } from "@looplia-core/core";
 import {
   createClaudeAgentExecutor,
@@ -32,6 +36,7 @@ import type {
   ExecutionContext,
   KitConfig,
   SummarizeConfig,
+  WorkflowConfig,
 } from "./types";
 
 /**
@@ -86,12 +91,12 @@ export class LoopliaRuntime {
     const prompt = command.promptTemplate(promptContext);
 
     if (this.context.mode === "streaming") {
-      return await this.executeStreaming<T>(
+      return await this.executeStreaming<T>({
         command,
         prompt,
         contentId,
-        contentTitle
-      );
+        contentTitle,
+      });
     }
 
     return await this.executeBatch<T>(command, prompt, contentId);
@@ -197,18 +202,235 @@ export class LoopliaRuntime {
   }
 
   /**
+   * Execute workflow (v0.5.1)
+   *
+   * Uses workflow-as-markdown pattern:
+   * 1. Validate workflow exists and has valid structure
+   * 2. Generate validation.json from frontmatter
+   * 3. Build prompt with workflow context
+   * 4. Execute workflow command
+   */
+  async executeWorkflow(
+    config: WorkflowConfig
+  ): Promise<CommandResult<unknown>> {
+    if (!config.workflowId) {
+      return {
+        success: false,
+        error: { type: "validation", message: "Workflow ID is required" },
+        sessionId: "",
+      };
+    }
+
+    const content = await this.sessionManager.prepare({
+      file: config.file,
+      sessionId: config.sessionId,
+    });
+
+    this.context.workspace = this.sessionManager.getWorkspace();
+
+    // Validate workflow exists and is valid (fail early)
+    const { validateWorkflow } = await import("../utils/workflow-validator");
+    const validation = validateWorkflow(
+      config.workflowId,
+      this.context.workspace
+    );
+
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: {
+          type: validation.error.code.toLowerCase(),
+          message: validation.error.message,
+        },
+        sessionId: content.id,
+      };
+    }
+
+    const { definition, instructions } = validation;
+
+    // Mock mode returns generic mock result
+    if (this.context.mock) {
+      return this.executeGenericMock(content, config.workflowId);
+    }
+
+    const workflowPath = `workflows/${config.workflowId}.md`;
+
+    // Generate validation.json
+    const validationManifest = generateValidationManifest(definition);
+    const validationPath = join(
+      this.context.workspace,
+      `contentItem/${content.id}/validation.json`
+    );
+
+    try {
+      const { writeFile, mkdir } = await import("node:fs/promises");
+      const { dirname } = await import("node:path");
+      await mkdir(dirname(validationPath), { recursive: true });
+      await writeFile(
+        validationPath,
+        JSON.stringify(validationManifest, null, 2)
+      );
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          type: "io",
+          message: `Failed to write validation.json: ${error}`,
+        },
+        sessionId: content.id,
+      };
+    }
+
+    // Build prompt context
+    const promptContext: PromptContext = {
+      contentId: content.id,
+      contentPath: `contentItem/${content.id}/content.md`,
+      workspace: this.context.workspace,
+      workflowName: config.workflowId,
+      workflowPath,
+      workflowDefinition: this.serializeWorkflowDefinition(definition),
+      workflowInstructions: instructions,
+    };
+
+    const prompt = buildWorkflowPrompt(promptContext);
+
+    // Update executor workspace
+    this.executor = createClaudeAgentExecutor({
+      workspace: this.context.workspace,
+    });
+
+    // Format workflow name for display (e.g., "writing-kit" -> "Writing Kit")
+    const workflowTitle = this.formatWorkflowTitle(definition.name);
+
+    if (this.context.mode === "streaming") {
+      return await this.executeStreaming<unknown>({
+        command: workflowCommand,
+        prompt,
+        contentId: content.id,
+        contentTitle: content.title,
+        titleOverride: workflowTitle,
+      });
+    }
+
+    return await this.executeBatch<unknown>(
+      workflowCommand,
+      prompt,
+      content.id
+    );
+  }
+
+  /**
+   * Execute generic mock for any workflow
+   */
+  private executeGenericMock(
+    content: { id: string; title: string },
+    workflowId: string
+  ): CommandResult<unknown> {
+    console.error("⏳ Processing (mock)...");
+    return {
+      success: true,
+      data: {
+        contentId: content.id,
+        workflowId,
+        mock: true,
+        timestamp: new Date().toISOString(),
+        message: "Mock execution - use real API for actual workflow output",
+      },
+      sessionId: `mock-${content.id}`,
+    };
+  }
+
+  /**
+   * Serialize workflow definition to YAML-like string for prompt
+   */
+  private serializeWorkflowDefinition(definition: {
+    name: string;
+    description: string;
+    outputs: Record<string, unknown>;
+  }): string {
+    const lines: string[] = [];
+    lines.push(`name: ${definition.name}`);
+    lines.push(`description: ${definition.description}`);
+    lines.push("outputs:");
+
+    for (const [name, output] of Object.entries(definition.outputs)) {
+      this.serializeOutput(lines, name, output as Record<string, unknown>);
+    }
+
+    return lines.join("\n");
+  }
+
+  /**
+   * Serialize a single output definition
+   */
+  private serializeOutput(
+    lines: string[],
+    name: string,
+    out: Record<string, unknown>
+  ): void {
+    lines.push(`  ${name}:`);
+    if (out.artifact) {
+      lines.push(`    artifact: ${out.artifact}`);
+    }
+    if (out.agent) {
+      lines.push(`    agent: ${out.agent}`);
+    }
+    if (out.requires) {
+      lines.push(`    requires: [${(out.requires as string[]).join(", ")}]`);
+    }
+    if (out.final) {
+      lines.push("    final: true");
+    }
+    if (out.validate) {
+      this.serializeValidate(lines, out.validate as Record<string, unknown>);
+    }
+  }
+
+  /**
+   * Serialize validate criteria
+   */
+  private serializeValidate(
+    lines: string[],
+    validate: Record<string, unknown>
+  ): void {
+    lines.push("    validate:");
+    for (const [key, val] of Object.entries(validate)) {
+      if (Array.isArray(val)) {
+        lines.push(`      ${key}: [${val.join(", ")}]`);
+      } else {
+        lines.push(`      ${key}: ${val}`);
+      }
+    }
+  }
+
+  /**
+   * Format workflow name for display
+   * e.g., "writing-kit" -> "Writing Kit"
+   */
+  private formatWorkflowTitle(workflowName: string): string {
+    return workflowName
+      .split("-")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  }
+
+  /**
    * Execute command with streaming UI
    */
-  private async executeStreaming<T>(
-    command: CommandDefinition<T>,
-    prompt: string,
-    contentId: string,
-    contentTitle: string
-  ): Promise<CommandResult<T>> {
-    // DisplayConfig now lives in CLI layer (Clean Architecture)
+  private async executeStreaming<T>(options: {
+    command: CommandDefinition<T>;
+    prompt: string;
+    contentId: string;
+    contentTitle: string;
+    titleOverride?: string;
+  }): Promise<CommandResult<T>> {
+    const { command, prompt, contentId, contentTitle, titleOverride } = options;
+
+    // Use title override if provided (e.g., from workflow definition)
+    // Otherwise fall back to display config
     const { getDisplayConfig } = await import("../config/display-config");
     const displayConfig = getDisplayConfig(command.name);
-    const title = displayConfig?.title ?? command.name;
+    const title = titleOverride ?? displayConfig.title;
 
     const { result, error } = await renderStreamingQuery<T>({
       title,

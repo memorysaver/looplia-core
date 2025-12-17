@@ -2,7 +2,8 @@
 name: content-analyzer
 description: Deep content analysis using media-reviewer skill. Extracts structure, themes, narrative flow, core ideas, and important moments.
 model: haiku
-tools: Read, Skill
+tools: Read, Write, Skill
+skills: media-reviewer, content-documenter
 ---
 
 # Content Analyzer Agent

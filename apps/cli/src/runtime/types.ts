@@ -9,7 +9,6 @@
  * Base configuration shared by all commands
  */
 export type BaseConfig = {
-  format: "json" | "markdown";
   outputPath?: string;
   noStreaming: boolean;
   mock: boolean;
@@ -20,6 +19,19 @@ export type BaseConfig = {
  */
 export type KitConfig = BaseConfig & {
   help: boolean;
+  file?: string;
+  sessionId?: string;
+  topics?: string[];
+  tone?: string;
+  wordCount?: number;
+};
+
+/**
+ * Workflow command configuration (v0.5.1)
+ */
+export type WorkflowConfig = BaseConfig & {
+  help: boolean;
+  workflowId?: string;
   file?: string;
   sessionId?: string;
   topics?: string[];

@@ -13,10 +13,19 @@ function extractKey(arg: string): string | null {
 }
 
 /**
- * Parse command line arguments into a key-value object
+ * Parsed arguments with positional args in _
  */
-export function parseArgs(args: string[]): Record<string, string | boolean> {
-  const result: Record<string, string | boolean> = {};
+export type ParsedArgs = {
+  _: string[];
+  [key: string]: string | boolean | string[];
+};
+
+/**
+ * Parse command line arguments into a key-value object
+ * Positional arguments are collected in the _ array
+ */
+export function parseArgs(args: string[]): ParsedArgs {
+  const result: ParsedArgs = { _: [] };
   let i = 0;
 
   while (i < args.length) {
@@ -28,6 +37,8 @@ export function parseArgs(args: string[]): Record<string, string | boolean> {
 
     const key = extractKey(arg);
     if (!key) {
+      // Positional argument - collect in _ array
+      result._.push(arg);
       i += 1;
       continue;
     }
@@ -49,7 +60,7 @@ export function parseArgs(args: string[]): Record<string, string | boolean> {
  * Get a string argument value
  */
 export function getArg(
-  args: Record<string, string | boolean>,
+  args: ParsedArgs,
   ...keys: string[]
 ): string | undefined {
   for (const key of keys) {
@@ -64,10 +75,7 @@ export function getArg(
 /**
  * Check if a flag is set
  */
-export function hasFlag(
-  args: Record<string, string | boolean>,
-  ...keys: string[]
-): boolean {
+export function hasFlag(args: ParsedArgs, ...keys: string[]): boolean {
   for (const key of keys) {
     if (args[key] !== undefined) {
       return true;

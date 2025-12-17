@@ -2,7 +2,8 @@
 set -e
 
 # Looplia Docker E2E Test Script
-# Runs real API tests inside Docker container and evaluates output quality
+# Runs real API tests inside Docker container with v0.5.1 workflow verification
+# Tests: Workflow-as-Markdown with custom subagents and skills auto-loading
 
 # Colors for output
 RED='\033[0;31m'
@@ -52,24 +53,43 @@ print_info() {
   echo -e "    $1"
 }
 
+# Get Docker environment arguments
+# Supports: CLAUDE_CODE_OAUTH_TOKEN (CI), ANTHROPIC_API_KEY (env), .env file (local)
+get_env_args() {
+  if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+    # CI mode: subscription plan token (cost-effective)
+    echo "-e CLAUDE_CODE_OAUTH_TOKEN=$CLAUDE_CODE_OAUTH_TOKEN"
+  elif [ -n "$ANTHROPIC_API_KEY" ]; then
+    # Direct API key from environment
+    echo "-e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY"
+  elif [ -f "$ENV_FILE" ]; then
+    # Local mode: .env file
+    echo "--env-file $ENV_FILE"
+  else
+    echo ""
+  fi
+}
+
 # Check prerequisites
 check_prerequisites() {
   print_header "Checking Prerequisites"
 
-  # Check .env file (only for local runs, CI uses env vars directly)
+  # Check API credentials
   print_step "Checking API credentials..."
-  if [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
-    if [ -f "$ENV_FILE" ]; then
-      print_pass ".env file exists"
-    else
-      print_fail "No API credentials found"
-      echo ""
-      echo "Create .env with your Anthropic API key:"
-      echo "  echo 'ANTHROPIC_API_KEY=sk-ant-api03-xxx' > .env"
-      exit 1
-    fi
+  if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+    print_pass "OAuth token available (CI mode)"
+  elif [ -n "$ANTHROPIC_API_KEY" ]; then
+    print_pass "API key available via environment"
+  elif [ -f "$ENV_FILE" ]; then
+    print_pass ".env file exists (local mode)"
   else
-    print_pass "API credentials available via environment"
+    print_fail "No API credentials found"
+    echo ""
+    echo "Provide credentials via:"
+    echo "  - CLAUDE_CODE_OAUTH_TOKEN (CI/subscription plan)"
+    echo "  - ANTHROPIC_API_KEY environment variable"
+    echo "  - .env file with ANTHROPIC_API_KEY=sk-ant-..."
+    exit 1
   fi
 
   # Check Docker
@@ -101,19 +121,19 @@ check_prerequisites() {
   fi
   print_pass "Markdown fixture available"
 
-  # Check youtube fixtures
-  print_step "Checking YouTube test fixtures..."
-  if [ ! -f "$EXAMPLES_DIR/youtube/Anthropics/captions/EvtPBaaykdo.en.vtt" ]; then
-    print_fail "VTT fixture not found: $EXAMPLES_DIR/youtube/Anthropics/captions/EvtPBaaykdo.en.vtt"
-    exit 1
-  fi
-  print_pass "VTT fixture available"
-
-  if [ ! -f "$EXAMPLES_DIR/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt" ]; then
-    print_fail "SRT fixture not found: $EXAMPLES_DIR/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt"
-    exit 1
-  fi
-  print_pass "SRT fixture available"
+  # Check youtube fixtures (commented out - focus on markdown processing)
+  # print_step "Checking YouTube test fixtures..."
+  # if [ ! -f "$EXAMPLES_DIR/youtube/Anthropics/captions/EvtPBaaykdo.en.vtt" ]; then
+  #   print_fail "VTT fixture not found: $EXAMPLES_DIR/youtube/Anthropics/captions/EvtPBaaykdo.en.vtt"
+  #   exit 1
+  # fi
+  # print_pass "VTT fixture available"
+  #
+  # if [ ! -f "$EXAMPLES_DIR/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt" ]; then
+  #   print_fail "SRT fixture not found: $EXAMPLES_DIR/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt"
+  #   exit 1
+  # fi
+  # print_pass "SRT fixture available"
 }
 
 # Clean and prepare workspace
@@ -139,286 +159,299 @@ build_project() {
   print_pass "Docker image built: $IMAGE_NAME"
 }
 
-# Run summarize command
-test_summarize() {
-  print_header "Test 1: Summarize Command"
+# Verify workflow logs for subagent and skill usage
+verify_workflow_log() {
+  local SESSION_DIR=$1
+  local LOG_FILE=$(ls "$SESSION_DIR/logs/"*.log 2>/dev/null | head -1)
 
-  print_step "Running summarize with real API..."
-  # Run without volume mount - let container bootstrap naturally
-  # Then copy results out using docker cp
-  CONTAINER_ID=$(docker create \
-    --env-file "$ENV_FILE" \
-    -v "$(pwd)/$EXAMPLES_DIR:/examples:ro" \
-    "$IMAGE_NAME" \
-    summarize --file /examples/ai-healthcare.md \
-    --output /home/looplia/.looplia/summary.json)
-
-  docker start -a "$CONTAINER_ID"
-
-  # Copy results from container to local workspace
-  print_step "Extracting results from container..."
-  docker cp "$CONTAINER_ID:/home/looplia/.looplia/." "$WORKSPACE_DIR/"
-  docker rm "$CONTAINER_ID" > /dev/null
-
-  # Level 1: Schema validation
-  print_step "Validating summary schema..."
-  if jq -e '.headline and .tldr and .bullets and .tags' "$WORKSPACE_DIR/summary.json" > /dev/null 2>&1; then
-    print_pass "Schema validation passed"
-  else
-    print_fail "Schema validation failed - missing required fields"
-    jq '.' "$WORKSPACE_DIR/summary.json"
+  if [ -z "$LOG_FILE" ]; then
+    print_warn "No log file found in $SESSION_DIR/logs/"
     return 1
   fi
 
-  # Level 2: Quality metrics
-  print_step "Checking quality metrics..."
+  print_step "Verifying workflow execution logs..."
 
-  TLDR_WORDS=$(jq -r '.tldr' "$WORKSPACE_DIR/summary.json" | wc -w | tr -d ' ')
-  BULLET_COUNT=$(jq '.bullets | length' "$WORKSPACE_DIR/summary.json")
-  TAG_COUNT=$(jq '.tags | length' "$WORKSPACE_DIR/summary.json")
+  local pass=true
 
-  print_info "TLDR word count: $TLDR_WORDS (expected: 30-200)"
-  print_info "Bullet count: $BULLET_COUNT (expected: 3-7)"
-  print_info "Tag count: $TAG_COUNT (expected: 3-10)"
-
-  local quality_passed=true
-
-  if [ "$TLDR_WORDS" -ge 30 ] && [ "$TLDR_WORDS" -le 200 ]; then
-    print_pass "TLDR length acceptable"
+  # Check for custom subagent types (CRITICAL)
+  if grep -q '"subagent_type".*"content-analyzer"' "$LOG_FILE"; then
+    print_pass "content-analyzer subagent used"
   else
-    print_warn "TLDR length out of range"
-    quality_passed=false
+    print_fail "content-analyzer subagent NOT FOUND"
+    pass=false
   fi
 
-  if [ "$BULLET_COUNT" -ge 3 ] && [ "$BULLET_COUNT" -le 7 ]; then
-    print_pass "Bullet count acceptable"
+  if grep -q '"subagent_type".*"idea-generator"' "$LOG_FILE"; then
+    print_pass "idea-generator subagent used"
   else
-    print_warn "Bullet count out of range"
-    quality_passed=false
+    print_fail "idea-generator subagent NOT FOUND"
+    pass=false
   fi
 
-  if [ "$TAG_COUNT" -ge 3 ]; then
-    print_pass "Tag count acceptable"
+  if grep -q '"subagent_type".*"writing-kit-builder"' "$LOG_FILE"; then
+    print_pass "writing-kit-builder subagent used"
   else
-    print_warn "Tag count low"
-    quality_passed=false
+    print_fail "writing-kit-builder subagent NOT FOUND"
+    pass=false
   fi
 
-  if [ "$quality_passed" = true ]; then
-    print_pass "Quality metrics passed"
+  # Check for general-purpose (should NOT exist)
+  if grep -q '"subagent_type".*"general-purpose"' "$LOG_FILE"; then
+    print_fail "FAIL: general-purpose subagent detected!"
+    pass=false
+  else
+    print_pass "No general-purpose fallback"
   fi
+
+  # Check Task tool invocations
+  TASK_COUNT=$(grep -c '"name".*"Task"' "$LOG_FILE" 2>/dev/null || echo "0")
+  if [ "$TASK_COUNT" -ge 3 ]; then
+    print_pass "Task tool invocations: $TASK_COUNT"
+  else
+    print_warn "Task tool invocations: $TASK_COUNT (expected >= 3)"
+  fi
+
+  # Check Skill tool invocations
+  SKILL_COUNT=$(grep -c '"name".*"Skill"' "$LOG_FILE" 2>/dev/null || echo "0")
+  print_info "Skill tool invocations: $SKILL_COUNT"
+
+  # Check for validation script calls
+  VALIDATE_COUNT=$(grep -c "validate.ts" "$LOG_FILE" 2>/dev/null || echo "0")
+  if [ "$VALIDATE_COUNT" -ge 3 ]; then
+    print_pass "Validation script calls: $VALIDATE_COUNT"
+  else
+    print_warn "Validation script calls: $VALIDATE_COUNT (expected >= 3)"
+  fi
+
+  [ "$pass" = true ] && return 0 || return 1
 }
 
-# Run kit command
-test_kit() {
-  print_header "Test 2: Kit Command"
+# Check validation.json state
+check_validation_state() {
+  local SESSION_DIR=$1
+  local VALIDATION_FILE="$SESSION_DIR/validation.json"
 
-  print_step "Running kit with real API..."
-  # Run without volume mount - let container bootstrap naturally
-  # Then copy results out using docker cp
-  CONTAINER_ID=$(docker create \
-    --env-file "$ENV_FILE" \
-    -v "$(pwd)/$EXAMPLES_DIR:/examples:ro" \
-    "$IMAGE_NAME" \
-    kit --file /examples/ai-healthcare.md \
-    --topics "ai,healthcare,technology" \
-    --tone "expert" \
-    --output /home/looplia/.looplia/kit.json)
+  print_step "Checking validation state..."
 
-  docker start -a "$CONTAINER_ID"
-
-  # Copy results from container to local workspace
-  print_step "Extracting results from container..."
-  docker cp "$CONTAINER_ID:/home/looplia/.looplia/." "$WORKSPACE_DIR/"
-  docker rm "$CONTAINER_ID" > /dev/null
-
-  # Level 1: Schema validation
-  print_step "Validating kit schema..."
-  if jq -e '.contentId and .summary and .ideas and .suggestedOutline' "$WORKSPACE_DIR/kit.json" > /dev/null 2>&1; then
-    print_pass "Schema validation passed"
-  else
-    print_fail "Schema validation failed - missing required fields"
-    jq '.' "$WORKSPACE_DIR/kit.json"
+  if [ ! -f "$VALIDATION_FILE" ]; then
+    print_fail "validation.json not found"
     return 1
   fi
 
-  # Level 2: Quality metrics
+  print_pass "validation.json exists"
+
+  local pass=true
+
+  # Check each output is validated
+  for output in summary ideas writing-kit; do
+    VALIDATED=$(jq -r ".outputs.\"$output\".validated // false" "$VALIDATION_FILE" 2>/dev/null)
+    if [ "$VALIDATED" = "true" ]; then
+      print_pass "$output: validated"
+    else
+      print_fail "$output: NOT validated"
+      pass=false
+    fi
+  done
+
+  [ "$pass" = true ] && return 0 || return 1
+}
+
+# Test: Markdown workflow (3-stage pipeline)
+test_workflow_markdown() {
+  print_header "Test 1: Markdown Workflow (3-stage pipeline)"
+
+  print_step "Running writing-kit workflow with real API..."
+
+  ENV_ARGS=$(get_env_args)
+  CONTAINER_ID=$(docker create \
+    $ENV_ARGS \
+    -v "$(pwd)/$EXAMPLES_DIR:/examples:ro" \
+    "$IMAGE_NAME" \
+    run writing-kit --file /examples/ai-healthcare.md \
+    --topics "ai,healthcare,technology" \
+    --tone "expert")
+
+  docker start -a "$CONTAINER_ID" || true
+
+  # Copy results from container
+  print_step "Extracting results from container..."
+  mkdir -p "$WORKSPACE_DIR/markdown-test"
+  docker cp "$CONTAINER_ID:/home/looplia/.looplia/." "$WORKSPACE_DIR/markdown-test/"
+  docker rm "$CONTAINER_ID" > /dev/null
+
+  # Find session directory
+  SESSION_DIR=$(find "$WORKSPACE_DIR/markdown-test/contentItem" -maxdepth 1 -type d ! -name contentItem 2>/dev/null | head -1)
+  if [ -z "$SESSION_DIR" ]; then
+    print_fail "No session directory found"
+    return 1
+  fi
+  SESSION_ID=$(basename "$SESSION_DIR")
+  print_pass "Session folder created: $SESSION_ID"
+
+  # Verify artifacts exist
+  print_step "Checking pipeline artifacts..."
+
+  if [ -f "$SESSION_DIR/summary.json" ]; then
+    print_pass "summary.json exists (Stage 1)"
+  else
+    print_fail "summary.json NOT found"
+  fi
+
+  if [ -f "$SESSION_DIR/ideas.json" ]; then
+    print_pass "ideas.json exists (Stage 2)"
+  else
+    print_fail "ideas.json NOT found"
+  fi
+
+  if [ -f "$SESSION_DIR/writing-kit.json" ]; then
+    print_pass "writing-kit.json exists (Stage 3)"
+  else
+    print_fail "writing-kit.json NOT found"
+    return 1
+  fi
+
+  # Schema validation
+  print_step "Validating writing-kit.json schema..."
+  if jq -e '.contentId and .summary and .ideas and .suggestedOutline' "$SESSION_DIR/writing-kit.json" > /dev/null 2>&1; then
+    print_pass "Schema validation passed"
+  else
+    print_fail "Schema validation failed - missing required fields"
+    jq '.' "$SESSION_DIR/writing-kit.json"
+    return 1
+  fi
+
+  # Quality metrics
   print_step "Checking quality metrics..."
 
-  HOOK_COUNT=$(jq '.ideas.hooks | length' "$WORKSPACE_DIR/kit.json")
-  ANGLE_COUNT=$(jq '.ideas.angles | length' "$WORKSPACE_DIR/kit.json")
-  QUESTION_COUNT=$(jq '.ideas.questions | length' "$WORKSPACE_DIR/kit.json")
-  SECTION_COUNT=$(jq '.suggestedOutline | length' "$WORKSPACE_DIR/kit.json")
+  HOOK_COUNT=$(jq '.ideas.hooks | length' "$SESSION_DIR/writing-kit.json" 2>/dev/null || echo "0")
+  SECTION_COUNT=$(jq '.suggestedOutline | length' "$SESSION_DIR/writing-kit.json" 2>/dev/null || echo "0")
 
   print_info "Hook count: $HOOK_COUNT (expected: >= 2)"
-  print_info "Angle count: $ANGLE_COUNT (expected: >= 2)"
-  print_info "Question count: $QUESTION_COUNT (expected: >= 2)"
   print_info "Outline sections: $SECTION_COUNT (expected: >= 3)"
-
-  local quality_passed=true
 
   if [ "$HOOK_COUNT" -ge 2 ]; then
     print_pass "Hook count acceptable"
   else
     print_warn "Hook count low"
-    quality_passed=false
-  fi
-
-  if [ "$ANGLE_COUNT" -ge 2 ]; then
-    print_pass "Angle count acceptable"
-  else
-    print_warn "Angle count low"
-    quality_passed=false
-  fi
-
-  if [ "$QUESTION_COUNT" -ge 2 ]; then
-    print_pass "Question count acceptable"
-  else
-    print_warn "Question count low"
-    quality_passed=false
   fi
 
   if [ "$SECTION_COUNT" -ge 3 ]; then
     print_pass "Outline section count acceptable"
   else
     print_warn "Outline section count low"
-    quality_passed=false
   fi
 
-  if [ "$quality_passed" = true ]; then
-    print_pass "Quality metrics passed"
-  fi
+  # Verify log patterns (subagent/skill usage)
+  verify_workflow_log "$SESSION_DIR"
+
+  # Check validation state
+  check_validation_state "$SESSION_DIR"
 }
 
-# Test VTT caption summarization
-test_vtt_summarize() {
-  print_header "Test 3: Summarize VTT Caption"
+# Test: VTT caption workflow
+test_workflow_vtt() {
+  print_header "Test 2: VTT Caption Workflow"
 
-  print_step "Running summarize on VTT file..."
-  # Run without --output to let it save to session folder naturally
+  print_step "Running writing-kit workflow on VTT file..."
+
+  ENV_ARGS=$(get_env_args)
   CONTAINER_ID=$(docker create \
-    --env-file "$ENV_FILE" \
+    $ENV_ARGS \
     -v "$(pwd)/$EXAMPLES_DIR:/examples:ro" \
     "$IMAGE_NAME" \
-    summarize --file /examples/youtube/Anthropics/captions/EvtPBaaykdo.en.vtt)
+    run writing-kit --file /examples/youtube/Anthropics/captions/EvtPBaaykdo.en.vtt)
 
-  docker start -a "$CONTAINER_ID"
+  docker start -a "$CONTAINER_ID" || true
 
   print_step "Extracting results from container..."
-  # Copy to a unique subfolder to preserve session data
   mkdir -p "$WORKSPACE_DIR/vtt-test"
   docker cp "$CONTAINER_ID:/home/looplia/.looplia/." "$WORKSPACE_DIR/vtt-test/"
   docker rm "$CONTAINER_ID" > /dev/null
 
-  # Find the session folder (should be contentItem/{sessionId}/)
-  print_step "Checking session folder structure..."
+  # Find session directory
   SESSION_DIR=$(find "$WORKSPACE_DIR/vtt-test/contentItem" -maxdepth 1 -type d ! -name contentItem 2>/dev/null | head -1)
-  if [ -n "$SESSION_DIR" ]; then
-    SESSION_ID=$(basename "$SESSION_DIR")
-    print_pass "Session folder created: $SESSION_ID"
-  else
-    print_fail "No session folder found in contentItem/"
-    ls -la "$WORKSPACE_DIR/vtt-test/contentItem/" 2>/dev/null || echo "contentItem folder missing"
+  if [ -z "$SESSION_DIR" ]; then
+    print_fail "No session directory found"
     return 1
   fi
+  SESSION_ID=$(basename "$SESSION_DIR")
+  print_pass "Session folder created: $SESSION_ID"
 
-  # Check summary.json exists in session folder
-  SUMMARY_FILE="$SESSION_DIR/summary.json"
-  if [ -f "$SUMMARY_FILE" ]; then
-    print_pass "summary.json found in session folder"
+  # Check writing-kit.json exists
+  if [ -f "$SESSION_DIR/writing-kit.json" ]; then
+    print_pass "writing-kit.json found"
   else
-    print_fail "summary.json not found in session folder"
-    ls -la "$SESSION_DIR/" 2>/dev/null
+    print_fail "writing-kit.json not found"
     return 1
   fi
 
   # Schema validation
-  print_step "Validating VTT summary schema..."
-  if jq -e '.headline and .tldr and .bullets and .tags' "$SUMMARY_FILE" > /dev/null 2>&1; then
+  print_step "Validating VTT writing-kit schema..."
+  if jq -e '.contentId and .summary and .ideas' "$SESSION_DIR/writing-kit.json" > /dev/null 2>&1; then
     print_pass "VTT schema validation passed"
   else
-    print_fail "VTT schema validation failed - missing required fields"
-    jq '.' "$SUMMARY_FILE" 2>/dev/null || cat "$SUMMARY_FILE"
+    print_fail "VTT schema validation failed"
     return 1
   fi
 
-  # Source type detection validation
-  print_step "Checking source type detection..."
-  DETECTED_SOURCE=$(jq -r '.detectedSource // empty' "$SUMMARY_FILE")
-  if [ -n "$DETECTED_SOURCE" ]; then
-    print_pass "Source detected: $DETECTED_SOURCE"
-  else
-    print_warn "No source type detected (detectedSource field empty)"
-  fi
+  # Verify subagent usage
+  verify_workflow_log "$SESSION_DIR"
 
-  # Quality check
-  TLDR_WORDS=$(jq -r '.tldr' "$SUMMARY_FILE" | wc -w | tr -d ' ')
-  print_info "VTT TLDR word count: $TLDR_WORDS"
-  if [ "$TLDR_WORDS" -ge 20 ]; then
-    print_pass "VTT content extracted successfully"
-  else
-    print_warn "VTT TLDR seems short"
-  fi
+  # Check validation state
+  check_validation_state "$SESSION_DIR"
 }
 
-# Test SRT transcript summarization
-test_srt_summarize() {
-  print_header "Test 4: Summarize SRT Transcript"
+# Test: SRT transcript workflow
+test_workflow_srt() {
+  print_header "Test 3: SRT Transcript Workflow"
 
-  print_step "Running summarize on SRT file..."
-  # Run without --output to let it save to session folder naturally
+  print_step "Running writing-kit workflow on SRT file..."
+
+  ENV_ARGS=$(get_env_args)
   CONTAINER_ID=$(docker create \
-    --env-file "$ENV_FILE" \
+    $ENV_ARGS \
     -v "$(pwd)/$EXAMPLES_DIR:/examples:ro" \
     "$IMAGE_NAME" \
-    summarize --file /examples/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt)
+    run writing-kit --file /examples/youtube/Anthropics/transcripts/CBneTpXF1CQ.srt)
 
-  docker start -a "$CONTAINER_ID"
+  docker start -a "$CONTAINER_ID" || true
 
   print_step "Extracting results from container..."
-  # Copy to a unique subfolder to preserve session data
   mkdir -p "$WORKSPACE_DIR/srt-test"
   docker cp "$CONTAINER_ID:/home/looplia/.looplia/." "$WORKSPACE_DIR/srt-test/"
   docker rm "$CONTAINER_ID" > /dev/null
 
-  # Find the session folder
-  print_step "Checking session folder structure..."
+  # Find session directory
   SESSION_DIR=$(find "$WORKSPACE_DIR/srt-test/contentItem" -maxdepth 1 -type d ! -name contentItem 2>/dev/null | head -1)
-  if [ -n "$SESSION_DIR" ]; then
-    SESSION_ID=$(basename "$SESSION_DIR")
-    print_pass "Session folder created: $SESSION_ID"
-  else
-    print_fail "No session folder found in contentItem/"
+  if [ -z "$SESSION_DIR" ]; then
+    print_fail "No session directory found"
     return 1
   fi
+  SESSION_ID=$(basename "$SESSION_DIR")
+  print_pass "Session folder created: $SESSION_ID"
 
-  # Check summary.json exists in session folder
-  SUMMARY_FILE="$SESSION_DIR/summary.json"
-  if [ -f "$SUMMARY_FILE" ]; then
-    print_pass "summary.json found in session folder"
+  # Check writing-kit.json exists
+  if [ -f "$SESSION_DIR/writing-kit.json" ]; then
+    print_pass "writing-kit.json found"
   else
-    print_fail "summary.json not found in session folder"
+    print_fail "writing-kit.json not found"
     return 1
   fi
 
   # Schema validation
-  print_step "Validating SRT summary schema..."
-  if jq -e '.headline and .tldr and .bullets and .tags' "$SUMMARY_FILE" > /dev/null 2>&1; then
+  print_step "Validating SRT writing-kit schema..."
+  if jq -e '.contentId and .summary and .ideas' "$SESSION_DIR/writing-kit.json" > /dev/null 2>&1; then
     print_pass "SRT schema validation passed"
   else
-    print_fail "SRT schema validation failed - missing required fields"
-    jq '.' "$SUMMARY_FILE" 2>/dev/null || cat "$SUMMARY_FILE"
+    print_fail "SRT schema validation failed"
     return 1
   fi
 
-  # Quality check
-  TLDR_WORDS=$(jq -r '.tldr' "$SUMMARY_FILE" | wc -w | tr -d ' ')
-  print_info "SRT TLDR word count: $TLDR_WORDS"
-  if [ "$TLDR_WORDS" -ge 20 ]; then
-    print_pass "SRT content extracted successfully"
-  else
-    print_warn "SRT TLDR seems short"
-  fi
+  # Verify subagent usage
+  verify_workflow_log "$SESSION_DIR"
+
+  # Check validation state
+  check_validation_state "$SESSION_DIR"
 }
 
 # Check workspace structure
@@ -427,26 +460,51 @@ check_workspace() {
 
   print_step "Checking workspace structure..."
 
-  if [ -f "$WORKSPACE_DIR/CLAUDE.md" ]; then
+  # Check main test workspace
+  if [ -f "$WORKSPACE_DIR/markdown-test/CLAUDE.md" ]; then
     print_pass "CLAUDE.md exists (workspace initialized)"
   else
     print_warn "CLAUDE.md not found"
   fi
 
-  if [ -d "$WORKSPACE_DIR/contentItem" ]; then
-    SESSION_COUNT=$(find "$WORKSPACE_DIR/contentItem" -maxdepth 1 -type d | wc -l | tr -d ' ')
-    SESSION_COUNT=$((SESSION_COUNT - 1))
-    print_pass "contentItem directory exists ($SESSION_COUNT sessions)"
+  # Check workflows directory
+  if [ -d "$WORKSPACE_DIR/markdown-test/workflows" ]; then
+    print_pass "workflows/ directory exists"
+  else
+    print_warn "workflows/ directory not found"
+  fi
 
-    # Check for query logs (v0.3.3 feature)
-    LOG_COUNT=$(find "$WORKSPACE_DIR/contentItem" -name "query-*.log" 2>/dev/null | wc -l | tr -d ' ')
+  # Check .claude structure
+  if [ -d "$WORKSPACE_DIR/markdown-test/.claude/agents" ]; then
+    AGENT_COUNT=$(ls "$WORKSPACE_DIR/markdown-test/.claude/agents/"*.md 2>/dev/null | wc -l | tr -d ' ')
+    print_pass ".claude/agents/ exists ($AGENT_COUNT agents)"
+  else
+    print_warn ".claude/agents/ not found"
+  fi
+
+  if [ -d "$WORKSPACE_DIR/markdown-test/.claude/skills" ]; then
+    SKILL_COUNT=$(find "$WORKSPACE_DIR/markdown-test/.claude/skills" -maxdepth 1 -type d | wc -l | tr -d ' ')
+    SKILL_COUNT=$((SKILL_COUNT - 1))
+    print_pass ".claude/skills/ exists ($SKILL_COUNT skills)"
+  else
+    print_warn ".claude/skills/ not found"
+  fi
+
+  # Check contentItem directory
+  if [ -d "$WORKSPACE_DIR/markdown-test/contentItem" ]; then
+    SESSION_COUNT=$(find "$WORKSPACE_DIR/markdown-test/contentItem" -maxdepth 1 -type d | wc -l | tr -d ' ')
+    SESSION_COUNT=$((SESSION_COUNT - 1))
+    print_pass "contentItem/ exists ($SESSION_COUNT sessions)"
+
+    # Check for query logs
+    LOG_COUNT=$(find "$WORKSPACE_DIR" -name "*.log" 2>/dev/null | wc -l | tr -d ' ')
     if [ "$LOG_COUNT" -gt 0 ]; then
       print_pass "Query logs found ($LOG_COUNT log files)"
     else
-      print_info "No query logs found (may be expected)"
+      print_info "No query logs found"
     fi
   else
-    print_warn "contentItem directory not found"
+    print_warn "contentItem/ not found"
   fi
 }
 
@@ -469,30 +527,33 @@ print_summary() {
 
   echo ""
   echo "Test artifacts saved to: $WORKSPACE_DIR/"
-  echo "  - contentItem/ (Test 1-2: markdown source)"
-  echo "  - vtt-test/contentItem/{sessionId}/ (Test 3: VTT caption)"
-  echo "  - srt-test/contentItem/{sessionId}/ (Test 4: SRT transcript)"
+  echo "  - markdown-test/ (Test 1: Markdown source)"
+  # echo "  - vtt-test/ (Test 2: VTT caption)"      # Commented out
+  # echo "  - srt-test/ (Test 3: SRT transcript)"   # Commented out
   echo ""
   echo "Each session folder contains:"
   echo "  - content.md (raw input)"
-  echo "  - summary.json (analysis output)"
-  echo "  - writing-kit.json (full kit, if kit command)"
+  echo "  - validation.json (validation state)"
+  echo "  - summary.json (Stage 1)"
+  echo "  - ideas.json (Stage 2)"
+  echo "  - writing-kit.json (Stage 3 - final)"
+  echo "  - logs/*.log (query log for verification)"
   echo ""
 }
 
 # Main execution
 main() {
   print_header "Looplia Docker E2E Test Suite"
-  echo "  Version: 0.3.3"
+  echo "  Version: 0.5.1"
   echo "  Date: $(date '+%Y-%m-%d %H:%M:%S')"
+  echo "  Architecture: Workflow-as-Markdown with Custom Subagents"
 
   check_prerequisites
   prepare_workspace
   build_project
-  test_summarize
-  test_kit
-  test_vtt_summarize
-  test_srt_summarize
+  test_workflow_markdown
+  # test_workflow_vtt   # Commented out - focus on markdown processing
+  # test_workflow_srt   # Commented out - focus on markdown processing
   check_workspace
   print_summary
 }

@@ -2,7 +2,8 @@
 name: idea-generator
 description: Generate writing ideas (hooks, angles, questions) from content summary.
 model: haiku
-tools: Read, Skill
+tools: Read, Write, Skill
+skills: user-profile-reader
 ---
 
 # Idea Generator Agent

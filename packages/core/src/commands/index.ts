@@ -6,7 +6,6 @@
 
 // Command Definitions
 export { kitCommand } from "./kit";
-
 // Registry
 export {
   clearCommands,
@@ -15,7 +14,6 @@ export {
   hasCommand,
   registerCommand,
 } from "./registry";
-
 // Types
 export type {
   AgentExecutor,
@@ -37,9 +35,13 @@ export type {
   ToolStartEvent,
   UsageEvent,
 } from "./types";
+// Workflow Command (v0.5.1)
+export { buildWorkflowPrompt, workflowCommand } from "./workflow";
 
 // Auto-register commands on import
 import { kitCommand } from "./kit";
 import { registerCommand } from "./registry";
+import { workflowCommand } from "./workflow";
 
 registerCommand(kitCommand);
+registerCommand(workflowCommand);

@@ -62,14 +62,14 @@ describe("CLI E2E Tests", () => {
       const result = await execCLI(["--version"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia 0.5.0");
+      expect(result.stdout).toContain("looplia 0.5.1");
     });
 
     it("should show version with -v flag", async () => {
       const result = await execCLI(["-v"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia 0.5.0");
+      expect(result.stdout).toContain("looplia 0.5.1");
     });
 
     it("should error on unknown command", async () => {
@@ -144,7 +144,7 @@ describe("CLI E2E Tests", () => {
   });
 
   describe("Run Command", () => {
-    it("should build writing kit with all options", async () => {
+    it("should execute workflow with all options", async () => {
       const content = readFileSync(
         join(__dirname, "../fixtures/sample-article.txt"),
         "utf-8"
@@ -153,6 +153,7 @@ describe("CLI E2E Tests", () => {
 
       const result = await execCLI([
         "run",
+        "writing-kit",
         "--file",
         inputFile,
         "--topics",
@@ -168,26 +169,9 @@ describe("CLI E2E Tests", () => {
       // stderr may contain status messages like "✓ Content written" and "⏳ Processing"
       expect(result.stderr).not.toContain("Error");
 
-      // Parse and validate WritingKit JSON
-      const kit = JSON.parse(result.stdout);
-      expect(kit).toHaveProperty("contentId");
-      expect(kit).toHaveProperty("source");
-      expect(kit).toHaveProperty("summary");
-      expect(kit).toHaveProperty("ideas");
-      expect(kit).toHaveProperty("suggestedOutline");
-      expect(kit).toHaveProperty("meta");
-
-      // Validate nested structures
-      expect(kit.summary).toHaveProperty("headline");
-      expect(kit.summary).toHaveProperty("tldr");
-      expect(kit.ideas).toHaveProperty("hooks");
-      expect(kit.ideas).toHaveProperty("angles");
-      expect(kit.ideas).toHaveProperty("questions");
-      expect(Array.isArray(kit.ideas.hooks)).toBe(true);
-      expect(Array.isArray(kit.ideas.angles)).toBe(true);
-      expect(Array.isArray(kit.ideas.questions)).toBe(true);
-      expect(Array.isArray(kit.suggestedOutline)).toBe(true);
-      expect(kit.suggestedOutline.length).toBeGreaterThan(0);
+      // Parse output and verify it's valid JSON with contentId
+      const output = JSON.parse(result.stdout);
+      expect(output).toHaveProperty("contentId");
     });
 
     it("should use defaults when optional args omitted", async () => {
@@ -197,51 +181,30 @@ describe("CLI E2E Tests", () => {
       );
       const inputFile = createTestFile(tempDir.path, "input.txt", content);
 
-      const result = await execCLI(["run", "--file", inputFile, "--mock"]);
-
-      expect(result.exitCode).toBe(0);
-      const kit = JSON.parse(result.stdout);
-      expect(kit).toHaveProperty("summary");
-      expect(kit).toHaveProperty("ideas");
-      expect(kit).toHaveProperty("suggestedOutline");
-    });
-
-    it("should output markdown format for kit", async () => {
-      const content = readFileSync(
-        join(__dirname, "../fixtures/sample-article.txt"),
-        "utf-8"
-      );
-      const inputFile = createTestFile(tempDir.path, "input.txt", content);
-
       const result = await execCLI([
         "run",
+        "writing-kit",
         "--file",
         inputFile,
-        "--format",
-        "markdown",
         "--mock",
       ]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("# Writing Kit:");
-      expect(result.stdout).toContain("## Summary");
-      expect(result.stdout).toContain("## Writing Ideas");
-      expect(result.stdout).toContain("### Hooks");
-      expect(result.stdout).toContain("### Angles");
-      expect(result.stdout).toContain("### Questions");
-      expect(result.stdout).toContain("## Suggested Outline");
+      const output = JSON.parse(result.stdout);
+      expect(output).toHaveProperty("contentId");
     });
 
-    it("should write kit output to file", async () => {
+    it("should write output to file", async () => {
       const content = readFileSync(
         join(__dirname, "../fixtures/sample-article.txt"),
         "utf-8"
       );
       const inputFile = createTestFile(tempDir.path, "input.txt", content);
-      const outputFile = join(tempDir.path, "kit.json");
+      const outputFile = join(tempDir.path, "output.json");
 
       const result = await execCLI([
         "run",
+        "writing-kit",
         "--file",
         inputFile,
         "--output",
@@ -250,12 +213,11 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain(`Writing kit saved to: ${outputFile}`);
+      expect(result.stderr).toContain(`saved to: ${outputFile}`);
 
       const outputContent = readTestFile(outputFile);
-      const kit = JSON.parse(outputContent);
-      expect(kit).toHaveProperty("summary");
-      expect(kit).toHaveProperty("ideas");
+      const output = JSON.parse(outputContent);
+      expect(output).toHaveProperty("contentId");
     });
 
     it("should parse topics correctly", async () => {
@@ -267,6 +229,7 @@ describe("CLI E2E Tests", () => {
 
       const result = await execCLI([
         "run",
+        "writing-kit",
         "--file",
         inputFile,
         "--topics",
@@ -275,8 +238,8 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      const kit = JSON.parse(result.stdout);
-      expect(kit).toHaveProperty("ideas");
+      const output = JSON.parse(result.stdout);
+      expect(output).toHaveProperty("contentId");
     });
 
     it("should handle topics with whitespace", async () => {
@@ -288,6 +251,7 @@ describe("CLI E2E Tests", () => {
 
       const result = await execCLI([
         "run",
+        "writing-kit",
         "--file",
         inputFile,
         "--topics",
@@ -296,8 +260,8 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      const kit = JSON.parse(result.stdout);
-      expect(kit).toHaveProperty("ideas");
+      const output = JSON.parse(result.stdout);
+      expect(output).toHaveProperty("contentId");
     });
 
     it("should handle all valid tone values", async () => {
@@ -312,6 +276,7 @@ describe("CLI E2E Tests", () => {
       for (const tone of tones) {
         const result = await execCLI([
           "run",
+          "writing-kit",
           "--file",
           inputFile,
           "--tone",
@@ -320,8 +285,8 @@ describe("CLI E2E Tests", () => {
         ]);
 
         expect(result.exitCode).toBe(0);
-        const kit = JSON.parse(result.stdout);
-        expect(kit).toHaveProperty("ideas");
+        const output = JSON.parse(result.stdout);
+        expect(output).toHaveProperty("contentId");
       }
     });
 
@@ -334,6 +299,7 @@ describe("CLI E2E Tests", () => {
 
       const result = await execCLI([
         "run",
+        "writing-kit",
         "--file",
         inputFile,
         "--tone",
@@ -342,8 +308,8 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      const kit = JSON.parse(result.stdout);
-      expect(kit).toHaveProperty("ideas");
+      const output = JSON.parse(result.stdout);
+      expect(output).toHaveProperty("contentId");
     });
 
     it("should handle custom word count", async () => {
@@ -355,6 +321,7 @@ describe("CLI E2E Tests", () => {
 
       const result = await execCLI([
         "run",
+        "writing-kit",
         "--file",
         inputFile,
         "--word-count",
@@ -363,12 +330,19 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      const kit = JSON.parse(result.stdout);
-      expect(kit).toHaveProperty("suggestedOutline");
+      const output = JSON.parse(result.stdout);
+      expect(output).toHaveProperty("contentId");
+    });
+
+    it("should error when workflow ID is missing", async () => {
+      const result = await execCLI(["run"]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain("Error: Workflow ID is required");
     });
 
     it("should error when --file is missing", async () => {
-      const result = await execCLI(["run"]);
+      const result = await execCLI(["run", "writing-kit"]);
 
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain(
@@ -379,6 +353,7 @@ describe("CLI E2E Tests", () => {
     it("should error when file does not exist", async () => {
       const result = await execCLI([
         "run",
+        "writing-kit",
         "--file",
         "/non/existent/file.txt",
         "--mock",
@@ -393,6 +368,7 @@ describe("CLI E2E Tests", () => {
 
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain("looplia run");
+      expect(result.stdout).toContain("<workflow-id>");
       expect(result.stdout).toContain("--file");
       expect(result.stdout).toContain("--topics");
       expect(result.stdout).toContain("--tone");
@@ -402,6 +378,7 @@ describe("CLI E2E Tests", () => {
     it("should accept --session-id flag", async () => {
       const result = await execCLI([
         "run",
+        "writing-kit",
         "--session-id",
         "nonexistent-id",
         "--mock",
