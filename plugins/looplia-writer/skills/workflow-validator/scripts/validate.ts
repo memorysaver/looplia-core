@@ -105,81 +105,117 @@ function validate(
 
   // Check required_fields
   if (criteria.required_fields) {
-    for (const field of criteria.required_fields) {
-      const exists = hasField(data, field);
-      checks.push({
-        name: `has_${field}`,
-        passed: exists,
-        message: exists ? "OK" : `Missing required field: ${field}`,
-      });
-    }
+    checks.push(...checkRequiredFields(data, criteria.required_fields));
   }
 
   // Check min_quotes
   if (criteria.min_quotes !== undefined) {
-    const quotes = getArrayLength(data, "importantQuotes");
-    const passed = quotes >= criteria.min_quotes;
-    checks.push({
-      name: "min_quotes",
-      passed,
-      message: passed
-        ? `Found ${quotes} quotes (min: ${criteria.min_quotes})`
-        : `Found ${quotes} quotes, need at least ${criteria.min_quotes}`,
-    });
+    checks.push(checkMinQuotes(data, criteria.min_quotes));
   }
 
-  // Check min_key_points (checks bullets or keyPoints array)
+  // Check min_key_points
   if (criteria.min_key_points !== undefined) {
-    const bullets = getArrayLength(data, "bullets");
-    const keyPoints = getArrayLength(data, "keyPoints");
-    const count = Math.max(bullets, keyPoints);
-    const passed = count >= criteria.min_key_points;
-    checks.push({
-      name: "min_key_points",
-      passed,
-      message: passed
-        ? `Found ${count} key points (min: ${criteria.min_key_points})`
-        : `Found ${count} key points, need at least ${criteria.min_key_points}`,
-    });
+    checks.push(checkMinKeyPoints(data, criteria.min_key_points));
   }
 
   // Check min_outline_sections
   if (criteria.min_outline_sections !== undefined) {
-    const sections = getArrayLength(data, "suggestedOutline");
-    const passed = sections >= criteria.min_outline_sections;
-    checks.push({
-      name: "min_outline_sections",
-      passed,
-      message: passed
-        ? `Found ${sections} outline sections (min: ${criteria.min_outline_sections})`
-        : `Found ${sections} sections, need at least ${criteria.min_outline_sections}`,
-    });
+    checks.push(checkMinOutlineSections(data, criteria.min_outline_sections));
   }
 
   // Check has_hooks
   if (criteria.has_hooks === true) {
-    // Check nested in ideas.hooks or top-level hooks
-    let hooksCount = 0;
-    const ideas = data.ideas as Record<string, unknown> | undefined;
-    if (ideas && Array.isArray(ideas.hooks)) {
-      hooksCount = ideas.hooks.length;
-    } else if (Array.isArray(data.hooks)) {
-      hooksCount = data.hooks.length;
-    }
-    const passed = hooksCount > 0;
-    checks.push({
-      name: "has_hooks",
-      passed,
-      message: passed
-        ? `Found ${hooksCount} hooks`
-        : "No hooks found in artifact",
-    });
+    checks.push(checkHasHooks(data));
   }
 
   // Calculate overall pass/fail
   const passed = checks.every((check) => check.passed);
 
   return { passed, checks };
+}
+
+function checkRequiredFields(
+  data: Record<string, unknown>,
+  fields: string[]
+): ValidationCheck[] {
+  return fields.map((field) => {
+    const exists = hasField(data, field);
+    return {
+      name: `has_${field}`,
+      passed: exists,
+      message: exists ? "OK" : `Missing required field: ${field}`,
+    };
+  });
+}
+
+function checkMinQuotes(
+  data: Record<string, unknown>,
+  minQuotes: number
+): ValidationCheck {
+  const quotes = getArrayLength(data, "importantQuotes");
+  const passed = quotes >= minQuotes;
+  return {
+    name: "min_quotes",
+    passed,
+    message: passed
+      ? `Found ${quotes} quotes (min: ${minQuotes})`
+      : `Found ${quotes} quotes, need at least ${minQuotes}`,
+  };
+}
+
+function checkMinKeyPoints(
+  data: Record<string, unknown>,
+  minPoints: number
+): ValidationCheck {
+  const bullets = getArrayLength(data, "bullets");
+  const keyPoints = getArrayLength(data, "keyPoints");
+  const count = Math.max(bullets, keyPoints);
+  const passed = count >= minPoints;
+  return {
+    name: "min_key_points",
+    passed,
+    message: passed
+      ? `Found ${count} key points (min: ${minPoints})`
+      : `Found ${count} key points, need at least ${minPoints}`,
+  };
+}
+
+function checkMinOutlineSections(
+  data: Record<string, unknown>,
+  minSections: number
+): ValidationCheck {
+  const sections = getArrayLength(data, "suggestedOutline");
+  const passed = sections >= minSections;
+  return {
+    name: "min_outline_sections",
+    passed,
+    message: passed
+      ? `Found ${sections} outline sections (min: ${minSections})`
+      : `Found ${sections} sections, need at least ${minSections}`,
+  };
+}
+
+function checkHasHooks(data: Record<string, unknown>): ValidationCheck {
+  const hooksCount = getHooksCount(data);
+  const passed = hooksCount > 0;
+  return {
+    name: "has_hooks",
+    passed,
+    message: passed
+      ? `Found ${hooksCount} hooks`
+      : "No hooks found in artifact",
+  };
+}
+
+function getHooksCount(data: Record<string, unknown>): number {
+  const ideas = data.ideas as Record<string, unknown> | undefined;
+  if (ideas && Array.isArray(ideas.hooks)) {
+    return ideas.hooks.length;
+  }
+  if (Array.isArray(data.hooks)) {
+    return data.hooks.length;
+  }
+  return 0;
 }
 
 function hasField(data: Record<string, unknown>, field: string): boolean {

@@ -62,14 +62,14 @@ describe("CLI E2E Tests", () => {
       const result = await execCLI(["--version"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia 0.5.0");
+      expect(result.stdout).toContain("looplia 0.5.1");
     });
 
     it("should show version with -v flag", async () => {
       const result = await execCLI(["-v"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia 0.5.0");
+      expect(result.stdout).toContain("looplia 0.5.1");
     });
 
     it("should error on unknown command", async () => {
@@ -153,6 +153,7 @@ describe("CLI E2E Tests", () => {
 
       const result = await execCLI([
         "run",
+        "writing-kit",
         "--file",
         inputFile,
         "--topics",
@@ -197,7 +198,13 @@ describe("CLI E2E Tests", () => {
       );
       const inputFile = createTestFile(tempDir.path, "input.txt", content);
 
-      const result = await execCLI(["run", "--file", inputFile, "--mock"]);
+      const result = await execCLI([
+        "run",
+        "writing-kit",
+        "--file",
+        inputFile,
+        "--mock",
+      ]);
 
       expect(result.exitCode).toBe(0);
       const kit = JSON.parse(result.stdout);
@@ -215,6 +222,7 @@ describe("CLI E2E Tests", () => {
 
       const result = await execCLI([
         "run",
+        "writing-kit",
         "--file",
         inputFile,
         "--format",
@@ -242,6 +250,7 @@ describe("CLI E2E Tests", () => {
 
       const result = await execCLI([
         "run",
+        "writing-kit",
         "--file",
         inputFile,
         "--output",
@@ -267,6 +276,7 @@ describe("CLI E2E Tests", () => {
 
       const result = await execCLI([
         "run",
+        "writing-kit",
         "--file",
         inputFile,
         "--topics",
@@ -288,6 +298,7 @@ describe("CLI E2E Tests", () => {
 
       const result = await execCLI([
         "run",
+        "writing-kit",
         "--file",
         inputFile,
         "--topics",
@@ -312,6 +323,7 @@ describe("CLI E2E Tests", () => {
       for (const tone of tones) {
         const result = await execCLI([
           "run",
+          "writing-kit",
           "--file",
           inputFile,
           "--tone",
@@ -334,6 +346,7 @@ describe("CLI E2E Tests", () => {
 
       const result = await execCLI([
         "run",
+        "writing-kit",
         "--file",
         inputFile,
         "--tone",
@@ -355,6 +368,7 @@ describe("CLI E2E Tests", () => {
 
       const result = await execCLI([
         "run",
+        "writing-kit",
         "--file",
         inputFile,
         "--word-count",
@@ -367,8 +381,15 @@ describe("CLI E2E Tests", () => {
       expect(kit).toHaveProperty("suggestedOutline");
     });
 
-    it("should error when --file is missing", async () => {
+    it("should error when workflow ID is missing", async () => {
       const result = await execCLI(["run"]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain("Error: Workflow ID is required");
+    });
+
+    it("should error when --file is missing", async () => {
+      const result = await execCLI(["run", "writing-kit"]);
 
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain(
@@ -379,6 +400,7 @@ describe("CLI E2E Tests", () => {
     it("should error when file does not exist", async () => {
       const result = await execCLI([
         "run",
+        "writing-kit",
         "--file",
         "/non/existent/file.txt",
         "--mock",
@@ -393,6 +415,7 @@ describe("CLI E2E Tests", () => {
 
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain("looplia run");
+      expect(result.stdout).toContain("<workflow-id>");
       expect(result.stdout).toContain("--file");
       expect(result.stdout).toContain("--topics");
       expect(result.stdout).toContain("--tone");
@@ -402,6 +425,7 @@ describe("CLI E2E Tests", () => {
     it("should accept --session-id flag", async () => {
       const result = await execCLI([
         "run",
+        "writing-kit",
         "--session-id",
         "nonexistent-id",
         "--mock",

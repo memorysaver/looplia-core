@@ -229,13 +229,20 @@ export class LoopliaRuntime {
 
     this.context.workspace = this.sessionManager.getWorkspace();
 
-    // Mock mode not supported for workflows yet
+    // Mock mode for writing-kit workflow falls back to kit mock provider
     if (this.context.mock) {
+      if (config.workflowId === "writing-kit") {
+        const userProfile = await this.loadUserProfile(config as KitConfig);
+        return this.executeKitMock(content, userProfile) as Promise<
+          CommandResult<unknown>
+        >;
+      }
+      // Other workflows not yet supported in mock mode
       return {
         success: false,
         error: {
           type: "unsupported",
-          message: "Mock mode not yet supported for workflows",
+          message: `Mock mode not yet supported for workflow: ${config.workflowId}`,
         },
         sessionId: content.id,
       };

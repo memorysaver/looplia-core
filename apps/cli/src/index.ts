@@ -2,7 +2,7 @@ import { runConfigCommand } from "./commands/config";
 import { runInitCommand } from "./commands/init";
 import { runRunCommand } from "./commands/run";
 
-const VERSION = "0.5.0";
+const VERSION = "0.5.1";
 
 function printHelp(): void {
   console.log(`
@@ -13,7 +13,7 @@ Usage:
 
 Commands:
   init         Initialize or refresh workspace
-  run          Run a pipeline to build writing kit
+  run          Execute a workflow on content
   config       Manage user profile settings
 
 Options:
@@ -22,7 +22,7 @@ Options:
 
 Examples:
   looplia init
-  looplia run --file ./article.txt
+  looplia run writing-kit --file ./article.txt
   looplia config topics "ai,productivity,writing"
 
 For command-specific help:

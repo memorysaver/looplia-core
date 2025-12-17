@@ -12,6 +12,11 @@ import type {
   WorkflowDefinition,
 } from "./workflow";
 
+// Top-level regex constants for performance
+const ARRAY_PATTERN = /^\[(.*)\]$/;
+const INTEGER_PATTERN = /^\d+$/;
+const NON_SPACE_PATTERN = /\S/;
+
 /**
  * Parse YAML frontmatter from markdown content
  *
@@ -63,15 +68,19 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
 
   for (const line of lines) {
     // Skip empty lines and comments
-    if (!line.trim() || line.trim().startsWith("#")) continue;
+    if (!line.trim() || line.trim().startsWith("#")) {
+      continue;
+    }
 
-    const indent = line.search(/\S/);
+    const indent = line.search(NON_SPACE_PATTERN);
     const trimmed = line.trim();
 
     // Top-level keys (indent 0)
     if (indent === 0) {
       const colonIndex = trimmed.indexOf(":");
-      if (colonIndex === -1) continue;
+      if (colonIndex === -1) {
+        continue;
+      }
 
       currentKey = trimmed.slice(0, colonIndex);
       const value = trimmed.slice(colonIndex + 1).trim();
@@ -95,10 +104,14 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
     // Output properties (indent 4)
     else if (indent === 4 && currentOutput) {
       const outputObj = outputs[currentOutput];
-      if (!outputObj) continue;
+      if (!outputObj) {
+        continue;
+      }
 
       const colonIndex = trimmed.indexOf(":");
-      if (colonIndex === -1) continue;
+      if (colonIndex === -1) {
+        continue;
+      }
 
       const propKey = trimmed.slice(0, colonIndex);
       const propValue = trimmed.slice(colonIndex + 1).trim();
@@ -108,7 +121,7 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
         outputObj.validate = currentValidate;
       } else if (propKey === "requires") {
         // Parse array: [item1, item2]
-        const arrayMatch = propValue.match(/^\[(.*)\]$/);
+        const arrayMatch = propValue.match(ARRAY_PATTERN);
         if (arrayMatch?.[1]) {
           outputObj.requires = arrayMatch[1].split(",").map((s) => s.trim());
         }
@@ -121,13 +134,15 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
     // Validate properties (indent 6)
     else if (indent === 6 && currentValidate) {
       const colonIndex = trimmed.indexOf(":");
-      if (colonIndex === -1) continue;
+      if (colonIndex === -1) {
+        continue;
+      }
 
       const propKey = trimmed.slice(0, colonIndex);
       const propValue = trimmed.slice(colonIndex + 1).trim();
 
       // Parse array: [item1, item2]
-      const arrayMatch = propValue.match(/^\[(.*)\]$/);
+      const arrayMatch = propValue.match(ARRAY_PATTERN);
       if (arrayMatch?.[1] !== undefined) {
         currentValidate[propKey] = arrayMatch[1]
           .split(",")
@@ -136,7 +151,7 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
         currentValidate[propKey] = true;
       } else if (propValue === "false") {
         currentValidate[propKey] = false;
-      } else if (/^\d+$/.test(propValue)) {
+      } else if (INTEGER_PATTERN.test(propValue)) {
         currentValidate[propKey] = Number.parseInt(propValue, 10);
       } else {
         currentValidate[propKey] = propValue;
@@ -231,7 +246,9 @@ export function getExecutionOrder(definition: WorkflowDefinition): string[] {
   const visiting = new Set<string>();
 
   function visit(name: string) {
-    if (visited.has(name)) return;
+    if (visited.has(name)) {
+      return;
+    }
     if (visiting.has(name)) {
       throw new Error(`Circular dependency detected: ${name}`);
     }
@@ -275,7 +292,7 @@ export function getFinalOutput(definition: WorkflowDefinition): string {
 
   // If no output is marked final, return the last one in execution order
   const order = getExecutionOrder(definition);
-  const lastOutput = order[order.length - 1];
+  const lastOutput = order.at(-1);
   if (!lastOutput) {
     throw new Error("Workflow has no outputs");
   }
