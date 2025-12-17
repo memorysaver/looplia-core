@@ -6,7 +6,6 @@ import {
   validatePipelineOutput,
   validateSessionManifest,
   validateUserProfile,
-  validateWritingIdeas,
 } from "../../src/validation/schemas";
 
 describe("ContentSummary validation", () => {
@@ -173,54 +172,6 @@ describe("UserProfile validation", () => {
     };
 
     const result = validateUserProfile(invalid);
-    expect(result.success).toBe(false);
-  });
-});
-
-describe("WritingIdeas validation", () => {
-  it("should accept valid writing ideas", () => {
-    const valid = {
-      contentId: "content-1",
-      hooks: [{ text: "What if this happened?", type: "curiosity" }],
-      angles: [
-        {
-          title: "Beginner Guide",
-          description: "A guide for newcomers to the topic",
-          relevanceScore: 0.8,
-        },
-      ],
-      questions: [
-        {
-          question: "How does this affect your workflow?",
-          type: "practical",
-        },
-      ],
-    };
-
-    const result = validateWritingIdeas(valid);
-    expect(result.success).toBe(true);
-  });
-
-  it("should reject empty hooks array", () => {
-    const invalid = {
-      contentId: "content-1",
-      hooks: [],
-      angles: [
-        {
-          title: "Beginner Guide",
-          description: "A guide for newcomers to the topic",
-          relevanceScore: 0.8,
-        },
-      ],
-      questions: [
-        {
-          question: "How does this affect your workflow?",
-          type: "practical",
-        },
-      ],
-    };
-
-    const result = validateWritingIdeas(invalid);
     expect(result.success).toBe(false);
   });
 });

@@ -343,28 +343,53 @@ export class LoopliaRuntime {
     lines.push("outputs:");
 
     for (const [name, output] of Object.entries(definition.outputs)) {
-      const out = output as Record<string, unknown>;
-      lines.push(`  ${name}:`);
-      if (out.artifact) lines.push(`    artifact: ${out.artifact}`);
-      if (out.agent) lines.push(`    agent: ${out.agent}`);
-      if (out.requires)
-        lines.push(`    requires: [${(out.requires as string[]).join(", ")}]`);
-      if (out.final) lines.push("    final: true");
-      if (out.validate) {
-        lines.push("    validate:");
-        for (const [key, val] of Object.entries(
-          out.validate as Record<string, unknown>
-        )) {
-          if (Array.isArray(val)) {
-            lines.push(`      ${key}: [${val.join(", ")}]`);
-          } else {
-            lines.push(`      ${key}: ${val}`);
-          }
-        }
-      }
+      this.serializeOutput(lines, name, output as Record<string, unknown>);
     }
 
     return lines.join("\n");
+  }
+
+  /**
+   * Serialize a single output definition
+   */
+  private serializeOutput(
+    lines: string[],
+    name: string,
+    out: Record<string, unknown>
+  ): void {
+    lines.push(`  ${name}:`);
+    if (out.artifact) {
+      lines.push(`    artifact: ${out.artifact}`);
+    }
+    if (out.agent) {
+      lines.push(`    agent: ${out.agent}`);
+    }
+    if (out.requires) {
+      lines.push(`    requires: [${(out.requires as string[]).join(", ")}]`);
+    }
+    if (out.final) {
+      lines.push("    final: true");
+    }
+    if (out.validate) {
+      this.serializeValidate(lines, out.validate as Record<string, unknown>);
+    }
+  }
+
+  /**
+   * Serialize validate criteria
+   */
+  private serializeValidate(
+    lines: string[],
+    validate: Record<string, unknown>
+  ): void {
+    lines.push("    validate:");
+    for (const [key, val] of Object.entries(validate)) {
+      if (Array.isArray(val)) {
+        lines.push(`      ${key}: [${val.join(", ")}]`);
+      } else {
+        lines.push(`      ${key}: ${val}`);
+      }
+    }
   }
 
   /**

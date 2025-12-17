@@ -16,6 +16,163 @@ import type {
 const ARRAY_PATTERN = /^\[(.*)\]$/;
 const INTEGER_PATTERN = /^\d+$/;
 const NON_SPACE_PATTERN = /\S/;
+const FRONTMATTER_REGEX = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/;
+
+/** Check if line is empty or a comment */
+function isSkippableLine(line: string): boolean {
+  const trimmed = line.trim();
+  return !trimmed || trimmed.startsWith("#");
+}
+
+/** Parse key-value from YAML line */
+function parseKeyValue(trimmed: string): { key: string; value: string } | null {
+  const colonIndex = trimmed.indexOf(":");
+  if (colonIndex === -1) {
+    return null;
+  }
+  return {
+    key: trimmed.slice(0, colonIndex),
+    value: trimmed.slice(colonIndex + 1).trim(),
+  };
+}
+
+/** Parse array syntax [item1, item2] */
+function parseArray(value: string): string[] | null {
+  const match = value.match(ARRAY_PATTERN);
+  if (match?.[1] !== undefined) {
+    return match[1].split(",").map((s) => s.trim());
+  }
+  return null;
+}
+
+/** Convert YAML string value to typed value */
+function parseYamlValue(value: string): unknown {
+  const array = parseArray(value);
+  if (array) {
+    return array;
+  }
+  if (value === "true") {
+    return true;
+  }
+  if (value === "false") {
+    return false;
+  }
+  if (INTEGER_PATTERN.test(value)) {
+    return Number.parseInt(value, 10);
+  }
+  return value;
+}
+
+/** Handle output property (indent 4) */
+function handleOutputProperty(
+  key: string,
+  value: string,
+  outputObj: Record<string, unknown>
+): Record<string, unknown> | null {
+  if (key === "validate") {
+    const validate: Record<string, unknown> = {};
+    outputObj.validate = validate;
+    return validate;
+  }
+  if (key === "requires") {
+    const array = parseArray(value);
+    if (array) {
+      outputObj.requires = array;
+    }
+    return null;
+  }
+  if (key === "final") {
+    outputObj.final = value === "true";
+    return null;
+  }
+  if (value) {
+    outputObj[key] = value;
+  }
+  return null;
+}
+
+/** State for YAML parser */
+type YamlParserState = {
+  result: Record<string, unknown>;
+  outputs: Record<string, Record<string, unknown>>;
+  currentKey: string;
+  currentOutput: string;
+  currentValidate: Record<string, unknown> | null;
+};
+
+/** Process a single YAML line */
+function processYamlLine(state: YamlParserState, line: string): void {
+  if (isSkippableLine(line)) {
+    return;
+  }
+
+  const indent = line.search(NON_SPACE_PATTERN);
+  const trimmed = line.trim();
+
+  if (indent === 0) {
+    processTopLevel(state, trimmed);
+  } else if (indent === 2 && state.currentKey === "outputs") {
+    processOutputName(state, trimmed);
+  } else if (indent === 4 && state.currentOutput) {
+    processOutputProperty(state, trimmed);
+  } else if (indent === 6 && state.currentValidate) {
+    processValidateProperty(state, trimmed);
+  }
+}
+
+/** Process top-level key (indent 0) */
+function processTopLevel(state: YamlParserState, trimmed: string): void {
+  const kv = parseKeyValue(trimmed);
+  if (!kv) {
+    return;
+  }
+  state.currentKey = kv.key;
+  if (kv.key !== "outputs" && kv.value) {
+    state.result[kv.key] = kv.value;
+  }
+  state.currentOutput = "";
+  state.currentValidate = null;
+}
+
+/** Process output name (indent 2) */
+function processOutputName(state: YamlParserState, trimmed: string): void {
+  if (trimmed.endsWith(":")) {
+    state.currentOutput = trimmed.slice(0, -1);
+    state.outputs[state.currentOutput] = {};
+    state.currentValidate = null;
+  }
+}
+
+/** Process output property (indent 4) */
+function processOutputProperty(state: YamlParserState, trimmed: string): void {
+  const outputObj = state.outputs[state.currentOutput];
+  if (!outputObj) {
+    return;
+  }
+  const kv = parseKeyValue(trimmed);
+  if (!kv) {
+    return;
+  }
+  const validate = handleOutputProperty(kv.key, kv.value, outputObj);
+  if (validate) {
+    state.currentValidate = validate;
+  }
+}
+
+/** Process validate property (indent 6) */
+function processValidateProperty(
+  state: YamlParserState,
+  trimmed: string
+): void {
+  if (!state.currentValidate) {
+    return;
+  }
+  const kv = parseKeyValue(trimmed);
+  if (!kv) {
+    return;
+  }
+  state.currentValidate[kv.key] = parseYamlValue(kv.value);
+}
 
 /**
  * Parse YAML frontmatter from markdown content
@@ -29,8 +186,7 @@ export function parseFrontmatter(content: string): {
   frontmatter: Record<string, unknown>;
   body: string;
 } {
-  const frontmatterRegex = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/;
-  const match = content.match(frontmatterRegex);
+  const match = content.match(FRONTMATTER_REGEX);
 
   if (!match) {
     throw new Error(
@@ -40,8 +196,6 @@ export function parseFrontmatter(content: string): {
 
   const yamlContent = match[1] ?? "";
   const body = match[2] ?? "";
-
-  // Simple YAML parser for our specific structure
   const frontmatter = parseSimpleYaml(yamlContent);
 
   return { frontmatter, body: body.trim() };
@@ -58,112 +212,23 @@ export function parseFrontmatter(content: string): {
  * Note: This is a simplified parser. For complex YAML, consider using a library.
  */
 function parseSimpleYaml(yaml: string): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  const lines = yaml.split("\n");
+  const state: YamlParserState = {
+    result: {},
+    outputs: {},
+    currentKey: "",
+    currentOutput: "",
+    currentValidate: null,
+  };
 
-  let currentKey = "";
-  const outputs: Record<string, Record<string, unknown>> = {};
-  let currentOutput = "";
-  let currentValidate: Record<string, unknown> | null = null;
-
-  for (const line of lines) {
-    // Skip empty lines and comments
-    if (!line.trim() || line.trim().startsWith("#")) {
-      continue;
-    }
-
-    const indent = line.search(NON_SPACE_PATTERN);
-    const trimmed = line.trim();
-
-    // Top-level keys (indent 0)
-    if (indent === 0) {
-      const colonIndex = trimmed.indexOf(":");
-      if (colonIndex === -1) {
-        continue;
-      }
-
-      currentKey = trimmed.slice(0, colonIndex);
-      const value = trimmed.slice(colonIndex + 1).trim();
-
-      if (currentKey === "outputs") {
-        // outputs object already initialized
-      } else if (value) {
-        result[currentKey] = value;
-      }
-      currentOutput = "";
-      currentValidate = null;
-    }
-    // Output names (indent 2)
-    else if (indent === 2 && currentKey === "outputs") {
-      if (trimmed.endsWith(":")) {
-        currentOutput = trimmed.slice(0, -1);
-        outputs[currentOutput] = {};
-        currentValidate = null;
-      }
-    }
-    // Output properties (indent 4)
-    else if (indent === 4 && currentOutput) {
-      const outputObj = outputs[currentOutput];
-      if (!outputObj) {
-        continue;
-      }
-
-      const colonIndex = trimmed.indexOf(":");
-      if (colonIndex === -1) {
-        continue;
-      }
-
-      const propKey = trimmed.slice(0, colonIndex);
-      const propValue = trimmed.slice(colonIndex + 1).trim();
-
-      if (propKey === "validate") {
-        currentValidate = {};
-        outputObj.validate = currentValidate;
-      } else if (propKey === "requires") {
-        // Parse array: [item1, item2]
-        const arrayMatch = propValue.match(ARRAY_PATTERN);
-        if (arrayMatch?.[1]) {
-          outputObj.requires = arrayMatch[1].split(",").map((s) => s.trim());
-        }
-      } else if (propKey === "final") {
-        outputObj.final = propValue === "true";
-      } else if (propValue) {
-        outputObj[propKey] = propValue;
-      }
-    }
-    // Validate properties (indent 6)
-    else if (indent === 6 && currentValidate) {
-      const colonIndex = trimmed.indexOf(":");
-      if (colonIndex === -1) {
-        continue;
-      }
-
-      const propKey = trimmed.slice(0, colonIndex);
-      const propValue = trimmed.slice(colonIndex + 1).trim();
-
-      // Parse array: [item1, item2]
-      const arrayMatch = propValue.match(ARRAY_PATTERN);
-      if (arrayMatch?.[1] !== undefined) {
-        currentValidate[propKey] = arrayMatch[1]
-          .split(",")
-          .map((s) => s.trim());
-      } else if (propValue === "true") {
-        currentValidate[propKey] = true;
-      } else if (propValue === "false") {
-        currentValidate[propKey] = false;
-      } else if (INTEGER_PATTERN.test(propValue)) {
-        currentValidate[propKey] = Number.parseInt(propValue, 10);
-      } else {
-        currentValidate[propKey] = propValue;
-      }
-    }
+  for (const line of yaml.split("\n")) {
+    processYamlLine(state, line);
   }
 
-  if (currentKey === "outputs" || Object.keys(outputs).length > 0) {
-    result.outputs = outputs;
+  if (state.currentKey === "outputs" || Object.keys(state.outputs).length > 0) {
+    state.result.outputs = state.outputs;
   }
 
-  return result;
+  return state.result;
 }
 
 /**
