@@ -2,7 +2,7 @@
 
 > **Universal agentic workflow CLI — compose AI agents and skills for any task.**
 
-Looplia Core is an agentic workflow platform powered by the Claude Agent SDK. It provides a composable architecture of subagents and skills that can be extended to any domain.
+Looplia Core is an agentic workflow platform powered by the Claude Agent SDK. It provides a composable architecture of custom subagents with auto-loading skills that can be extended to any domain.
 
 **Current focus:** Content writing workflows (summarization, idea generation, writing kit construction)
 
@@ -14,35 +14,38 @@ Looplia Core is an agentic workflow platform powered by the Claude Agent SDK. It
 ┌─────────────────────────────────────────────────────────────┐
 │  CLI Commands                                               │
 │  └─ looplia init   → Initialize workspace                   │
-│  └─ looplia run    → Execute pipeline workflow              │
+│  └─ looplia run    → Execute workflow (e.g., writing-kit)   │
 │  └─ looplia config → Manage user settings                   │
 └─────────────────────────────────────────────────────────────┘
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Pipeline-as-Configuration + AgentExecutor                  │
-│  • YAML workflow definitions (pipelines/)                   │
-│  • Session manifest for smart continuation                  │
+│  Workflow-as-Markdown + AgentExecutor                       │
+│  • Workflow definitions (workflows/*.md with frontmatter)   │
+│  • Validation-driven completion (validation.json)           │
 │  • Real-time streaming events                               │
 └─────────────────────────────────────────────────────────────┘
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Subagents & Skills (Composable Capabilities)               │
-│  • Domain-specific subagents (.claude/agents/)              │
-│  • Reusable skills (.claude/skills/)                        │
-│  • Manifest-based state & smart continuation                │
+│  Custom Subagents & Auto-Loading Skills                     │
+│  • Custom subagents via Task tool (.claude/agents/)         │
+│  • Skills auto-load via frontmatter (.claude/skills/)       │
+│  • Validation-driven state & smart continuation             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ## Features
 
-- **Claude Agent SDK** - Agentic runtime with subagents and skills
+- **Claude Agent SDK** - Agentic runtime with custom subagents and skills
+- **Workflow-as-Markdown** - YAML frontmatter + markdown instructions
+- **Custom Subagents** - Task tool with custom `subagent_type`
+- **Skills Auto-Loading** - `skills:` frontmatter for automatic skill loading
+- **Validation-Driven** - Deterministic script-based output validation
 - **Clean Architecture** - CLI → Core → Provider separation
 - **Streaming TUI** - Real-time progress with tool execution display
-- **Smart Continuation** - Resume workflows from where they left off
+- **Smart Continuation** - Resume workflows via validation state
 - **TypeScript** - Full type safety with Zod schemas
-- **Turborepo** - Optimized monorepo build system
 
 ## Quick Start
 
@@ -53,56 +56,65 @@ bun install
 # 2. Build the project
 bun run build
 
-# 3. Initialize workspace (creates ~/.looplia/ with agents, skills, pipelines)
+# 3. Initialize workspace (creates ~/.looplia/ with agents, skills, workflows)
 bun run apps/cli/dist/index.js init --yes
 
 # 4. Run a workflow
 export ANTHROPIC_API_KEY=sk-ant-...
-bun run apps/cli/dist/index.js run --file ./examples/ai-healthcare.md
+bun run apps/cli/dist/index.js run writing-kit --file ./examples/ai-healthcare.md
 ```
 
 ## CLI Commands
 
 | Command | Description |
 |---------|-------------|
-| `looplia init` | Initialize workspace with plugin files (agents, skills, pipelines, CLAUDE.md) |
-| `looplia run` | Execute pipeline to build a complete writing kit |
+| `looplia init` | Initialize workspace with plugin files (agents, skills, workflows, CLAUDE.md) |
+| `looplia run <workflow-id>` | Execute workflow to build output (e.g., `run writing-kit --file article.md`) |
 | `looplia config` | Manage user profile settings |
 
 ### Writing Kit Workflow
 
-The `run` command executes the writing-kit pipeline and produces a complete WritingKit:
+The `run writing-kit` command executes a 3-stage pipeline:
 
+```
+content-analyzer → summary.json
+       ↓
+idea-generator → ideas.json
+       ↓
+writing-kit-builder → writing-kit.json
+```
+
+**Output includes:**
 - **Summary**: Headline, TL;DR, key bullets, tags, themes, core ideas, quotes
-- **Ideas**: 5 hooks, 5 angles, 5 reflective questions
+- **Ideas**: 5 hooks (emotional, curiosity, controversy, statistic, story), angles, questions
 - **Outline**: Structured sections with word estimates
 - **Meta**: Relevance score, estimated reading time
 
 ```bash
 # Build kit from content
-looplia run --file ./article.md
+looplia run writing-kit --file ./article.md
 
-# With options
-looplia run --file ./article.md --topics "ai,productivity" --tone expert --word-count 2000
+# With user profile options
+looplia run writing-kit --file ./article.md --topics "ai,productivity"
 
 # Resume existing session
-looplia run --session-id article-2024-12-09-abc123
+looplia run writing-kit --session-id article-2024-12-09-abc123
 
 # Output formats
-looplia run --file ./article.md --format markdown --output kit.md
+looplia run writing-kit --file ./article.md --format markdown --output kit.md
 ```
 
 ### Session Management
 
-Each `--file` creates a new session with a `session.json` manifest. Use `--session-id` to resume:
+Each `--file` creates a new session with a `validation.json` manifest. Use `--session-id` to resume:
 
 ```bash
 # Create new session
-looplia run --file ./article.md
-# Output: ✓ New session created: article-2024-12-09-abc123
+looplia run writing-kit --file ./article.md
+# Output: ✓ New session created: cli-1234567890
 
-# Resume (skips completed steps via manifest-based smart continuation)
-looplia run --session-id article-2024-12-09-abc123
+# Resume (skips validated steps via validation-driven smart continuation)
+looplia run writing-kit --session-id cli-1234567890
 ```
 
 ## Architecture
@@ -115,11 +127,15 @@ looplia-core/
 ├── packages/
 │   ├── core/          # Domain models, command framework
 │   └── provider/      # Claude Agent SDK integration
+├── plugins/
+│   └── looplia-writer/  # Writing kit plugin (agents, skills, workflows)
+├── scripts/
+│   └── verify-workflow-log.sh  # Log verification script
 └── docs/              # Architecture documentation
-    ├── DESIGN-0.4.0.md
-    ├── AGENTIC_CONCEPT-0.3.md
-    ├── GLOSSARY.md
-    └── TEST_PLAN-0.3.md
+    ├── DESIGN-0.5.1.md
+    ├── AGENTIC_CONCEPT-0.4.md
+    ├── TEST_PLAN-0.5.md
+    └── GLOSSARY.md
 ```
 
 ## Development
@@ -137,6 +153,12 @@ bun run check-types
 # Link CLI globally
 cd apps/cli && bun link
 looplia --help
+
+# Test with real API
+env $(cat .env) looplia run writing-kit --file test.md
+
+# Verify workflow logs
+./scripts/verify-workflow-log.sh
 ```
 
 ## Environment Variables
@@ -147,10 +169,14 @@ looplia --help
 
 ## Documentation
 
-- [DESIGN-0.4.0.md](./docs/DESIGN-0.4.0.md) - Architecture overview
-- [AGENTIC_CONCEPT-0.3.md](./docs/AGENTIC_CONCEPT-0.3.md) - Agent system design
-- [GLOSSARY.md](./docs/GLOSSARY.md) - Ubiquitous language reference
-- [TEST_PLAN-0.3.md](./docs/TEST_PLAN-0.3.md) - Test strategy
+| Document | Description |
+|----------|-------------|
+| [AGENTIC_CONCEPT-0.4.md](./docs/AGENTIC_CONCEPT-0.4.md) | Agent system design (v0.4) |
+| [DESIGN-0.5.1.md](./docs/DESIGN-0.5.1.md) | Workflow-as-Markdown architecture |
+| [TEST_PLAN-0.5.md](./docs/TEST_PLAN-0.5.md) | Test strategy with real API testing |
+| [GLOSSARY.md](./docs/GLOSSARY.md) | Ubiquitous language reference |
+| [SUBAGENTS.md](./docs/SUBAGENTS.md) | Anthropic SDK subagents reference |
+| [AGENT-SKILLS.md](./docs/AGENT-SKILLS.md) | Anthropic SDK skills reference |
 
 ## License
 

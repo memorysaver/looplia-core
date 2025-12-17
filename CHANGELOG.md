@@ -5,6 +5,57 @@ All notable changes to Looplia-Core will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2025-12-17
+
+### Added
+
+- **Workflow-as-Markdown** - Single-file workflow definitions with YAML frontmatter
+  - `workflows/*.md` format with `outputs`, `agents`, `validation` in frontmatter
+  - Markdown body for custom instructions
+  - Replaces Pipeline-as-Configuration YAML files
+- **Custom Subagents** - Task tool with custom `subagent_type` parameter
+  - Agent definitions in `.claude/agents/*.md`
+  - Custom types: `content-analyzer`, `idea-generator`, `writing-kit-builder`
+  - SDK discovers agents via `settingSources: ["project"]` configuration
+- **Skills Auto-Loading** - Automatic skill loading via `skills:` frontmatter
+  - Agent definitions specify required skills in frontmatter
+  - Skills loaded at subagent invocation time
+  - Progressive disclosure model for skill availability
+- **Validation-Driven Completion** - Deterministic script-based output validation
+  - `validation.json` tracks validation state per output
+  - `workflow-validator` skill with `validate.ts` script
+  - Replaces binary "done" status with validated/not-validated state
+- **Log Verification Script** - `scripts/verify-workflow-log.sh`
+  - Automated verification of subagent_type usage
+  - Checks Task tool and Skill tool invocations
+  - Validates workflow execution matches design
+
+### Changed
+
+- **SDK Configuration** - Added `settingSources: ["project"]` for agent/skill discovery
+- **Workspace Structure** - Reorganized for Workflow-as-Markdown
+  - `workflows/` directory for workflow definitions
+  - `validation.json` replaces `session.json` for state tracking
+- **Smart Continuation** - Now uses validation state instead of binary done status
+  - Resume via `validated: true` flag + artifact existence check
+
+### Documentation
+
+- **AGENTIC_CONCEPT-0.4.md** - New agent system design document
+  - Workflow-as-Markdown architecture
+  - Custom Subagents with Task tool
+  - Skills Auto-Loading mechanism
+  - Validation-Driven Completion flow
+  - Execution Cycle and Call Stack concepts
+- **TEST_PLAN-0.5.md** - Updated test strategy
+  - Real API testing with `bun link` workflow
+  - Log verification for subagent and skill execution
+  - Automated verification script documentation
+- **DESIGN-0.5.1.md** - Workflow-as-Markdown architecture design
+- **SUBAGENTS.md** - Added to documentation references
+- **README.md** - Updated for v0.5.1 with new architecture
+- **docs/README.md** - Updated document references and relationships
+
 ## [0.5.0] - 2025-12-12
 
 ### Added
@@ -169,7 +220,8 @@ The following were considered but **intentionally deferred** to v0.6+:
 
 ---
 
-[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/memorysaver/looplia-core/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/memorysaver/looplia-core/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/memorysaver/looplia-core/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/memorysaver/looplia-core/compare/v0.3.2...v0.3.3
