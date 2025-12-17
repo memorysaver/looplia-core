@@ -100,7 +100,10 @@ function createDefaultProfile(): object {
 }
 
 /**
- * Create empty workspace structure for testing (without plugin bootstrap)
+ * Create workspace structure for testing (copies workflows but not agents/skills)
+ *
+ * This ensures workflow validation works in mock mode while skipping
+ * the heavy agent/skill bootstrap that requires API access.
  */
 async function createTestWorkspace(
   workspaceDir: string,
@@ -119,7 +122,18 @@ async function createTestWorkspace(
   await mkdir(join(workspaceDir, ".claude", "agents"), { recursive: true });
   await mkdir(join(workspaceDir, ".claude", "skills"), { recursive: true });
   await mkdir(join(workspaceDir, "contentItem"), { recursive: true });
-  await mkdir(join(workspaceDir, "workflows"), { recursive: true });
+
+  // Copy workflows from plugin (needed for workflow validation in mock mode)
+  const pluginDir = getPluginPath();
+  const pluginWorkflowsDir = join(pluginDir, "workflows");
+  if (await pathExists(pluginWorkflowsDir)) {
+    await cp(pluginWorkflowsDir, join(workspaceDir, "workflows"), {
+      recursive: true,
+    });
+  } else {
+    // Fallback: create empty workflows directory
+    await mkdir(join(workspaceDir, "workflows"), { recursive: true });
+  }
 
   await writeFile(
     join(workspaceDir, "CLAUDE.md"),
