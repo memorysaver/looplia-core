@@ -32,7 +32,6 @@ export function parseWorkflowArgs(args: string[]): WorkflowConfig {
     topics: parseTopics(getArg(parsed, "topics")),
     tone: parseTone(getArg(parsed, "tone")),
     wordCount: parseWordCount(getArg(parsed, "word-count")),
-    format: (getArg(parsed, "format") ?? "json") as "json" | "markdown",
     outputPath: getArg(parsed, "output", "o"),
     noStreaming: hasFlag(parsed, "no-streaming"),
     mock: hasFlag(parsed, "mock", "m"),
@@ -95,7 +94,6 @@ ${workflowList}
 Options:
   --file, -f         Path to content file (creates new session)
   --session-id       Session ID to continue (resumes existing session)
-  --format           Output format: json, markdown (default: json)
   --output, -o       Output file path (default: stdout)
   --topics           Comma-separated topics of interest
   --tone             Writing tone: beginner, intermediate, expert, mixed (default: intermediate)

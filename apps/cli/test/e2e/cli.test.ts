@@ -194,28 +194,6 @@ describe("CLI E2E Tests", () => {
       expect(output).toHaveProperty("contentId");
     });
 
-    it("should output markdown format", async () => {
-      const content = readFileSync(
-        join(__dirname, "../fixtures/sample-article.txt"),
-        "utf-8"
-      );
-      const inputFile = createTestFile(tempDir.path, "input.txt", content);
-
-      const result = await execCLI([
-        "run",
-        "writing-kit",
-        "--file",
-        inputFile,
-        "--format",
-        "markdown",
-        "--mock",
-      ]);
-
-      expect(result.exitCode).toBe(0);
-      // Verify markdown format (has # headers)
-      expect(result.stdout).toContain("#");
-    });
-
     it("should write output to file", async () => {
       const content = readFileSync(
         join(__dirname, "../fixtures/sample-article.txt"),
@@ -235,7 +213,7 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain(`saved to: ${outputFile}`);
+      expect(result.stderr).toContain(`saved to: ${outputFile}`);
 
       const outputContent = readTestFile(outputFile);
       const output = JSON.parse(outputContent);

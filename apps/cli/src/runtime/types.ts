@@ -9,7 +9,6 @@
  * Base configuration shared by all commands
  */
 export type BaseConfig = {
-  format: "json" | "markdown";
   outputPath?: string;
   noStreaming: boolean;
   mock: boolean;

@@ -12,7 +12,7 @@ import {
   printWorkflowHelp,
   validateWorkflowInput,
 } from "../parsers/workflow-parser";
-import { renderKitResult } from "../renderers/kit-renderer";
+import { renderWorkflowResult } from "../renderers/workflow-renderer";
 import { createRuntime } from "../runtime";
 
 /**
@@ -40,8 +40,10 @@ export async function runRunCommand(args: string[]): Promise<void> {
   try {
     const runtime = createRuntime(config);
     const result = await runtime.executeWorkflow(config);
-    // Cast to WritingKit for now - future: create generic workflow renderer
-    renderKitResult(result as Parameters<typeof renderKitResult>[0], config);
+    renderWorkflowResult(result, {
+      output: config.outputPath,
+      workflowId: config.workflowId ?? "unknown",
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`Error: ${message}`);

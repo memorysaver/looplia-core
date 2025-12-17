@@ -23,22 +23,45 @@ export type DisplayConfig = {
 };
 
 /**
- * Display configurations for each command
+ * Display configurations for commands
+ *
+ * Note: Workflow titles are derived from workflow definitions,
+ * not from this config. This is used for legacy commands only.
  */
 export const DISPLAY_CONFIGS: Record<string, DisplayConfig> = {
+  workflow: {
+    title: "Workflow Executor",
+    successMessage: "Workflow complete",
+    sessionInfoFormat: "~/.looplia/contentItem/{contentId}/",
+    nextStep: null,
+  },
   kit: {
     title: "Writing Kit Builder",
     successMessage: "Writing kit complete",
     sessionInfoFormat: "~/.looplia/contentItem/{contentId}/writing-kit.json",
     nextStep: null,
   },
+  summarize: {
+    title: "Content Summarizer",
+    successMessage: "Summary complete",
+    sessionInfoFormat: "~/.looplia/contentItem/{contentId}/summary.json",
+    nextStep: null,
+  },
 };
 
 /**
  * Get display configuration for a command
+ *
+ * Note: For workflows, the title is overridden by the workflow definition name.
+ * This provides a fallback for legacy command execution.
  */
-export function getDisplayConfig(
-  commandName: string
-): DisplayConfig | undefined {
-  return DISPLAY_CONFIGS[commandName];
+export function getDisplayConfig(commandName: string): DisplayConfig {
+  return (
+    DISPLAY_CONFIGS[commandName] ?? {
+      title: commandName,
+      successMessage: "Complete",
+      sessionInfoFormat: "~/.looplia/contentItem/{contentId}/",
+      nextStep: null,
+    }
+  );
 }

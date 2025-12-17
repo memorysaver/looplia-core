@@ -22,7 +22,6 @@ import {
   createMockWritingKitProvider,
   generateValidationManifest,
   getCommand,
-  parseWorkflow,
   workflowCommand,
 } from "@looplia-core/core";
 import {
@@ -92,12 +91,12 @@ export class LoopliaRuntime {
     const prompt = command.promptTemplate(promptContext);
 
     if (this.context.mode === "streaming") {
-      return await this.executeStreaming<T>(
+      return await this.executeStreaming<T>({
         command,
         prompt,
         contentId,
-        contentTitle
-      );
+        contentTitle,
+      });
     }
 
     return await this.executeBatch<T>(command, prompt, contentId);
@@ -206,7 +205,7 @@ export class LoopliaRuntime {
    * Execute workflow (v0.5.1)
    *
    * Uses workflow-as-markdown pattern:
-   * 1. Parse workflow definition from workflows/{id}.md
+   * 1. Validate workflow exists and has valid structure
    * 2. Generate validation.json from frontmatter
    * 3. Build prompt with workflow context
    * 4. Execute workflow command
@@ -229,45 +228,32 @@ export class LoopliaRuntime {
 
     this.context.workspace = this.sessionManager.getWorkspace();
 
-    // Mock mode for writing-kit workflow falls back to kit mock provider
+    // Validate workflow exists and is valid (fail early)
+    const { validateWorkflow } = await import("../utils/workflow-validator");
+    const validation = validateWorkflow(
+      config.workflowId,
+      this.context.workspace
+    );
+
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: {
+          type: validation.error.code.toLowerCase(),
+          message: validation.error.message,
+        },
+        sessionId: content.id,
+      };
+    }
+
+    const { definition, instructions } = validation;
+
+    // Mock mode returns generic mock result
     if (this.context.mock) {
-      if (config.workflowId === "writing-kit") {
-        const userProfile = await this.loadUserProfile(config as KitConfig);
-        return this.executeKitMock(content, userProfile) as Promise<
-          CommandResult<unknown>
-        >;
-      }
-      // Other workflows not yet supported in mock mode
-      return {
-        success: false,
-        error: {
-          type: "unsupported",
-          message: `Mock mode not yet supported for workflow: ${config.workflowId}`,
-        },
-        sessionId: content.id,
-      };
+      return this.executeGenericMock(content, config.workflowId);
     }
 
-    // Load and parse workflow
     const workflowPath = `workflows/${config.workflowId}.md`;
-    const workflowFullPath = join(this.context.workspace, workflowPath);
-
-    let workflowContent: string;
-    try {
-      const { readFile } = await import("node:fs/promises");
-      workflowContent = await readFile(workflowFullPath, "utf-8");
-    } catch {
-      return {
-        success: false,
-        error: {
-          type: "not_found",
-          message: `Workflow not found: ${workflowPath}`,
-        },
-        sessionId: content.id,
-      };
-    }
-
-    const { definition, instructions } = parseWorkflow(workflowContent);
 
     // Generate validation.json
     const validationManifest = generateValidationManifest(definition);
@@ -313,13 +299,17 @@ export class LoopliaRuntime {
       workspace: this.context.workspace,
     });
 
+    // Format workflow name for display (e.g., "writing-kit" -> "Writing Kit")
+    const workflowTitle = this.formatWorkflowTitle(definition.name);
+
     if (this.context.mode === "streaming") {
-      return await this.executeStreaming<unknown>(
-        workflowCommand,
+      return await this.executeStreaming<unknown>({
+        command: workflowCommand,
         prompt,
-        content.id,
-        content.title
-      );
+        contentId: content.id,
+        contentTitle: content.title,
+        titleOverride: workflowTitle,
+      });
     }
 
     return await this.executeBatch<unknown>(
@@ -327,6 +317,27 @@ export class LoopliaRuntime {
       prompt,
       content.id
     );
+  }
+
+  /**
+   * Execute generic mock for any workflow
+   */
+  private executeGenericMock(
+    content: { id: string; title: string },
+    workflowId: string
+  ): CommandResult<unknown> {
+    console.error("⏳ Processing (mock)...");
+    return {
+      success: true,
+      data: {
+        contentId: content.id,
+        workflowId,
+        mock: true,
+        timestamp: new Date().toISOString(),
+        message: "Mock execution - use real API for actual workflow output",
+      },
+      sessionId: `mock-${content.id}`,
+    };
   }
 
   /**
@@ -393,18 +404,33 @@ export class LoopliaRuntime {
   }
 
   /**
+   * Format workflow name for display
+   * e.g., "writing-kit" -> "Writing Kit"
+   */
+  private formatWorkflowTitle(workflowName: string): string {
+    return workflowName
+      .split("-")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  }
+
+  /**
    * Execute command with streaming UI
    */
-  private async executeStreaming<T>(
-    command: CommandDefinition<T>,
-    prompt: string,
-    contentId: string,
-    contentTitle: string
-  ): Promise<CommandResult<T>> {
-    // DisplayConfig now lives in CLI layer (Clean Architecture)
+  private async executeStreaming<T>(options: {
+    command: CommandDefinition<T>;
+    prompt: string;
+    contentId: string;
+    contentTitle: string;
+    titleOverride?: string;
+  }): Promise<CommandResult<T>> {
+    const { command, prompt, contentId, contentTitle, titleOverride } = options;
+
+    // Use title override if provided (e.g., from workflow definition)
+    // Otherwise fall back to display config
     const { getDisplayConfig } = await import("../config/display-config");
     const displayConfig = getDisplayConfig(command.name);
-    const title = displayConfig?.title ?? command.name;
+    const title = titleOverride ?? displayConfig.title;
 
     const { result, error } = await renderStreamingQuery<T>({
       title,
