@@ -53,17 +53,42 @@ For each output in the workflow (following dependency order):
 1. **Check completion**:
    - If artifact exists AND validated=true in validation.json → skip
 
-2. **If incomplete**:
-   a. Invoke the specified agent as subagent
-   b. Agent writes artifact to \`contentItem/${ctx.contentId}/{artifact}\`
+2. **If incomplete - use Task tool with custom subagent_type**:
 
-3. **After artifact written**:
-   a. Use **workflow-validator** skill to validate
-   b. Run: \`bun .claude/skills/workflow-validator/scripts/validate.ts {artifact-path} '{criteria-json}'\`
+   Use the **Task** tool to invoke the agent specified in the workflow definition.
+   The subagent_type MUST match the \`agent\` field exactly from the workflow YAML.
+
+   Example for an output with \`agent: content-analyzer\`:
+   \`\`\`json
+   {
+     "name": "Task",
+     "input": {
+       "subagent_type": "content-analyzer",
+       "description": "Generate summary artifact",
+       "prompt": "Analyze content at contentItem/${ctx.contentId}/content.md and write summary.json"
+     }
+   }
+   \`\`\`
+
+   The subagent will:
+   - Auto-load its configured skills (from .claude/agents/*.md)
+   - Write artifact to \`contentItem/${ctx.contentId}/{artifact}\`
+
+3. **After artifact written - use Skill tool for validation**:
+
+   Use the **Skill** tool to invoke workflow-validator:
+   \`\`\`json
+   {
+     "name": "Skill",
+     "input": { "skill": "workflow-validator" }
+   }
+   \`\`\`
+
+   Then follow the skill's instructions to validate the artifact against criteria.
 
 4. **Handle validation result**:
    - If passed: Update validation.json → set \`outputs.{name}.validated = true\`
-   - If failed: Review failed checks, retry subagent with feedback, or report issue
+   - If failed: Review failed checks, retry subagent with specific feedback
 
 ### Step 3: Return Final Output
 
@@ -95,9 +120,10 @@ When the output marked \`final: true\` passes validation:
  * Note: The output schema is dynamic based on the workflow.
  * The runtime will provide the appropriate schema.
  */
-export const workflowCommand: CommandDefinition<unknown> = {
+export const workflowCommand: CommandDefinition<Record<string, unknown>> = {
   name: "workflow",
   promptTemplate: buildWorkflowPrompt,
-  // Generic schema - actual schema determined by workflow's final output type
-  outputSchema: z.unknown(),
+  // Generic object schema - allows any JSON object structure
+  // Must be an object schema (not z.unknown()) to produce valid JSON schema with "type" field
+  outputSchema: z.record(z.string(), z.unknown()),
 };

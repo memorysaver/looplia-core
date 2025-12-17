@@ -1,6 +1,6 @@
 ---
 name: writing-kit
-description: Transform content into structured writing kit with summary and creative ideas
+description: Transform content into structured writing kit with summary, ideas, and outline
 
 outputs:
   summary:
@@ -11,10 +11,18 @@ outputs:
       min_quotes: 3
       min_key_points: 5
 
+  ideas:
+    artifact: ideas.json
+    agent: idea-generator
+    requires: [summary]
+    validate:
+      required_fields: [contentId, hooks, angles, questions]
+      has_hooks: true
+
   writing-kit:
     artifact: writing-kit.json
     agent: writing-kit-builder
-    requires: [summary]
+    requires: [summary, ideas]
     final: true
     validate:
       required_fields: [contentId, source, summary, ideas, suggestedOutline, meta]
@@ -28,9 +36,10 @@ Transform raw content into a comprehensive writing kit with summary, creative id
 
 ## Purpose
 
-This workflow processes content through two stages:
-1. **Summary Stage**: Deep analysis of content to extract key themes, quotes, and insights
-2. **Writing Kit Stage**: Generate creative hooks, angles, and structured outline for writing
+This workflow processes content through three stages:
+1. **Summary Stage** (content-analyzer): Deep analysis of content to extract key themes, quotes, and insights
+2. **Ideas Stage** (idea-generator): Generate creative hooks, angles, and exploratory questions
+3. **Writing Kit Stage** (writing-kit-builder): Assemble final kit with outline and all components
 
 ## Content Analysis Guidelines
 
@@ -81,6 +90,7 @@ If validation fails:
 contentItem/{id}/
   content.md          # Original content
   validation.json     # Generated validation checklist
-  summary.json        # Stage 1 output
-  writing-kit.json    # Stage 2 output (final)
+  summary.json        # Stage 1 output (content-analyzer)
+  ideas.json          # Stage 2 output (idea-generator)
+  writing-kit.json    # Stage 3 output (writing-kit-builder) - final
 ```

@@ -2,7 +2,8 @@
 name: writing-kit-builder
 description: Create outline and assemble final WritingKit from existing summary and ideas.
 model: haiku
-tools: Read, Write
+tools: Read, Write, Skill
+skills: user-profile-reader
 ---
 
 # Writing Kit Builder Agent

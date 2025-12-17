@@ -166,7 +166,10 @@ export async function* executeAgenticQueryStreaming<T>(
         cwd: workspace,
         permissionMode: "bypassPermissions",
         allowDangerouslySkipPermissions: true,
-        allowedTools: ["Read", "Skill"],
+        // v0.5.2: Enable subagent & skill discovery from .claude/ directories
+        settingSources: ["project"],
+        // v0.5.2: Enable Task for subagent spawning, Write/Glob for file operations
+        allowedTools: ["Read", "Write", "Glob", "Task", "Skill"],
         outputFormat: { type: "json_schema", schema: jsonSchema },
       },
     });
