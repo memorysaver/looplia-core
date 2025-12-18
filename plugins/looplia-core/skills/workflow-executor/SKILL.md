@@ -19,30 +19,34 @@ Use this skill when:
 
 ## Full Execution Protocol
 
-### Phase 1: Session Management
+### Phase 1: Sandbox Management
 
-**New Session** (when `--file` provided):
+**New Sandbox** (when `--file` provided):
 
-1. Generate session ID using id-generator pattern:
+1. Generate sandbox ID using id-generator pattern:
    ```
    {content-slug}-{YYYY-MM-DD}-{random4chars}
    Example: my-article-2025-12-18-xk7m
    ```
 
-2. Create session folder:
+2. Create sandbox folder structure:
    ```
-   contentItem/{session-id}/
+   sandbox/{sandbox-id}/
+   ├── inputs/content.md    # Copy content file here
+   ├── outputs/             # Outputs written here
+   ├── logs/                # Session logs
+   └── validation.json      # Generated validation state
    ```
 
-3. Copy content file:
+3. Copy content file to inputs:
    ```
-   contentItem/{session-id}/content.md
+   sandbox/{sandbox-id}/inputs/content.md
    ```
 
-**Resume Session** (when `--session-id` provided):
+**Resume Sandbox** (when `--sandbox-id` provided):
 
-1. Verify session exists: `contentItem/{session-id}/`
-2. Load existing validation state
+1. Verify sandbox exists: `sandbox/{sandbox-id}/`
+2. Load existing validation state from `sandbox/{sandbox-id}/validation.json`
 3. Continue from last incomplete output
 
 ### Phase 2: Workflow Loading
@@ -81,16 +85,18 @@ Use this skill when:
 
 ### Phase 3: Validation State
 
-**Generate validation.json** (new session):
+**Generate validation.json** (new sandbox):
+
+Write to `sandbox/{sandbox-id}/validation.json`:
 
 ```json
 {
   "workflow": "writing-kit",
-  "sessionId": "article-2025-12-18-xk7m",
+  "sandboxId": "article-2025-12-18-xk7m",
   "createdAt": "2025-12-18T10:30:00Z",
   "outputs": {
     "summary": {
-      "artifact": "summary.json",
+      "artifact": "outputs/summary.json",
       "criteria": {
         "required_fields": ["contentId", "headline"],
         "min_quotes": 3
@@ -98,14 +104,14 @@ Use this skill when:
       "validated": false
     },
     "ideas": {
-      "artifact": "ideas.json",
+      "artifact": "outputs/ideas.json",
       "criteria": {
         "required_fields": ["contentId", "ideas"]
       },
       "validated": false
     },
     "writing-kit": {
-      "artifact": "writing-kit.json",
+      "artifact": "outputs/writing-kit.json",
       "criteria": {
         "required_fields": ["contentId", "writingKit"]
       },
@@ -115,9 +121,9 @@ Use this skill when:
 }
 ```
 
-**Read validation.json** (resume session):
+**Read validation.json** (resume sandbox):
 
-Load existing state to determine what work remains.
+Load existing state from `sandbox/{sandbox-id}/validation.json` to determine what work remains.
 
 ### Phase 4: Dependency Resolution
 
@@ -187,7 +193,7 @@ Use the Task tool to invoke subagents:
   "input": {
     "subagent_type": "content-analyzer",
     "description": "Generate summary artifact",
-    "prompt": "Analyze content at contentItem/{session-id}/content.md and generate summary.json"
+    "prompt": "Analyze content at sandbox/{sandbox-id}/inputs/content.md and generate outputs/summary.json"
   }
 }
 ```
@@ -195,18 +201,19 @@ Use the Task tool to invoke subagents:
 Subagent protocol:
 1. Subagent reads its agent definition from `.claude/agents/{name}.md`
 2. Auto-loads skills from `skills:` frontmatter field
-3. Reads input content and any required artifacts
-4. Writes output to `contentItem/{session-id}/{artifact}`
+3. Reads input content from `sandbox/{sandbox-id}/inputs/content.md`
+4. Reads any required artifacts from `sandbox/{sandbox-id}/outputs/`
+5. Writes output to `sandbox/{sandbox-id}/outputs/{artifact}`
 
 ### Phase 7: Validation
 
-After subagent writes artifact:
+After subagent writes artifact to `sandbox/{sandbox-id}/outputs/`:
 
 1. Use **workflow-validator** skill
 2. Run validation script:
    ```bash
    bun .claude/skills/workflow-validator/scripts/validate.ts \
-     contentItem/{session-id}/summary.json \
+     sandbox/{sandbox-id}/outputs/summary.json \
      '{"required_fields":["contentId"],"min_quotes":3}'
    ```
 3. Parse result:
@@ -219,7 +226,7 @@ After subagent writes artifact:
      ]
    }
    ```
-4. If passed: Update validation.json
+4. If passed: Update `sandbox/{sandbox-id}/validation.json`
 5. If failed: Retry with specific feedback
 
 ### Phase 8: Return Final
@@ -228,14 +235,14 @@ When output with `final: true` passes validation:
 
 1. Read final artifact:
    ```
-   contentItem/{session-id}/writing-kit.json
+   sandbox/{sandbox-id}/outputs/writing-kit.json
    ```
 
 2. Return as structured result:
    ```json
    {
      "status": "success",
-     "sessionId": "article-2025-12-18-xk7m",
+     "sandboxId": "article-2025-12-18-xk7m",
      "workflow": "writing-kit",
      "artifact": { ... content of writing-kit.json ... }
    }
@@ -267,7 +274,7 @@ All outputs validated: true          │  Already complete
 | Scenario | Action |
 |----------|--------|
 | Workflow not found | Error with available workflows |
-| Session not found | Error with suggestion to use --file |
+| Sandbox not found | Error with suggestion to use --file |
 | Subagent fails | Retry up to 2 times with feedback |
 | Validation fails | Provide specific failed checks to subagent |
 | Max retries exceeded | Report failure with details |
@@ -277,30 +284,37 @@ All outputs validated: true          │  Already complete
 ```
 /run writing-kit --file article.md
 
-1. [SESSION] Created: article-2025-12-18-xk7m
-2. [WORKFLOW] Loaded: workflows/writing-kit.md
-3. [VALIDATION] Generated: validation.json (all false)
-4. [ORDER] Computed: [summary, ideas, writing-kit]
+1. [SANDBOX] Created: sandbox/article-2025-12-18-xk7m/
+   - inputs/content.md (copied)
+   - outputs/ (empty)
+   - logs/
+   - validation.json (generated)
 
-5. [EXECUTE] summary
+2. [WORKFLOW] Loaded: workflows/writing-kit.md
+3. [ORDER] Computed: [summary, ideas, writing-kit]
+
+4. [EXECUTE] summary
    - Invoke: content-analyzer
-   - Artifact: summary.json (written)
+   - Input: sandbox/.../inputs/content.md
+   - Output: sandbox/.../outputs/summary.json (written)
    - Validate: PASSED
    - Update: validation.json (summary.validated = true)
 
-6. [EXECUTE] ideas
+5. [EXECUTE] ideas
    - Invoke: idea-generator
-   - Artifact: ideas.json (written)
+   - Input: sandbox/.../outputs/summary.json
+   - Output: sandbox/.../outputs/ideas.json (written)
    - Validate: PASSED
    - Update: validation.json (ideas.validated = true)
 
-7. [EXECUTE] writing-kit
+6. [EXECUTE] writing-kit
    - Invoke: writing-kit-builder
-   - Artifact: writing-kit.json (written)
+   - Input: sandbox/.../outputs/summary.json, ideas.json
+   - Output: sandbox/.../outputs/writing-kit.json (written)
    - Validate: PASSED
    - Update: validation.json (writing-kit.validated = true)
 
-8. [COMPLETE] Final output: writing-kit.json
+7. [COMPLETE] Final output: outputs/writing-kit.json
    - Return structured result
 ```
 
@@ -308,6 +322,9 @@ All outputs validated: true          │  Already complete
 
 - Workflow definitions: `workflows/*.md`
 - Agent definitions: `.claude/agents/*.md`
-- Session storage: `contentItem/{session-id}/`
-- Validation state: `contentItem/{session-id}/validation.json`
+- Sandbox storage: `sandbox/{sandbox-id}/`
+  - Input content: `sandbox/{sandbox-id}/inputs/content.md`
+  - Output artifacts: `sandbox/{sandbox-id}/outputs/`
+  - Session logs: `sandbox/{sandbox-id}/logs/`
+  - Validation state: `sandbox/{sandbox-id}/validation.json`
 - Validator script: `.claude/skills/workflow-validator/scripts/validate.ts`
