@@ -27,7 +27,7 @@ import { isInteractive } from "../utils/terminal";
 type RunArgs = {
   workflowId: string;
   file?: string;
-  sessionId?: string;
+  sandboxId?: string;
   mock: boolean;
   noStreaming: boolean;
   help: boolean;
@@ -38,7 +38,11 @@ type RunArgs = {
  */
 function isValueFlag(arg: string): boolean {
   return (
-    arg === "--file" || arg === "-f" || arg === "--session-id" || arg === "-s"
+    arg === "--file" ||
+    arg === "-f" ||
+    arg === "--sandbox" ||
+    arg === "-s" ||
+    arg === "--sandbox-id"
   );
 }
 
@@ -54,8 +58,8 @@ function processArg(
     result.help = true;
   } else if (arg === "--file" || arg === "-f") {
     result.file = nextArg;
-  } else if (arg === "--session-id" || arg === "-s") {
-    result.sessionId = nextArg;
+  } else if (arg === "--sandbox-id" || arg === "--sandbox" || arg === "-s") {
+    result.sandboxId = nextArg;
   } else if (arg === "--mock") {
     result.mock = true;
   } else if (arg === "--no-streaming") {
@@ -107,15 +111,15 @@ Arguments:
   workflow-id           Name of workflow (e.g., "writing-kit")
 
 Options:
-  --file, -f <path>     Path to content file (creates new session)
-  --session-id, -s <id> Resume existing session
-  --mock                Use mock mode (no API calls)
-  --no-streaming        Disable streaming output
-  --help, -h            Show this help
+  --file, -f <path>       Path to content file (creates new sandbox)
+  --sandbox-id, -s <id>   Resume existing sandbox
+  --mock                  Use mock mode (no API calls)
+  --no-streaming          Disable streaming output
+  --help, -h              Show this help
 
 Examples:
   looplia run writing-kit --file article.md
-  looplia run writing-kit --session-id article-2025-12-18-abc123
+  looplia run writing-kit --sandbox-id text-2025-12-18-abc123
 `);
 }
 
@@ -162,8 +166,8 @@ function validateEnvironment(mock: boolean): void {
  * Build the /run prompt to inject into the agent
  */
 function buildRunPrompt(args: RunArgs): string {
-  if (args.sessionId) {
-    return `/run ${args.workflowId} --session-id ${args.sessionId}`;
+  if (args.sandboxId) {
+    return `/run ${args.workflowId} --sandbox-id ${args.sandboxId}`;
   }
 
   if (args.file) {
@@ -171,7 +175,7 @@ function buildRunPrompt(args: RunArgs): string {
     return `/run ${args.workflowId} --file ${absolutePath}`;
   }
 
-  throw new Error("Either --file or --session-id is required");
+  throw new Error("Either --file or --sandbox-id is required");
 }
 
 /**
@@ -300,8 +304,8 @@ export async function runRunCommand(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  if (!(parsed.file || parsed.sessionId)) {
-    console.error("Error: Either --file or --session-id is required");
+  if (!(parsed.file || parsed.sandboxId)) {
+    console.error("Error: Either --file or --sandbox-id is required");
     printHelp();
     process.exit(1);
   }

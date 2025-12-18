@@ -175,7 +175,7 @@ describe("CLI E2E Tests", () => {
 
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain(
-        "Error: Either --file or --sandbox is required"
+        "Error: Either --file or --sandbox-id is required"
       );
     });
 

@@ -146,7 +146,7 @@ async function createTestWorkspace(
   await mkdir(workspaceDir, { recursive: true });
   await mkdir(join(workspaceDir, ".claude", "agents"), { recursive: true });
   await mkdir(join(workspaceDir, ".claude", "skills"), { recursive: true });
-  await mkdir(join(workspaceDir, "contentItem"), { recursive: true });
+  await mkdir(join(workspaceDir, "sandbox"), { recursive: true });
 
   const plugins = getPluginPaths();
 
@@ -203,7 +203,7 @@ async function bootstrapFromPlugins(
   // Create directory structure
   await mkdir(workspaceDir, { recursive: true });
   await mkdir(join(workspaceDir, ".claude"), { recursive: true });
-  await mkdir(join(workspaceDir, "contentItem"), { recursive: true });
+  await mkdir(join(workspaceDir, "sandbox"), { recursive: true });
 
   // --- From looplia-core plugin ---
 

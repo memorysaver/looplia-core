@@ -1,4 +1,4 @@
-# Looplia Workflow Interpreter
+# Looplia Workflow Interpreter (v0.5.2)
 
 You execute workflows defined in `workflows/*.md` files using the workflow-executor skill.
 
@@ -13,8 +13,9 @@ When you receive a `/run` command:
 
 | Command | Description |
 |---------|-------------|
-| `/run <workflow-id> --file <path>` | Execute a workflow on content |
-| `/run <workflow-id> --session-id <id>` | Resume an existing session |
+| `/run <workflow-id> --file <path>` | Execute a workflow (creates new sandbox) |
+| `/run <workflow-id> --file <path> --sandbox-id <id>` | Execute with explicit sandbox ID |
+| `/run <workflow-id> --sandbox <id>` | Resume an existing sandbox |
 | `/build-workflow <name>` | Scaffold a new workflow definition |
 | `/list-workflows` | List available workflows |
 
@@ -45,7 +46,7 @@ outputs:
 Additional guidance for this workflow...
 ```
 
-## Workspace Structure
+## Workspace Structure (v0.5.2)
 
 ```
 ~/.looplia/
@@ -62,10 +63,16 @@ Additional guidance for this workflow...
 │       ├── workflow-executor/    # Core execution skill
 │       └── workflow-validator/   # Output validation skill
 ├── user-profile.json             # User preferences
-└── contentItem/{id}/
-    ├── content.md                # Input content
+└── sandbox/{sandbox-id}/         # Sandbox folder (v0.5.2)
+    ├── inputs/
+    │   └── content.md            # Input content
+    ├── outputs/
+    │   ├── summary.json          # Workflow outputs
+    │   ├── ideas.json
+    │   └── writing-kit.json
     ├── validation.json           # Validation state
-    └── *.json                    # Output artifacts
+    └── logs/
+        └── {session-id}.log      # Session logs
 ```
 
 ## Core Skills
@@ -73,7 +80,7 @@ Additional guidance for this workflow...
 ### workflow-executor
 
 The primary skill for running workflows. Handles:
-- Session creation (new or resume)
+- Sandbox creation (new or resume) - v0.5.2
 - Workflow parsing (YAML frontmatter + body)
 - Dependency resolution (topological order)
 - Subagent orchestration (via Task tool)
@@ -87,7 +94,7 @@ Validates output artifacts using deterministic scripts:
 
 ```bash
 bun .claude/skills/workflow-validator/scripts/validate.ts \
-  contentItem/{id}/summary.json \
+  sandbox/{sandbox-id}/outputs/summary.json \
   '{"required_fields":["contentId"],"min_quotes":3}'
 ```
 
@@ -104,19 +111,20 @@ Returns validation result (no LLM tokens consumed):
 ## Validation-Driven Completion
 
 A step is **complete** when:
-1. Artifact file exists at specified path
+1. Artifact file exists at specified path in `outputs/`
 2. `validation.json` shows `validated: true` for that output
 
 ```json
 {
   "workflow": "writing-kit",
+  "sandboxId": "text-2025-12-18-ai-healthcare",
   "outputs": {
     "summary": {
-      "artifact": "summary.json",
+      "artifact": "outputs/summary.json",
       "validated": true    // ← Complete!
     },
     "ideas": {
-      "artifact": "ideas.json",
+      "artifact": "outputs/ideas.json",
       "validated": false   // ← Still pending
     }
   }
@@ -125,7 +133,7 @@ A step is **complete** when:
 
 ## Smart Continuation
 
-When resuming a session:
+When resuming a sandbox:
 1. Read validation.json
 2. Skip outputs with `validated: true`
 3. Continue from first pending output
