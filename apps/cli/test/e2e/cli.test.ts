@@ -175,7 +175,7 @@ describe("CLI E2E Tests", () => {
 
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain(
-        "Error: Either --file or --session-id is required"
+        "Error: Either --file or --sandbox is required"
       );
     });
 
@@ -186,7 +186,7 @@ describe("CLI E2E Tests", () => {
       expect(result.stdout).toContain("looplia run");
       expect(result.stdout).toContain("<workflow-id>");
       expect(result.stdout).toContain("--file");
-      expect(result.stdout).toContain("--session-id");
+      expect(result.stdout).toContain("--sandbox");
       expect(result.stdout).toContain("--mock");
     });
 
