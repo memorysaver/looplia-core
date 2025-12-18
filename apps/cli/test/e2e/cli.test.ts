@@ -158,6 +158,13 @@ describe("CLI E2E Tests", () => {
         "--mock",
       ]);
 
+      // Log diagnostic info on failure
+      if (result.exitCode !== 0) {
+        console.error("Mock mode test failed:");
+        console.error("stdout:", result.stdout);
+        console.error("stderr:", result.stderr);
+      }
+
       expect(result.exitCode).toBe(0);
       // Mock mode outputs to stdout
       expect(result.stdout).toContain("Workflow completed successfully");
