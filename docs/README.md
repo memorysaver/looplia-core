@@ -34,13 +34,33 @@ v0.5.2 separates the single plugin into **two plugins**:
 | **looplia-core** | Infrastructure | Workflow engine, validation, `/run` command |
 | **looplia-writer** | Domain | Writing-kit workflow, content analysis agents |
 
+### Sandbox Folder Architecture
+
+Each workflow execution creates an isolated sandbox:
+
+```
+~/.looplia/sandbox/{sandbox-id}/
+├── inputs/
+│   └── content.md        # Input content (copied from --file)
+├── outputs/
+│   ├── summary.json      # Stage 1 output
+│   ├── ideas.json        # Stage 2 output
+│   └── writing-kit.json  # Stage 3 output (final)
+├── logs/
+│   └── query-*.log       # Session logs
+└── validation.json       # Validation state tracking
+```
+
+**Sandbox ID format:** `{slug}-{YYYY-MM-DD}-{random4chars}` (e.g., `my-article-2025-12-18-xk7m`)
+
 ### Slash Commands
 
 New commands exposed via Claude Code plugin system:
 
 | Command | Description |
 |---------|-------------|
-| `/run <workflow-id> --file <path>` | Execute a workflow on content |
+| `/run <workflow-id> --file <path>` | Execute a workflow on content (creates sandbox) |
+| `/run <workflow-id> --sandbox-id <id>` | Resume existing sandbox |
 | `/build-workflow <name>` | Scaffold a new workflow definition |
 | `/list-workflows` | List available workflows |
 
@@ -48,7 +68,7 @@ New commands exposed via Claude Code plugin system:
 
 - Proper plugin manifest (`.claude-plugin/plugin.json`)
 - Commands in `commands/` directory
-- Minimal hooks for lifecycle logging
+- Hooks for lifecycle logging and validation
 - Workflows as a Looplia extension
 
 ---
@@ -198,10 +218,30 @@ Previous versions are preserved for reference:
 │   ├── workflow-executor/         │    │   ├── media-reviewer/                │
 │   └── workflow-validator/        │    │   └── ...                            │
 ├─────────────────────────────────┤    ├─────────────────────────────────────┤
-│ CLAUDE.md                        │    │ workflows/                           │
-│   (Generic interpreter)          │    │   └── writing-kit.md                 │
-└─────────────────────────────────┘    └─────────────────────────────────────┘
+│ hooks/                           │    │ workflows/                           │
+│   └── hooks.json                 │    │   └── writing-kit.md                 │
+├─────────────────────────────────┤    └─────────────────────────────────────┘
+│ CLAUDE.md                        │
+│   (Generic interpreter)          │
+└─────────────────────────────────┘
 ```
+
+### Sandbox Architecture
+
+Each workflow run creates an isolated sandbox folder:
+
+```
+sandbox/{sandbox-id}/
+├── inputs/content.md      # Copied from --file
+├── outputs/*.json         # Generated artifacts
+├── logs/*.log             # Session logs
+└── validation.json        # Tracks validated: true/false per output
+```
+
+Benefits:
+- **Isolation**: Each run is self-contained
+- **Resumable**: Use `--sandbox-id` to continue from last validated step
+- **Auditable**: Full logs preserved for debugging
 
 ### Workflow-as-Markdown
 
@@ -233,7 +273,8 @@ outputs:
 Execute workflows via Claude Code commands:
 
 ```
-/run writing-kit --file article.md
+/run writing-kit --file article.md           # Create new sandbox
+/run writing-kit --sandbox-id text-2025-12-18-abc1  # Resume existing
 /list-workflows
 /build-workflow my-new-workflow
 ```
