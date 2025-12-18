@@ -57,7 +57,16 @@ async function pathExists(path: string): Promise<boolean> {
 }
 
 /**
- * Get the plugin directory path
+ * Plugin paths for two-plugin architecture
+ */
+export type PluginPaths = {
+  core: string;
+  writer: string;
+};
+
+/**
+ * Get the plugin directory path (legacy - returns writer plugin only)
+ * @deprecated Use getPluginPaths() instead
  */
 export function getPluginPath(): string {
   // Assuming CLI runs from project root
@@ -65,14 +74,30 @@ export function getPluginPath(): string {
 }
 
 /**
+ * Get paths to both plugins for two-plugin architecture
+ */
+export function getPluginPaths(): PluginPaths {
+  const base = join(process.cwd(), "plugins");
+  return {
+    core: join(base, "looplia-core"),
+    writer: join(base, "looplia-writer"),
+  };
+}
+
+/**
  * Check if all required workspace files exist
  */
 async function checkRequiredFiles(workspaceDir: string): Promise<boolean> {
   const requiredPaths = [
+    // Core structure
     join(workspaceDir, "CLAUDE.md"),
     join(workspaceDir, ".claude", "agents"),
     join(workspaceDir, ".claude", "skills"),
     join(workspaceDir, "workflows"),
+    // From looplia-core plugin
+    join(workspaceDir, ".claude", "commands"),
+    join(workspaceDir, ".claude", "skills", "workflow-executor"),
+    join(workspaceDir, ".claude", "skills", "workflow-validator"),
   ];
 
   for (const path of requiredPaths) {
@@ -100,7 +125,7 @@ function createDefaultProfile(): object {
 }
 
 /**
- * Create workspace structure for testing (copies workflows but not agents/skills)
+ * Create workspace structure for testing (copies workflows and core skills)
  *
  * This ensures workflow validation works in mock mode while skipping
  * the heavy agent/skill bootstrap that requires API access.
@@ -123,16 +148,27 @@ async function createTestWorkspace(
   await mkdir(join(workspaceDir, ".claude", "skills"), { recursive: true });
   await mkdir(join(workspaceDir, "contentItem"), { recursive: true });
 
-  // Copy workflows from plugin (needed for workflow validation in mock mode)
-  const pluginDir = getPluginPath();
-  const pluginWorkflowsDir = join(pluginDir, "workflows");
-  if (await pathExists(pluginWorkflowsDir)) {
-    await cp(pluginWorkflowsDir, join(workspaceDir, "workflows"), {
+  const plugins = getPluginPaths();
+
+  // Copy workflows from writer plugin (needed for workflow validation in mock mode)
+  const writerWorkflowsDir = join(plugins.writer, "workflows");
+  if (await pathExists(writerWorkflowsDir)) {
+    await cp(writerWorkflowsDir, join(workspaceDir, "workflows"), {
       recursive: true,
     });
   } else {
     // Fallback: create empty workflows directory
     await mkdir(join(workspaceDir, "workflows"), { recursive: true });
+  }
+
+  // Copy workflow-validator skill from core plugin (needed for validation tests)
+  const coreValidatorDir = join(plugins.core, "skills", "workflow-validator");
+  if (await pathExists(coreValidatorDir)) {
+    await cp(
+      coreValidatorDir,
+      join(workspaceDir, ".claude", "skills", "workflow-validator"),
+      { recursive: true }
+    );
   }
 
   await writeFile(
@@ -149,35 +185,85 @@ async function createTestWorkspace(
 }
 
 /**
- * Bootstrap workspace from plugin directory
+ * Bootstrap workspace from both looplia-core and looplia-writer plugins
+ *
+ * Copies files in order:
+ * 1. From looplia-core: commands/, skills/, hooks/, CLAUDE.md
+ * 2. From looplia-writer: agents/, skills/ (merged), workflows/
  */
-async function bootstrapFromPlugin(
+async function bootstrapFromPlugins(
   workspaceDir: string,
-  pluginDir: string
+  plugins: PluginPaths
 ): Promise<void> {
   const workspaceExists = await pathExists(workspaceDir);
   if (workspaceExists) {
     await rm(workspaceDir, { recursive: true, force: true });
   }
 
+  // Create directory structure
   await mkdir(workspaceDir, { recursive: true });
   await mkdir(join(workspaceDir, ".claude"), { recursive: true });
   await mkdir(join(workspaceDir, "contentItem"), { recursive: true });
 
-  await cp(join(pluginDir, "agents"), join(workspaceDir, ".claude", "agents"), {
-    recursive: true,
-  });
+  // --- From looplia-core plugin ---
 
-  await cp(join(pluginDir, "skills"), join(workspaceDir, ".claude", "skills"), {
-    recursive: true,
-  });
+  // commands/ → ~/.looplia/.claude/commands/
+  const coreCommandsDir = join(plugins.core, "commands");
+  if (await pathExists(coreCommandsDir)) {
+    await cp(coreCommandsDir, join(workspaceDir, ".claude", "commands"), {
+      recursive: true,
+    });
+  }
 
-  await cp(join(pluginDir, "workflows"), join(workspaceDir, "workflows"), {
-    recursive: true,
-  });
+  // skills/ → ~/.looplia/.claude/skills/ (first, will be merged)
+  const coreSkillsDir = join(plugins.core, "skills");
+  if (await pathExists(coreSkillsDir)) {
+    await cp(coreSkillsDir, join(workspaceDir, ".claude", "skills"), {
+      recursive: true,
+    });
+  }
 
-  await cp(join(pluginDir, "README.md"), join(workspaceDir, "CLAUDE.md"));
+  // hooks/ → ~/.looplia/.claude/hooks/
+  const coreHooksDir = join(plugins.core, "hooks");
+  if (await pathExists(coreHooksDir)) {
+    await cp(coreHooksDir, join(workspaceDir, ".claude", "hooks"), {
+      recursive: true,
+    });
+  }
 
+  // CLAUDE.md → ~/.looplia/CLAUDE.md
+  const coreClaudeMd = join(plugins.core, "CLAUDE.md");
+  if (await pathExists(coreClaudeMd)) {
+    await cp(coreClaudeMd, join(workspaceDir, "CLAUDE.md"));
+  }
+
+  // --- From looplia-writer plugin ---
+
+  // agents/ → ~/.looplia/.claude/agents/
+  const writerAgentsDir = join(plugins.writer, "agents");
+  if (await pathExists(writerAgentsDir)) {
+    await cp(writerAgentsDir, join(workspaceDir, ".claude", "agents"), {
+      recursive: true,
+    });
+  }
+
+  // skills/ → ~/.looplia/.claude/skills/ (merge with core skills)
+  const writerSkillsDir = join(plugins.writer, "skills");
+  if (await pathExists(writerSkillsDir)) {
+    await cp(writerSkillsDir, join(workspaceDir, ".claude", "skills"), {
+      recursive: true,
+    });
+  }
+
+  // workflows/ → ~/.looplia/workflows/
+  const writerWorkflowsDir = join(plugins.writer, "workflows");
+  if (await pathExists(writerWorkflowsDir)) {
+    await cp(writerWorkflowsDir, join(workspaceDir, "workflows"), {
+      recursive: true,
+    });
+  }
+
+  // Create default user profile
   await writeFile(
     join(workspaceDir, "user-profile.json"),
     JSON.stringify(createDefaultProfile(), null, 2),
@@ -188,13 +274,16 @@ async function bootstrapFromPlugin(
 /**
  * Ensure the Looplia workspace exists and is properly initialized
  *
- * Creates ~/.looplia/ with .claude/ structure and copies from looplia-writer plugin.
- * On first run or when force=true, performs destructive refresh from plugin.
+ * Creates ~/.looplia/ with .claude/ structure and copies from both plugins:
+ * - looplia-core: commands/, skills/ (core), hooks/, CLAUDE.md
+ * - looplia-writer: agents/, skills/ (domain), workflows/
+ *
+ * On first run or when force=true, performs destructive refresh from plugins.
  *
  * @param options - Configuration options
  * @returns The absolute path to the workspace directory
  *
- * @throws Error if plugin directory not found or required files missing without force
+ * @throws Error if plugin directories not found or required files missing without force
  *
  * @example
  * ```typescript
@@ -224,12 +313,17 @@ export async function ensureWorkspace(
     return workspaceDir;
   }
 
-  const pluginDir = getPluginPath();
+  const plugins = getPluginPaths();
 
-  // Check if plugin directory exists
-  if (!(await pathExists(pluginDir))) {
+  // Check if plugin directories exist
+  if (!(await pathExists(plugins.core))) {
     throw new Error(
-      `Plugin directory not found: ${pluginDir}. Ensure you're running from project root.`
+      `Plugin directory not found: ${plugins.core}. Ensure you're running from project root.`
+    );
+  }
+  if (!(await pathExists(plugins.writer))) {
+    throw new Error(
+      `Plugin directory not found: ${plugins.writer}. Ensure you're running from project root.`
     );
   }
 
@@ -243,7 +337,7 @@ export async function ensureWorkspace(
     force || !workspaceExists || (requireFiles && !requiredFilesPresent);
 
   if (needsBootstrap) {
-    await bootstrapFromPlugin(workspaceDir, pluginDir);
+    await bootstrapFromPlugins(workspaceDir, plugins);
   }
 
   return workspaceDir;
