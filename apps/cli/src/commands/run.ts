@@ -8,9 +8,9 @@
  * @see plugins/looplia-core/skills/workflow-executor/SKILL.md
  */
 
-import { existsSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 
 import type { StreamingEvent } from "@looplia-core/core";
 import {
@@ -20,6 +20,56 @@ import {
 
 import { renderStreamingQuery } from "../components";
 import { isInteractive } from "../utils/terminal";
+
+/**
+ * Generate a random 4-character suffix for sandbox IDs
+ */
+function generateRandomSuffix(): string {
+  return Math.random().toString(36).substring(2, 6);
+}
+
+/**
+ * Generate a slug from filename for sandbox ID
+ */
+function generateSlugFromFile(filePath: string): string {
+  const filename = basename(filePath, ".md");
+  return filename
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .substring(0, 30);
+}
+
+/**
+ * Generate sandbox ID from file path
+ * Format: {slug}-{YYYY-MM-DD}-{random4chars}
+ */
+function generateSandboxId(filePath: string): string {
+  const slug = generateSlugFromFile(filePath);
+  const date = new Date().toISOString().split("T")[0];
+  const suffix = generateRandomSuffix();
+  return `${slug}-${date}-${suffix}`;
+}
+
+/**
+ * Create sandbox folder structure and copy content file
+ * Returns the sandbox ID
+ */
+function createSandbox(workspace: string, filePath: string): string {
+  const sandboxId = generateSandboxId(filePath);
+  const sandboxDir = join(workspace, "sandbox", sandboxId);
+
+  // Create sandbox folder structure
+  mkdirSync(join(sandboxDir, "inputs"), { recursive: true });
+  mkdirSync(join(sandboxDir, "outputs"), { recursive: true });
+  mkdirSync(join(sandboxDir, "logs"), { recursive: true });
+
+  // Copy content file to inputs/content.md
+  const absolutePath = resolve(filePath);
+  copyFileSync(absolutePath, join(sandboxDir, "inputs", "content.md"));
+
+  return sandboxId;
+}
 
 /**
  * Parsed command arguments
@@ -164,18 +214,11 @@ function validateEnvironment(mock: boolean): void {
 
 /**
  * Build the /run prompt to inject into the agent
+ * When sandboxId is provided (either from --sandbox-id or from createSandbox),
+ * always use sandbox-id format so the logger can extract it
  */
-function buildRunPrompt(args: RunArgs): string {
-  if (args.sandboxId) {
-    return `/run ${args.workflowId} --sandbox-id ${args.sandboxId}`;
-  }
-
-  if (args.file) {
-    const absolutePath = resolve(args.file);
-    return `/run ${args.workflowId} --file ${absolutePath}`;
-  }
-
-  throw new Error("Either --file or --sandbox-id is required");
+function buildRunPrompt(workflowId: string, sandboxId: string): string {
+  return `/run ${workflowId} --sandbox-id ${sandboxId}`;
 }
 
 /**
@@ -270,6 +313,56 @@ async function executeBatch(
 }
 
 /**
+ * Resolve or create sandbox ID based on args
+ * Returns sandbox ID or exits on error
+ */
+function resolveSandboxId(workspace: string, parsed: RunArgs): string {
+  if (parsed.sandboxId) {
+    // Resume existing sandbox
+    const sandboxDir = join(workspace, "sandbox", parsed.sandboxId);
+    if (!existsSync(sandboxDir)) {
+      console.error(`Error: Sandbox not found: ${parsed.sandboxId}`);
+      console.error(`Path: ${sandboxDir}`);
+      process.exit(1);
+    }
+    return parsed.sandboxId;
+  }
+
+  if (parsed.file) {
+    // Create new sandbox
+    if (!existsSync(parsed.file)) {
+      console.error(`Error: File not found: ${parsed.file}`);
+      process.exit(1);
+    }
+    const sandboxId = createSandbox(workspace, parsed.file);
+    console.error(`Created sandbox: ${sandboxId}`);
+    return sandboxId;
+  }
+
+  throw new Error("Either --file or --sandbox-id is required");
+}
+
+/**
+ * Execute workflow based on mode
+ */
+function executeWorkflow(
+  prompt: string,
+  workspace: string,
+  workflowId: string,
+  parsed: RunArgs
+): Promise<WorkflowResult> {
+  if (parsed.mock) {
+    return Promise.resolve(executeMock(parsed));
+  }
+
+  if (isInteractive() && !parsed.noStreaming) {
+    return executeStreaming(prompt, workspace, workflowId);
+  }
+
+  return executeBatch(prompt, workspace, workflowId);
+}
+
+/**
  * Render the result
  */
 function renderResult(result: WorkflowResult): void {
@@ -317,21 +410,21 @@ export async function runRunCommand(args: string[]): Promise<void> {
     // 2. Ensure workspace
     const workspace = ensureWorkspace();
 
-    // 3. Build /run prompt
-    const prompt = buildRunPrompt(parsed);
+    // 3. Resolve or create sandbox
+    const sandboxId = resolveSandboxId(workspace, parsed);
 
-    // 4. Execute
-    let result: WorkflowResult;
+    // 4. Build /run prompt with sandbox ID
+    const prompt = buildRunPrompt(parsed.workflowId, sandboxId);
 
-    if (parsed.mock) {
-      result = executeMock(parsed);
-    } else if (isInteractive() && !parsed.noStreaming) {
-      result = await executeStreaming(prompt, workspace, parsed.workflowId);
-    } else {
-      result = await executeBatch(prompt, workspace, parsed.workflowId);
-    }
+    // 5. Execute
+    const result = await executeWorkflow(
+      prompt,
+      workspace,
+      parsed.workflowId,
+      parsed
+    );
 
-    // 5. Render result
+    // 6. Render result
     renderResult(result);
 
     if (result.status !== "success") {
