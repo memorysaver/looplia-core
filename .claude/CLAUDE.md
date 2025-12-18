@@ -20,7 +20,7 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 
 ## PR Checklist
 
-Before creating or merging a PR, review [docs/PR_CHECKLIST.md](../docs/PR_CHECKLIST.md).
+Before creating or merging a PR, review @docs/PR_CHECKLIST.md
 
 ### Type Safety & Explicitness
 
