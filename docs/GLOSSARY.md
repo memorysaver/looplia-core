@@ -2,8 +2,8 @@
 
 > Ubiquitous Language Reference for Domain-Driven Design
 >
-> **Version:** 0.5.1
-> **Last Updated:** 2025-12-17
+> **Version:** 0.5.2
+> **Last Updated:** 2025-12-18
 
 This glossary defines the shared vocabulary used throughout Looplia-Core. Consistent terminology enables clear communication between code, documentation, and team discussions.
 
@@ -476,20 +476,23 @@ Debug logging for agent queries. Creates unique log files per query for auditabi
 ## 8. Workspace & Session
 
 ### Workspace
-The `~/.looplia/` directory. Persistent filesystem for sessions, plugins, and configuration.
+The `~/.looplia/` directory. Persistent filesystem for sandboxes, plugins, and configuration.
 
 ```
 ~/.looplia/
 ├── CLAUDE.md           # Main agent instructions
 ├── user-profile.json   # User preferences
-├── contentItem/        # Session storage
-│   └── {session-id}/
-│       ├── content.md      # Input content
-│       ├── session.json    # Session manifest (v0.5.0)
-│       ├── summary.json    # ContentSummary
-│       ├── ideas.json      # WritingIdeas
-│       ├── outline.json    # OutlineSection[]
-│       └── writing-kit.json # WritingKit
+├── sandbox/            # Sandbox storage (v0.5.2)
+│   └── {sandbox-id}/
+│       ├── inputs/
+│       │   └── content.md    # Input content (copied from --file)
+│       ├── outputs/
+│       │   ├── summary.json    # ContentSummary
+│       │   ├── ideas.json      # WritingIdeas
+│       │   └── writing-kit.json # WritingKit (final)
+│       ├── logs/
+│       │   └── query-*.log     # Session logs
+│       └── validation.json     # Validation state
 └── .claude/            # Plugins (agents, skills)
 ```
 
@@ -526,23 +529,40 @@ Named pipeline steps with artifact mappings:
 
 **Note:** `writing-kit-builder` produces both `outline.json` and `writing-kit.json`. Both steps are marked done together.
 
-### Session
-A work session with unique ID. Contains all input/output files for one execution.
+### Sandbox (v0.5.2)
+An isolated execution environment for a single workflow run. Contains all input, output, and log files.
 
-### Session-ID
-Unique identifier for a session. Format: `{title-slug}-{timestamp}-{random}` (e.g., `article-2025-12-09-abc123`)
+**Structure:**
+```
+sandbox/{sandbox-id}/
+├── inputs/content.md      # Copied from --file
+├── outputs/*.json         # Generated artifacts
+├── logs/*.log             # Session logs
+└── validation.json        # Validation state tracking
+```
 
-### contentItem Folder
-Session file storage at `~/.looplia/contentItem/{session-id}/`.
+**Benefits:**
+- **Isolation**: Each run is self-contained
+- **Resumable**: Use `--sandbox-id` to continue from last validated step
+- **Auditable**: Full logs preserved for debugging
 
-Files:
-- `content.md` - Input content
-- `session.json` - Session manifest (v0.5.0)
-- `summary.json` - From content-analyzer
-- `ideas.json` - From idea-generator
-- `outline.json` - From writing-kit-builder
-- `writing-kit.json` - Final output
-- `logs/` - Query logs
+### Sandbox-ID (v0.5.2)
+Unique identifier for a sandbox. Format: `{slug}-{YYYY-MM-DD}-{random4chars}`
+
+**Examples:**
+- `my-article-2025-12-18-xk7m`
+- `ai-healthcare-2025-12-18-ab12`
+
+**Generation:**
+1. Extract slug from filename (lowercase, alphanumeric, hyphens)
+2. Add current date in ISO format
+3. Append 4 random alphanumeric characters
+
+### Session (deprecated v0.5.2)
+Previous term for what is now called a "Sandbox". See **Sandbox**.
+
+### contentItem Folder (deprecated v0.5.2)
+Previous folder structure replaced by `sandbox/` in v0.5.2. See **Sandbox**.
 
 ### CLAUDE.md
 Main agent instructions deployed from `plugins/looplia-writer/README.md`. The "brain" of the system.
@@ -730,22 +750,29 @@ Criteria for validating workflow outputs. Used by the workflow-validator skill.
 
 Extensible with custom keys for workflow-specific validation.
 
-### validation.json (v0.5.1)
-**Location:** `contentItem/{id}/validation.json`
+### validation.json (v0.5.2)
+**Location:** `sandbox/{sandbox-id}/validation.json`
 
-Replaces `session.json` from v0.5.0. Generated from workflow frontmatter. Tracks validation state per output.
+Generated from workflow frontmatter. Tracks validation state per output.
 
 ```json
 {
   "workflow": "writing-kit",
+  "sandboxId": "my-article-2025-12-18-xk7m",
+  "createdAt": "2025-12-18T10:30:00Z",
   "outputs": {
     "summary": {
-      "artifact": "summary.json",
+      "artifact": "outputs/summary.json",
       "criteria": { "required_fields": [...], "min_quotes": 3 },
-      "validated": false
+      "validated": true
+    },
+    "ideas": {
+      "artifact": "outputs/ideas.json",
+      "criteria": { "required_fields": [...], "has_hooks": true },
+      "validated": true
     },
     "writing-kit": {
-      "artifact": "writing-kit.json",
+      "artifact": "outputs/writing-kit.json",
       "criteria": { "required_fields": [...], "has_hooks": true },
       "validated": false
     }
@@ -753,9 +780,10 @@ Replaces `session.json` from v0.5.0. Generated from workflow frontmatter. Tracks
 }
 ```
 
-**Key Difference from session.json:**
-- v0.5.0 `session.json`: Binary "done" status tracking
-- v0.5.1 `validation.json`: Criteria + validated boolean
+**v0.5.2 Changes:**
+- Location changed from `contentItem/{id}/` to `sandbox/{id}/`
+- Added `sandboxId` and `createdAt` fields
+- Artifact paths now relative to sandbox (e.g., `outputs/summary.json`)
 
 ### workflow-validator Skill
 **Location:** `.claude/skills/workflow-validator/`
@@ -799,16 +827,147 @@ A step is complete when its output **passes validation**, not when it's marked "
 
 ---
 
+## 12. Plugin System (v0.5.2)
+
+### Two-Plugin Architecture
+**v0.5.2 Concept**
+
+Looplia-Core separates functionality into two Claude Code plugins:
+
+| Plugin | Type | Purpose |
+|--------|------|---------|
+| **looplia-core** | Infrastructure | Workflow engine, validation, slash commands |
+| **looplia-writer** | Domain | Writing-kit workflow, content analysis agents |
+
+**Benefits:**
+- Infrastructure reusable across domains
+- Domain plugins installable independently
+- Clear separation of concerns
+
+### looplia-core Plugin
+**Location:** `plugins/looplia-core/`
+
+Infrastructure plugin providing workflow execution capabilities.
+
+**Components:**
+- `commands/run.md` - `/run` slash command
+- `commands/build-workflow.md` - `/build-workflow` slash command
+- `commands/list-workflows.md` - `/list-workflows` slash command
+- `skills/workflow-executor/` - Workflow interpretation skill
+- `skills/workflow-validator/` - Output validation skill
+- `hooks/hooks.json` - Lifecycle event handlers
+- `CLAUDE.md` - Generic workflow interpreter
+
+### looplia-writer Plugin
+**Location:** `plugins/looplia-writer/`
+
+Domain plugin for writing-related workflows.
+
+**Components:**
+- `agents/content-analyzer.md` - Deep content analysis
+- `agents/idea-generator.md` - Creative idea generation
+- `agents/writing-kit-builder.md` - Final kit assembly
+- `skills/media-reviewer/` - Media content analysis
+- `skills/content-documenter/` - Structured output generation
+- `skills/user-profile-reader/` - User preference loading
+- `workflows/writing-kit.md` - Writing workflow definition
+
+### Slash Command
+**v0.5.2 Concept**
+
+Claude Code slash commands defined in `commands/*.md`. Primary entry point for user interaction.
+
+**Structure:**
+```markdown
+---
+description: Short description for /help
+---
+
+# Command Title
+
+## Usage
+/command-name <args> [--flags]
+
+## Implementation
+How the agent should execute...
+```
+
+**Available Commands (looplia-core):**
+| Command | Description |
+|---------|-------------|
+| `/run <workflow-id> --file <path>` | Execute a workflow |
+| `/build-workflow <name>` | Scaffold new workflow |
+| `/list-workflows` | List available workflows |
+
+### workflow-executor Skill
+**Location:** `plugins/looplia-core/skills/workflow-executor/`
+
+Core skill that interprets workflow.md files and orchestrates execution.
+
+**Capabilities:**
+1. Parse workflow definition (YAML frontmatter + markdown)
+2. Resolve output dependencies (topological sort)
+3. Invoke subagents via Task tool
+4. Track validation state via validation.json
+5. Resume from last validated state
+
+### Plugin Manifest
+**Location:** `.claude-plugin/plugin.json`
+
+JSON file describing plugin metadata.
+
+```json
+{
+  "name": "plugin-name",
+  "version": "0.5.2",
+  "description": "What this plugin does",
+  "author": { "name": "Author Name" },
+  "keywords": ["tag1", "tag2"],
+  "dependencies": ["other-plugin"]
+}
+```
+
+### Infrastructure Plugin
+A plugin providing foundational capabilities used by domain plugins. Example: looplia-core provides workflow execution.
+
+### Domain Plugin
+A plugin providing domain-specific functionality. Depends on infrastructure plugins. Example: looplia-writer provides writing workflow.
+
+### Looplia Extension
+The `workflows/` directory is a Looplia-specific extension to the Claude Code plugin model. Not part of standard Claude Code plugin spec.
+
+**Standard Claude Code:**
+- `commands/`, `agents/`, `skills/`, `hooks/`
+
+**Looplia Extension:**
+- `workflows/` - Workflow-as-Markdown definitions
+
+### Hooks
+**Location:** `hooks/hooks.json`
+
+Event handlers for workflow lifecycle events.
+
+**v0.5.2 Hooks (minimal logging):**
+```json
+{
+  "hooks": {
+    "SubagentStart": [...],
+    "SubagentStop": [...]
+  }
+}
+```
+
+---
+
 ## Quick Reference: File Locations
 
 | Concept | Location |
 |---------|----------|
 | Domain entities | `packages/core/src/domain/` |
-| Workflow types | `packages/core/src/domain/workflow.ts` (v0.5.1) |
-| Workflow parser | `packages/core/src/domain/workflow-parser.ts` (v0.5.1) |
-| Session manifest types | `packages/core/src/domain/session.ts` (v0.5.0, deprecated) |
+| Workflow types | `packages/core/src/domain/workflow.ts` |
+| Workflow parser | `packages/core/src/domain/workflow-parser.ts` |
 | Command framework | `packages/core/src/commands/` |
-| Workflow command | `packages/core/src/commands/workflow.ts` (v0.5.1) |
+| Workflow command | `packages/core/src/commands/workflow.ts` |
 | Port interfaces | `packages/core/src/ports/` |
 | Services | `packages/core/src/services/` |
 | Mock adapters | `packages/core/src/adapters/mock/` |
@@ -817,28 +976,49 @@ A step is complete when its output **passes validation**, not when it's marked "
 | Display config | `apps/cli/src/config/display-config.ts` |
 | Runtime | `apps/cli/src/runtime/` |
 | TUI components | `apps/cli/src/components/` |
-| Plugins | `plugins/looplia-writer/` |
-| Workflows | `plugins/looplia-writer/workflows/` (v0.5.1) |
-| Validation skill | `plugins/looplia-writer/skills/workflow-validator/` (v0.5.1) |
+| **looplia-core plugin** | `plugins/looplia-core/` (v0.5.2) |
+| **looplia-writer plugin** | `plugins/looplia-writer/` (v0.5.2) |
+| Slash commands | `plugins/looplia-core/commands/` (v0.5.2) |
+| workflow-executor skill | `plugins/looplia-core/skills/workflow-executor/` (v0.5.2) |
+| workflow-validator skill | `plugins/looplia-core/skills/workflow-validator/` (v0.5.2) |
+| Writing workflows | `plugins/looplia-writer/workflows/` |
+| Writing agents | `plugins/looplia-writer/agents/` |
 
-### Workspace Structure (v0.5.1)
+### Workspace Structure (v0.5.2)
 
 ```
 ~/.looplia/
-├── CLAUDE.md                    # Generic workflow interpreter
+├── CLAUDE.md                    # From looplia-core
 ├── user-profile.json            # User preferences
-├── workflows/                   # Workflow definitions (v0.5.1)
-│   └── writing-kit.md             YAML frontmatter + instructions
+├── commands/                    # From looplia-core (v0.5.2)
+│   ├── run.md
+│   ├── build-workflow.md
+│   └── list-workflows.md
+├── hooks/                       # From looplia-core (v0.5.2)
+│   └── hooks.json
+├── workflows/                   # From looplia-writer
+│   └── writing-kit.md
 ├── .claude/
-│   ├── agents/*.md              # Subagent definitions
-│   └── skills/
-│       └── workflow-validator/  # Validation skill (v0.5.1)
-│           ├── SKILL.md
-│           └── scripts/validate.ts
-└── contentItem/{id}/
-    ├── content.md               # Input content
-    ├── validation.json          # Validation state (v0.5.1)
-    └── *.json                   # Output artifacts
+│   ├── agents/                  # From looplia-writer
+│   │   ├── content-analyzer.md
+│   │   ├── idea-generator.md
+│   │   └── writing-kit-builder.md
+│   └── skills/                  # From both plugins
+│       ├── workflow-executor/   # looplia-core
+│       ├── workflow-validator/  # looplia-core
+│       ├── media-reviewer/      # looplia-writer
+│       ├── content-documenter/  # looplia-writer
+│       └── ...
+└── sandbox/{sandbox-id}/        # v0.5.2 sandbox architecture
+    ├── inputs/
+    │   └── content.md           # Input content (copied from --file)
+    ├── outputs/
+    │   ├── summary.json         # Stage 1 output
+    │   ├── ideas.json           # Stage 2 output
+    │   └── writing-kit.json     # Stage 3 output (final)
+    ├── logs/
+    │   └── query-*.log          # Session logs
+    └── validation.json          # Validation state
 ```
 
 ---

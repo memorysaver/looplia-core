@@ -28,30 +28,30 @@ Ensure all fields are populated with accurate, concise information.`;
 /**
  * Build user prompt for summarization
  *
- * @deprecated v0.3.1 uses minimal prompts with agentic approach.
+ * @deprecated v0.5.2 uses minimal prompts with agentic approach.
  * Use the summarizer with workspace setup instead.
  *
- * The v0.3.1 architecture uses:
- * - Minimal prompt: "Summarize content: contentItem/{id}/content.md"
+ * The v0.5.2 architecture uses:
+ * - Minimal prompt: "Summarize content: sandbox/{id}/inputs/content.md"
  * - Agent reads CLAUDE.md for full instructions
  * - Agent uses skills (media-reviewer, content-documenter) autonomously
- * - Results stored in contentItem/{id}/results/
+ * - Results stored in sandbox/{id}/outputs/
  */
 export function buildSummarizePrompt(
   content: ContentItem,
   _user?: UserProfile
 ): string {
   // Invoke content-analyzer subagent for deep content analysis
-  // Content is in folder structure: contentItem/{id}/content.md
-  // Results stored in: contentItem/{id}/results/summary.json
+  // Content is in folder structure: sandbox/{id}/inputs/content.md
+  // Results stored in: sandbox/{id}/outputs/summary.json
   return `Invoke \`content-analyzer\` subagent to analyze and document content.
 
-Content location: contentItem/${content.id}/content.md
-Content ID: ${content.id}
+Content location: sandbox/${content.id}/inputs/content.md
+Sandbox ID: ${content.id}
 
 The content-analyzer agent will:
 1. Read the content file and metadata
 2. Use media-reviewer skill for deep analysis
 3. Use content-documenter skill for structured documentation
-4. Write results to contentItem/${content.id}/results/summary.json`;
+4. Write results to sandbox/${content.id}/outputs/summary.json`;
 }

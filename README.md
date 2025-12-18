@@ -39,12 +39,13 @@ Looplia Core is an agentic workflow platform powered by the Claude Agent SDK. It
 
 - **Claude Agent SDK** - Agentic runtime with custom subagents and skills
 - **Workflow-as-Markdown** - YAML frontmatter + markdown instructions
+- **Sandbox Isolation** - Each run in `sandbox/{id}/inputs/outputs/logs/`
 - **Custom Subagents** - Task tool with custom `subagent_type`
 - **Skills Auto-Loading** - `skills:` frontmatter for automatic skill loading
 - **Validation-Driven** - Deterministic script-based output validation
 - **Clean Architecture** - CLI → Core → Provider separation
 - **Streaming TUI** - Real-time progress with tool execution display
-- **Smart Continuation** - Resume workflows via validation state
+- **Smart Continuation** - Resume workflows via `--sandbox-id`
 - **TypeScript** - Full type safety with Zod schemas
 
 ## Quick Start
@@ -104,17 +105,27 @@ looplia run writing-kit --session-id article-2024-12-09-abc123
 looplia run writing-kit --file ./article.md --format markdown --output kit.md
 ```
 
-### Session Management
+### Sandbox Architecture (v0.5.2)
 
-Each `--file` creates a new session with a `validation.json` manifest. Use `--session-id` to resume:
+Each `--file` creates an isolated sandbox folder:
+
+```
+~/.looplia/sandbox/{sandbox-id}/
+├── inputs/content.md      # Copied from --file
+├── outputs/               # Generated artifacts (summary.json, ideas.json, etc.)
+├── logs/                  # Session logs for debugging
+└── validation.json        # Tracks validated: true/false per output
+```
+
+**Sandbox ID format:** `{slug}-{YYYY-MM-DD}-{random4chars}` (e.g., `my-article-2025-12-18-xk7m`)
 
 ```bash
-# Create new session
+# Create new sandbox
 looplia run writing-kit --file ./article.md
-# Output: ✓ New session created: cli-1234567890
+# Output: Created sandbox: my-article-2025-12-18-xk7m
 
-# Resume (skips validated steps via validation-driven smart continuation)
-looplia run writing-kit --session-id cli-1234567890
+# Resume existing sandbox (skips validated steps)
+looplia run writing-kit --sandbox-id my-article-2025-12-18-xk7m
 ```
 
 ## Architecture
@@ -122,18 +133,19 @@ looplia run writing-kit --session-id cli-1234567890
 ```
 looplia-core/
 ├── apps/
-│   ├── cli/           # CLI application
-│   └── docs/          # Documentation (Astro Starlight)
+│   ├── cli/              # CLI application
+│   └── docs/             # Documentation (Astro Starlight)
 ├── packages/
-│   ├── core/          # Domain models, command framework
-│   └── provider/      # Claude Agent SDK integration
+│   ├── core/             # Domain models, command framework
+│   └── provider/         # Claude Agent SDK integration
 ├── plugins/
-│   └── looplia-writer/  # Writing kit plugin (agents, skills, workflows)
+│   ├── looplia-core/     # Infrastructure plugin (commands, skills, hooks)
+│   └── looplia-writer/   # Domain plugin (agents, workflows)
 ├── scripts/
 │   └── verify-workflow-log.sh  # Log verification script
-└── docs/              # Architecture documentation
-    ├── DESIGN-0.5.1.md
-    ├── AGENTIC_CONCEPT-0.4.md
+└── docs/                 # Architecture documentation
+    ├── DESIGN-0.5.2.md
+    ├── AGENTIC_CONCEPT-0.5.md
     ├── TEST_PLAN-0.5.md
     └── GLOSSARY.md
 ```
@@ -171,10 +183,11 @@ env $(cat .env) looplia run writing-kit --file test.md
 
 | Document | Description |
 |----------|-------------|
-| [AGENTIC_CONCEPT-0.4.md](./docs/AGENTIC_CONCEPT-0.4.md) | Agent system design (v0.4) |
-| [DESIGN-0.5.1.md](./docs/DESIGN-0.5.1.md) | Workflow-as-Markdown architecture |
+| [DESIGN-0.5.2.md](./docs/DESIGN-0.5.2.md) | Two-plugin architecture, sandbox folder design |
+| [AGENTIC_CONCEPT-0.5.md](./docs/AGENTIC_CONCEPT-0.5.md) | Agent system design with validation-driven completion |
 | [TEST_PLAN-0.5.md](./docs/TEST_PLAN-0.5.md) | Test strategy with real API testing |
 | [GLOSSARY.md](./docs/GLOSSARY.md) | Ubiquitous language reference |
+| [PR_CHECKLIST.md](./docs/PR_CHECKLIST.md) | PR checklist for docs and CI/CD alignment |
 | [SUBAGENTS.md](./docs/SUBAGENTS.md) | Anthropic SDK subagents reference |
 | [AGENT-SKILLS.md](./docs/AGENT-SKILLS.md) | Anthropic SDK skills reference |
 

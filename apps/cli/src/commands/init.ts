@@ -12,12 +12,18 @@ Options:
   --yes, -y    Skip confirmation prompt (for automation/Docker)
 
 Description:
-  Performs a destructive refresh of the ~/.looplia/ workspace from the
-  looplia-writer plugin. This will:
+  Performs a destructive refresh of the ~/.looplia/ workspace from both plugins:
 
-  1. DELETE existing ~/.looplia/ directory
-  2. Copy agents, skills, and pipelines from plugins/looplia-writer/
-  3. Create fresh CLAUDE.md and user-profile.json
+  From looplia-core (infrastructure):
+    - .claude/commands/   Slash command definitions (/run, /list-workflows, etc.)
+    - .claude/skills/     Workflow executor and validator skills
+    - .claude/hooks/      Minimal logging hooks
+    - CLAUDE.md           Workflow interpreter instructions
+
+  From looplia-writer (domain):
+    - .claude/agents/     Content analyzer, idea generator, writing-kit builder
+    - .claude/skills/     Media reviewer, content documenter, etc.
+    - workflows/          Writing-kit workflow definition
 
   WARNING: This removes ALL customizations in ~/.looplia/
 
@@ -73,9 +79,11 @@ export async function runInitCommand(args: string[]): Promise<void> {
 
   try {
     await ensureWorkspace({ force: true });
-    console.log("Workspace initialized from looplia-writer plugin");
     console.log(
-      "Fresh agents, skills, pipelines, CLAUDE.md, and user-profile.json created"
+      "Workspace initialized from looplia-core + looplia-writer plugins"
+    );
+    console.log(
+      "Created: .claude/{commands,agents,skills,hooks}/, workflows/, CLAUDE.md"
     );
     console.log("");
     console.log('Next steps: Configure your profile with "looplia config"');

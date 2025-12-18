@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Workflow Validator Script (v0.5.1)
+ * Workflow Validator Script (v0.5.2)
  *
  * Deterministic validation of workflow artifacts against criteria.
  * Runs outside LLM context - no tokens consumed.
@@ -11,7 +11,7 @@
  * Example:
  *   bun validate.ts contentItem/session-123/summary.json '{"required_fields":["contentId"],"min_quotes":3}'
  *
- * @see docs/DESIGN-0.5.1.md
+ * @see docs/DESIGN-0.5.2.md
  */
 
 import { readFile } from "node:fs/promises";

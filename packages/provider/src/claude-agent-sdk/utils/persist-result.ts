@@ -90,51 +90,53 @@ export async function persistResultToWorkspace<T extends { contentId: string }>(
   options: PersistOptions
 ): Promise<PersistResult> {
   const { workspace, contentId, sessionId, filename } = options;
-  const tempDir = join(workspace, "contentItem", contentId);
+  const tempSandboxDir = join(workspace, "sandbox", contentId);
+  const tempOutputsDir = join(tempSandboxDir, "outputs");
 
-  // No session ID - write to original location
+  // No session ID - write to original location (sandbox/{id}/outputs/)
   if (!sessionId) {
     data.contentId = contentId;
-    const outputPath = join(tempDir, filename);
+    const outputPath = join(tempOutputsDir, filename);
     await writeWithMkdir(outputPath, JSON.stringify(data, null, 2));
-    return { finalContentId: contentId, targetDir: tempDir };
+    return { finalContentId: contentId, targetDir: tempOutputsDir };
   }
 
-  const newDir = join(workspace, "contentItem", sessionId);
+  const newSandboxDir = join(workspace, "sandbox", sessionId);
+  const newOutputsDir = join(newSandboxDir, "outputs");
 
-  // Try atomic rename (avoids TOCTOU race)
-  const renamed = await tryAtomicRename(tempDir, newDir);
+  // Try atomic rename of entire sandbox folder (avoids TOCTOU race)
+  const renamed = await tryAtomicRename(tempSandboxDir, newSandboxDir);
 
   if (renamed) {
     data.contentId = sessionId;
-    const outputPath = join(newDir, filename);
+    const outputPath = join(newOutputsDir, filename);
     await writeWithMkdir(outputPath, JSON.stringify(data, null, 2));
-    return { finalContentId: sessionId, targetDir: newDir };
+    return { finalContentId: sessionId, targetDir: newOutputsDir };
   }
 
   // Rename failed - determine best target location
-  // Check if newDir exists (target may have been created by concurrent process)
+  // Check if newOutputsDir exists (target may have been created by concurrent process)
   try {
-    await stat(newDir);
-    // newDir exists - use it
+    await stat(newOutputsDir);
+    // newOutputsDir exists - use it
     data.contentId = sessionId;
-    const outputPath = join(newDir, filename);
+    const outputPath = join(newOutputsDir, filename);
     await writeWithMkdir(outputPath, JSON.stringify(data, null, 2));
-    return { finalContentId: sessionId, targetDir: newDir };
+    return { finalContentId: sessionId, targetDir: newOutputsDir };
   } catch (err) {
     const nodeErr = err as NodeError;
     // Only treat ENOENT as "directory doesn't exist" - re-throw other errors
     if (nodeErr.code !== "ENOENT") {
       const contextErr = new Error(
-        `Failed to stat directory (${nodeErr.code || "unknown"}): ${newDir}`
+        `Failed to stat directory (${nodeErr.code || "unknown"}): ${newOutputsDir}`
       );
       contextErr.cause = err;
       throw contextErr;
     }
-    // newDir doesn't exist - use tempDir
+    // newOutputsDir doesn't exist - use tempOutputsDir
     data.contentId = contentId;
-    const outputPath = join(tempDir, filename);
+    const outputPath = join(tempOutputsDir, filename);
     await writeWithMkdir(outputPath, JSON.stringify(data, null, 2));
-    return { finalContentId: contentId, targetDir: tempDir };
+    return { finalContentId: contentId, targetDir: tempOutputsDir };
   }
 }

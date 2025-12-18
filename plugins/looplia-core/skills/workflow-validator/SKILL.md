@@ -10,7 +10,7 @@ Validates JSON artifacts against validation criteria using deterministic script 
 
 ## What This Skill Does
 
-- Reads validation criteria from `contentItem/{id}/validation.json`
+- Reads validation criteria from `sandbox/{id}/validation.json`
 - Runs deterministic validation script (no LLM tokens consumed)
 - Returns pass/fail status with detailed check results
 - Enables workflow completion verification
@@ -27,7 +27,7 @@ Use this skill **after each workflow step** produces an artifact:
 
 ### Step 1: Read Validation Criteria
 
-Read the validation manifest at `contentItem/{id}/validation.json`:
+Read the validation manifest at `sandbox/{id}/validation.json`:
 
 ```json
 {
@@ -56,7 +56,7 @@ bun scripts/validate.ts <artifact-path> '<criteria-json>'
 
 Example:
 ```bash
-bun scripts/validate.ts contentItem/podcast-2024-12-08-ai/summary.json '{"required_fields":["contentId","headline"],"min_quotes":3}'
+bun scripts/validate.ts sandbox/podcast-2024-12-08-ai/outputs/summary.json '{"required_fields":["contentId","headline"],"min_quotes":3}'
 ```
 
 ### Step 3: Parse Results

@@ -49,7 +49,7 @@ describe("workspace", () => {
       // Check v0.3 directory structure: .claude/ subdirectory with agents/skills
       const entries = await readdir(workspacePath);
       expect(entries).toContain(".claude");
-      expect(entries).toContain("contentItem");
+      expect(entries).toContain("sandbox");
       expect(entries).toContain("CLAUDE.md");
       expect(entries).toContain("user-profile.json");
 
@@ -83,15 +83,15 @@ describe("workspace", () => {
       expect(stats.isDirectory()).toBe(true);
     });
 
-    it("should create contentItem directory", async () => {
+    it("should create sandbox directory", async () => {
       const workspacePath = await ensureWorkspace({
         baseDir: tempWorkspace.path,
         skipPluginBootstrap: true,
         force: true,
       });
 
-      const contentDir = join(workspacePath, "contentItem");
-      const stats = await stat(contentDir);
+      const sandboxDir = join(workspacePath, "sandbox");
+      const stats = await stat(sandboxDir);
       expect(stats.isDirectory()).toBe(true);
     });
 

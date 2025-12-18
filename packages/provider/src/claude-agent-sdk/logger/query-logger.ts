@@ -5,16 +5,16 @@ import { join } from "node:path";
  * QueryLogger - One query = One log file
  *
  * Creates a unique log file per SDK query using timestamp.
- * Log files are stored in contentItem/{contentId}/logs/
+ * Log files are stored in sandbox/{sandboxId}/logs/
  * Never overwrites existing logs.
  */
 export type QueryLogger = {
   /**
    * Initialize a new log file for this query
-   * @param contentId - Content ID from prompt (for folder location)
+   * @param sandboxId - Sandbox ID from prompt (for folder location)
    * @returns Log file path
    */
-  init(contentId: string): string;
+  init(sandboxId: string): string;
 
   /**
    * Log a message from SDK
@@ -50,7 +50,7 @@ function generateLogFilename(): string {
  * @example
  * ```typescript
  * const logger = createQueryLogger("~/.looplia");
- * const logPath = logger.init("my-content-id");
+ * const logPath = logger.init("my-sandbox-id");
  * logger.log({ type: "prompt", content: "..." });
  * logger.log({ type: "result", ... });
  * logger.close();
@@ -60,9 +60,9 @@ export function createQueryLogger(workspace: string): QueryLogger {
   let logPath: string | null = null;
 
   return {
-    init(contentId: string): string {
+    init(sandboxId: string): string {
       // Create logs directory if it doesn't exist
-      const logsDir = join(workspace, "contentItem", contentId, "logs");
+      const logsDir = join(workspace, "sandbox", sandboxId, "logs");
       mkdirSync(logsDir, { recursive: true });
 
       // Generate unique filename

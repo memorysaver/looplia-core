@@ -2,8 +2,8 @@
 set -e
 
 # Looplia Docker E2E Test Script
-# Runs real API tests inside Docker container with v0.5.1 workflow verification
-# Tests: Workflow-as-Markdown with custom subagents and skills auto-loading
+# Runs real API tests inside Docker container with v0.5.2 sandbox architecture
+# Tests: Workflow-as-Markdown with custom subagents, skills auto-loading, and sandbox isolation
 
 # Colors for output
 RED='\033[0;31m'
@@ -279,52 +279,52 @@ test_workflow_markdown() {
   docker cp "$CONTAINER_ID:/home/looplia/.looplia/." "$WORKSPACE_DIR/markdown-test/"
   docker rm "$CONTAINER_ID" > /dev/null
 
-  # Find session directory
-  SESSION_DIR=$(find "$WORKSPACE_DIR/markdown-test/contentItem" -maxdepth 1 -type d ! -name contentItem 2>/dev/null | head -1)
-  if [ -z "$SESSION_DIR" ]; then
-    print_fail "No session directory found"
+  # Find sandbox directory
+  SANDBOX_DIR=$(find "$WORKSPACE_DIR/markdown-test/sandbox" -maxdepth 1 -type d ! -name sandbox 2>/dev/null | head -1)
+  if [ -z "$SANDBOX_DIR" ]; then
+    print_fail "No sandbox directory found"
     return 1
   fi
-  SESSION_ID=$(basename "$SESSION_DIR")
-  print_pass "Session folder created: $SESSION_ID"
+  SANDBOX_ID=$(basename "$SANDBOX_DIR")
+  print_pass "Sandbox folder created: $SANDBOX_ID"
 
-  # Verify artifacts exist
+  # Verify artifacts exist in outputs/
   print_step "Checking pipeline artifacts..."
 
-  if [ -f "$SESSION_DIR/summary.json" ]; then
-    print_pass "summary.json exists (Stage 1)"
+  if [ -f "$SANDBOX_DIR/outputs/summary.json" ]; then
+    print_pass "outputs/summary.json exists (Stage 1)"
   else
-    print_fail "summary.json NOT found"
+    print_fail "outputs/summary.json NOT found"
   fi
 
-  if [ -f "$SESSION_DIR/ideas.json" ]; then
-    print_pass "ideas.json exists (Stage 2)"
+  if [ -f "$SANDBOX_DIR/outputs/ideas.json" ]; then
+    print_pass "outputs/ideas.json exists (Stage 2)"
   else
-    print_fail "ideas.json NOT found"
+    print_fail "outputs/ideas.json NOT found"
   fi
 
-  if [ -f "$SESSION_DIR/writing-kit.json" ]; then
-    print_pass "writing-kit.json exists (Stage 3)"
+  if [ -f "$SANDBOX_DIR/outputs/writing-kit.json" ]; then
+    print_pass "outputs/writing-kit.json exists (Stage 3)"
   else
-    print_fail "writing-kit.json NOT found"
+    print_fail "outputs/writing-kit.json NOT found"
     return 1
   fi
 
   # Schema validation
-  print_step "Validating writing-kit.json schema..."
-  if jq -e '.contentId and .summary and .ideas and .suggestedOutline' "$SESSION_DIR/writing-kit.json" > /dev/null 2>&1; then
+  print_step "Validating outputs/writing-kit.json schema..."
+  if jq -e '.contentId and .summary and .ideas and .suggestedOutline' "$SANDBOX_DIR/outputs/writing-kit.json" > /dev/null 2>&1; then
     print_pass "Schema validation passed"
   else
     print_fail "Schema validation failed - missing required fields"
-    jq '.' "$SESSION_DIR/writing-kit.json"
+    jq '.' "$SANDBOX_DIR/outputs/writing-kit.json"
     return 1
   fi
 
   # Quality metrics
   print_step "Checking quality metrics..."
 
-  HOOK_COUNT=$(jq '.ideas.hooks | length' "$SESSION_DIR/writing-kit.json" 2>/dev/null || echo "0")
-  SECTION_COUNT=$(jq '.suggestedOutline | length' "$SESSION_DIR/writing-kit.json" 2>/dev/null || echo "0")
+  HOOK_COUNT=$(jq '.ideas.hooks | length' "$SANDBOX_DIR/outputs/writing-kit.json" 2>/dev/null || echo "0")
+  SECTION_COUNT=$(jq '.suggestedOutline | length' "$SANDBOX_DIR/outputs/writing-kit.json" 2>/dev/null || echo "0")
 
   print_info "Hook count: $HOOK_COUNT (expected: >= 2)"
   print_info "Outline sections: $SECTION_COUNT (expected: >= 3)"
@@ -342,10 +342,10 @@ test_workflow_markdown() {
   fi
 
   # Verify log patterns (subagent/skill usage)
-  verify_workflow_log "$SESSION_DIR"
+  verify_workflow_log "$SANDBOX_DIR"
 
   # Check validation state
-  check_validation_state "$SESSION_DIR"
+  check_validation_state "$SANDBOX_DIR"
 }
 
 # Test: VTT caption workflow
@@ -368,26 +368,26 @@ test_workflow_vtt() {
   docker cp "$CONTAINER_ID:/home/looplia/.looplia/." "$WORKSPACE_DIR/vtt-test/"
   docker rm "$CONTAINER_ID" > /dev/null
 
-  # Find session directory
-  SESSION_DIR=$(find "$WORKSPACE_DIR/vtt-test/contentItem" -maxdepth 1 -type d ! -name contentItem 2>/dev/null | head -1)
-  if [ -z "$SESSION_DIR" ]; then
-    print_fail "No session directory found"
+  # Find sandbox directory
+  SANDBOX_DIR=$(find "$WORKSPACE_DIR/vtt-test/sandbox" -maxdepth 1 -type d ! -name sandbox 2>/dev/null | head -1)
+  if [ -z "$SANDBOX_DIR" ]; then
+    print_fail "No sandbox directory found"
     return 1
   fi
-  SESSION_ID=$(basename "$SESSION_DIR")
-  print_pass "Session folder created: $SESSION_ID"
+  SANDBOX_ID=$(basename "$SANDBOX_DIR")
+  print_pass "Sandbox folder created: $SANDBOX_ID"
 
-  # Check writing-kit.json exists
-  if [ -f "$SESSION_DIR/writing-kit.json" ]; then
-    print_pass "writing-kit.json found"
+  # Check outputs/writing-kit.json exists
+  if [ -f "$SANDBOX_DIR/outputs/writing-kit.json" ]; then
+    print_pass "outputs/writing-kit.json found"
   else
-    print_fail "writing-kit.json not found"
+    print_fail "outputs/writing-kit.json not found"
     return 1
   fi
 
   # Schema validation
   print_step "Validating VTT writing-kit schema..."
-  if jq -e '.contentId and .summary and .ideas' "$SESSION_DIR/writing-kit.json" > /dev/null 2>&1; then
+  if jq -e '.contentId and .summary and .ideas' "$SANDBOX_DIR/outputs/writing-kit.json" > /dev/null 2>&1; then
     print_pass "VTT schema validation passed"
   else
     print_fail "VTT schema validation failed"
@@ -395,10 +395,10 @@ test_workflow_vtt() {
   fi
 
   # Verify subagent usage
-  verify_workflow_log "$SESSION_DIR"
+  verify_workflow_log "$SANDBOX_DIR"
 
   # Check validation state
-  check_validation_state "$SESSION_DIR"
+  check_validation_state "$SANDBOX_DIR"
 }
 
 # Test: SRT transcript workflow
@@ -421,26 +421,26 @@ test_workflow_srt() {
   docker cp "$CONTAINER_ID:/home/looplia/.looplia/." "$WORKSPACE_DIR/srt-test/"
   docker rm "$CONTAINER_ID" > /dev/null
 
-  # Find session directory
-  SESSION_DIR=$(find "$WORKSPACE_DIR/srt-test/contentItem" -maxdepth 1 -type d ! -name contentItem 2>/dev/null | head -1)
-  if [ -z "$SESSION_DIR" ]; then
-    print_fail "No session directory found"
+  # Find sandbox directory
+  SANDBOX_DIR=$(find "$WORKSPACE_DIR/srt-test/sandbox" -maxdepth 1 -type d ! -name sandbox 2>/dev/null | head -1)
+  if [ -z "$SANDBOX_DIR" ]; then
+    print_fail "No sandbox directory found"
     return 1
   fi
-  SESSION_ID=$(basename "$SESSION_DIR")
-  print_pass "Session folder created: $SESSION_ID"
+  SANDBOX_ID=$(basename "$SANDBOX_DIR")
+  print_pass "Sandbox folder created: $SANDBOX_ID"
 
-  # Check writing-kit.json exists
-  if [ -f "$SESSION_DIR/writing-kit.json" ]; then
-    print_pass "writing-kit.json found"
+  # Check outputs/writing-kit.json exists
+  if [ -f "$SANDBOX_DIR/outputs/writing-kit.json" ]; then
+    print_pass "outputs/writing-kit.json found"
   else
-    print_fail "writing-kit.json not found"
+    print_fail "outputs/writing-kit.json not found"
     return 1
   fi
 
   # Schema validation
   print_step "Validating SRT writing-kit schema..."
-  if jq -e '.contentId and .summary and .ideas' "$SESSION_DIR/writing-kit.json" > /dev/null 2>&1; then
+  if jq -e '.contentId and .summary and .ideas' "$SANDBOX_DIR/outputs/writing-kit.json" > /dev/null 2>&1; then
     print_pass "SRT schema validation passed"
   else
     print_fail "SRT schema validation failed"
@@ -448,10 +448,10 @@ test_workflow_srt() {
   fi
 
   # Verify subagent usage
-  verify_workflow_log "$SESSION_DIR"
+  verify_workflow_log "$SANDBOX_DIR"
 
   # Check validation state
-  check_validation_state "$SESSION_DIR"
+  check_validation_state "$SANDBOX_DIR"
 }
 
 # Check workspace structure
@@ -490,11 +490,11 @@ check_workspace() {
     print_warn ".claude/skills/ not found"
   fi
 
-  # Check contentItem directory
-  if [ -d "$WORKSPACE_DIR/markdown-test/contentItem" ]; then
-    SESSION_COUNT=$(find "$WORKSPACE_DIR/markdown-test/contentItem" -maxdepth 1 -type d | wc -l | tr -d ' ')
-    SESSION_COUNT=$((SESSION_COUNT - 1))
-    print_pass "contentItem/ exists ($SESSION_COUNT sessions)"
+  # Check sandbox directory (v0.5.2 architecture)
+  if [ -d "$WORKSPACE_DIR/markdown-test/sandbox" ]; then
+    SANDBOX_COUNT=$(find "$WORKSPACE_DIR/markdown-test/sandbox" -maxdepth 1 -type d | wc -l | tr -d ' ')
+    SANDBOX_COUNT=$((SANDBOX_COUNT - 1))
+    print_pass "sandbox/ exists ($SANDBOX_COUNT sandboxes)"
 
     # Check for query logs
     LOG_COUNT=$(find "$WORKSPACE_DIR" -name "*.log" 2>/dev/null | wc -l | tr -d ' ')
@@ -504,7 +504,7 @@ check_workspace() {
       print_info "No query logs found"
     fi
   else
-    print_warn "contentItem/ not found"
+    print_warn "sandbox/ not found"
   fi
 }
 
@@ -531,22 +531,22 @@ print_summary() {
   # echo "  - vtt-test/ (Test 2: VTT caption)"      # Commented out
   # echo "  - srt-test/ (Test 3: SRT transcript)"   # Commented out
   echo ""
-  echo "Each session folder contains:"
-  echo "  - content.md (raw input)"
-  echo "  - validation.json (validation state)"
-  echo "  - summary.json (Stage 1)"
-  echo "  - ideas.json (Stage 2)"
-  echo "  - writing-kit.json (Stage 3 - final)"
+  echo "Each sandbox folder contains (v0.5.2 architecture):"
+  echo "  - inputs/content.md (raw input)"
+  echo "  - outputs/summary.json (Stage 1)"
+  echo "  - outputs/ideas.json (Stage 2)"
+  echo "  - outputs/writing-kit.json (Stage 3 - final)"
   echo "  - logs/*.log (query log for verification)"
+  echo "  - validation.json (validation state)"
   echo ""
 }
 
 # Main execution
 main() {
   print_header "Looplia Docker E2E Test Suite"
-  echo "  Version: 0.5.1"
+  echo "  Version: 0.5.2"
   echo "  Date: $(date '+%Y-%m-%d %H:%M:%S')"
-  echo "  Architecture: Workflow-as-Markdown with Custom Subagents"
+  echo "  Architecture: Sandbox Isolation with Custom Subagents"
 
   check_prerequisites
   prepare_workspace

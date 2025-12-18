@@ -1,4 +1,7 @@
 // Re-export types and utilities
+
+// Re-export WorkflowResult from core for convenience
+export type { WorkflowResult } from "@looplia-core/core";
 export type {
   ClaudeAgentConfig,
   ConfigValidationResult,

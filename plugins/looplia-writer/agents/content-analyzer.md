@@ -12,11 +12,11 @@ Analyze content deeply to understand structure, themes, narrative flow, AND dete
 
 ## Task
 
-1. Read content from `contentItem/{id}/content.md`
+1. Read content from `sandbox/{id}/inputs/content.md`
 2. **Detect source type** - Analyze characteristics to identify if podcast, transcript, article, etc.
 3. Use **media-reviewer** skill for analysis
 4. Use **content-documenter** skill for structured output
-5. Write output to: `contentItem/{id}/summary.json`
+5. Write output to: `sandbox/{id}/outputs/summary.json`
 
 ## Source Detection
 
@@ -35,7 +35,7 @@ Include in summary JSON: `"detectedSource": "podcast"` (or appropriate type)
 
 ## Output
 
-Write to: `contentItem/{id}/summary.json`
+Write to: `sandbox/{id}/outputs/summary.json`
 
 Return enriched ContentSummary JSON with:
 - overview, keyThemes, detailedAnalysis
