@@ -5,6 +5,47 @@ All notable changes to Looplia-Core will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2025-12-18
+
+### Added
+
+- **Sandbox Folder Architecture** - Isolated execution environments for each workflow run
+  - New folder structure: `sandbox/{sandbox-id}/inputs/`, `outputs/`, `logs/`
+  - Sandbox ID format: `{slug}-{YYYY-MM-DD}-{random4chars}`
+  - CLI creates sandbox folder when `--file` is provided
+  - Content copied to `inputs/content.md`, artifacts written to `outputs/`
+  - Logs written to `logs/` subdirectory
+- **Two-Plugin Architecture** - Separation of infrastructure and domain concerns
+  - `looplia-core` plugin: workflow engine, validation, `/run` command
+  - `looplia-writer` plugin: writing-kit workflow, content analysis agents
+- **Hook-Based Workflow Validator** - Claude Code hooks for workflow integrity
+  - `PostToolUse:Write` hook for auto-validation of artifacts
+  - `Stop` hook to guard workflow completion
+  - `SessionStart:compact` hook to re-inject sandbox state
+- **PR Checklist** - `docs/PR_CHECKLIST.md` for documentation and CI/CD alignment
+  - Checklist for updating README, docs, GLOSSARY, TEST_PLAN
+  - CI/CD verification steps
+  - Version consistency checks
+
+### Changed
+
+- **Workspace Structure** - Migrated from `contentItem/` to `sandbox/` folder
+  - `contentItem/{session-id}/` → `sandbox/{sandbox-id}/`
+  - Flat structure → Organized `inputs/`, `outputs/`, `logs/` subdirectories
+  - `validation.json` now at sandbox root level
+- **CI/CD Updates** - Updated Docker E2E tests for sandbox architecture
+  - `.github/workflows/docker-e2e.yml` uses sandbox paths
+  - `scripts/docker-e2e.sh` updated to v0.5.2
+
+### Documentation
+
+- **DESIGN-0.5.2.md** - Two-plugin architecture design
+- **README.md** - Updated with sandbox architecture section
+- **docs/README.md** - Added sandbox folder architecture, updated quick links
+- **GLOSSARY.md** - Added Sandbox, Sandbox-ID terms; deprecated contentItem
+- **TEST_PLAN-0.5.md** - Updated all paths to sandbox folder structure
+- **PR_CHECKLIST.md** - New checklist for documentation and CI/CD alignment
+
 ## [0.5.1] - 2025-12-17
 
 ### Added
@@ -220,7 +261,8 @@ The following were considered but **intentionally deferred** to v0.6+:
 
 ---
 
-[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/memorysaver/looplia-core/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/memorysaver/looplia-core/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/memorysaver/looplia-core/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/memorysaver/looplia-core/compare/v0.3.3...v0.4.0

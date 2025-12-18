@@ -187,6 +187,7 @@ env $(cat .env) looplia run writing-kit --file test.md
 | [AGENTIC_CONCEPT-0.5.md](./docs/AGENTIC_CONCEPT-0.5.md) | Agent system design with validation-driven completion |
 | [TEST_PLAN-0.5.md](./docs/TEST_PLAN-0.5.md) | Test strategy with real API testing |
 | [GLOSSARY.md](./docs/GLOSSARY.md) | Ubiquitous language reference |
+| [PR_CHECKLIST.md](./docs/PR_CHECKLIST.md) | PR checklist for docs and CI/CD alignment |
 | [SUBAGENTS.md](./docs/SUBAGENTS.md) | Anthropic SDK subagents reference |
 | [AGENT-SKILLS.md](./docs/AGENT-SKILLS.md) | Anthropic SDK skills reference |
 

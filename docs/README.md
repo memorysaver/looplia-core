@@ -17,6 +17,7 @@ These are the current, authoritative documents for the v0.5.2 architecture:
 | [AGENTIC_CONCEPT-0.5.md](./AGENTIC_CONCEPT-0.5.md) | Agent system design: Two-plugin model, workflow-executor skill, commands | Architects, System Designers |
 | [TEST_PLAN-0.5.md](./TEST_PLAN-0.5.md) | Test architecture with real API testing, log verification, bun link workflow | QA, Developers |
 | [GLOSSARY.md](./GLOSSARY.md) | Ubiquitous language reference (domain terms + TypeScript types) | All team members |
+| [PR_CHECKLIST.md](./PR_CHECKLIST.md) | **PR checklist** for docs, CI/CD alignment, version consistency | Contributors, Claude Code |
 | [CLAUDE_PLUGINS.md](./CLAUDE_PLUGINS.md) | Claude Code plugin system reference | Developers |
 | [SUBAGENTS.md](./SUBAGENTS.md) | Anthropic official Subagents documentation (reference) | Developers |
 | [AGENT-SKILLS.md](./AGENT-SKILLS.md) | Anthropic official Agent Skills documentation (reference) | Developers |
@@ -145,6 +146,7 @@ Previous versions are preserved for reference:
 1. Start with [GLOSSARY.md](./GLOSSARY.md) to understand the terminology
 2. Read [DESIGN-0.5.2.md](./DESIGN-0.5.2.md) for the two-plugin architecture
 3. Review [AGENTIC_CONCEPT-0.5.md](./AGENTIC_CONCEPT-0.5.md) for agent system design
+4. **Before PRs:** Use [PR_CHECKLIST.md](./PR_CHECKLIST.md) to ensure docs and CI/CD are updated
 
 ### For Developers
 
