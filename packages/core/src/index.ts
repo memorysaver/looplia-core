@@ -14,6 +14,7 @@ export type {
   ExecutorOptions,
   PromptContext,
   StreamingEvent,
+  WorkflowResult,
 } from "./commands";
 // Command Framework
 export {

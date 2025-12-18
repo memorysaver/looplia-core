@@ -1,164 +1,107 @@
-# Looplia Workflow Interpreter
+# Looplia Writer Plugin
 
-You execute workflows defined in `workflows/*.md` files using a structured protocol.
+Writing domain plugin providing content analysis, idea generation, and writing-kit workflow.
 
-## Workflow File Format
+## Overview
 
-Each workflow is a markdown file with YAML frontmatter:
-- **Frontmatter**: Output definitions, agents, dependencies, validation criteria
-- **Body**: Custom workflow instructions and context
+This plugin is a **domain plugin** that depends on `looplia-core` for workflow execution. It provides:
 
-Example structure:
-```yaml
----
-name: workflow-name
-description: What this workflow does
+- **Writing-kit workflow** for transforming content into actionable writing materials
+- **Specialized agents** for content analysis and idea generation
+- **Domain skills** for media review, content documentation, and writing enhancement
 
-outputs:
-  step-one:
-    artifact: output.json
-    agent: subagent-name
-    validate:
-      required_fields: [field1, field2]
-      min_quotes: 3
+## Workflow
 
-  step-two:
-    artifact: final.json
-    agent: another-agent
-    requires: [step-one]
-    final: true
-    validate:
-      required_fields: [field1]
----
+### writing-kit
 
-# Workflow Instructions
-Custom guidance for this workflow...
-```
-
-## Workspace Structure
+Transforms source content into a comprehensive writing kit:
 
 ```
-~/.looplia/
-├── workflows/                    # Workflow definitions
-│   └── {name}.md                 # YAML frontmatter + instructions
-├── .claude/
-│   ├── agents/*.md               # Subagent definitions
-│   └── skills/
-│       ├── workflow-validator/   # Validates outputs
-│       └── ...other skills
-├── user-profile.json             # User preferences
-└── contentItem/{id}/
-    ├── content.md                # Input content
-    ├── validation.json           # Validation checklist (auto-generated)
-    └── *.json                    # Output artifacts
+/run writing-kit --file article.md
 ```
 
-## Your Protocol
+**Stages:**
+1. **content-analyzer** → `summary.json` - Deep content analysis
+2. **idea-generator** → `ideas.json` - Writing ideas and hooks
+3. **writing-kit-builder** → `writing-kit.json` - Final assembled kit
 
-### Step 1: Read Validation State
+## Agents
 
-Read `contentItem/{id}/validation.json` to understand:
-- What outputs are required
-- Validation criteria for each output
-- Which outputs have already passed validation
+### content-analyzer
 
-```json
-{
-  "workflow": "writing-kit",
-  "outputs": {
-    "summary": {
-      "artifact": "summary.json",
-      "criteria": { "required_fields": ["contentId"], "min_quotes": 3 },
-      "validated": false
-    }
-  }
-}
-```
+Deep content analysis using media-reviewer skill.
 
-### Step 2: Execute Outputs (Dependency Order)
+**Skills:** media-reviewer, content-documenter
 
-For each output in the workflow (following dependency order):
+**Output:** `summary.json` with:
+- Content ID, headline, TLDR
+- Key themes and talking points
+- Important quotes (verbatim)
+- Source metadata
 
-1. **Check completion**:
-   - If artifact exists AND `validated=true` in validation.json, skip this step
+### idea-generator
 
-2. **If incomplete**:
-   - Invoke the specified agent as subagent
-   - Agent reads inputs and writes artifact to `contentItem/{id}/{artifact}`
+Generate writing ideas based on content analysis.
 
-3. **After artifact written**:
-   - Use **workflow-validator** skill to validate
-   - Run validation script: `bun .claude/skills/workflow-validator/scripts/validate.ts {path} '{criteria}'`
+**Skills:** user-profile-reader
 
-4. **Handle validation result**:
-   - If passed: Update validation.json → set `outputs.{name}.validated = true`
-   - If failed: Review failed checks, retry subagent with feedback, or report issue
+**Output:** `ideas.json` with:
+- Content ideas with hooks and angles
+- Format recommendations
+- Target audience alignment
 
-### Step 3: Return Final Output
+### writing-kit-builder
 
-When the output marked `final: true` passes validation:
-1. Read the final artifact JSON
-2. Return it as structured output
+Assemble final writing kit from all artifacts.
 
-## Key Skills
+**Skills:** user-profile-reader
 
-### workflow-validator
-Validates artifacts against criteria defined in validation.json.
+**Output:** `writing-kit.json` with:
+- Complete writing kit structure
+- All previous artifacts integrated
+- Ready-to-use writing materials
 
-Usage:
+## Skills
+
+| Skill | Purpose |
+|-------|---------|
+| media-reviewer | Analyze media content (transcripts, articles) |
+| content-documenter | Generate structured documentation |
+| id-generator | Create meaningful session IDs |
+| user-profile-reader | Load user preferences and style |
+| writing-enhancer | Enhance content quality |
+
+## Dependencies
+
+This plugin requires `looplia-core` which provides:
+- `/run` command for workflow execution
+- `workflow-executor` skill for orchestration
+- `workflow-validator` skill for output validation
+
+## Installation
+
 ```bash
-bun .claude/skills/workflow-validator/scripts/validate.ts contentItem/{id}/summary.json '{"required_fields":["contentId"],"min_quotes":3}'
+looplia init
 ```
 
-Returns:
-```json
-{
-  "passed": true,
-  "checks": [
-    { "name": "has_contentId", "passed": true, "message": "OK" },
-    { "name": "min_quotes", "passed": true, "message": "Found 5 quotes (min: 3)" }
-  ]
-}
+Both `looplia-core` and `looplia-writer` are installed together.
+
+## File Structure
+
 ```
-
-### Other Skills
-- **content-documenter**: Deep content analysis
-- **media-reviewer**: Media-specific analysis
-- **id-generator**: Generate meaningful session IDs
-- **user-profile-reader**: Load user preferences
-
-## Validation Criteria Reference
-
-| Criteria | Description |
-|----------|-------------|
-| `required_fields` | Array of field names that must exist |
-| `min_quotes` | Minimum items in `importantQuotes` array |
-| `min_key_points` | Minimum items in `bullets` or `keyPoints` |
-| `min_outline_sections` | Minimum outline sections |
-| `has_hooks` | Requires `hooks` array with at least one item |
-
-## Subagent Invocation
-
-When invoking subagents:
-1. Specify the agent name (e.g., `content-analyzer`)
-2. Provide the task context (session ID, input paths)
-3. Wait for completion
-4. Verify output artifact was created
-5. Run validation
-
-## Error Handling
-
-If validation fails:
-1. Parse the failed checks from validation result
-2. Provide specific feedback to subagent
-3. Retry the subagent invocation
-4. If retry also fails, report to user with details
-
-## Rules
-
-- **Always validate** - Never skip validation after artifact creation
-- **Update state** - Mark outputs validated in validation.json when passed
-- **Follow dependencies** - Complete required outputs before dependent ones
-- **Preserve meaning** - Never add interpretation beyond source content
-- **Read completely** - Always read all source material before analyzing
-- **Extract verbatim** - Quotes must be exact, never paraphrased
+plugins/looplia-writer/
+├── .claude-plugin/plugin.json    # Plugin manifest
+├── agents/
+│   ├── content-analyzer.md       # Stage 1 agent
+│   ├── idea-generator.md         # Stage 2 agent
+│   └── writing-kit-builder.md    # Stage 3 agent
+├── skills/
+│   ├── media-reviewer/SKILL.md
+│   ├── content-documenter/SKILL.md
+│   ├── id-generator/SKILL.md
+│   ├── user-profile-reader/SKILL.md
+│   └── writing-enhancer/SKILL.md
+├── workflows/
+│   └── writing-kit.md            # Workflow definition
+└── README.md                     # This file
+```

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://code.claude.com/schemas/hooks.json",
+  "hooks": [
+    {
+      "event": "SessionStart",
+      "command": "echo '>>> Looplia session started'",
+      "description": "Log session start"
+    },
+    {
+      "event": "Stop",
+      "command": "echo '>>> Looplia session ended'",
+      "description": "Log session end"
+    }
+  ]
+}

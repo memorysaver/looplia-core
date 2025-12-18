@@ -188,6 +188,18 @@ export type CommandDefinition<TOutput = unknown> = {
 };
 
 /**
+ * v0.5.2: Generic workflow result for prompt-based execution
+ */
+export type WorkflowResult = {
+  status: "success" | "error" | "partial";
+  sessionId?: string;
+  workflowId?: string;
+  artifact?: Record<string, unknown>;
+  error?: string;
+  [key: string]: unknown;
+};
+
+/**
  * Agent Executor Interface
  *
  * Provider layer implements this interface.
@@ -212,6 +224,23 @@ export type AgentExecutor = {
     schema: z.ZodType<T>,
     options: ExecutorOptions
   ): Promise<CommandResult<T>>;
+
+  /**
+   * v0.5.2: Execute a prompt without schema (thin wrapper pattern)
+   * Used by CLI to inject /run commands
+   */
+  executePromptStreaming(
+    prompt: string,
+    options: ExecutorOptions
+  ): AsyncGenerator<StreamingEvent, CommandResult<WorkflowResult>>;
+
+  /**
+   * v0.5.2: Execute a prompt without schema (non-streaming)
+   */
+  executePrompt(
+    prompt: string,
+    options: ExecutorOptions
+  ): Promise<CommandResult<WorkflowResult>>;
 };
 
 /**

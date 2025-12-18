@@ -2,8 +2,8 @@
 
 > Ubiquitous Language Reference for Domain-Driven Design
 >
-> **Version:** 0.5.1
-> **Last Updated:** 2025-12-17
+> **Version:** 0.5.2
+> **Last Updated:** 2025-12-18
 
 This glossary defines the shared vocabulary used throughout Looplia-Core. Consistent terminology enables clear communication between code, documentation, and team discussions.
 
@@ -799,16 +799,147 @@ A step is complete when its output **passes validation**, not when it's marked "
 
 ---
 
+## 12. Plugin System (v0.5.2)
+
+### Two-Plugin Architecture
+**v0.5.2 Concept**
+
+Looplia-Core separates functionality into two Claude Code plugins:
+
+| Plugin | Type | Purpose |
+|--------|------|---------|
+| **looplia-core** | Infrastructure | Workflow engine, validation, slash commands |
+| **looplia-writer** | Domain | Writing-kit workflow, content analysis agents |
+
+**Benefits:**
+- Infrastructure reusable across domains
+- Domain plugins installable independently
+- Clear separation of concerns
+
+### looplia-core Plugin
+**Location:** `plugins/looplia-core/`
+
+Infrastructure plugin providing workflow execution capabilities.
+
+**Components:**
+- `commands/run.md` - `/run` slash command
+- `commands/build-workflow.md` - `/build-workflow` slash command
+- `commands/list-workflows.md` - `/list-workflows` slash command
+- `skills/workflow-executor/` - Workflow interpretation skill
+- `skills/workflow-validator/` - Output validation skill
+- `hooks/hooks.json` - Lifecycle event handlers
+- `CLAUDE.md` - Generic workflow interpreter
+
+### looplia-writer Plugin
+**Location:** `plugins/looplia-writer/`
+
+Domain plugin for writing-related workflows.
+
+**Components:**
+- `agents/content-analyzer.md` - Deep content analysis
+- `agents/idea-generator.md` - Creative idea generation
+- `agents/writing-kit-builder.md` - Final kit assembly
+- `skills/media-reviewer/` - Media content analysis
+- `skills/content-documenter/` - Structured output generation
+- `skills/user-profile-reader/` - User preference loading
+- `workflows/writing-kit.md` - Writing workflow definition
+
+### Slash Command
+**v0.5.2 Concept**
+
+Claude Code slash commands defined in `commands/*.md`. Primary entry point for user interaction.
+
+**Structure:**
+```markdown
+---
+description: Short description for /help
+---
+
+# Command Title
+
+## Usage
+/command-name <args> [--flags]
+
+## Implementation
+How the agent should execute...
+```
+
+**Available Commands (looplia-core):**
+| Command | Description |
+|---------|-------------|
+| `/run <workflow-id> --file <path>` | Execute a workflow |
+| `/build-workflow <name>` | Scaffold new workflow |
+| `/list-workflows` | List available workflows |
+
+### workflow-executor Skill
+**Location:** `plugins/looplia-core/skills/workflow-executor/`
+
+Core skill that interprets workflow.md files and orchestrates execution.
+
+**Capabilities:**
+1. Parse workflow definition (YAML frontmatter + markdown)
+2. Resolve output dependencies (topological sort)
+3. Invoke subagents via Task tool
+4. Track validation state via validation.json
+5. Resume from last validated state
+
+### Plugin Manifest
+**Location:** `.claude-plugin/plugin.json`
+
+JSON file describing plugin metadata.
+
+```json
+{
+  "name": "plugin-name",
+  "version": "0.5.2",
+  "description": "What this plugin does",
+  "author": { "name": "Author Name" },
+  "keywords": ["tag1", "tag2"],
+  "dependencies": ["other-plugin"]
+}
+```
+
+### Infrastructure Plugin
+A plugin providing foundational capabilities used by domain plugins. Example: looplia-core provides workflow execution.
+
+### Domain Plugin
+A plugin providing domain-specific functionality. Depends on infrastructure plugins. Example: looplia-writer provides writing workflow.
+
+### Looplia Extension
+The `workflows/` directory is a Looplia-specific extension to the Claude Code plugin model. Not part of standard Claude Code plugin spec.
+
+**Standard Claude Code:**
+- `commands/`, `agents/`, `skills/`, `hooks/`
+
+**Looplia Extension:**
+- `workflows/` - Workflow-as-Markdown definitions
+
+### Hooks
+**Location:** `hooks/hooks.json`
+
+Event handlers for workflow lifecycle events.
+
+**v0.5.2 Hooks (minimal logging):**
+```json
+{
+  "hooks": {
+    "SubagentStart": [...],
+    "SubagentStop": [...]
+  }
+}
+```
+
+---
+
 ## Quick Reference: File Locations
 
 | Concept | Location |
 |---------|----------|
 | Domain entities | `packages/core/src/domain/` |
-| Workflow types | `packages/core/src/domain/workflow.ts` (v0.5.1) |
-| Workflow parser | `packages/core/src/domain/workflow-parser.ts` (v0.5.1) |
-| Session manifest types | `packages/core/src/domain/session.ts` (v0.5.0, deprecated) |
+| Workflow types | `packages/core/src/domain/workflow.ts` |
+| Workflow parser | `packages/core/src/domain/workflow-parser.ts` |
 | Command framework | `packages/core/src/commands/` |
-| Workflow command | `packages/core/src/commands/workflow.ts` (v0.5.1) |
+| Workflow command | `packages/core/src/commands/workflow.ts` |
 | Port interfaces | `packages/core/src/ports/` |
 | Services | `packages/core/src/services/` |
 | Mock adapters | `packages/core/src/adapters/mock/` |
@@ -817,27 +948,42 @@ A step is complete when its output **passes validation**, not when it's marked "
 | Display config | `apps/cli/src/config/display-config.ts` |
 | Runtime | `apps/cli/src/runtime/` |
 | TUI components | `apps/cli/src/components/` |
-| Plugins | `plugins/looplia-writer/` |
-| Workflows | `plugins/looplia-writer/workflows/` (v0.5.1) |
-| Validation skill | `plugins/looplia-writer/skills/workflow-validator/` (v0.5.1) |
+| **looplia-core plugin** | `plugins/looplia-core/` (v0.5.2) |
+| **looplia-writer plugin** | `plugins/looplia-writer/` (v0.5.2) |
+| Slash commands | `plugins/looplia-core/commands/` (v0.5.2) |
+| workflow-executor skill | `plugins/looplia-core/skills/workflow-executor/` (v0.5.2) |
+| workflow-validator skill | `plugins/looplia-core/skills/workflow-validator/` (v0.5.2) |
+| Writing workflows | `plugins/looplia-writer/workflows/` |
+| Writing agents | `plugins/looplia-writer/agents/` |
 
-### Workspace Structure (v0.5.1)
+### Workspace Structure (v0.5.2)
 
 ```
 ~/.looplia/
-├── CLAUDE.md                    # Generic workflow interpreter
+├── CLAUDE.md                    # From looplia-core
 ├── user-profile.json            # User preferences
-├── workflows/                   # Workflow definitions (v0.5.1)
-│   └── writing-kit.md             YAML frontmatter + instructions
+├── commands/                    # From looplia-core (v0.5.2)
+│   ├── run.md
+│   ├── build-workflow.md
+│   └── list-workflows.md
+├── hooks/                       # From looplia-core (v0.5.2)
+│   └── hooks.json
+├── workflows/                   # From looplia-writer
+│   └── writing-kit.md
 ├── .claude/
-│   ├── agents/*.md              # Subagent definitions
-│   └── skills/
-│       └── workflow-validator/  # Validation skill (v0.5.1)
-│           ├── SKILL.md
-│           └── scripts/validate.ts
+│   ├── agents/                  # From looplia-writer
+│   │   ├── content-analyzer.md
+│   │   ├── idea-generator.md
+│   │   └── writing-kit-builder.md
+│   └── skills/                  # From both plugins
+│       ├── workflow-executor/   # looplia-core
+│       ├── workflow-validator/  # looplia-core
+│       ├── media-reviewer/      # looplia-writer
+│       ├── content-documenter/  # looplia-writer
+│       └── ...
 └── contentItem/{id}/
     ├── content.md               # Input content
-    ├── validation.json          # Validation state (v0.5.1)
+    ├── validation.json          # Validation state
     └── *.json                   # Output artifacts
 ```
 

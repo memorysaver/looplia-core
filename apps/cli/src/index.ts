@@ -2,7 +2,7 @@ import { runConfigCommand } from "./commands/config";
 import { runInitCommand } from "./commands/init";
 import { runRunCommand } from "./commands/run";
 
-const VERSION = "0.5.1";
+const VERSION = "0.5.2";
 
 function printHelp(): void {
   console.log(`

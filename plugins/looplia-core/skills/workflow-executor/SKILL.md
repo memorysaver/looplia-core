@@ -1,0 +1,313 @@
+---
+name: workflow-executor
+description: |
+  Execute workflow-as-markdown definitions. Handles session creation,
+  dependency resolution, subagent orchestration, and validation state tracking.
+  This is the core skill that contains ALL workflow execution logic.
+---
+
+# Workflow Executor Skill
+
+Execute workflows defined in `workflows/*.md` files with validation-driven completion.
+
+## When to Use
+
+Use this skill when:
+- Handling `/run` commands
+- Executing workflow-as-markdown definitions
+- Orchestrating multi-step agent workflows
+
+## Full Execution Protocol
+
+### Phase 1: Session Management
+
+**New Session** (when `--file` provided):
+
+1. Generate session ID using id-generator pattern:
+   ```
+   {content-slug}-{YYYY-MM-DD}-{random4chars}
+   Example: my-article-2025-12-18-xk7m
+   ```
+
+2. Create session folder:
+   ```
+   contentItem/{session-id}/
+   ```
+
+3. Copy content file:
+   ```
+   contentItem/{session-id}/content.md
+   ```
+
+**Resume Session** (when `--session-id` provided):
+
+1. Verify session exists: `contentItem/{session-id}/`
+2. Load existing validation state
+3. Continue from last incomplete output
+
+### Phase 2: Workflow Loading
+
+1. Read workflow file:
+   ```
+   workflows/{workflow-id}.md
+   ```
+
+2. Parse YAML frontmatter:
+   - `name` - Workflow identifier
+   - `description` - What workflow does
+   - `outputs` - Map of output definitions
+
+3. Parse output definitions:
+   ```yaml
+   outputs:
+     summary:
+       artifact: summary.json      # Output file name
+       agent: content-analyzer     # Subagent to invoke
+       validate:                   # Validation criteria
+         required_fields: [contentId, headline]
+         min_quotes: 3
+     ideas:
+       artifact: ideas.json
+       agent: idea-generator
+       requires: [summary]         # Dependencies
+     writing-kit:
+       artifact: writing-kit.json
+       agent: writing-kit-builder
+       requires: [summary, ideas]
+       final: true                 # This is the final output
+   ```
+
+4. Extract markdown body as custom instructions
+
+### Phase 3: Validation State
+
+**Generate validation.json** (new session):
+
+```json
+{
+  "workflow": "writing-kit",
+  "sessionId": "article-2025-12-18-xk7m",
+  "createdAt": "2025-12-18T10:30:00Z",
+  "outputs": {
+    "summary": {
+      "artifact": "summary.json",
+      "criteria": {
+        "required_fields": ["contentId", "headline"],
+        "min_quotes": 3
+      },
+      "validated": false
+    },
+    "ideas": {
+      "artifact": "ideas.json",
+      "criteria": {
+        "required_fields": ["contentId", "ideas"]
+      },
+      "validated": false
+    },
+    "writing-kit": {
+      "artifact": "writing-kit.json",
+      "criteria": {
+        "required_fields": ["contentId", "writingKit"]
+      },
+      "validated": false
+    }
+  }
+}
+```
+
+**Read validation.json** (resume session):
+
+Load existing state to determine what work remains.
+
+### Phase 4: Dependency Resolution
+
+Build topological order from `requires` fields:
+
+```
+Input:
+  summary: { requires: [] }
+  ideas: { requires: [summary] }
+  writing-kit: { requires: [summary, ideas], final: true }
+
+Computed order: [summary, ideas, writing-kit]
+```
+
+Algorithm:
+1. Start with outputs that have no dependencies
+2. Add outputs whose dependencies are already in the list
+3. Repeat until all outputs are ordered
+
+### Phase 5: Output Execution Loop
+
+For each output in dependency order:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ OUTPUT EXECUTION LOOP                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+For output in [summary, ideas, writing-kit]:
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│ Check: artifact exists AND validated?    │
+└────────────────┬────────────────────────┘
+                 │
+         ┌───────┴───────┐
+         │               │
+         ▼ YES           ▼ NO
+    ┌─────────┐    ┌─────────────────────────────┐
+    │ SKIP    │    │ 1. Invoke subagent          │
+    │ (done)  │    │    via Task tool            │
+    └─────────┘    │                             │
+                   │ 2. Wait for artifact        │
+                   │                             │
+                   │ 3. Validate with            │
+                   │    workflow-validator skill │
+                   │                             │
+                   │ 4. If PASSED:               │
+                   │    - Update validation.json │
+                   │    - Continue to next       │
+                   │                             │
+                   │ 5. If FAILED:               │
+                   │    - Parse failed checks    │
+                   │    - Retry subagent with    │
+                   │      specific feedback      │
+                   │    - Max 2 retries          │
+                   └─────────────────────────────┘
+```
+
+### Phase 6: Subagent Invocation
+
+Use the Task tool to invoke subagents:
+
+```json
+{
+  "name": "Task",
+  "input": {
+    "subagent_type": "content-analyzer",
+    "description": "Generate summary artifact",
+    "prompt": "Analyze content at contentItem/{session-id}/content.md and generate summary.json"
+  }
+}
+```
+
+Subagent protocol:
+1. Subagent reads its agent definition from `.claude/agents/{name}.md`
+2. Auto-loads skills from `skills:` frontmatter field
+3. Reads input content and any required artifacts
+4. Writes output to `contentItem/{session-id}/{artifact}`
+
+### Phase 7: Validation
+
+After subagent writes artifact:
+
+1. Use **workflow-validator** skill
+2. Run validation script:
+   ```bash
+   bun .claude/skills/workflow-validator/scripts/validate.ts \
+     contentItem/{session-id}/summary.json \
+     '{"required_fields":["contentId"],"min_quotes":3}'
+   ```
+3. Parse result:
+   ```json
+   {
+     "passed": true,
+     "checks": [
+       { "name": "has_contentId", "passed": true },
+       { "name": "min_quotes", "passed": true, "message": "Found 5 (min: 3)" }
+     ]
+   }
+   ```
+4. If passed: Update validation.json
+5. If failed: Retry with specific feedback
+
+### Phase 8: Return Final
+
+When output with `final: true` passes validation:
+
+1. Read final artifact:
+   ```
+   contentItem/{session-id}/writing-kit.json
+   ```
+
+2. Return as structured result:
+   ```json
+   {
+     "status": "success",
+     "sessionId": "article-2025-12-18-xk7m",
+     "workflow": "writing-kit",
+     "artifact": { ... content of writing-kit.json ... }
+   }
+   ```
+
+## Smart Continuation Logic
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    SMART CONTINUATION DECISION                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Validation State                     │  Action
+─────────────────────────────────────┼─────────────────────────────────────────
+All outputs validated: false         │  Fresh start: Run all subagents
+─────────────────────────────────────┼─────────────────────────────────────────
+summary.validated: true              │  Skip content-analyzer
++ summary.json exists                │  Run: idea-generator, writing-kit-builder
+─────────────────────────────────────┼─────────────────────────────────────────
+summary + ideas validated: true      │  Skip content-analyzer, idea-generator
++ artifacts exist                    │  Run: writing-kit-builder only
+─────────────────────────────────────┼─────────────────────────────────────────
+All outputs validated: true          │  Already complete
++ all artifacts exist                │  Just return writing-kit.json
+```
+
+## Error Handling
+
+| Scenario | Action |
+|----------|--------|
+| Workflow not found | Error with available workflows |
+| Session not found | Error with suggestion to use --file |
+| Subagent fails | Retry up to 2 times with feedback |
+| Validation fails | Provide specific failed checks to subagent |
+| Max retries exceeded | Report failure with details |
+
+## Example Execution Trace
+
+```
+/run writing-kit --file article.md
+
+1. [SESSION] Created: article-2025-12-18-xk7m
+2. [WORKFLOW] Loaded: workflows/writing-kit.md
+3. [VALIDATION] Generated: validation.json (all false)
+4. [ORDER] Computed: [summary, ideas, writing-kit]
+
+5. [EXECUTE] summary
+   - Invoke: content-analyzer
+   - Artifact: summary.json (written)
+   - Validate: PASSED
+   - Update: validation.json (summary.validated = true)
+
+6. [EXECUTE] ideas
+   - Invoke: idea-generator
+   - Artifact: ideas.json (written)
+   - Validate: PASSED
+   - Update: validation.json (ideas.validated = true)
+
+7. [EXECUTE] writing-kit
+   - Invoke: writing-kit-builder
+   - Artifact: writing-kit.json (written)
+   - Validate: PASSED
+   - Update: validation.json (writing-kit.validated = true)
+
+8. [COMPLETE] Final output: writing-kit.json
+   - Return structured result
+```
+
+## File References
+
+- Workflow definitions: `workflows/*.md`
+- Agent definitions: `.claude/agents/*.md`
+- Session storage: `contentItem/{session-id}/`
+- Validation state: `contentItem/{session-id}/validation.json`
+- Validator script: `.claude/skills/workflow-validator/scripts/validate.ts`

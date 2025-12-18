@@ -34,6 +34,7 @@ export type {
   ToolEndEvent,
   ToolStartEvent,
   UsageEvent,
+  WorkflowResult,
 } from "./types";
 // Workflow Command (v0.5.1)
 export { buildWorkflowPrompt, workflowCommand } from "./workflow";

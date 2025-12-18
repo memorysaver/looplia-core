@@ -1,7 +1,10 @@
 {
   "name": "looplia-writer",
-  "version": "0.4.0",
-  "description": "Looplia writing assistant with content analysis and idea generation",
-  "author": "Looplia",
-  "homepage": "https://github.com/looplia/looplia-core/tree/main/plugins/looplia-writer"
+  "description": "Writing domain plugin - Content analysis, idea generation, and writing-kit workflow",
+  "version": "0.5.2",
+  "author": {
+    "name": "Looplia"
+  },
+  "keywords": ["writing", "content", "analysis", "ideas"],
+  "homepage": "https://github.com/looplia/looplia-core"
 }

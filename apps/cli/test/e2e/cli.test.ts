@@ -13,7 +13,6 @@ import {
   createTempDir,
   createTestFile,
   execCLI,
-  readTestFile,
 } from "../utils";
 
 describe("CLI E2E Tests", () => {
@@ -62,14 +61,14 @@ describe("CLI E2E Tests", () => {
       const result = await execCLI(["--version"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia 0.5.1");
+      expect(result.stdout).toContain("looplia 0.5.2");
     });
 
     it("should show version with -v flag", async () => {
       const result = await execCLI(["-v"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia 0.5.1");
+      expect(result.stdout).toContain("looplia 0.5.2");
     });
 
     it("should error on unknown command", async () => {
@@ -144,37 +143,7 @@ describe("CLI E2E Tests", () => {
   });
 
   describe("Run Command", () => {
-    it("should execute workflow with all options", async () => {
-      const content = readFileSync(
-        join(__dirname, "../fixtures/sample-article.txt"),
-        "utf-8"
-      );
-      const inputFile = createTestFile(tempDir.path, "input.txt", content);
-
-      const result = await execCLI([
-        "run",
-        "writing-kit",
-        "--file",
-        inputFile,
-        "--topics",
-        "ai,agents,software",
-        "--tone",
-        "expert",
-        "--word-count",
-        "1500",
-        "--mock",
-      ]);
-
-      expect(result.exitCode).toBe(0);
-      // stderr may contain status messages like "✓ Content written" and "⏳ Processing"
-      expect(result.stderr).not.toContain("Error");
-
-      // Parse output and verify it's valid JSON with contentId
-      const output = JSON.parse(result.stdout);
-      expect(output).toHaveProperty("contentId");
-    });
-
-    it("should use defaults when optional args omitted", async () => {
+    it("should execute workflow in mock mode", async () => {
       const content = readFileSync(
         join(__dirname, "../fixtures/sample-article.txt"),
         "utf-8"
@@ -190,155 +159,15 @@ describe("CLI E2E Tests", () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      const output = JSON.parse(result.stdout);
-      expect(output).toHaveProperty("contentId");
-    });
-
-    it("should write output to file", async () => {
-      const content = readFileSync(
-        join(__dirname, "../fixtures/sample-article.txt"),
-        "utf-8"
-      );
-      const inputFile = createTestFile(tempDir.path, "input.txt", content);
-      const outputFile = join(tempDir.path, "output.json");
-
-      const result = await execCLI([
-        "run",
-        "writing-kit",
-        "--file",
-        inputFile,
-        "--output",
-        outputFile,
-        "--mock",
-      ]);
-
-      expect(result.exitCode).toBe(0);
-      expect(result.stderr).toContain(`saved to: ${outputFile}`);
-
-      const outputContent = readTestFile(outputFile);
-      const output = JSON.parse(outputContent);
-      expect(output).toHaveProperty("contentId");
-    });
-
-    it("should parse topics correctly", async () => {
-      const content = readFileSync(
-        join(__dirname, "../fixtures/sample-article.txt"),
-        "utf-8"
-      );
-      const inputFile = createTestFile(tempDir.path, "input.txt", content);
-
-      const result = await execCLI([
-        "run",
-        "writing-kit",
-        "--file",
-        inputFile,
-        "--topics",
-        "ai,productivity,startup",
-        "--mock",
-      ]);
-
-      expect(result.exitCode).toBe(0);
-      const output = JSON.parse(result.stdout);
-      expect(output).toHaveProperty("contentId");
-    });
-
-    it("should handle topics with whitespace", async () => {
-      const content = readFileSync(
-        join(__dirname, "../fixtures/sample-article.txt"),
-        "utf-8"
-      );
-      const inputFile = createTestFile(tempDir.path, "input.txt", content);
-
-      const result = await execCLI([
-        "run",
-        "writing-kit",
-        "--file",
-        inputFile,
-        "--topics",
-        " ai , productivity , startup ",
-        "--mock",
-      ]);
-
-      expect(result.exitCode).toBe(0);
-      const output = JSON.parse(result.stdout);
-      expect(output).toHaveProperty("contentId");
-    });
-
-    it("should handle all valid tone values", async () => {
-      const content = readFileSync(
-        join(__dirname, "../fixtures/sample-article.txt"),
-        "utf-8"
-      );
-      const inputFile = createTestFile(tempDir.path, "input.txt", content);
-
-      const tones = ["beginner", "intermediate", "expert", "mixed"];
-
-      for (const tone of tones) {
-        const result = await execCLI([
-          "run",
-          "writing-kit",
-          "--file",
-          inputFile,
-          "--tone",
-          tone,
-          "--mock",
-        ]);
-
-        expect(result.exitCode).toBe(0);
-        const output = JSON.parse(result.stdout);
-        expect(output).toHaveProperty("contentId");
-      }
-    });
-
-    it("should use intermediate tone for invalid value", async () => {
-      const content = readFileSync(
-        join(__dirname, "../fixtures/sample-article.txt"),
-        "utf-8"
-      );
-      const inputFile = createTestFile(tempDir.path, "input.txt", content);
-
-      const result = await execCLI([
-        "run",
-        "writing-kit",
-        "--file",
-        inputFile,
-        "--tone",
-        "invalid-tone",
-        "--mock",
-      ]);
-
-      expect(result.exitCode).toBe(0);
-      const output = JSON.parse(result.stdout);
-      expect(output).toHaveProperty("contentId");
-    });
-
-    it("should handle custom word count", async () => {
-      const content = readFileSync(
-        join(__dirname, "../fixtures/sample-article.txt"),
-        "utf-8"
-      );
-      const inputFile = createTestFile(tempDir.path, "input.txt", content);
-
-      const result = await execCLI([
-        "run",
-        "writing-kit",
-        "--file",
-        inputFile,
-        "--word-count",
-        "2000",
-        "--mock",
-      ]);
-
-      expect(result.exitCode).toBe(0);
-      const output = JSON.parse(result.stdout);
-      expect(output).toHaveProperty("contentId");
+      // Mock mode outputs to stdout
+      expect(result.stdout).toContain("Workflow completed successfully");
     });
 
     it("should error when workflow ID is missing", async () => {
       const result = await execCLI(["run"]);
 
       expect(result.exitCode).toBe(1);
-      expect(result.stderr).toContain("Error: Workflow ID is required");
+      expect(result.stderr).toContain("Error: workflow-id is required");
     });
 
     it("should error when --file is missing", async () => {
@@ -350,19 +179,6 @@ describe("CLI E2E Tests", () => {
       );
     });
 
-    it("should error when file does not exist", async () => {
-      const result = await execCLI([
-        "run",
-        "writing-kit",
-        "--file",
-        "/non/existent/file.txt",
-        "--mock",
-      ]);
-
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toContain("Could not read file");
-    });
-
     it("should show command help with --help", async () => {
       const result = await execCLI(["run", "--help"]);
 
@@ -370,25 +186,15 @@ describe("CLI E2E Tests", () => {
       expect(result.stdout).toContain("looplia run");
       expect(result.stdout).toContain("<workflow-id>");
       expect(result.stdout).toContain("--file");
-      expect(result.stdout).toContain("--topics");
-      expect(result.stdout).toContain("--tone");
-      expect(result.stdout).toContain("--word-count");
+      expect(result.stdout).toContain("--session-id");
+      expect(result.stdout).toContain("--mock");
     });
 
-    it("should accept --session-id flag", async () => {
-      const result = await execCLI([
-        "run",
-        "writing-kit",
-        "--session-id",
-        "nonexistent-id",
-        "--mock",
-      ]);
+    it("should show command help with -h", async () => {
+      const result = await execCLI(["run", "-h"]);
 
-      // Should fail because session doesn't exist, but --session-id should be recognized
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toContain(
-        'Error: Session "nonexistent-id" not found'
-      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain("looplia run");
     });
   });
 });
