@@ -476,20 +476,23 @@ Debug logging for agent queries. Creates unique log files per query for auditabi
 ## 8. Workspace & Session
 
 ### Workspace
-The `~/.looplia/` directory. Persistent filesystem for sessions, plugins, and configuration.
+The `~/.looplia/` directory. Persistent filesystem for sandboxes, plugins, and configuration.
 
 ```
 ~/.looplia/
 ├── CLAUDE.md           # Main agent instructions
 ├── user-profile.json   # User preferences
-├── contentItem/        # Session storage
-│   └── {session-id}/
-│       ├── content.md      # Input content
-│       ├── session.json    # Session manifest (v0.5.0)
-│       ├── summary.json    # ContentSummary
-│       ├── ideas.json      # WritingIdeas
-│       ├── outline.json    # OutlineSection[]
-│       └── writing-kit.json # WritingKit
+├── sandbox/            # Sandbox storage (v0.5.2)
+│   └── {sandbox-id}/
+│       ├── inputs/
+│       │   └── content.md    # Input content (copied from --file)
+│       ├── outputs/
+│       │   ├── summary.json    # ContentSummary
+│       │   ├── ideas.json      # WritingIdeas
+│       │   └── writing-kit.json # WritingKit (final)
+│       ├── logs/
+│       │   └── query-*.log     # Session logs
+│       └── validation.json     # Validation state
 └── .claude/            # Plugins (agents, skills)
 ```
 
@@ -526,23 +529,40 @@ Named pipeline steps with artifact mappings:
 
 **Note:** `writing-kit-builder` produces both `outline.json` and `writing-kit.json`. Both steps are marked done together.
 
-### Session
-A work session with unique ID. Contains all input/output files for one execution.
+### Sandbox (v0.5.2)
+An isolated execution environment for a single workflow run. Contains all input, output, and log files.
 
-### Session-ID
-Unique identifier for a session. Format: `{title-slug}-{timestamp}-{random}` (e.g., `article-2025-12-09-abc123`)
+**Structure:**
+```
+sandbox/{sandbox-id}/
+├── inputs/content.md      # Copied from --file
+├── outputs/*.json         # Generated artifacts
+├── logs/*.log             # Session logs
+└── validation.json        # Validation state tracking
+```
 
-### contentItem Folder
-Session file storage at `~/.looplia/contentItem/{session-id}/`.
+**Benefits:**
+- **Isolation**: Each run is self-contained
+- **Resumable**: Use `--sandbox-id` to continue from last validated step
+- **Auditable**: Full logs preserved for debugging
 
-Files:
-- `content.md` - Input content
-- `session.json` - Session manifest (v0.5.0)
-- `summary.json` - From content-analyzer
-- `ideas.json` - From idea-generator
-- `outline.json` - From writing-kit-builder
-- `writing-kit.json` - Final output
-- `logs/` - Query logs
+### Sandbox-ID (v0.5.2)
+Unique identifier for a sandbox. Format: `{slug}-{YYYY-MM-DD}-{random4chars}`
+
+**Examples:**
+- `my-article-2025-12-18-xk7m`
+- `ai-healthcare-2025-12-18-ab12`
+
+**Generation:**
+1. Extract slug from filename (lowercase, alphanumeric, hyphens)
+2. Add current date in ISO format
+3. Append 4 random alphanumeric characters
+
+### Session (deprecated v0.5.2)
+Previous term for what is now called a "Sandbox". See **Sandbox**.
+
+### contentItem Folder (deprecated v0.5.2)
+Previous folder structure replaced by `sandbox/` in v0.5.2. See **Sandbox**.
 
 ### CLAUDE.md
 Main agent instructions deployed from `plugins/looplia-writer/README.md`. The "brain" of the system.
@@ -730,22 +750,29 @@ Criteria for validating workflow outputs. Used by the workflow-validator skill.
 
 Extensible with custom keys for workflow-specific validation.
 
-### validation.json (v0.5.1)
-**Location:** `contentItem/{id}/validation.json`
+### validation.json (v0.5.2)
+**Location:** `sandbox/{sandbox-id}/validation.json`
 
-Replaces `session.json` from v0.5.0. Generated from workflow frontmatter. Tracks validation state per output.
+Generated from workflow frontmatter. Tracks validation state per output.
 
 ```json
 {
   "workflow": "writing-kit",
+  "sandboxId": "my-article-2025-12-18-xk7m",
+  "createdAt": "2025-12-18T10:30:00Z",
   "outputs": {
     "summary": {
-      "artifact": "summary.json",
+      "artifact": "outputs/summary.json",
       "criteria": { "required_fields": [...], "min_quotes": 3 },
-      "validated": false
+      "validated": true
+    },
+    "ideas": {
+      "artifact": "outputs/ideas.json",
+      "criteria": { "required_fields": [...], "has_hooks": true },
+      "validated": true
     },
     "writing-kit": {
-      "artifact": "writing-kit.json",
+      "artifact": "outputs/writing-kit.json",
       "criteria": { "required_fields": [...], "has_hooks": true },
       "validated": false
     }
@@ -753,9 +780,10 @@ Replaces `session.json` from v0.5.0. Generated from workflow frontmatter. Tracks
 }
 ```
 
-**Key Difference from session.json:**
-- v0.5.0 `session.json`: Binary "done" status tracking
-- v0.5.1 `validation.json`: Criteria + validated boolean
+**v0.5.2 Changes:**
+- Location changed from `contentItem/{id}/` to `sandbox/{id}/`
+- Added `sandboxId` and `createdAt` fields
+- Artifact paths now relative to sandbox (e.g., `outputs/summary.json`)
 
 ### workflow-validator Skill
 **Location:** `.claude/skills/workflow-validator/`
@@ -981,10 +1009,16 @@ Event handlers for workflow lifecycle events.
 │       ├── media-reviewer/      # looplia-writer
 │       ├── content-documenter/  # looplia-writer
 │       └── ...
-└── contentItem/{id}/
-    ├── content.md               # Input content
-    ├── validation.json          # Validation state
-    └── *.json                   # Output artifacts
+└── sandbox/{sandbox-id}/        # v0.5.2 sandbox architecture
+    ├── inputs/
+    │   └── content.md           # Input content (copied from --file)
+    ├── outputs/
+    │   ├── summary.json         # Stage 1 output
+    │   ├── ideas.json           # Stage 2 output
+    │   └── writing-kit.json     # Stage 3 output (final)
+    ├── logs/
+    │   └── query-*.log          # Session logs
+    └── validation.json          # Validation state
 ```
 
 ---

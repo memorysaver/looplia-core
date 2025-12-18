@@ -259,22 +259,26 @@ looplia run writing-kit --file /tmp/test-article.md
 }
 ```
 
-### Verify Generated Artifacts
+### Verify Generated Artifacts (v0.5.2 Sandbox Architecture)
 
 ```bash
-# List session folder
-ls -la ~/.looplia/contentItem/cli-*/
+# List sandbox folder
+ls -la ~/.looplia/sandbox/*/
 
-# Expected files:
-# - content.md (input)
-# - validation.json (validation state)
-# - summary.json (Stage 1)
-# - ideas.json (Stage 2)
-# - outline.json (intermediate)
-# - writing-kit.json (Stage 3 - final)
+# Expected structure:
+# sandbox/{sandbox-id}/
+# ├── inputs/
+# │   └── content.md          # Input content (copied from --file)
+# ├── outputs/
+# │   ├── summary.json        # Stage 1 output
+# │   ├── ideas.json          # Stage 2 output
+# │   └── writing-kit.json    # Stage 3 output (final)
+# ├── logs/
+# │   └── query-*.log         # Session logs
+# └── validation.json         # Validation state
 
 # Check validation state
-cat ~/.looplia/contentItem/cli-*/validation.json | jq .
+cat ~/.looplia/sandbox/*/validation.json | jq .
 
 # Expected: all outputs validated: true
 ```
@@ -291,13 +295,14 @@ Log analysis is critical for verifying that the workflow system correctly:
 3. Runs **workflow-validator** skill after each stage
 4. Follows **dependency order** (summary → ideas → writing-kit)
 
-### Log File Location
+### Log File Location (v0.5.2)
 
 ```bash
-# Find the latest log file
-ls -la ~/.looplia/contentItem/cli-*/logs/
+# Find the latest log file in sandbox
+ls -la ~/.looplia/sandbox/*/logs/
 
 # Log file naming: query-YYYY-MM-DDTHH-MM-SS-MMMZ.log
+# Example: query-2025-12-18T09-45-18-294Z.log
 ```
 
 ### Key Patterns to Verify
@@ -308,7 +313,7 @@ Search for Task tool invocations with custom `subagent_type`:
 
 ```bash
 # Grep for subagent_type in log
-grep -n "subagent_type" ~/.looplia/contentItem/cli-*/logs/*.log
+grep -o '"subagent_type"[^,]*' ~/.looplia/sandbox/*/logs/*.log
 
 # Expected output (GOOD):
 # "subagent_type": "content-analyzer"
@@ -323,7 +328,7 @@ grep -n "subagent_type" ~/.looplia/contentItem/cli-*/logs/*.log
 
 ```bash
 # Grep for Task tool usage
-grep -n '"name".*"Task"' ~/.looplia/contentItem/cli-*/logs/*.log
+grep -c '"name".*"Task"' ~/.looplia/sandbox/*/logs/*.log
 
 # Should see 3 Task invocations (one per stage)
 ```
@@ -332,7 +337,7 @@ grep -n '"name".*"Task"' ~/.looplia/contentItem/cli-*/logs/*.log
 
 ```bash
 # Grep for Skill tool usage
-grep -n '"name".*"Skill"' ~/.looplia/contentItem/cli-*/logs/*.log
+grep -c '"Skill"' ~/.looplia/sandbox/*/logs/*.log
 
 # Should see workflow-validator skill invocations
 # Also may see auto-loaded skills: media-reviewer, content-documenter, etc.
@@ -342,17 +347,17 @@ grep -n '"name".*"Skill"' ~/.looplia/contentItem/cli-*/logs/*.log
 
 ```bash
 # Grep for validate.ts execution
-grep -n "validate.ts" ~/.looplia/contentItem/cli-*/logs/*.log
+grep -c "validate.ts" ~/.looplia/sandbox/*/logs/*.log
 
 # Should see Bash calls like:
-# bun .claude/skills/workflow-validator/scripts/validate.ts summary.json '{"required_fields":...}'
+# bun .claude/skills/workflow-validator/scripts/validate.ts outputs/summary.json '{"required_fields":...}'
 ```
 
 #### 5. Artifacts Written
 
 ```bash
 # Grep for Write tool usage with artifact names
-grep -n "summary.json\|ideas.json\|writing-kit.json" ~/.looplia/contentItem/cli-*/logs/*.log
+grep -n "outputs/summary.json\|outputs/ideas.json\|outputs/writing-kit.json" ~/.looplia/sandbox/*/logs/*.log
 ```
 
 ### Verification Checklist
@@ -384,39 +389,47 @@ grep -n "summary.json\|ideas.json\|writing-kit.json" ~/.looplia/contentItem/cli-
 - [ ] validation.json shows all validated: true
 ```
 
-### Example Log Analysis Session
+### Example Log Analysis Session (v0.5.2)
 
 ```bash
-# Step 1: Run workflow
-env $(cat .env) looplia run writing-kit --file /tmp/test-article.md
+# Step 1: Run workflow (creates sandbox automatically)
+ANTHROPIC_API_KEY="sk-ant-..." looplia run writing-kit --file /tmp/test-article.md
 
-# Step 2: Find session ID
-SESSION_ID=$(ls ~/.looplia/contentItem/ | tail -1)
-echo "Session: $SESSION_ID"
+# Step 2: Find sandbox ID (from CLI output or by listing)
+SANDBOX_ID=$(ls ~/.looplia/sandbox/ | tail -1)
+echo "Sandbox: $SANDBOX_ID"
 
-# Step 3: Find log file
-LOG_FILE=$(ls ~/.looplia/contentItem/$SESSION_ID/logs/*.log | head -1)
+# Step 3: Verify sandbox structure
+ls -la ~/.looplia/sandbox/$SANDBOX_ID/
+# Should show: inputs/, outputs/, logs/, validation.json
+
+# Step 4: Find log file
+LOG_FILE=$(ls ~/.looplia/sandbox/$SANDBOX_ID/logs/*.log | head -1)
 echo "Log: $LOG_FILE"
 
-# Step 4: Verify custom subagent_type
+# Step 5: Verify custom subagent_type
 echo "=== Subagent Types ==="
-grep "subagent_type" $LOG_FILE
+grep -o '"subagent_type"[^,]*' $LOG_FILE
 
-# Step 5: Verify Task tool invocations (count should be 3)
+# Step 6: Verify Task tool invocations (count should be 3)
 echo "=== Task Invocations ==="
 grep -c '"name".*"Task"' $LOG_FILE
 
-# Step 6: Verify Skill tool invocations
+# Step 7: Verify Skill tool invocations
 echo "=== Skill Invocations ==="
 grep '"name".*"Skill"' $LOG_FILE
 
-# Step 7: Verify validation script
+# Step 8: Verify validation script
 echo "=== Validation Script ==="
 grep "validate.ts" $LOG_FILE
 
-# Step 8: Check validation.json
+# Step 9: Check validation.json
 echo "=== Validation State ==="
-cat ~/.looplia/contentItem/$SESSION_ID/validation.json | jq '.outputs | to_entries[] | {name: .key, validated: .value.validated}'
+cat ~/.looplia/sandbox/$SANDBOX_ID/validation.json | jq '.outputs | to_entries[] | {name: .key, validated: .value.validated}'
+
+# Step 10: Verify outputs exist
+echo "=== Outputs ==="
+ls -la ~/.looplia/sandbox/$SANDBOX_ID/outputs/
 ```
 
 ### Expected Log Patterns
@@ -430,7 +443,7 @@ cat ~/.looplia/contentItem/$SESSION_ID/validation.json | jq '.outputs | to_entri
   "input": {
     "subagent_type": "content-analyzer",
     "description": "Generate summary artifact",
-    "prompt": "Analyze content at contentItem/cli-123/content.md..."
+    "prompt": "Analyze content at sandbox/my-article-2025-12-18-xk7m/inputs/content.md..."
   }
 }
 ```
@@ -564,7 +577,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       - name: Verify subagents
         run: |
-          LOG=$(ls ~/.looplia/contentItem/*/logs/*.log | head -1)
+          LOG=$(ls ~/.looplia/sandbox/*/logs/*.log | head -1)
           grep "content-analyzer" $LOG
           grep "idea-generator" $LOG
           grep "writing-kit-builder" $LOG
@@ -589,7 +602,7 @@ docker run --rm \
   run writing-kit --file /examples/ai-healthcare.md
 ```
 
-### Workspace Output Structure
+### Workspace Output Structure (v0.5.2)
 
 ```
 test-workspace/
@@ -604,15 +617,16 @@ test-workspace/
 │       ├── workflow-validator/
 │       ├── media-reviewer/
 │       └── user-profile-reader/
-├── contentItem/{session-id}/
-│   ├── content.md
-│   ├── validation.json
-│   ├── summary.json
-│   ├── ideas.json
-│   ├── outline.json
-│   ├── writing-kit.json
-│   └── logs/
-│       └── query-*.log
+├── sandbox/{sandbox-id}/           # v0.5.2 sandbox architecture
+│   ├── inputs/
+│   │   └── content.md              # Input content
+│   ├── outputs/
+│   │   ├── summary.json            # Stage 1
+│   │   ├── ideas.json              # Stage 2
+│   │   └── writing-kit.json        # Stage 3 (final)
+│   ├── logs/
+│   │   └── query-*.log             # Session logs
+│   └── validation.json             # Validation state
 └── CLAUDE.md
 ```
 
@@ -754,20 +768,28 @@ If validation fails:
 
 ```bash
 # Check validation.json for failed checks
-cat ~/.looplia/contentItem/*/validation.json | jq .
+cat ~/.looplia/sandbox/*/validation.json | jq .
 
 # Run validator manually
 bun ~/.looplia/.claude/skills/workflow-validator/scripts/validate.ts \
-  ~/.looplia/contentItem/*/summary.json \
+  ~/.looplia/sandbox/*/outputs/summary.json \
   '{"required_fields":["contentId","headline"]}'
 ```
+
+### Logs Not Being Written (v0.5.2)
+
+If `sandbox/{id}/logs/` is empty:
+
+1. Verify CLI creates sandbox before execution (check "Created sandbox: ..." message)
+2. Verify prompt includes `--sandbox-id` (logger extracts ID from prompt)
+3. Check logger initialization in `query-executor.ts`
 
 ---
 
 ## Cross-References
 
-- **Agent System**: [AGENTIC_CONCEPT-0.4.md](./AGENTIC_CONCEPT-0.4.md)
-- **Architecture**: [DESIGN-0.5.1.md](./DESIGN-0.5.1.md)
+- **Agent System**: [AGENTIC_CONCEPT-0.5.md](./AGENTIC_CONCEPT-0.5.md)
+- **Architecture**: [DESIGN-0.5.2.md](./DESIGN-0.5.2.md)
 - **Skills**: [AGENT-SKILLS.md](./AGENT-SKILLS.md)
 - **Glossary**: [GLOSSARY.md](./GLOSSARY.md)
 
