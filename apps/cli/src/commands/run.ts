@@ -182,13 +182,19 @@ function getWorkspacePath(): string {
 
 /**
  * Ensure workspace is initialized
+ * In mock mode, auto-create minimal workspace structure
  */
-function ensureWorkspace(): string {
+function ensureWorkspace(mock: boolean): string {
   const workspace = getWorkspacePath();
 
   if (!existsSync(workspace)) {
-    console.error("Workspace not initialized. Run: looplia init");
-    process.exit(1);
+    if (mock) {
+      // In mock mode, auto-create minimal workspace structure
+      mkdirSync(join(workspace, "sandbox"), { recursive: true });
+    } else {
+      console.error("Workspace not initialized. Run: looplia init");
+      process.exit(1);
+    }
   }
 
   return workspace;
@@ -408,7 +414,7 @@ export async function runRunCommand(args: string[]): Promise<void> {
     validateEnvironment(parsed.mock);
 
     // 2. Ensure workspace
-    const workspace = ensureWorkspace();
+    const workspace = ensureWorkspace(parsed.mock);
 
     // 3. Resolve or create sandbox
     const sandboxId = resolveSandboxId(workspace, parsed);
