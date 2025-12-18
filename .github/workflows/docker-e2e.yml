@@ -89,84 +89,84 @@ jobs:
           echo "=== Workspace Structure ==="
           find test-workspace -type f 2>/dev/null | head -50 || echo "No files found"
           echo ""
-          echo "=== Session folder contents ==="
-          SESSION_DIR=$(find test-workspace/contentItem -maxdepth 1 -type d ! -name contentItem 2>/dev/null | head -1)
-          if [ -n "$SESSION_DIR" ]; then
-            echo "Session: $SESSION_DIR"
-            ls -la "$SESSION_DIR" || true
+          echo "=== Sandbox folder contents ==="
+          SANDBOX_DIR=$(find test-workspace/sandbox -maxdepth 1 -type d ! -name sandbox 2>/dev/null | head -1)
+          if [ -n "$SANDBOX_DIR" ]; then
+            echo "Sandbox: $SANDBOX_DIR"
+            ls -la "$SANDBOX_DIR" || true
             echo ""
-            echo "=== content.md (first 20 lines) ==="
-            head -20 "$SESSION_DIR/content.md" 2>/dev/null || echo "No content.md"
+            echo "=== inputs/content.md (first 20 lines) ==="
+            head -20 "$SANDBOX_DIR/inputs/content.md" 2>/dev/null || echo "No content.md"
             echo ""
             echo "=== validation.json ==="
-            cat "$SESSION_DIR/validation.json" 2>/dev/null || echo "No validation.json"
+            cat "$SANDBOX_DIR/validation.json" 2>/dev/null || echo "No validation.json"
             echo ""
-            echo "=== summary.json (if exists) ==="
-            cat "$SESSION_DIR/summary.json" 2>/dev/null || echo "No summary.json"
+            echo "=== outputs/summary.json (if exists) ==="
+            cat "$SANDBOX_DIR/outputs/summary.json" 2>/dev/null || echo "No summary.json"
             echo ""
-            echo "=== writing-kit.json (if exists) ==="
-            cat "$SESSION_DIR/writing-kit.json" 2>/dev/null | head -100 || echo "No writing-kit.json"
+            echo "=== outputs/writing-kit.json (if exists) ==="
+            cat "$SANDBOX_DIR/outputs/writing-kit.json" 2>/dev/null | head -100 || echo "No writing-kit.json"
             echo ""
             echo "=== Query logs (last 200 lines) ==="
-            LOG_FILE=$(ls "$SESSION_DIR/logs/"*.log 2>/dev/null | head -1)
+            LOG_FILE=$(ls "$SANDBOX_DIR/logs/"*.log 2>/dev/null | head -1)
             if [ -n "$LOG_FILE" ]; then
               tail -200 "$LOG_FILE"
             else
               echo "No query log found"
             fi
           else
-            echo "No session directory found"
+            echo "No sandbox directory found"
             echo "Contents of test-workspace:"
             ls -laR test-workspace/ 2>/dev/null || echo "Empty"
           fi
 
-      - name: Validate session created
+      - name: Validate sandbox created
         run: |
-          echo "Checking session was created..."
-          SESSION_DIR=$(find test-workspace/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
-          [ -n "$SESSION_DIR" ] || (echo "ERROR: No session directory found" && exit 1)
-          echo "Session folder: $SESSION_DIR"
+          echo "Checking sandbox was created..."
+          SANDBOX_DIR=$(find test-workspace/sandbox -maxdepth 1 -type d ! -name sandbox | head -1)
+          [ -n "$SANDBOX_DIR" ] || (echo "ERROR: No sandbox directory found" && exit 1)
+          echo "Sandbox folder: $SANDBOX_DIR"
 
-          # Check content.md exists
-          [ -f "$SESSION_DIR/content.md" ] || (echo "ERROR: content.md not found" && exit 1)
-          echo "✓ content.md exists"
+          # Check inputs/content.md exists
+          [ -f "$SANDBOX_DIR/inputs/content.md" ] || (echo "ERROR: inputs/content.md not found" && exit 1)
+          echo "✓ inputs/content.md exists"
 
       - name: Validate pipeline artifacts
         run: |
-          SESSION_DIR=$(find test-workspace/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
+          SANDBOX_DIR=$(find test-workspace/sandbox -maxdepth 1 -type d ! -name sandbox | head -1)
 
-          # Check all 3 stage artifacts exist
-          [ -f "$SESSION_DIR/summary.json" ] || (echo "ERROR: summary.json not found (Stage 1)" && exit 1)
-          echo "✓ summary.json exists (Stage 1)"
+          # Check all 3 stage artifacts exist in outputs/
+          [ -f "$SANDBOX_DIR/outputs/summary.json" ] || (echo "ERROR: outputs/summary.json not found (Stage 1)" && exit 1)
+          echo "✓ outputs/summary.json exists (Stage 1)"
 
-          [ -f "$SESSION_DIR/ideas.json" ] || (echo "ERROR: ideas.json not found (Stage 2)" && exit 1)
-          echo "✓ ideas.json exists (Stage 2)"
+          [ -f "$SANDBOX_DIR/outputs/ideas.json" ] || (echo "ERROR: outputs/ideas.json not found (Stage 2)" && exit 1)
+          echo "✓ outputs/ideas.json exists (Stage 2)"
 
-          [ -f "$SESSION_DIR/writing-kit.json" ] || (echo "ERROR: writing-kit.json not found (Stage 3)" && exit 1)
-          echo "✓ writing-kit.json exists (Stage 3)"
+          [ -f "$SANDBOX_DIR/outputs/writing-kit.json" ] || (echo "ERROR: outputs/writing-kit.json not found (Stage 3)" && exit 1)
+          echo "✓ outputs/writing-kit.json exists (Stage 3)"
 
       - name: Validate writing-kit output
         run: |
-          SESSION_DIR=$(find test-workspace/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
+          SANDBOX_DIR=$(find test-workspace/sandbox -maxdepth 1 -type d ! -name sandbox | head -1)
 
           # Validate basic structure
-          jq -e '.contentId' "$SESSION_DIR/writing-kit.json" > /dev/null || (echo "ERROR: missing contentId" && exit 1)
-          jq -e '.summary' "$SESSION_DIR/writing-kit.json" > /dev/null || (echo "ERROR: missing summary" && exit 1)
-          jq -e '.ideas' "$SESSION_DIR/writing-kit.json" > /dev/null || (echo "ERROR: missing ideas" && exit 1)
-          jq -e '.suggestedOutline' "$SESSION_DIR/writing-kit.json" > /dev/null || (echo "ERROR: missing suggestedOutline" && exit 1)
-          echo "✓ writing-kit.json has valid structure"
+          jq -e '.contentId' "$SANDBOX_DIR/outputs/writing-kit.json" > /dev/null || (echo "ERROR: missing contentId" && exit 1)
+          jq -e '.summary' "$SANDBOX_DIR/outputs/writing-kit.json" > /dev/null || (echo "ERROR: missing summary" && exit 1)
+          jq -e '.ideas' "$SANDBOX_DIR/outputs/writing-kit.json" > /dev/null || (echo "ERROR: missing ideas" && exit 1)
+          jq -e '.suggestedOutline' "$SANDBOX_DIR/outputs/writing-kit.json" > /dev/null || (echo "ERROR: missing suggestedOutline" && exit 1)
+          echo "✓ outputs/writing-kit.json has valid structure"
 
       - name: Validate pipeline completion
         run: |
-          SESSION_DIR=$(find test-workspace/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
+          SANDBOX_DIR=$(find test-workspace/sandbox -maxdepth 1 -type d ! -name sandbox | head -1)
 
           # Check validation.json exists
-          [ -f "$SESSION_DIR/validation.json" ] || (echo "ERROR: validation.json not found" && exit 1)
+          [ -f "$SANDBOX_DIR/validation.json" ] || (echo "ERROR: validation.json not found" && exit 1)
           echo "✓ validation.json exists"
 
           # Check all outputs are validated
           for output in summary ideas writing-kit; do
-            VALIDATED=$(jq -r ".outputs.\"$output\".validated // false" "$SESSION_DIR/validation.json")
+            VALIDATED=$(jq -r ".outputs.\"$output\".validated // false" "$SANDBOX_DIR/validation.json")
             if [ "$VALIDATED" = "true" ]; then
               echo "✓ $output: validated"
             else
@@ -176,8 +176,8 @@ jobs:
 
       - name: Verify subagent execution
         run: |
-          SESSION_DIR=$(find test-workspace/contentItem -maxdepth 1 -type d ! -name contentItem | head -1)
-          LOG_FILE=$(ls "$SESSION_DIR/logs/"*.log 2>/dev/null | head -1)
+          SANDBOX_DIR=$(find test-workspace/sandbox -maxdepth 1 -type d ! -name sandbox | head -1)
+          LOG_FILE=$(ls "$SANDBOX_DIR/logs/"*.log 2>/dev/null | head -1)
 
           if [ -z "$LOG_FILE" ]; then
             echo "⚠ No log file found, skipping subagent verification"
