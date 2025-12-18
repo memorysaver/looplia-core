@@ -19,7 +19,8 @@ if [[ ! -d "$SANDBOX_BASE" ]]; then
   exit 0
 fi
 
-SANDBOX_DIR=$(find "$SANDBOX_BASE" -maxdepth 1 -type d ! -name "sandbox" 2>/dev/null | head -1)
+# Sort by modification time (newest first) to get most recent sandbox
+SANDBOX_DIR=$(ls -td "$SANDBOX_BASE"/*/ 2>/dev/null | head -1 | sed 's:/$::')
 if [[ -z "$SANDBOX_DIR" ]]; then
   exit 0
 fi

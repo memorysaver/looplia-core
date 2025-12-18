@@ -8,6 +8,7 @@
  * @see plugins/looplia-core/skills/workflow-executor/SKILL.md
  */
 
+import { randomBytes } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
@@ -22,10 +23,11 @@ import { renderStreamingQuery } from "../components";
 import { isInteractive } from "../utils/terminal";
 
 /**
- * Generate a random 4-character suffix for sandbox IDs
+ * Generate a random 4-character hex suffix for sandbox IDs
+ * Uses crypto.randomBytes for secure random generation
  */
 function generateRandomSuffix(): string {
-  return Math.random().toString(36).substring(2, 6);
+  return randomBytes(2).toString("hex");
 }
 
 /**
@@ -51,22 +53,34 @@ function generateSandboxId(filePath: string): string {
   return `${slug}-${date}-${suffix}`;
 }
 
+/** Standard filename for content input in sandbox */
+const SANDBOX_CONTENT_FILENAME = "content.md";
+
 /**
  * Create sandbox folder structure and copy content file
  * Returns the sandbox ID
+ * @throws Error if sandbox creation or file copy fails
  */
 function createSandbox(workspace: string, filePath: string): string {
   const sandboxId = generateSandboxId(filePath);
   const sandboxDir = join(workspace, "sandbox", sandboxId);
 
-  // Create sandbox folder structure
-  mkdirSync(join(sandboxDir, "inputs"), { recursive: true });
-  mkdirSync(join(sandboxDir, "outputs"), { recursive: true });
-  mkdirSync(join(sandboxDir, "logs"), { recursive: true });
+  try {
+    // Create sandbox folder structure
+    mkdirSync(join(sandboxDir, "inputs"), { recursive: true });
+    mkdirSync(join(sandboxDir, "outputs"), { recursive: true });
+    mkdirSync(join(sandboxDir, "logs"), { recursive: true });
 
-  // Copy content file to inputs/content.md
-  const absolutePath = resolve(filePath);
-  copyFileSync(absolutePath, join(sandboxDir, "inputs", "content.md"));
+    // Copy content file to inputs/content.md
+    const absolutePath = resolve(filePath);
+    copyFileSync(
+      absolutePath,
+      join(sandboxDir, "inputs", SANDBOX_CONTENT_FILENAME)
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to create sandbox "${sandboxId}": ${message}`);
+  }
 
   return sandboxId;
 }
