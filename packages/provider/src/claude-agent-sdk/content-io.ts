@@ -5,37 +5,43 @@ import type { ContentItem } from "@looplia-core/core";
 /**
  * Write ContentItem to workspace as markdown file with frontmatter
  *
- * Creates a flat folder structure for each content item:
+ * Creates sandbox folder structure (v0.5.2):
  * ```
- * contentItem/{id}/
- * ├── content.md          (original content with metadata)
- * ├── summary.json        (content-analyzer output)
- * ├── ideas.json          (idea-generator output)
- * ├── outline.json        (outline generation output)
- * └── writing-kit.json    (final assembled WritingKit)
+ * sandbox/{id}/
+ * ├── inputs/
+ * │   └── content.md      (original content with metadata)
+ * ├── outputs/
+ * │   ├── summary.json    (content-analyzer output)
+ * │   ├── ideas.json      (idea-generator output)
+ * │   ├── outline.json    (outline generation output)
+ * │   └── writing-kit.json (final assembled WritingKit)
+ * ├── logs/               (session logs)
+ * └── validation.json     (validation state)
  * ```
  *
  * @param content - ContentItem to write
  * @param workspace - Workspace directory path
- * @returns The content ID
+ * @returns The content ID (sandbox ID)
  *
  * @example
  * ```typescript
  * const workspace = await ensureWorkspace();
- * const contentId = await writeContentItem(content, workspace);
- * console.log(`Content written: ${contentId}`);
+ * const sandboxId = await writeContentItem(content, workspace);
+ * console.log(`Content written to sandbox: ${sandboxId}`);
  * ```
  */
 export async function writeContentItem(
   content: ContentItem,
   workspace: string
 ): Promise<string> {
-  const itemDir = join(workspace, "contentItem", content.id);
+  const sandboxDir = join(workspace, "sandbox", content.id);
 
-  // Create flat folder structure: contentItem/{id}/
-  await mkdir(itemDir, { recursive: true });
+  // Create sandbox folder structure: sandbox/{id}/inputs/, outputs/, logs/
+  await mkdir(join(sandboxDir, "inputs"), { recursive: true });
+  await mkdir(join(sandboxDir, "outputs"), { recursive: true });
+  await mkdir(join(sandboxDir, "logs"), { recursive: true });
 
-  const filePath = join(itemDir, "content.md");
+  const filePath = join(sandboxDir, "inputs", "content.md");
 
   // Build metadata section
   const metadataLines: string[] = [];

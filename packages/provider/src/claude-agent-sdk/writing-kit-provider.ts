@@ -17,53 +17,55 @@ import { WRITING_KIT_OUTPUT_SCHEMA } from "./utils/schema-converter";
 import { ensureWorkspace, writeUserProfile } from "./workspace";
 
 /**
- * Build smart continuation prompt for writing kit (v0.3.2 agentic approach)
+ * Build smart continuation prompt for writing kit (v0.5.2 sandbox architecture)
  *
  * Main agent is a simple orchestrator that:
- * 1. Checks session folder for existing progress
+ * 1. Checks sandbox folder for existing progress
  * 2. Invokes only the subagents needed
  * 3. Returns the final WritingKit
  *
  * 3 Subagents:
- * - `content-analyzer` - deep content analysis → summary.json
- * - `idea-generator` - generate hooks, angles, questions → ideas.json
- * - `writing-kit-builder` - create outline + assemble kit → outline.json, writing-kit.json
+ * - `content-analyzer` - deep content analysis → outputs/summary.json
+ * - `idea-generator` - generate hooks, angles, questions → outputs/ideas.json
+ * - `writing-kit-builder` - create outline + assemble kit → outputs/outline.json, outputs/writing-kit.json
  *
  * Smart continuation: Agent decides what work is needed based on existing files.
  * No hardcoded control logic in TypeScript.
  *
- * Content structure (flat folder):
- * contentItem/{id}/content.md - original content
- * contentItem/{id}/summary.json - content-analyzer output
- * contentItem/{id}/ideas.json - idea-generator output
- * contentItem/{id}/outline.json - writing-kit-builder output
- * contentItem/{id}/writing-kit.json - writing-kit-builder final output
+ * Sandbox structure (v0.5.2):
+ * sandbox/{id}/inputs/content.md - original content
+ * sandbox/{id}/outputs/summary.json - content-analyzer output
+ * sandbox/{id}/outputs/ideas.json - idea-generator output
+ * sandbox/{id}/outputs/outline.json - writing-kit-builder output
+ * sandbox/{id}/outputs/writing-kit.json - writing-kit-builder final output
+ * sandbox/{id}/logs/ - session logs
+ * sandbox/{id}/validation.json - validation state
  */
-function buildMinimalKitPrompt(sessionId: string): string {
-  return `Task: Build WritingKit for session: contentItem/${sessionId}
+function buildMinimalKitPrompt(sandboxId: string): string {
+  return `Task: Build WritingKit for sandbox: sandbox/${sandboxId}
 
 ## Check Existing Progress
-First, check which files already exist in contentItem/${sessionId}/:
+First, check which files already exist in sandbox/${sandboxId}/outputs/:
 - summary.json → If exists, skip content-analyzer
 - ideas.json → If exists, skip idea-generator
 - writing-kit.json → If exists, return it directly
 
 ## Sequential Workflow (invoke only what's needed)
 
-Step 1: IF summary.json missing:
-  → Invoke content-analyzer subagent for contentItem/${sessionId}/content.md
-  → Wait for completion → summary.json created
+Step 1: IF outputs/summary.json missing:
+  → Invoke content-analyzer subagent for sandbox/${sandboxId}/inputs/content.md
+  → Wait for completion → outputs/summary.json created
 
-Step 2: IF ideas.json missing:
-  → Invoke idea-generator subagent for contentItem/${sessionId}/summary.json
-  → Wait for completion → ideas.json created
+Step 2: IF outputs/ideas.json missing:
+  → Invoke idea-generator subagent for sandbox/${sandboxId}/outputs/summary.json
+  → Wait for completion → outputs/ideas.json created
 
-Step 3: IF writing-kit.json missing:
-  → Invoke writing-kit-builder subagent for contentItem/${sessionId}/
-  → Wait for completion → outline.json + writing-kit.json created
+Step 3: IF outputs/writing-kit.json missing:
+  → Invoke writing-kit-builder subagent for sandbox/${sandboxId}/
+  → Wait for completion → outputs/outline.json + outputs/writing-kit.json created
 
 Step 4: Return
-  → Read writing-kit.json from contentItem/${sessionId}/
+  → Read writing-kit.json from sandbox/${sandboxId}/outputs/
   → Return as structured output`;
 }
 

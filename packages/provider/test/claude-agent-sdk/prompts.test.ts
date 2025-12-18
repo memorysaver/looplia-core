@@ -15,10 +15,10 @@ describe("prompts", () => {
     it("should build prompt with content details", () => {
       const prompt = buildSummarizePrompt(testContent);
 
-      // v0.3.1 uses minimal agentic prompt with subagent invocation
+      // v0.5.2 uses minimal agentic prompt with subagent invocation
       expect(prompt).toContain("content-analyzer");
       expect(prompt).toContain(testContent.id);
-      expect(prompt).toContain("contentItem");
+      expect(prompt).toContain("sandbox");
     });
 
     it("should include user context when provided", () => {
@@ -43,10 +43,10 @@ describe("prompts", () => {
 
       const prompt = buildSummarizePrompt(longContent);
 
-      // v0.3.1 uses minimal prompt; content is stored in file, not embedded in prompt
+      // v0.5.2 uses minimal prompt; content is stored in file, not embedded in prompt
       expect(prompt).toContain("content-analyzer");
       expect(prompt).toContain(longContent.id);
-      expect(prompt).toContain("contentItem");
+      expect(prompt).toContain("sandbox");
     });
   });
 

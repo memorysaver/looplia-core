@@ -13,7 +13,7 @@ describe("persist-result", () => {
 
   beforeEach(async () => {
     testDir = join(tmpdir(), `persist-test-${Date.now()}`);
-    await mkdir(join(testDir, "contentItem"), { recursive: true });
+    await mkdir(join(testDir, "sandbox"), { recursive: true });
   });
 
   afterEach(async () => {
@@ -35,8 +35,8 @@ describe("persist-result", () => {
 
   describe("persistResultToWorkspace", () => {
     it("should write to original location when no sessionId", async () => {
-      const contentDir = join(testDir, "contentItem", "test-id");
-      await mkdir(contentDir, { recursive: true });
+      const outputsDir = join(testDir, "sandbox", "test-id", "outputs");
+      await mkdir(outputsDir, { recursive: true });
 
       const data = { contentId: "", value: "test" };
       const result = await persistResultToWorkspace(data, {
@@ -49,13 +49,13 @@ describe("persist-result", () => {
       expect(data.contentId).toBe("test-id");
 
       const written = JSON.parse(
-        await readFile(join(contentDir, "result.json"), "utf-8")
+        await readFile(join(outputsDir, "result.json"), "utf-8")
       );
       expect(written.value).toBe("test");
     });
 
     it("should relocate folder when sessionId provided", async () => {
-      const tempDir = join(testDir, "contentItem", "cli-123");
+      const tempDir = join(testDir, "sandbox", "cli-123", "outputs");
       await mkdir(tempDir, { recursive: true });
       await writeFile(join(tempDir, "content.md"), "test content");
 
@@ -70,7 +70,7 @@ describe("persist-result", () => {
       expect(result.finalContentId).toBe("session-abc");
       expect(data.contentId).toBe("session-abc");
 
-      const newDir = join(testDir, "contentItem", "session-abc");
+      const newDir = join(testDir, "sandbox", "session-abc", "outputs");
       const written = JSON.parse(
         await readFile(join(newDir, "result.json"), "utf-8")
       );
@@ -79,7 +79,7 @@ describe("persist-result", () => {
 
     it("should use sessionId location if target already exists", async () => {
       // Target already exists (concurrent process created it)
-      const newDir = join(testDir, "contentItem", "session-abc");
+      const newDir = join(testDir, "sandbox", "session-abc", "outputs");
       await mkdir(newDir, { recursive: true });
 
       const data = { contentId: "", value: "test" };
@@ -107,7 +107,7 @@ describe("persist-result", () => {
       expect(result.finalContentId).toBe("cli-123");
       expect(data.contentId).toBe("cli-123");
 
-      const tempDir = join(testDir, "contentItem", "cli-123");
+      const tempDir = join(testDir, "sandbox", "cli-123", "outputs");
       const written = JSON.parse(
         await readFile(join(tempDir, "result.json"), "utf-8")
       );
@@ -124,9 +124,9 @@ describe("persist-result", () => {
 
       expect(result.finalContentId).toBe("new-content");
 
-      const contentDir = join(testDir, "contentItem", "new-content");
+      const outputsDir = join(testDir, "sandbox", "new-content", "outputs");
       const written = JSON.parse(
-        await readFile(join(contentDir, "result.json"), "utf-8")
+        await readFile(join(outputsDir, "result.json"), "utf-8")
       );
       expect(written.value).toBe("test");
     });

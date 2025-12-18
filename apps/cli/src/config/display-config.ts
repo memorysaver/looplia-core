@@ -32,19 +32,20 @@ export const DISPLAY_CONFIGS: Record<string, DisplayConfig> = {
   workflow: {
     title: "Workflow Executor",
     successMessage: "Workflow complete",
-    sessionInfoFormat: "~/.looplia/contentItem/{contentId}/",
+    sessionInfoFormat: "~/.looplia/sandbox/{contentId}/",
     nextStep: null,
   },
   kit: {
     title: "Writing Kit Builder",
     successMessage: "Writing kit complete",
-    sessionInfoFormat: "~/.looplia/contentItem/{contentId}/writing-kit.json",
+    sessionInfoFormat:
+      "~/.looplia/sandbox/{contentId}/outputs/writing-kit.json",
     nextStep: null,
   },
   summarize: {
     title: "Content Summarizer",
     successMessage: "Summary complete",
-    sessionInfoFormat: "~/.looplia/contentItem/{contentId}/summary.json",
+    sessionInfoFormat: "~/.looplia/sandbox/{contentId}/outputs/summary.json",
     nextStep: null,
   },
 };
@@ -60,7 +61,7 @@ export function getDisplayConfig(commandName: string): DisplayConfig {
     DISPLAY_CONFIGS[commandName] ?? {
       title: commandName,
       successMessage: "Complete",
-      sessionInfoFormat: "~/.looplia/contentItem/{contentId}/",
+      sessionInfoFormat: "~/.looplia/sandbox/{contentId}/",
       nextStep: null,
     }
   );

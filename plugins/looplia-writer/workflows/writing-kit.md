@@ -84,13 +84,16 @@ If validation fails:
 2. Retry the subagent with specific feedback
 3. Report to user if retry also fails
 
-## Session Structure
+## Sandbox Structure (v0.5.2)
 
 ```
-contentItem/{id}/
-  content.md          # Original content
-  validation.json     # Generated validation checklist
-  summary.json        # Stage 1 output (content-analyzer)
-  ideas.json          # Stage 2 output (idea-generator)
-  writing-kit.json    # Stage 3 output (writing-kit-builder) - final
+sandbox/{id}/
+  inputs/
+    content.md          # Original content
+  outputs/
+    summary.json        # Stage 1 output (content-analyzer)
+    ideas.json          # Stage 2 output (idea-generator)
+    writing-kit.json    # Stage 3 output (writing-kit-builder) - final
+  logs/                 # Session logs
+  validation.json       # Generated validation checklist
 ```

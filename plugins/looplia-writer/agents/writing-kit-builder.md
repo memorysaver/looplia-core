@@ -12,17 +12,17 @@ Create article outline and assemble the complete WritingKit.
 
 ## Input
 
-Session folder: `contentItem/{id}/`
-- `summary.json` - ContentSummary from content-analyzer (required)
-- `ideas.json` - WritingIdeas from idea-generator (required)
+Sandbox folder: `sandbox/{id}/`
+- `outputs/summary.json` - ContentSummary from content-analyzer (required)
+- `outputs/ideas.json` - WritingIdeas from idea-generator (required)
 - `user-profile.json` - User preferences (optional, in workspace root)
 
 ## Task
 
 ### Step 1: Read inputs
 
-1. Read `contentItem/{id}/summary.json` for content analysis
-2. Read `contentItem/{id}/ideas.json` for writing ideas
+1. Read `sandbox/{id}/outputs/summary.json` for content analysis
+2. Read `sandbox/{id}/outputs/ideas.json` for writing ideas
 3. Read `user-profile.json` for target word count preference (default: 1000)
 
 ### Step 2: Generate outline array
@@ -37,7 +37,7 @@ Create `suggestedOutline` array with 4-7 sections:
 ]
 ```
 
-Write to: `contentItem/{id}/outline.json`
+Write to: `sandbox/{id}/outputs/outline.json`
 
 ### Step 3: Assemble WritingKit
 
@@ -97,9 +97,9 @@ Write to: `contentItem/{id}/outline.json`
 - `relevanceToUser`: Copy from summary.json score.relevanceToUser (0.0-1.0)
 - `estimatedReadingTimeMinutes`: Total outline estimatedWords / 200, minimum 1
 
-Write to: `contentItem/{id}/writing-kit.json`
+Write to: `sandbox/{id}/outputs/writing-kit.json`
 
 ## Output
 
-1. Write `contentItem/{id}/outline.json` - The outline array
-2. Write `contentItem/{id}/writing-kit.json` - Complete WritingKit with EXACT schema above
+1. Write `sandbox/{id}/outputs/outline.json` - The outline array
+2. Write `sandbox/{id}/outputs/writing-kit.json` - Complete WritingKit with EXACT schema above
