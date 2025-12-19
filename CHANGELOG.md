@@ -5,6 +5,47 @@ All notable changes to Looplia-Core will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2025-12-20
+
+### Added
+
+- **Steps-Based Workflow Schema** - GitHub Actions-inspired workflow format
+  - `steps:` array replaces `outputs:` object for explicit ordering
+  - `run: agents/{name}` action-oriented syntax
+  - `needs:` dependency specification (replaces `requires:`)
+  - `${{ sandbox }}` and `${{ steps.X.output }}` variable substitution
+- **Deterministic Subagent Invocation** - Explicit mapping from workflow to Task tool
+  - `run: agents/content-analyzer` → `subagent_type: "content-analyzer"`
+  - Visual prohibition against `general-purpose` fallback in CLAUDE.md
+  - Mapping table in CLAUDE.md for all agent types
+- **Semantic Validation in Hooks** - Full validation integrated into hook system
+  - `post-write-validate.sh` now calls `validate.ts` with criteria
+  - Blocks writes that fail semantic validation (not just JSON syntax)
+  - Hook handles validation automatically; skill for manual retry only
+
+### Changed
+
+- **Workflow Schema** - Breaking change from v0.5.x format
+  - `outputs:` (object) → `steps:` (array)
+  - `agent:` → `run: agents/{name}`
+  - `requires:` → `needs:`
+  - `artifact:` → `output:`
+  - Implicit paths → `${{ }}` explicit syntax
+- **validation.json Schema** - Uses `steps` instead of `outputs`
+  - `.outputs[$art]` → `.steps[$art]` in all hooks
+  - Updated `post-write-validate.sh`, `stop-guard.sh`, `compact-inject-state.sh`
+- **workflow-validator Skill** - Now primarily for manual retry/debugging
+  - Automatic validation handled by PostToolUse hook
+  - Skill documentation updated to reflect new role
+
+### Documentation
+
+- **DESIGN-0.6.0.md** - New architecture document for steps-based schema
+- **CONTEXT-INJECTION.md** - Updated to v0.6.0 workflow format
+- **docs/README.md** - Updated to v0.6.0 with new concepts
+- **workflow-executor/SKILL.md** - Updated execution protocol
+- **workflow-validator/SKILL.md** - Updated for hook-based validation
+
 ## [0.5.2] - 2025-12-18
 
 ### Added
@@ -261,7 +302,8 @@ The following were considered but **intentionally deferred** to v0.6+:
 
 ---
 
-[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/memorysaver/looplia-core/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/memorysaver/looplia-core/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/memorysaver/looplia-core/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/memorysaver/looplia-core/compare/v0.4.0...v0.5.0

@@ -2,8 +2,8 @@
 
 > Ubiquitous Language Reference for Domain-Driven Design
 >
-> **Version:** 0.5.2
-> **Last Updated:** 2025-12-18
+> **Version:** 0.6.0
+> **Last Updated:** 2025-12-20
 
 This glossary defines the shared vocabulary used throughout Looplia-Core. Consistent terminology enables clear communication between code, documentation, and team discussions.
 
@@ -694,22 +694,23 @@ A topic the user is interested in.
 
 ---
 
-## 11. Workflow System (v0.5.1)
+## 11. Workflow System (v0.6.0)
 
 ### Workflow
 A configuration-driven task orchestration unit. Replaces "Pipeline" terminology from v0.5.0.
 
 **v0.5.0:** `pipelines/*.yaml` (YAML only)
-**v0.5.1:** `workflows/*.md` (YAML frontmatter + markdown instructions)
+**v0.5.1:** `workflows/*.md` (YAML frontmatter with `outputs:` object)
+**v0.6.0:** `workflows/*.md` (YAML frontmatter with `steps:` array - GitHub Actions-inspired)
 
 ### Workflow.md
 A single markdown file defining a complete workflow:
-- **YAML frontmatter**: Declarative output definitions with validation criteria
+- **YAML frontmatter**: Declarative step definitions with validation criteria
 - **Markdown body**: Custom instructions for this specific workflow
 
 **Location:** `~/.looplia/workflows/{workflow-id}.md`
 
-### WorkflowDefinition
+### WorkflowDefinition (v0.6.0)
 **Type:** `packages/core/src/domain/workflow.ts`
 
 Complete workflow definition parsed from YAML frontmatter.
@@ -717,23 +718,56 @@ Complete workflow definition parsed from YAML frontmatter.
 ```typescript
 type WorkflowDefinition = {
   name: string;           // Unique workflow identifier
+  version: string;        // Semantic version
   description: string;    // Human-readable description
-  outputs: Record<string, WorkflowOutput>;
+  steps: WorkflowStep[];  // Ordered list of steps (v0.6.0)
 };
 ```
 
-### WorkflowOutput
+**v0.6.0 Changes:**
+- `steps:` array replaces `outputs:` object
+- Explicit ordering via array index
+- GitHub Actions-inspired syntax
+
+### WorkflowStep (v0.6.0)
 **Type:** `packages/core/src/domain/workflow.ts`
 
-Single output configuration within a workflow.
+Single step configuration within a workflow.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `artifact` | `string` | Output filename (e.g., `summary.json`) |
-| `agent` | `string` | Subagent responsible for producing this output |
-| `requires` | `string[]?` | Dependencies - other output names |
+| `id` | `string` | Unique step identifier |
+| `run` | `string` | Agent path: `agents/{name}` |
+| `needs` | `string[]?` | Dependencies - other step IDs |
+| `input` | `string \| string[]` | Input file path(s) with variable substitution |
+| `output` | `string` | Output file path with variable substitution |
 | `final` | `boolean?` | Marks this as the final output |
 | `validate` | `ValidationCriteria?` | Validation criteria |
+
+**v0.6.0 Changes:**
+- `run: agents/{name}` replaces `agent:` (action-oriented syntax)
+- `needs:` replaces `requires:`
+- `output:` replaces `artifact:`
+- Variable substitution with `${{ }}` syntax
+
+### Variable Substitution (v0.6.0)
+Template variables for dynamic path resolution in workflow steps.
+
+| Variable | Resolves To | Example |
+|----------|-------------|---------|
+| `${{ sandbox }}` | `sandbox/{sandbox-id}` | `${{ sandbox }}/inputs/content.md` |
+| `${{ steps.{id}.output }}` | Output path of step `{id}` | `${{ steps.summary.output }}` |
+
+### Deterministic Subagent Invocation (v0.6.0)
+Explicit mapping from workflow `run:` syntax to Task tool `subagent_type`.
+
+| Workflow YAML | Task Tool `subagent_type` |
+|---------------|---------------------------|
+| `run: agents/content-analyzer` | `"content-analyzer"` |
+| `run: agents/idea-generator` | `"idea-generator"` |
+| `run: agents/writing-kit-builder` | `"writing-kit-builder"` |
+
+**Critical Rule:** Never use `"subagent_type": "general-purpose"` for workflow steps.
 
 ### ValidationCriteria
 **Type:** `packages/core/src/domain/workflow.ts`
@@ -750,35 +784,42 @@ Criteria for validating workflow outputs. Used by the workflow-validator skill.
 
 Extensible with custom keys for workflow-specific validation.
 
-### validation.json (v0.5.2)
+### validation.json (v0.6.0)
 **Location:** `sandbox/{sandbox-id}/validation.json`
 
-Generated from workflow frontmatter. Tracks validation state per output.
+Generated from workflow frontmatter. Tracks validation state per step.
 
 ```json
 {
   "workflow": "writing-kit",
+  "version": "1.0.0",
   "sandboxId": "my-article-2025-12-18-xk7m",
   "createdAt": "2025-12-18T10:30:00Z",
-  "outputs": {
+  "steps": {
     "summary": {
-      "artifact": "outputs/summary.json",
-      "criteria": { "required_fields": [...], "min_quotes": 3 },
+      "output": "outputs/summary.json",
+      "validate": { "required_fields": [...], "min_quotes": 3 },
       "validated": true
     },
     "ideas": {
-      "artifact": "outputs/ideas.json",
-      "criteria": { "required_fields": [...], "has_hooks": true },
+      "output": "outputs/ideas.json",
+      "validate": { "required_fields": [...], "has_hooks": true },
       "validated": true
     },
     "writing-kit": {
-      "artifact": "outputs/writing-kit.json",
-      "criteria": { "required_fields": [...], "has_hooks": true },
+      "output": "outputs/writing-kit.json",
+      "validate": { "required_fields": [...], "has_hooks": true },
       "validated": false
     }
   }
 }
 ```
+
+**v0.6.0 Changes:**
+- `outputs:` → `steps:` (aligns with workflow schema)
+- `artifact:` → `output:` (aligns with WorkflowStep)
+- `criteria:` → `validate:` (aligns with WorkflowStep)
+- Added `version` field
 
 **v0.5.2 Changes:**
 - Location changed from `contentItem/{id}/` to `sandbox/{id}/`
@@ -788,7 +829,11 @@ Generated from workflow frontmatter. Tracks validation state per output.
 ### workflow-validator Skill
 **Location:** `.claude/skills/workflow-validator/`
 
-New skill in v0.5.1 for validating workflow outputs against criteria.
+Skill for validating workflow outputs against criteria.
+
+**v0.6.0 Changes:**
+- Hook-based automatic validation - `PostToolUse:Write` hook calls `validate.ts`
+- Skill now primarily for manual retry/debugging
 
 **Structure:**
 ```
@@ -827,7 +872,7 @@ A step is complete when its output **passes validation**, not when it's marked "
 
 ---
 
-## 12. Plugin System (v0.5.2)
+## 12. Plugin System (v0.6.0)
 
 ### Two-Plugin Architecture
 **v0.5.2 Concept**
@@ -984,7 +1029,7 @@ Event handlers for workflow lifecycle events.
 | Writing workflows | `plugins/looplia-writer/workflows/` |
 | Writing agents | `plugins/looplia-writer/agents/` |
 
-### Workspace Structure (v0.5.2)
+### Workspace Structure (v0.6.0)
 
 ```
 ~/.looplia/

@@ -164,13 +164,13 @@ jobs:
           [ -f "$SANDBOX_DIR/validation.json" ] || (echo "ERROR: validation.json not found" && exit 1)
           echo "✓ validation.json exists"
 
-          # Check all outputs are validated
-          for output in summary ideas writing-kit; do
-            VALIDATED=$(jq -r ".outputs.\"$output\".validated // false" "$SANDBOX_DIR/validation.json")
+          # Check all steps are validated (v0.6.0 uses "steps" not "outputs")
+          for step in summary ideas writing-kit; do
+            VALIDATED=$(jq -r ".steps.\"$step\".validated // false" "$SANDBOX_DIR/validation.json")
             if [ "$VALIDATED" = "true" ]; then
-              echo "✓ $output: validated"
+              echo "✓ $step: validated"
             else
-              echo "⚠ $output: NOT validated (may be expected if validation skill not yet implemented)"
+              echo "⚠ $step: NOT validated (may be expected if validation skill not yet implemented)"
             fi
           done
 
