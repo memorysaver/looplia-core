@@ -7,6 +7,7 @@
  * @see docs/DESIGN-0.6.0.md
  */
 
+import { isValidRunFormat } from "./agent-utils";
 import type {
   ParsedWorkflow,
   StepValidationState,
@@ -270,6 +271,33 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
 }
 
 /**
+ * Validate a single workflow step has all required fields and correct format
+ * @throws Error if step is invalid
+ */
+function validateStep(step: WorkflowStep): void {
+  if (!step.id) {
+    throw new Error("Each step must have an 'id' field");
+  }
+  if (!step.run) {
+    throw new Error(`Step '${step.id}' must have a 'run' field`);
+  }
+  if (!isValidRunFormat(step.run)) {
+    throw new Error(
+      `Step '${step.id}' has invalid run format '${step.run}'. Expected 'agents/{name}' where name is lowercase alphanumeric with hyphens.`
+    );
+  }
+  if (!step.input) {
+    throw new Error(`Step '${step.id}' must have an 'input' field`);
+  }
+  if (Array.isArray(step.input) && step.input.length === 0) {
+    throw new Error(`Step '${step.id}' input array cannot be empty`);
+  }
+  if (!step.output) {
+    throw new Error(`Step '${step.id}' must have an 'output' field`);
+  }
+}
+
+/**
  * Parse a workflow.md file into structured data (v0.6.0)
  *
  * @param content - Full content of the workflow.md file
@@ -279,7 +307,7 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
 export function parseWorkflow(content: string): ParsedWorkflow {
   const { frontmatter, body } = parseFrontmatter(content);
 
-  // Validate required fields
+  // Validate required top-level fields
   if (!frontmatter.name || typeof frontmatter.name !== "string") {
     throw new Error("Workflow must have a 'name' field");
   }
@@ -293,28 +321,18 @@ export function parseWorkflow(content: string): ParsedWorkflow {
     throw new Error("Workflow must have at least one step defined");
   }
 
-  // Validate each step has required fields
+  // Validate each step
   for (const step of frontmatter.steps as WorkflowStep[]) {
-    if (!step.id) {
-      throw new Error("Each step must have an 'id' field");
-    }
-    if (!step.run) {
-      throw new Error(`Step '${step.id}' must have a 'run' field`);
-    }
-    if (!step.output) {
-      throw new Error(`Step '${step.id}' must have an 'output' field`);
-    }
+    validateStep(step);
   }
 
-  const definition: WorkflowDefinition = {
-    name: frontmatter.name,
-    version: frontmatter.version as string | undefined,
-    description: frontmatter.description,
-    steps: frontmatter.steps as WorkflowStep[],
-  };
-
   return {
-    definition,
+    definition: {
+      name: frontmatter.name,
+      version: frontmatter.version as string | undefined,
+      description: frontmatter.description,
+      steps: frontmatter.steps as WorkflowStep[],
+    },
     instructions: body,
   };
 }

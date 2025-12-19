@@ -30,6 +30,12 @@ export {
   registerCommand,
   workflowCommand,
 } from "./commands";
+// Agent Utilities (v0.6.0)
+export {
+  extractAgentName,
+  isValidRunFormat,
+  RUN_FORMAT_PATTERN,
+} from "./domain/agent-utils";
 export type {
   ContentItem,
   ContentMetadata,
