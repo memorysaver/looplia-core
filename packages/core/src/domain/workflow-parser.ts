@@ -416,8 +416,3 @@ export function getFinalStep(definition: WorkflowDefinition): string {
   }
   return lastStep;
 }
-
-/**
- * @deprecated Use getFinalStep instead
- */
-export const getFinalOutput = getFinalStep;

@@ -13,7 +13,7 @@
  * - No content hashes (file existence suffices)
  * - No provider-side updates (agent manages state)
  *
- * @see docs/DESIGN-0.5.0.md
+ * @see docs/DESIGN-0.6.0.md
  */
 export type SessionManifest = {
   /** Manifest format version */

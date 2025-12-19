@@ -136,9 +136,3 @@ export type ValidationCheck = {
   /** Human-readable message */
   message: string;
 };
-
-// Legacy type aliases for backwards compatibility
-/** @deprecated Use WorkflowStep instead */
-export type WorkflowOutput = WorkflowStep;
-/** @deprecated Use StepValidationState instead */
-export type OutputValidationState = StepValidationState;

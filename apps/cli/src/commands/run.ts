@@ -4,7 +4,7 @@
  * Execute a workflow by injecting /run command into the agent.
  * All workflow logic is in the workflow-executor skill.
  *
- * @see docs/DESIGN-0.5.2.md § 7.3 CLI as Thin Wrapper
+ * @see docs/DESIGN-0.6.0.md § 7.3 CLI as Thin Wrapper
  * @see plugins/looplia-core/skills/workflow-executor/SKILL.md
  */
 

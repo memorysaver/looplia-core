@@ -4,7 +4,7 @@
  * Generic workflow executor using workflow-as-markdown pattern.
  * Replaces the hardcoded kit command.
  *
- * @see docs/DESIGN-0.5.1.md
+ * @see docs/DESIGN-0.6.0.md
  */
 
 import { z } from "zod";

@@ -54,20 +54,20 @@ export type {
 } from "./domain/user-profile";
 // Workflow Types (v0.6.0)
 export type {
-  OutputValidationState,
   ParsedWorkflow,
+  StepValidationState,
   ValidationCheck,
   ValidationCriteria,
   ValidationManifest,
   ValidationResult,
   WorkflowDefinition,
-  WorkflowOutput,
+  WorkflowStep,
 } from "./domain/workflow";
 // Workflow Parser (v0.6.0)
 export {
   generateValidationManifest,
   getExecutionOrder,
-  getFinalOutput,
+  getFinalStep,
   parseFrontmatter,
   parseWorkflow,
 } from "./domain/workflow-parser";
@@ -95,11 +95,9 @@ export {
 export {
   ContentItemSchema,
   ContentSummarySchema,
-  // Workflow Validation (v0.6.0)
-  OutputValidationStateSchema,
-  PipelineDefinitionSchema,
-  PipelineOutputSchema,
   SessionManifestSchema,
+  // Workflow Validation (v0.6.0)
+  StepValidationStateSchema,
   UserProfileSchema,
   ValidationCheckSchema,
   ValidationCriteriaSchema,
@@ -113,7 +111,7 @@ export {
   validateWorkflowDefinition,
   validateWritingIdeas,
   WorkflowDefinitionSchema,
-  WorkflowOutputSchema,
+  WorkflowStepSchema,
   WritingIdeasSchema,
   WritingKitSchema,
 } from "./validation/schemas";

@@ -11,7 +11,7 @@
  * Example:
  *   bun validate.ts contentItem/session-123/summary.json '{"required_fields":["contentId"],"min_quotes":3}'
  *
- * @see docs/DESIGN-0.5.2.md
+ * @see docs/DESIGN-0.6.0.md
  */
 
 import { readFile } from "node:fs/promises";
