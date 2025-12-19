@@ -1,14 +1,13 @@
 ---
 name: workflow-executor
 description: |
-  Execute workflow-as-markdown definitions. Handles session creation,
-  dependency resolution, subagent orchestration, and validation state tracking.
-  This is the core skill that contains ALL workflow execution logic.
+  Execute workflow-as-markdown definitions with the v0.6.0 steps-based format.
+  Handles sandbox management, step execution, and validation state tracking.
 ---
 
-# Workflow Executor Skill
+# Workflow Executor Skill (v0.6.0)
 
-Execute workflows defined in `workflows/*.md` files with validation-driven completion.
+Execute workflows defined in `workflows/*.md` files using the steps-based format.
 
 ## When to Use
 
@@ -17,257 +16,229 @@ Use this skill when:
 - Executing workflow-as-markdown definitions
 - Orchestrating multi-step agent workflows
 
-## Full Execution Protocol
+---
 
-### Phase 1: Sandbox Management
+## CRITICAL: Subagent Invocation
+
+When executing a step with `run: agents/{name}`:
+
+```json
+{
+  "subagent_type": "{name}",
+  "description": "Execute step: {step.id}",
+  "prompt": "..."
+}
+```
+
+**Example:**
+```yaml
+- id: summary
+  run: agents/content-analyzer
+```
+
+**Task tool call:**
+```json
+{
+  "subagent_type": "content-analyzer",
+  "description": "Execute step: summary",
+  "prompt": "You are content-analyzer..."
+}
+```
+
+**NEVER use `"subagent_type": "general-purpose"` for workflow steps.**
+
+---
+
+## Execution Protocol
+
+### Phase 1: Sandbox Setup
 
 **New Sandbox** (when `--file` provided):
 
-1. Generate sandbox ID using id-generator pattern:
+1. Generate sandbox ID:
    ```
    {content-slug}-{YYYY-MM-DD}-{random4chars}
    Example: my-article-2025-12-18-xk7m
    ```
 
-2. Create sandbox folder structure:
+2. Create folder structure:
    ```
    sandbox/{sandbox-id}/
    ├── inputs/content.md    # Copy content file here
-   ├── outputs/             # Outputs written here
+   ├── outputs/             # Step outputs go here
    ├── logs/                # Session logs
-   └── validation.json      # Generated validation state
+   └── validation.json      # Validation state
    ```
 
-3. Copy content file to inputs:
-   ```
-   sandbox/{sandbox-id}/inputs/content.md
-   ```
+3. Copy content file to `inputs/content.md`
 
 **Resume Sandbox** (when `--sandbox-id` provided):
 
-1. Verify sandbox exists: `sandbox/{sandbox-id}/`
-2. Load existing validation state from `sandbox/{sandbox-id}/validation.json`
-3. Continue from last incomplete output
+1. Verify sandbox exists
+2. Load `validation.json` to see completed steps
+3. Continue from first incomplete step
 
-### Phase 2: Workflow Loading
+### Phase 2: Workflow Parsing
 
-1. Read workflow file:
-   ```
-   workflows/{workflow-id}.md
-   ```
+1. Read workflow file: `workflows/{workflow-id}.md`
 
 2. Parse YAML frontmatter:
-   - `name` - Workflow identifier
-   - `description` - What workflow does
-   - `outputs` - Map of output definitions
-
-3. Parse output definitions:
    ```yaml
-   outputs:
-     summary:
-       artifact: summary.json      # Output file name
-       agent: content-analyzer     # Subagent to invoke
-       validate:                   # Validation criteria
-         required_fields: [contentId, headline]
-         min_quotes: 3
-     ideas:
-       artifact: ideas.json
-       agent: idea-generator
-       requires: [summary]         # Dependencies
-     writing-kit:
-       artifact: writing-kit.json
-       agent: writing-kit-builder
-       requires: [summary, ideas]
-       final: true                 # This is the final output
+   name: workflow-name
+   version: 1.0.0
+   description: ...
+   steps:
+     - id: step-one
+       run: agents/agent-name
+       input: ...
+       output: ...
    ```
 
-4. Extract markdown body as custom instructions
+3. Build dependency graph from `needs:` fields
 
 ### Phase 3: Validation State
 
 **Generate validation.json** (new sandbox):
 
-Write to `sandbox/{sandbox-id}/validation.json`:
-
 ```json
 {
   "workflow": "writing-kit",
+  "version": "1.0.0",
   "sandboxId": "article-2025-12-18-xk7m",
   "createdAt": "2025-12-18T10:30:00Z",
-  "outputs": {
+  "steps": {
     "summary": {
-      "artifact": "outputs/summary.json",
-      "criteria": {
-        "required_fields": ["contentId", "headline"],
-        "min_quotes": 3
-      },
+      "output": "outputs/summary.json",
       "validated": false
     },
     "ideas": {
-      "artifact": "outputs/ideas.json",
-      "criteria": {
-        "required_fields": ["contentId", "ideas"]
-      },
+      "output": "outputs/ideas.json",
       "validated": false
     },
     "writing-kit": {
-      "artifact": "outputs/writing-kit.json",
-      "criteria": {
-        "required_fields": ["contentId", "writingKit"]
-      },
+      "output": "outputs/writing-kit.json",
       "validated": false
     }
   }
 }
 ```
 
-**Read validation.json** (resume sandbox):
-
-Load existing state from `sandbox/{sandbox-id}/validation.json` to determine what work remains.
-
 ### Phase 4: Dependency Resolution
 
-Build topological order from `requires` fields:
+Compute execution order using topological sort:
 
 ```
 Input:
-  summary: { requires: [] }
-  ideas: { requires: [summary] }
-  writing-kit: { requires: [summary, ideas], final: true }
+  summary: { needs: [] }
+  ideas: { needs: [summary] }
+  writing-kit: { needs: [summary, ideas] }
 
 Computed order: [summary, ideas, writing-kit]
 ```
 
-Algorithm:
-1. Start with outputs that have no dependencies
-2. Add outputs whose dependencies are already in the list
-3. Repeat until all outputs are ordered
-
-### Phase 5: Output Execution Loop
-
-For each output in dependency order:
+### Phase 5: Step Execution Loop
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ OUTPUT EXECUTION LOOP                                                        │
-└─────────────────────────────────────────────────────────────────────────────┘
-
-For output in [summary, ideas, writing-kit]:
+FOR EACH step in dependency order:
     │
     ▼
 ┌─────────────────────────────────────────┐
-│ Check: artifact exists AND validated?    │
+│ Check: output exists AND validated?      │
 └────────────────┬────────────────────────┘
                  │
          ┌───────┴───────┐
          │               │
          ▼ YES           ▼ NO
     ┌─────────┐    ┌─────────────────────────────┐
-    │ SKIP    │    │ 1. Invoke subagent          │
-    │ (done)  │    │    via Task tool            │
-    └─────────┘    │                             │
-                   │ 2. Wait for artifact        │
-                   │                             │
-                   │ 3. Validate with            │
-                   │    workflow-validator skill │
-                   │                             │
-                   │ 4. If PASSED:               │
-                   │    - Update validation.json │
-                   │    - Continue to next       │
-                   │                             │
-                   │ 5. If FAILED:               │
-                   │    - Parse failed checks    │
-                   │    - Retry subagent with    │
-                   │      specific feedback      │
-                   │    - Max 2 retries          │
+    │ SKIP    │    │ 1. INVOKE Task tool:        │
+    │ (done)  │    │    subagent_type: {agent}   │
+    └─────────┘    │    (from run: agents/{agent})│
+                   │                              │
+                   │ 2. VALIDATE output           │
+                   │                              │
+                   │ 3. UPDATE validation.json    │
+                   │                              │
+                   │ 4. IF FAILED: retry (max 2x) │
                    └─────────────────────────────┘
 ```
 
-### Phase 6: Subagent Invocation
+### Phase 6: Task Tool Invocation
 
-Use the Task tool to invoke subagents:
+For step:
+```yaml
+- id: summary
+  run: agents/content-analyzer
+  input: ${{ sandbox }}/inputs/content.md
+  output: ${{ sandbox }}/outputs/summary.json
+```
 
+Invoke Task tool:
 ```json
 {
-  "name": "Task",
-  "input": {
-    "subagent_type": "content-analyzer",
-    "description": "Generate summary artifact",
-    "prompt": "Analyze content at sandbox/{sandbox-id}/inputs/content.md and generate outputs/summary.json"
-  }
+  "subagent_type": "content-analyzer",
+  "description": "Execute step: summary",
+  "prompt": "You are content-analyzer. Read your instructions from .claude/agents/content-analyzer.md\n\nYour task:\n- Input: sandbox/article-2025-12-18-xk7m/inputs/content.md\n- Output: sandbox/article-2025-12-18-xk7m/outputs/summary.json\n\nWrite the output JSON to the specified path."
 }
 ```
 
-Subagent protocol:
-1. Subagent reads its agent definition from `.claude/agents/{name}.md`
-2. Auto-loads skills from `skills:` frontmatter field
-3. Reads input content from `sandbox/{sandbox-id}/inputs/content.md`
-4. Reads any required artifacts from `sandbox/{sandbox-id}/outputs/`
-5. Writes output to `sandbox/{sandbox-id}/outputs/{artifact}`
-
 ### Phase 7: Validation
 
-After subagent writes artifact to `sandbox/{sandbox-id}/outputs/`:
+After step output is written:
 
 1. Use **workflow-validator** skill
 2. Run validation script:
    ```bash
    bun .claude/skills/workflow-validator/scripts/validate.ts \
-     sandbox/{sandbox-id}/outputs/summary.json \
+     sandbox/{id}/outputs/summary.json \
      '{"required_fields":["contentId"],"min_quotes":3}'
    ```
+
 3. Parse result:
    ```json
    {
      "passed": true,
      "checks": [
-       { "name": "has_contentId", "passed": true },
-       { "name": "min_quotes", "passed": true, "message": "Found 5 (min: 3)" }
+       { "name": "has_contentId", "passed": true }
      ]
    }
    ```
-4. If passed: Update `sandbox/{sandbox-id}/validation.json`
-5. If failed: Retry with specific feedback
 
-### Phase 8: Return Final
+4. If passed: Update `validation.json` with `validated: true`
+5. If failed: Retry step with feedback (max 2 retries)
 
-When output with `final: true` passes validation:
+### Phase 8: Return Final Output
 
-1. Read final artifact:
-   ```
-   sandbox/{sandbox-id}/outputs/writing-kit.json
-   ```
+When step with `final: true` passes validation:
 
-2. Return as structured result:
+1. Read final artifact from `sandbox/{id}/outputs/{artifact}`
+2. Return structured result:
    ```json
    {
      "status": "success",
      "sandboxId": "article-2025-12-18-xk7m",
      "workflow": "writing-kit",
-     "artifact": { ... content of writing-kit.json ... }
+     "artifact": { ... }
    }
    ```
 
-## Smart Continuation Logic
+---
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    SMART CONTINUATION DECISION                               │
-└─────────────────────────────────────────────────────────────────────────────┘
+## Variable Substitution
 
-Validation State                     │  Action
-─────────────────────────────────────┼─────────────────────────────────────────
-All outputs validated: false         │  Fresh start: Run all subagents
-─────────────────────────────────────┼─────────────────────────────────────────
-summary.validated: true              │  Skip content-analyzer
-+ summary.json exists                │  Run: idea-generator, writing-kit-builder
-─────────────────────────────────────┼─────────────────────────────────────────
-summary + ideas validated: true      │  Skip content-analyzer, idea-generator
-+ artifacts exist                    │  Run: writing-kit-builder only
-─────────────────────────────────────┼─────────────────────────────────────────
-All outputs validated: true          │  Already complete
-+ all artifacts exist                │  Just return writing-kit.json
+Resolve variables before passing to subagents:
+
+| Variable | Resolution |
+|----------|------------|
+| `${{ sandbox }}` | `sandbox/{sandbox-id}` |
+| `${{ steps.{id}.output }}` | Actual output path of step `{id}` |
+
+Example:
+```yaml
+input: ${{ steps.summary.output }}
+# Resolves to: sandbox/article-2025-12-18-xk7m/outputs/summary.json
 ```
+
+---
 
 ## Error Handling
 
@@ -275,9 +246,11 @@ All outputs validated: true          │  Already complete
 |----------|--------|
 | Workflow not found | Error with available workflows |
 | Sandbox not found | Error with suggestion to use --file |
-| Subagent fails | Retry up to 2 times with feedback |
+| Step fails | Retry up to 2 times with feedback |
 | Validation fails | Provide specific failed checks to subagent |
 | Max retries exceeded | Report failure with details |
+
+---
 
 ## Example Execution Trace
 
@@ -286,45 +259,40 @@ All outputs validated: true          │  Already complete
 
 1. [SANDBOX] Created: sandbox/article-2025-12-18-xk7m/
    - inputs/content.md (copied)
-   - outputs/ (empty)
-   - logs/
    - validation.json (generated)
 
 2. [WORKFLOW] Loaded: workflows/writing-kit.md
+   - version: 1.0.0
+   - steps: [summary, ideas, writing-kit]
+
 3. [ORDER] Computed: [summary, ideas, writing-kit]
 
-4. [EXECUTE] summary
-   - Invoke: content-analyzer
-   - Input: sandbox/.../inputs/content.md
-   - Output: sandbox/.../outputs/summary.json (written)
+4. [STEP] summary
+   - Task tool: subagent_type="content-analyzer"
+   - Output: outputs/summary.json
    - Validate: PASSED
    - Update: validation.json (summary.validated = true)
 
-5. [EXECUTE] ideas
-   - Invoke: idea-generator
-   - Input: sandbox/.../outputs/summary.json
-   - Output: sandbox/.../outputs/ideas.json (written)
+5. [STEP] ideas
+   - Task tool: subagent_type="idea-generator"
+   - Output: outputs/ideas.json
    - Validate: PASSED
    - Update: validation.json (ideas.validated = true)
 
-6. [EXECUTE] writing-kit
-   - Invoke: writing-kit-builder
-   - Input: sandbox/.../outputs/summary.json, ideas.json
-   - Output: sandbox/.../outputs/writing-kit.json (written)
+6. [STEP] writing-kit
+   - Task tool: subagent_type="writing-kit-builder"
+   - Output: outputs/writing-kit.json
    - Validate: PASSED
    - Update: validation.json (writing-kit.validated = true)
 
-7. [COMPLETE] Final output: outputs/writing-kit.json
-   - Return structured result
+7. [COMPLETE] Final output: writing-kit.json
 ```
+
+---
 
 ## File References
 
 - Workflow definitions: `workflows/*.md`
 - Agent definitions: `.claude/agents/*.md`
 - Sandbox storage: `sandbox/{sandbox-id}/`
-  - Input content: `sandbox/{sandbox-id}/inputs/content.md`
-  - Output artifacts: `sandbox/{sandbox-id}/outputs/`
-  - Session logs: `sandbox/{sandbox-id}/logs/`
-  - Validation state: `sandbox/{sandbox-id}/validation.json`
 - Validator script: `.claude/skills/workflow-validator/scripts/validate.ts`
