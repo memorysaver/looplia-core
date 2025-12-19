@@ -365,7 +365,7 @@ The hook system provides **deterministic guardrails** that protect workflow vali
 ┃                                         ▼                                              ┃
 ┃  ┌─────────────────────────────────────────────────────────────────────────────────┐   ┃
 ┃  │ ACTION: Update validation.json                                                  │   ┃
-┃  │         jq '.outputs[$art].validated = true' validation.json > tmp && mv       │   ┃
+┃  │         jq '.steps[$art].validated = true' validation.json > tmp && mv         │   ┃
 ┃  │         echo "✓ Validated: summary.json"                                        │   ┃
 ┃  └─────────────────────────────────────────────────────────────────────────────────┘   ┃
 ┃                                                                                        ┃
@@ -398,7 +398,7 @@ The hook system provides **deterministic guardrails** that protect workflow vali
 ┃                                         ▼                                              ┃
 ┃  ┌─────────────────────────────────────────────────────────────────────────────────┐   ┃
 ┃  │ 2. Read validation.json                                                         │   ┃
-┃  │    Check: .outputs | select(.validated == false)                                │   ┃
+┃  │    Check: .steps | to_entries[] | select(.value.validated == false)            │   ┃
 ┃  └─────────────────────────────────────────────────────────────────────────────────┘   ┃
 ┃                                         │                                              ┃
 ┃                     ┌───────────────────┴───────────────────┐                          ┃

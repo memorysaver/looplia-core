@@ -34,7 +34,7 @@ fi
 PENDING=$(jq -r '.steps | to_entries[] | select(.value.validated == false) | .key' "$VALIDATION_JSON" 2>/dev/null | tr '\n' ', ' | sed 's/,$//')
 
 if [[ -n "$PENDING" ]]; then
-  echo "{\"decision\": \"block\", \"reason\": \"Workflow incomplete. Pending outputs: $PENDING\"}"
+  echo "{\"decision\": \"block\", \"reason\": \"Workflow incomplete. Pending steps: $PENDING\"}"
   exit 0
 fi
 
