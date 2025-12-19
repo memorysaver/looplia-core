@@ -233,13 +233,18 @@ AI is transforming how developers write code...
 The future belongs to developers who can effectively collaborate with AI.
 EOF
 
-# Run workflow with real API (env injection)
+# Quick test with example file (recommended)
+env $(cat .env) looplia run writing-kit --file ./examples/ai-healthcare.md
+
+# Or create custom test content and run
 env $(cat .env) looplia run writing-kit --file /tmp/test-article.md
 
-# Or use export
+# Alternative: export and run separately
 export $(cat .env)
-looplia run writing-kit --file /tmp/test-article.md
+looplia run writing-kit --file ./examples/ai-healthcare.md
 ```
+
+> **Important:** Always use `env $(cat .env)` syntax - do NOT use `env $(cat .env | xargs)` as it may cause parsing errors with special characters in API keys.
 
 ### Expected Output
 
