@@ -1,15 +1,19 @@
 /**
- * Workflow Parser (v0.5.1)
+ * Workflow Parser (v0.6.0)
  *
  * Parses workflow.md files with YAML frontmatter + markdown body.
+ * v0.6.0: Steps-based format with GitHub Actions-inspired syntax.
  *
- * @see docs/DESIGN-0.5.1.md
+ * @see docs/DESIGN-0.6.0.md
  */
 
+import { isValidRunFormat } from "./agent-utils";
 import type {
   ParsedWorkflow,
+  StepValidationState,
   ValidationManifest,
   WorkflowDefinition,
+  WorkflowStep,
 } from "./workflow";
 
 // Top-level regex constants for performance
@@ -63,40 +67,12 @@ function parseYamlValue(value: string): unknown {
   return value;
 }
 
-/** Handle output property (indent 4) */
-function handleOutputProperty(
-  key: string,
-  value: string,
-  outputObj: Record<string, unknown>
-): Record<string, unknown> | null {
-  if (key === "validate") {
-    const validate: Record<string, unknown> = {};
-    outputObj.validate = validate;
-    return validate;
-  }
-  if (key === "requires") {
-    const array = parseArray(value);
-    if (array) {
-      outputObj.requires = array;
-    }
-    return null;
-  }
-  if (key === "final") {
-    outputObj.final = value === "true";
-    return null;
-  }
-  if (value) {
-    outputObj[key] = value;
-  }
-  return null;
-}
-
-/** State for YAML parser */
+/** State for YAML parser (v0.6.0 steps format) */
 type YamlParserState = {
   result: Record<string, unknown>;
-  outputs: Record<string, Record<string, unknown>>;
+  steps: WorkflowStep[];
   currentKey: string;
-  currentOutput: string;
+  currentStep: Partial<WorkflowStep> | null;
   currentValidate: Record<string, unknown> | null;
 };
 
@@ -111,10 +87,10 @@ function processYamlLine(state: YamlParserState, line: string): void {
 
   if (indent === 0) {
     processTopLevel(state, trimmed);
-  } else if (indent === 2 && state.currentKey === "outputs") {
-    processOutputName(state, trimmed);
-  } else if (indent === 4 && state.currentOutput) {
-    processOutputProperty(state, trimmed);
+  } else if (indent === 2 && state.currentKey === "steps") {
+    processStepItem(state, trimmed);
+  } else if (indent === 4 && state.currentStep) {
+    processStepProperty(state, trimmed);
   } else if (indent === 6 && state.currentValidate) {
     processValidateProperty(state, trimmed);
   }
@@ -122,38 +98,95 @@ function processYamlLine(state: YamlParserState, line: string): void {
 
 /** Process top-level key (indent 0) */
 function processTopLevel(state: YamlParserState, trimmed: string): void {
+  // Save current step before moving to new section
+  if (state.currentStep?.id) {
+    state.steps.push(state.currentStep as WorkflowStep);
+    state.currentStep = null;
+  }
+
   const kv = parseKeyValue(trimmed);
   if (!kv) {
     return;
   }
   state.currentKey = kv.key;
-  if (kv.key !== "outputs" && kv.value) {
+  if (kv.key !== "steps" && kv.value) {
     state.result[kv.key] = kv.value;
   }
-  state.currentOutput = "";
   state.currentValidate = null;
 }
 
-/** Process output name (indent 2) */
-function processOutputName(state: YamlParserState, trimmed: string): void {
-  if (trimmed.endsWith(":")) {
-    state.currentOutput = trimmed.slice(0, -1);
-    state.outputs[state.currentOutput] = {};
+/** Process step item start (indent 2, starts with - id:) */
+function processStepItem(state: YamlParserState, trimmed: string): void {
+  // Check if this is a new step item (starts with -)
+  if (trimmed.startsWith("- ")) {
+    // Save previous step before starting new one
+    if (state.currentStep?.id) {
+      state.steps.push(state.currentStep as WorkflowStep);
+    }
+    state.currentStep = {};
     state.currentValidate = null;
+
+    // Parse the first property on the same line (e.g., "- id: ideas")
+    const firstProp = trimmed.slice(2).trim();
+    const kv = parseKeyValue(firstProp);
+    if (kv) {
+      handleStepProperty(state.currentStep, kv.key, kv.value);
+    }
   }
 }
 
-/** Process output property (indent 4) */
-function processOutputProperty(state: YamlParserState, trimmed: string): void {
-  const outputObj = state.outputs[state.currentOutput];
-  if (!outputObj) {
+/** Handle step property assignment */
+function handleStepProperty(
+  step: Partial<WorkflowStep>,
+  key: string,
+  value: string
+): Record<string, unknown> | null {
+  switch (key) {
+    case "id":
+      step.id = value;
+      break;
+    case "run":
+      step.run = value;
+      break;
+    case "input": {
+      const arr = parseArray(value);
+      step.input = arr ?? value;
+      break;
+    }
+    case "output":
+      step.output = value;
+      break;
+    case "needs": {
+      const arr = parseArray(value);
+      if (arr) {
+        step.needs = arr;
+      }
+      break;
+    }
+    case "final":
+      step.final = value === "true";
+      break;
+    case "validate": {
+      const validate: Record<string, unknown> = {};
+      step.validate = validate;
+      return validate;
+    }
+    default:
+      break;
+  }
+  return null;
+}
+
+/** Process step property (indent 4) */
+function processStepProperty(state: YamlParserState, trimmed: string): void {
+  if (!state.currentStep) {
     return;
   }
   const kv = parseKeyValue(trimmed);
   if (!kv) {
     return;
   }
-  const validate = handleOutputProperty(kv.key, kv.value, outputObj);
+  const validate = handleStepProperty(state.currentStep, kv.key, kv.value);
   if (validate) {
     state.currentValidate = validate;
   }
@@ -202,21 +235,22 @@ export function parseFrontmatter(content: string): {
 }
 
 /**
- * Simple YAML parser for workflow frontmatter
+ * Simple YAML parser for workflow frontmatter (v0.6.0)
  *
- * Handles the specific structure we expect:
+ * Handles the v0.6.0 structure:
  * - name: string
+ * - version: string
  * - description: string
- * - outputs: nested object with artifact, agent, requires, final, validate
+ * - steps: array of step objects with id, run, input, output, needs, final, validate
  *
  * Note: This is a simplified parser. For complex YAML, consider using a library.
  */
 function parseSimpleYaml(yaml: string): Record<string, unknown> {
   const state: YamlParserState = {
     result: {},
-    outputs: {},
+    steps: [],
     currentKey: "",
-    currentOutput: "",
+    currentStep: null,
     currentValidate: null,
   };
 
@@ -224,15 +258,47 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
     processYamlLine(state, line);
   }
 
-  if (state.currentKey === "outputs" || Object.keys(state.outputs).length > 0) {
-    state.result.outputs = state.outputs;
+  // Save final step if exists
+  if (state.currentStep?.id) {
+    state.steps.push(state.currentStep as WorkflowStep);
+  }
+
+  if (state.steps.length > 0) {
+    state.result.steps = state.steps;
   }
 
   return state.result;
 }
 
 /**
- * Parse a workflow.md file into structured data
+ * Validate a single workflow step has all required fields and correct format
+ * @throws Error if step is invalid
+ */
+function validateStep(step: WorkflowStep): void {
+  if (!step.id) {
+    throw new Error("Each step must have an 'id' field");
+  }
+  if (!step.run) {
+    throw new Error(`Step '${step.id}' must have a 'run' field`);
+  }
+  if (!isValidRunFormat(step.run)) {
+    throw new Error(
+      `Step '${step.id}' has invalid run format '${step.run}'. Expected 'agents/{name}' where name is lowercase alphanumeric with hyphens.`
+    );
+  }
+  if (!step.input) {
+    throw new Error(`Step '${step.id}' must have an 'input' field`);
+  }
+  if (Array.isArray(step.input) && step.input.length === 0) {
+    throw new Error(`Step '${step.id}' input array cannot be empty`);
+  }
+  if (!step.output) {
+    throw new Error(`Step '${step.id}' must have an 'output' field`);
+  }
+}
+
+/**
+ * Parse a workflow.md file into structured data (v0.6.0)
  *
  * @param content - Full content of the workflow.md file
  * @returns ParsedWorkflow with definition and instructions
@@ -241,7 +307,7 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
 export function parseWorkflow(content: string): ParsedWorkflow {
   const { frontmatter, body } = parseFrontmatter(content);
 
-  // Validate required fields
+  // Validate required top-level fields
   if (!frontmatter.name || typeof frontmatter.name !== "string") {
     throw new Error("Workflow must have a 'name' field");
   }
@@ -249,117 +315,122 @@ export function parseWorkflow(content: string): ParsedWorkflow {
     throw new Error("Workflow must have a 'description' field");
   }
   if (
-    !frontmatter.outputs ||
-    typeof frontmatter.outputs !== "object" ||
-    Object.keys(frontmatter.outputs as object).length === 0
+    !(frontmatter.steps && Array.isArray(frontmatter.steps)) ||
+    frontmatter.steps.length === 0
   ) {
-    throw new Error("Workflow must have at least one output defined");
+    throw new Error("Workflow must have at least one step defined");
   }
 
-  const definition: WorkflowDefinition = {
-    name: frontmatter.name,
-    description: frontmatter.description,
-    outputs: frontmatter.outputs as WorkflowDefinition["outputs"],
-  };
+  // Validate each step
+  for (const step of frontmatter.steps as WorkflowStep[]) {
+    validateStep(step);
+  }
 
   return {
-    definition,
+    definition: {
+      name: frontmatter.name,
+      version: frontmatter.version as string | undefined,
+      description: frontmatter.description,
+      steps: frontmatter.steps as WorkflowStep[],
+    },
     instructions: body,
   };
 }
 
 /**
- * Generate a validation manifest from a workflow definition
+ * Generate a validation manifest from a workflow definition (v0.6.0)
  *
- * This is written to contentItem/{id}/validation.json when a session starts.
+ * This is written to sandbox/{id}/validation.json when a session starts.
  *
  * @param definition - Workflow definition from parsed workflow
- * @returns ValidationManifest for tracking output validation state
+ * @returns ValidationManifest for tracking step validation state
  */
 export function generateValidationManifest(
   definition: WorkflowDefinition
 ): ValidationManifest {
-  const outputs: ValidationManifest["outputs"] = {};
+  const steps: Record<string, StepValidationState> = {};
 
-  for (const [name, output] of Object.entries(definition.outputs)) {
-    outputs[name] = {
-      artifact: output.artifact,
-      criteria: output.validate ?? {},
+  for (const step of definition.steps) {
+    steps[step.id] = {
+      output: step.output,
+      validate: step.validate,
       validated: false,
     };
   }
 
   return {
     workflow: definition.name,
-    outputs,
+    version: definition.version,
+    steps,
   };
 }
 
 /**
- * Get the execution order for workflow outputs based on dependencies
+ * Get the execution order for workflow steps based on dependencies (v0.6.0)
  *
  * Uses topological sort to ensure dependencies are processed first.
+ * Steps without dependencies run in declaration order.
  *
  * @param definition - Workflow definition
- * @returns Array of output names in execution order
+ * @returns Array of step IDs in execution order
  * @throws Error if circular dependencies detected
  */
 export function getExecutionOrder(definition: WorkflowDefinition): string[] {
-  const outputs = definition.outputs;
+  const stepsMap = new Map(definition.steps.map((s) => [s.id, s]));
   const order: string[] = [];
   const visited = new Set<string>();
   const visiting = new Set<string>();
 
-  function visit(name: string) {
-    if (visited.has(name)) {
+  function visit(id: string) {
+    if (visited.has(id)) {
       return;
     }
-    if (visiting.has(name)) {
-      throw new Error(`Circular dependency detected: ${name}`);
+    if (visiting.has(id)) {
+      throw new Error(`Circular dependency detected: ${id}`);
     }
 
-    visiting.add(name);
+    visiting.add(id);
 
-    const output = outputs[name];
-    if (output?.requires) {
-      for (const dep of output.requires) {
-        if (!outputs[dep]) {
-          throw new Error(`Unknown dependency '${dep}' in output '${name}'`);
+    const step = stepsMap.get(id);
+    if (step?.needs) {
+      for (const dep of step.needs) {
+        if (!stepsMap.has(dep)) {
+          throw new Error(`Unknown dependency '${dep}' in step '${id}'`);
         }
         visit(dep);
       }
     }
 
-    visiting.delete(name);
-    visited.add(name);
-    order.push(name);
+    visiting.delete(id);
+    visited.add(id);
+    order.push(id);
   }
 
-  for (const name of Object.keys(outputs)) {
-    visit(name);
+  for (const step of definition.steps) {
+    visit(step.id);
   }
 
   return order;
 }
 
 /**
- * Find the final output in a workflow definition
+ * Find the final step in a workflow definition (v0.6.0)
  *
  * @param definition - Workflow definition
- * @returns Name of the output marked as final, or last output if none marked
+ * @returns ID of the step marked as final, or last step if none marked
  */
-export function getFinalOutput(definition: WorkflowDefinition): string {
-  for (const [name, output] of Object.entries(definition.outputs)) {
-    if (output.final) {
-      return name;
+export function getFinalStep(definition: WorkflowDefinition): string {
+  for (const step of definition.steps) {
+    if (step.final) {
+      return step.id;
     }
   }
 
-  // If no output is marked final, return the last one in execution order
+  // If no step is marked final, return the last one in execution order
   const order = getExecutionOrder(definition);
-  const lastOutput = order.at(-1);
-  if (!lastOutput) {
-    throw new Error("Workflow has no outputs");
+  const lastStep = order.at(-1);
+  if (!lastStep) {
+    throw new Error("Workflow has no steps");
   }
-  return lastOutput;
+  return lastStep;
 }

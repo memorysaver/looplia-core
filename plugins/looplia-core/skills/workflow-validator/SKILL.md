@@ -1,12 +1,26 @@
 ---
 name: workflow-validator
 description: Validate workflow outputs against criteria defined in validation.json.
-  Use after each step completes to verify output meets requirements.
+  Primarily used for manual retry/debugging - automatic validation is handled by hooks.
 ---
 
 # Workflow Validator Skill
 
 Validates JSON artifacts against validation criteria using deterministic script execution.
+
+## Automatic Validation via Hook (v0.6.0)
+
+As of v0.6.0, the `PostToolUse:Write` hook **automatically** calls this validation script whenever an artifact is written to `sandbox/*/outputs/*.json`.
+
+**You typically don't need to manually invoke this skill** - the hook handles it.
+
+### When to Manually Use This Skill
+
+Use this skill only in these scenarios:
+- **Retrying after validation failure** - when the hook blocked a write and you need to debug
+- **Debugging validation issues** - to see detailed check results
+- **Checking artifacts outside the normal workflow** - for ad-hoc validation
+- **Pre-checking before write** - to validate data before writing to sandbox
 
 ## What This Skill Does
 
@@ -14,14 +28,6 @@ Validates JSON artifacts against validation criteria using deterministic script 
 - Runs deterministic validation script (no LLM tokens consumed)
 - Returns pass/fail status with detailed check results
 - Enables workflow completion verification
-
-## When to Use
-
-Use this skill **after each workflow step** produces an artifact:
-1. Subagent writes artifact (e.g., `summary.json`)
-2. Invoke workflow-validator skill to validate
-3. Check results and retry if validation fails
-4. Continue to next step only when validation passes
 
 ## Validation Process
 
@@ -32,10 +38,12 @@ Read the validation manifest at `sandbox/{id}/validation.json`:
 ```json
 {
   "workflow": "writing-kit",
-  "outputs": {
+  "version": "1.0.0",
+  "sandboxId": "article-2025-12-18-xk7m",
+  "steps": {
     "summary": {
-      "artifact": "summary.json",
-      "criteria": {
+      "output": "outputs/summary.json",
+      "validate": {
         "required_fields": ["contentId", "headline", "tldr", "keyThemes"],
         "min_quotes": 3,
         "min_key_points": 5
@@ -136,11 +144,11 @@ The validation script returns:
 
 ## Important Rules
 
-- **Always run after artifact creation** - Never skip validation
+- **Automatic validation via hook** - Hook handles validation on write; manual use only for retry/debugging
 - **Script is deterministic** - No LLM context consumed
-- **Update validation.json** - Mark outputs validated when passed
+- **Update validation.json** - Mark steps validated when passed (v0.6.0 uses `.steps` not `.outputs`)
 - **Retry on failure** - Give subagent feedback on what failed
-- **Check dependencies** - Ensure required outputs are validated before dependent steps
+- **Check dependencies** - Ensure required steps are validated before dependent steps
 - **Use exact paths** - Artifact paths are relative to workspace root
 
 ## Script Location

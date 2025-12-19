@@ -1,11 +1,11 @@
 /**
- * Claude Agent Executor (v0.5.2)
+ * Claude Agent Executor (v0.6.0)
  *
  * Implements the AgentExecutor interface from core.
  * This is the Clean Architecture adapter that connects
  * the core command framework to the Claude Agent SDK.
  *
- * v0.5.2: Added executePromptStreaming for thin wrapper pattern.
+ * v0.6.0: Added executePromptStreaming for thin wrapper pattern.
  * This allows CLI to inject /run commands without specifying output schema.
  */
 
@@ -134,7 +134,7 @@ export function createClaudeAgentExecutor(
     },
 
     /**
-     * v0.5.2: Execute a prompt without schema (thin wrapper pattern)
+     * v0.6.0: Execute a prompt without schema (thin wrapper pattern)
      *
      * Used by CLI thin wrapper to inject /run commands.
      * Agent interprets command via workflow-executor skill.
@@ -184,7 +184,7 @@ export function createClaudeAgentExecutor(
     },
 
     /**
-     * v0.5.2: Execute a prompt without schema (non-streaming)
+     * v0.6.0: Execute a prompt without schema (non-streaming)
      */
     async executePrompt(
       prompt: string,

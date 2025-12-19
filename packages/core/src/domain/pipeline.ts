@@ -4,7 +4,7 @@
  * Defines the structure for declarative workflow definitions.
  * Pipelines are YAML files that specify outputs, dependencies, and agents.
  *
- * @see docs/DESIGN-0.5.0.md
+ * @see docs/DESIGN-0.6.0.md
  */
 
 /**

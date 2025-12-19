@@ -36,7 +36,7 @@ export type {
   UsageEvent,
   WorkflowResult,
 } from "./types";
-// Workflow Command (v0.5.1)
+// Workflow Command (v0.6.0)
 export { buildWorkflowPrompt, workflowCommand } from "./workflow";
 
 // Auto-register commands on import

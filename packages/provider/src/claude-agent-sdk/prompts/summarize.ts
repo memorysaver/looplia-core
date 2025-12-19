@@ -28,10 +28,10 @@ Ensure all fields are populated with accurate, concise information.`;
 /**
  * Build user prompt for summarization
  *
- * @deprecated v0.5.2 uses minimal prompts with agentic approach.
+ * @deprecated v0.6.0 uses minimal prompts with agentic approach.
  * Use the summarizer with workspace setup instead.
  *
- * The v0.5.2 architecture uses:
+ * The v0.6.0 architecture uses:
  * - Minimal prompt: "Summarize content: sandbox/{id}/inputs/content.md"
  * - Agent reads CLAUDE.md for full instructions
  * - Agent uses skills (media-reviewer, content-documenter) autonomously

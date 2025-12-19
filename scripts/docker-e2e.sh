@@ -2,7 +2,7 @@
 set -e
 
 # Looplia Docker E2E Test Script
-# Runs real API tests inside Docker container with v0.5.2 sandbox architecture
+# Runs real API tests inside Docker container with v0.6.0 sandbox architecture
 # Tests: Workflow-as-Markdown with custom subagents, skills auto-loading, and sandbox isolation
 
 # Colors for output
@@ -242,13 +242,13 @@ check_validation_state() {
 
   local pass=true
 
-  # Check each output is validated
-  for output in summary ideas writing-kit; do
-    VALIDATED=$(jq -r ".outputs.\"$output\".validated // false" "$VALIDATION_FILE" 2>/dev/null)
+  # Check each step is validated (v0.6.0 uses "steps" not "outputs")
+  for step in summary ideas writing-kit; do
+    VALIDATED=$(jq -r ".steps.\"$step\".validated // false" "$VALIDATION_FILE" 2>/dev/null)
     if [ "$VALIDATED" = "true" ]; then
-      print_pass "$output: validated"
+      print_pass "$step: validated"
     else
-      print_fail "$output: NOT validated"
+      print_fail "$step: NOT validated"
       pass=false
     fi
   done
@@ -531,7 +531,7 @@ print_summary() {
   # echo "  - vtt-test/ (Test 2: VTT caption)"      # Commented out
   # echo "  - srt-test/ (Test 3: SRT transcript)"   # Commented out
   echo ""
-  echo "Each sandbox folder contains (v0.5.2 architecture):"
+  echo "Each sandbox folder contains (v0.6.0 architecture):"
   echo "  - inputs/content.md (raw input)"
   echo "  - outputs/summary.json (Stage 1)"
   echo "  - outputs/ideas.json (Stage 2)"
@@ -544,9 +544,9 @@ print_summary() {
 # Main execution
 main() {
   print_header "Looplia Docker E2E Test Suite"
-  echo "  Version: 0.5.2"
+  echo "  Version: 0.6.0"
   echo "  Date: $(date '+%Y-%m-%d %H:%M:%S')"
-  echo "  Architecture: Sandbox Isolation with Custom Subagents"
+  echo "  Architecture: Steps-Based Workflow with Sandbox Isolation"
 
   check_prerequisites
   prepare_workspace

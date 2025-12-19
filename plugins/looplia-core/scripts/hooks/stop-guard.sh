@@ -1,7 +1,7 @@
 #!/bin/bash
-# Workflow Completion Guard Hook
+# Workflow Completion Guard Hook (v0.6.0)
 # Triggered: When main agent attempts to stop
-# Action: Block if any output has validated: false
+# Action: Block if any step has validated: false
 
 set -euo pipefail
 
@@ -30,11 +30,11 @@ if [[ ! -f "$VALIDATION_JSON" ]]; then
   exit 0
 fi
 
-# Check all outputs are validated
-PENDING=$(jq -r '.outputs | to_entries[] | select(.value.validated == false) | .key' "$VALIDATION_JSON" 2>/dev/null | tr '\n' ', ' | sed 's/,$//')
+# Check all steps are validated (v0.6.0 uses "steps" not "outputs")
+PENDING=$(jq -r '.steps | to_entries[] | select(.value.validated == false) | .key' "$VALIDATION_JSON" 2>/dev/null | tr '\n' ', ' | sed 's/,$//')
 
 if [[ -n "$PENDING" ]]; then
-  echo "{\"decision\": \"block\", \"reason\": \"Workflow incomplete. Pending outputs: $PENDING\"}"
+  echo "{\"decision\": \"block\", \"reason\": \"Workflow incomplete. Pending steps: $PENDING\"}"
   exit 0
 fi
 

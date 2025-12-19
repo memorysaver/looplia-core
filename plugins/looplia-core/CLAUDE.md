@@ -1,104 +1,191 @@
-# Looplia Workflow Interpreter (v0.5.2)
+# Looplia Workflow Engine (v0.6.0)
 
-You execute workflows defined in `workflows/*.md` files using the workflow-executor skill.
+You are a workflow execution engine. You execute workflows defined in `workflows/*.md` files by orchestrating subagents.
 
-## Quick Start
+---
 
-When you receive a `/run` command:
-1. Read `commands/run.md` for command syntax
-2. Use the **workflow-executor** skill to handle all execution
-3. Return the final artifact when complete
+## CRITICAL: Subagent Invocation Rule
 
-## Available Commands
+When a workflow step specifies `run: agents/{name}`, you MUST invoke the Task tool with:
 
-| Command | Description |
-|---------|-------------|
-| `/run <workflow-id> --file <path>` | Execute a workflow (creates new sandbox) |
-| `/run <workflow-id> --file <path> --sandbox-id <id>` | Execute with explicit sandbox ID |
-| `/run <workflow-id> --sandbox <id>` | Resume an existing sandbox |
-| `/build-workflow <name>` | Scaffold a new workflow definition |
-| `/list-workflows` | List available workflows |
+```json
+{
+  "subagent_type": "{name}",
+  "description": "Execute step: {step-id}",
+  "prompt": "..."
+}
+```
 
-## Workflow-as-Markdown Format
+### Mapping Table
 
-Workflows are markdown files with YAML frontmatter:
+| Workflow YAML | Task Tool `subagent_type` |
+|---------------|---------------------------|
+| `run: agents/content-analyzer` | `"content-analyzer"` |
+| `run: agents/idea-generator` | `"idea-generator"` |
+| `run: agents/writing-kit-builder` | `"writing-kit-builder"` |
+
+### Rules
+
+- **REQUIRED**: Extract agent name from `run: agents/{name}` and use as `subagent_type`
+- **FORBIDDEN**: Never use `"subagent_type": "general-purpose"` for workflow steps
+- **ALWAYS**: The subagent reads its definition from `.claude/agents/{name}.md`
+
+---
+
+## Workflow Schema (v0.6.0)
+
+Workflows are markdown files with YAML frontmatter in `workflows/` directory:
 
 ```yaml
 ---
 name: workflow-name
+version: 1.0.0
 description: What this workflow does
 
-outputs:
-  step-one:
-    artifact: output.json
-    agent: subagent-name
+steps:
+  - id: step-one
+    run: agents/agent-name        # Which agent to execute
+    input: ${{ sandbox }}/inputs/content.md
+    output: ${{ sandbox }}/outputs/result.json
     validate:
       required_fields: [field1, field2]
 
-  step-two:
-    artifact: final.json
-    agent: another-agent
-    requires: [step-one]
-    final: true
+  - id: step-two
+    run: agents/another-agent
+    needs: [step-one]             # Dependencies (wait for these)
+    input: ${{ steps.step-one.output }}
+    output: ${{ sandbox }}/outputs/final.json
+    final: true                   # This is the final output
 ---
 
-# Custom Instructions
-Additional guidance for this workflow...
+# Workflow Instructions
+Additional markdown guidance...
 ```
 
-## Workspace Structure (v0.5.2)
+### Schema Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Workflow identifier |
+| `version` | string | Yes | Semantic version |
+| `description` | string | Yes | What workflow does |
+| `steps` | array | Yes | Ordered list of steps |
+
+### Step Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | Unique step identifier |
+| `run` | string | Yes | Agent path: `agents/{name}` |
+| `needs` | array | No | Step IDs this step depends on |
+| `input` | string/array | Yes | Input file path(s) |
+| `output` | string | Yes | Output file path |
+| `validate` | object | No | Validation criteria |
+| `final` | boolean | No | Mark as final output |
+
+### Variable Substitution
+
+| Variable | Resolves To |
+|----------|-------------|
+| `${{ sandbox }}` | `sandbox/{sandbox-id}` |
+| `${{ steps.{id}.output }}` | Output path of step `{id}` |
+
+---
+
+## Execution Protocol
+
+When you receive a `/run` command:
+
+### Phase 1: Setup
+
+1. Parse workflow YAML frontmatter from `workflows/{workflow-id}.md`
+2. Create or resume sandbox folder
+3. Initialize `validation.json` with all steps set to `validated: false`
+
+### Phase 2: Execute Steps
+
+For each step in dependency order (steps with no `needs:` first):
+
+```
+IF step.output exists AND validation.json[step.id].validated == true:
+    SKIP (already complete)
+ELSE:
+    1. INVOKE Task tool:
+       {
+         "subagent_type": "{agent-name}",  // From run: agents/{agent-name}
+         "description": "Execute step: {step.id}",
+         "prompt": "You are {agent-name}. Read .claude/agents/{agent-name}.md for your instructions.
+                    Input: {step.input}
+                    Output: {step.output}
+                    Sandbox: sandbox/{sandbox-id}/"
+       }
+
+    2. VALIDATE output using workflow-validator skill
+
+    3. UPDATE validation.json: steps[step.id].validated = true
+```
+
+### Phase 3: Return Result
+
+When step with `final: true` completes:
+- Read the final output artifact
+- Return as workflow result
+
+---
+
+## Workspace Structure
 
 ```
 ~/.looplia/
-├── CLAUDE.md                     # This file (interpreter instructions)
-├── commands/                     # Slash command definitions
+├── CLAUDE.md                    # This file
+├── commands/                    # Slash commands
 │   ├── run.md
 │   ├── build-workflow.md
 │   └── list-workflows.md
-├── workflows/                    # Workflow definitions (Looplia extension)
+├── workflows/                   # Workflow definitions
 │   └── {name}.md
 ├── .claude/
-│   ├── agents/*.md               # Subagent definitions
+│   ├── agents/                  # Subagent definitions
+│   │   ├── content-analyzer.md
+│   │   ├── idea-generator.md
+│   │   └── writing-kit-builder.md
 │   └── skills/
-│       ├── workflow-executor/    # Core execution skill
-│       └── workflow-validator/   # Output validation skill
-├── user-profile.json             # User preferences
-└── sandbox/{sandbox-id}/         # Sandbox folder (v0.5.2)
-    ├── inputs/
-    │   └── content.md            # Input content
-    ├── outputs/
-    │   ├── summary.json          # Workflow outputs
-    │   ├── ideas.json
-    │   └── writing-kit.json
-    ├── validation.json           # Validation state
+│       ├── workflow-executor/
+│       └── workflow-validator/
+├── hooks/
+│   └── hooks.json               # Lifecycle hooks
+├── user-profile.json
+└── sandbox/{sandbox-id}/        # Per-execution sandbox
+    ├── inputs/content.md
+    ├── outputs/*.json
+    ├── validation.json
     └── logs/
-        └── {session-id}.log      # Session logs
 ```
 
-## Core Skills
+---
 
-### workflow-executor
+## Commands
 
-The primary skill for running workflows. Handles:
-- Sandbox creation (new or resume) - v0.5.2
-- Workflow parsing (YAML frontmatter + body)
-- Dependency resolution (topological order)
-- Subagent orchestration (via Task tool)
-- Validation state tracking (validation.json)
+| Command | Description |
+|---------|-------------|
+| `/run <workflow> --file <path>` | Execute workflow on content (new sandbox) |
+| `/run <workflow> --sandbox-id <id>` | Resume existing sandbox |
+| `/list-workflows` | List available workflows |
+| `/build-workflow <name>` | Scaffold new workflow |
 
-Use this skill when handling `/run` commands.
+---
 
-### workflow-validator
+## Validation
 
-Validates output artifacts using deterministic scripts:
+Each step output is validated using deterministic scripts:
 
 ```bash
 bun .claude/skills/workflow-validator/scripts/validate.ts \
-  sandbox/{sandbox-id}/outputs/summary.json \
+  sandbox/{id}/outputs/summary.json \
   '{"required_fields":["contentId"],"min_quotes":3}'
 ```
 
-Returns validation result (no LLM tokens consumed):
+Returns:
 ```json
 {
   "passed": true,
@@ -108,44 +195,37 @@ Returns validation result (no LLM tokens consumed):
 }
 ```
 
-## Validation-Driven Completion
-
 A step is **complete** when:
-1. Artifact file exists at specified path in `outputs/`
-2. `validation.json` shows `validated: true` for that output
+1. Output file exists at specified path
+2. `validation.json` shows `validated: true` for that step
 
+---
+
+## Example: Task Tool Invocation
+
+For step:
+```yaml
+- id: summary
+  run: agents/content-analyzer
+  input: ${{ sandbox }}/inputs/content.md
+  output: ${{ sandbox }}/outputs/summary.json
+```
+
+Invoke Task tool:
 ```json
 {
-  "workflow": "writing-kit",
-  "sandboxId": "text-2025-12-18-ai-healthcare",
-  "outputs": {
-    "summary": {
-      "artifact": "outputs/summary.json",
-      "validated": true    // ← Complete!
-    },
-    "ideas": {
-      "artifact": "outputs/ideas.json",
-      "validated": false   // ← Still pending
-    }
-  }
+  "subagent_type": "content-analyzer",
+  "description": "Execute step: summary",
+  "prompt": "You are content-analyzer. Read .claude/agents/content-analyzer.md for your instructions.\n\nInput: sandbox/article-2025-12-18-xk7m/inputs/content.md\nOutput: sandbox/article-2025-12-18-xk7m/outputs/summary.json\nSandbox: sandbox/article-2025-12-18-xk7m/"
 }
 ```
 
-## Smart Continuation
-
-When resuming a sandbox:
-1. Read validation.json
-2. Skip outputs with `validated: true`
-3. Continue from first pending output
-
-This enables:
-- Interrupted work to be resumed
-- Cost savings by not repeating validated steps
-- Clear progress tracking
+---
 
 ## Rules
 
-- **Use workflow-executor skill** - Don't manually implement workflow logic
-- **Always validate** - Never skip validation after artifact creation
-- **Update state** - Mark outputs validated in validation.json when passed
-- **Follow dependencies** - Complete required outputs before dependent ones
+1. **Always use custom subagent_type** - Never use `"general-purpose"` for workflow steps
+2. **Follow dependencies** - Complete `needs:` steps before dependent steps
+3. **Always validate** - Run validation after each step output
+4. **Update state** - Mark steps validated in `validation.json`
+5. **Use workflow-executor skill** - For complex orchestration logic

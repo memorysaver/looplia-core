@@ -1,28 +1,34 @@
 ---
 name: writing-kit
+version: 1.0.0
 description: Transform content into structured writing kit with summary, ideas, and outline
 
-outputs:
-  summary:
-    artifact: summary.json
-    agent: content-analyzer
+steps:
+  - id: summary
+    run: agents/content-analyzer
+    input: ${{ sandbox }}/inputs/content.md
+    output: ${{ sandbox }}/outputs/summary.json
     validate:
       required_fields: [contentId, headline, tldr, bullets, tags, sentiment, category, overview, keyThemes, detailedAnalysis, narrativeFlow, coreIdeas, importantQuotes, context, relatedConcepts]
       min_quotes: 3
       min_key_points: 5
 
-  ideas:
-    artifact: ideas.json
-    agent: idea-generator
-    requires: [summary]
+  - id: ideas
+    run: agents/idea-generator
+    needs: [summary]
+    input: ${{ steps.summary.output }}
+    output: ${{ sandbox }}/outputs/ideas.json
     validate:
       required_fields: [contentId, hooks, angles, questions]
       has_hooks: true
 
-  writing-kit:
-    artifact: writing-kit.json
-    agent: writing-kit-builder
-    requires: [summary, ideas]
+  - id: writing-kit
+    run: agents/writing-kit-builder
+    needs: [summary, ideas]
+    input:
+      - ${{ steps.summary.output }}
+      - ${{ steps.ideas.output }}
+    output: ${{ sandbox }}/outputs/writing-kit.json
     final: true
     validate:
       required_fields: [contentId, source, summary, ideas, suggestedOutline, meta]
@@ -34,27 +40,55 @@ outputs:
 
 Transform raw content into a comprehensive writing kit with summary, creative ideas, and suggested outlines.
 
-## Purpose
+## Pipeline Overview
 
-This workflow processes content through three stages:
-1. **Summary Stage** (content-analyzer): Deep analysis of content to extract key themes, quotes, and insights
-2. **Ideas Stage** (idea-generator): Generate creative hooks, angles, and exploratory questions
-3. **Writing Kit Stage** (writing-kit-builder): Assemble final kit with outline and all components
+```
+content.md
+    │
+    ▼
+┌─────────────────────┐
+│  content-analyzer   │  Step 1: Deep content analysis
+│  (summary.json)     │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│   idea-generator    │  Step 2: Generate creative hooks and angles
+│   (ideas.json)      │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│ writing-kit-builder │  Step 3: Assemble final writing kit
+│ (writing-kit.json)  │
+└─────────────────────┘
+```
 
-## Content Analysis Guidelines
+## Step Details
 
-### Summary Requirements
-- Extract minimum 3 verbatim quotes with context
-- Identify 5-7 key themes from the content
-- Generate at least 5 key bullet points
-- Provide detailed narrative flow analysis
-- Include related concepts for further exploration
+### Step 1: Summary (content-analyzer)
 
-### Writing Kit Requirements
-- Generate 5 types of hooks: emotional, curiosity, controversy, statistic, story
-- Provide multiple writing angles with relevance scores
-- Create structured outline with estimated word counts per section
-- Calculate relevance score based on user profile topics
+Deep analysis of content to extract:
+- Key themes and concepts
+- Minimum 3 verbatim quotes with context
+- At least 5 key bullet points
+- Narrative flow analysis
+- Related concepts for exploration
+
+### Step 2: Ideas (idea-generator)
+
+Generate creative writing inspiration:
+- 5 types of hooks: emotional, curiosity, controversy, statistic, story
+- Multiple narrative angles with relevance scores
+- Exploratory questions by type (analytical, practical, philosophical, comparative)
+
+### Step 3: Writing Kit (writing-kit-builder)
+
+Assemble final kit with:
+- Structured outline with estimated word counts
+- All components from previous steps
+- Meta information (difficulty, time to write, audience)
+- Relevance scores based on user profile
 
 ## Quality Standards
 
@@ -70,12 +104,13 @@ Read `user-profile.json` from workspace root to personalize:
 - Adjust writing tone to match user's preferred style
 - Target word count based on user's typical article length
 
-## Output Validation
+## Validation Criteria
 
-Each output is validated by the workflow-validator skill:
-- Required fields must be present
-- Minimum counts for quotes, key points, outline sections
-- Hooks array must not be empty
+| Step | Required Fields | Additional Checks |
+|------|-----------------|-------------------|
+| summary | contentId, headline, tldr, bullets... | min_quotes: 3, min_key_points: 5 |
+| ideas | contentId, hooks, angles, questions | has_hooks: true |
+| writing-kit | contentId, source, summary, ideas... | min_outline_sections: 4 |
 
 ## Error Handling
 
@@ -83,17 +118,3 @@ If validation fails:
 1. Review the failed checks in validation result
 2. Retry the subagent with specific feedback
 3. Report to user if retry also fails
-
-## Sandbox Structure (v0.5.2)
-
-```
-sandbox/{id}/
-  inputs/
-    content.md          # Original content
-  outputs/
-    summary.json        # Stage 1 output (content-analyzer)
-    ideas.json          # Stage 2 output (idea-generator)
-    writing-kit.json    # Stage 3 output (writing-kit-builder) - final
-  logs/                 # Session logs
-  validation.json       # Generated validation checklist
-```

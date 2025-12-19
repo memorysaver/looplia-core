@@ -48,11 +48,12 @@ When making changes to the codebase, ensure the following documents are updated 
 
 ### Architecture Documents
 
-- [ ] **[docs/DESIGN-0.5.2.md](./DESIGN-0.5.2.md)**
+- [ ] **[docs/DESIGN-0.6.0.md](./DESIGN-0.6.0.md)**
+  - Steps-based workflow schema
   - Plugin structure
   - Command specifications
-  - Workflow definitions
   - Sandbox architecture
+  - Hook-based validation
 
 - [ ] **[docs/AGENTIC_CONCEPT-0.5.md](./AGENTIC_CONCEPT-0.5.md)**
   - Agent system design
@@ -68,10 +69,11 @@ When making changes to the codebase, ensure the following documents are updated 
   - Workspace structure changes
   - Deprecated terms marked
 
-- [ ] **[docs/TEST_PLAN-0.5.md](./TEST_PLAN-0.5.md)**
+- [ ] **[docs/TEST_PLAN-0.6.md](./TEST_PLAN-0.6.md)**
   - Test commands and paths
   - Log verification examples
   - Troubleshooting section
+  - Steps-based validation schema
 
 ---
 
@@ -84,7 +86,7 @@ Ensure CI/CD files match the current architecture design:
 - [ ] **[.github/workflows/docker-e2e.yml](../.github/workflows/docker-e2e.yml)**
   - Folder paths match design (e.g., `sandbox/` vs `contentItem/`)
   - File paths match design (e.g., `inputs/`, `outputs/`, `logs/`)
-  - Validation steps align with `validation.json` schema
+  - Validation steps align with `validation.json` schema (v0.6.0 uses `.steps` not `.outputs`)
   - Subagent verification matches expected agents
 
 ### Test Scripts
@@ -165,7 +167,7 @@ When creating a PR, include:
 - [ ] README.md
 - [ ] docs/README.md
 - [ ] docs/GLOSSARY.md
-- [ ] docs/TEST_PLAN-0.5.md
+- [ ] docs/TEST_PLAN-0.6.md
 - [ ] Other: ___
 
 ## CI/CD Verified

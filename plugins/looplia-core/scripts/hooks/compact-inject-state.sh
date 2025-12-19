@@ -1,5 +1,5 @@
 #!/bin/bash
-# Context Compact State Injection Hook
+# Context Compact State Injection Hook (v0.6.0)
 # Triggered: When context is compacted (SessionStart:compact)
 # Action: Re-inject current sandbox progress into new context
 
@@ -26,11 +26,11 @@ fi
 
 WORKFLOW=$(jq -r '.workflow // "unknown"' "$VALIDATION_JSON")
 
-# Build progress summary
+# Build progress summary (v0.6.0 uses "steps" not "outputs")
 echo "=== Active Sandbox: $SANDBOX_ID ==="
 echo "Workflow: $WORKFLOW"
 echo ""
 echo "Progress:"
-jq -r '.outputs | to_entries[] | "  - \(.key): \(if .value.validated then "✓ validated" else "⏳ pending" end)"' "$VALIDATION_JSON"
+jq -r '.steps | to_entries[] | "  - \(.key): \(if .value.validated then "✓ validated" else "⏳ pending" end)"' "$VALIDATION_JSON"
 echo ""
-echo "Next: Complete pending outputs in dependency order."
+echo "Next: Complete pending steps in dependency order."

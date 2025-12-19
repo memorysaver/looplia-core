@@ -1,11 +1,11 @@
 # Looplia-Core Test Plan
 
-> **Version:** 0.5
+> **Version:** 0.6
 > **Date:** December 2025
 > **Test Framework:** Bun Test (`bun:test`)
-> **Related:** [AGENTIC_CONCEPT-0.4.md](./AGENTIC_CONCEPT-0.4.md) | [DESIGN-0.5.1.md](./DESIGN-0.5.1.md)
+> **Related:** [AGENTIC_CONCEPT-0.4.md](./AGENTIC_CONCEPT-0.4.md) | [DESIGN-0.6.0.md](./DESIGN-0.6.0.md)
 
-This document describes the test architecture for Looplia-Core v0.5, including the new **Real API Testing** workflow with subagent and skill verification.
+This document describes the test architecture for Looplia-Core v0.6, including the new **Real API Testing** workflow with subagent and skill verification.
 
 ---
 
@@ -233,13 +233,18 @@ AI is transforming how developers write code...
 The future belongs to developers who can effectively collaborate with AI.
 EOF
 
-# Run workflow with real API (env injection)
+# Quick test with example file (recommended)
+env $(cat .env) looplia run writing-kit --file ./examples/ai-healthcare.md
+
+# Or create custom test content and run
 env $(cat .env) looplia run writing-kit --file /tmp/test-article.md
 
-# Or use export
+# Alternative: export and run separately
 export $(cat .env)
-looplia run writing-kit --file /tmp/test-article.md
+looplia run writing-kit --file ./examples/ai-healthcare.md
 ```
+
+> **Important:** Always use `env $(cat .env)` syntax - do NOT use `env $(cat .env | xargs)` as it may cause parsing errors with special characters in API keys.
 
 ### Expected Output
 
@@ -425,7 +430,7 @@ grep "validate.ts" $LOG_FILE
 
 # Step 9: Check validation.json
 echo "=== Validation State ==="
-cat ~/.looplia/sandbox/$SANDBOX_ID/validation.json | jq '.outputs | to_entries[] | {name: .key, validated: .value.validated}'
+cat ~/.looplia/sandbox/$SANDBOX_ID/validation.json | jq '.steps | to_entries[] | {name: .key, validated: .value.validated}'
 
 # Step 10: Verify outputs exist
 echo "=== Outputs ==="
@@ -676,20 +681,23 @@ describe("SDK Configuration", () => {
 
 ```typescript
 describe("Workflow Definition", () => {
-  it("should have 3 stages", () => {
+  it("should have 3 steps (v0.6.0)", () => {
     const workflow = parseWorkflow("workflows/writing-kit.md");
 
-    expect(Object.keys(workflow.outputs)).toHaveLength(3);
-    expect(workflow.outputs).toHaveProperty("summary");
-    expect(workflow.outputs).toHaveProperty("ideas");
-    expect(workflow.outputs).toHaveProperty("writing-kit");
+    expect(workflow.steps).toHaveLength(3);
+    expect(workflow.steps.map(s => s.id)).toContain("summary");
+    expect(workflow.steps.map(s => s.id)).toContain("ideas");
+    expect(workflow.steps.map(s => s.id)).toContain("writing-kit");
   });
 
-  it("should define correct dependencies", () => {
+  it("should define correct dependencies (v0.6.0 uses needs)", () => {
     const workflow = parseWorkflow("workflows/writing-kit.md");
 
-    expect(workflow.outputs.ideas.requires).toContain("summary");
-    expect(workflow.outputs["writing-kit"].requires).toContain("ideas");
+    const ideasStep = workflow.steps.find(s => s.id === "ideas");
+    const kitStep = workflow.steps.find(s => s.id === "writing-kit");
+
+    expect(ideasStep?.needs).toContain("summary");
+    expect(kitStep?.needs).toContain("ideas");
   });
 });
 ```
@@ -789,10 +797,10 @@ If `sandbox/{id}/logs/` is empty:
 ## Cross-References
 
 - **Agent System**: [AGENTIC_CONCEPT-0.5.md](./AGENTIC_CONCEPT-0.5.md)
-- **Architecture**: [DESIGN-0.5.2.md](./DESIGN-0.5.2.md)
+- **Architecture**: [DESIGN-0.6.0.md](./DESIGN-0.6.0.md)
 - **Skills**: [AGENT-SKILLS.md](./AGENT-SKILLS.md)
 - **Glossary**: [GLOSSARY.md](./GLOSSARY.md)
 
 ---
 
-*This test plan is maintained for Looplia-Core v0.5.*
+*This test plan is maintained for Looplia-Core v0.6.*
