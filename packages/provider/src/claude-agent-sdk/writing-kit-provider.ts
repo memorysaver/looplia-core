@@ -17,7 +17,7 @@ import { WRITING_KIT_OUTPUT_SCHEMA } from "./utils/schema-converter";
 import { ensureWorkspace, writeUserProfile } from "./workspace";
 
 /**
- * Build smart continuation prompt for writing kit (v0.5.2 sandbox architecture)
+ * Build smart continuation prompt for writing kit (v0.6.0 sandbox architecture)
  *
  * Main agent is a simple orchestrator that:
  * 1. Checks sandbox folder for existing progress
@@ -32,7 +32,7 @@ import { ensureWorkspace, writeUserProfile } from "./workspace";
  * Smart continuation: Agent decides what work is needed based on existing files.
  * No hardcoded control logic in TypeScript.
  *
- * Sandbox structure (v0.5.2):
+ * Sandbox structure (v0.6.0):
  * sandbox/{id}/inputs/content.md - original content
  * sandbox/{id}/outputs/summary.json - content-analyzer output
  * sandbox/{id}/outputs/ideas.json - idea-generator output

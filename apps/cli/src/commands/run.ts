@@ -1,5 +1,5 @@
 /**
- * Run Command (v0.5.2) - Thin Wrapper
+ * Run Command (v0.6.0) - Thin Wrapper
  *
  * Execute a workflow by injecting /run command into the agent.
  * All workflow logic is in the workflow-executor skill.
@@ -401,7 +401,7 @@ function renderResult(result: WorkflowResult): void {
 }
 
 /**
- * Main entry point for run command (v0.5.2 thin wrapper)
+ * Main entry point for run command (v0.6.0 thin wrapper)
  */
 export async function runRunCommand(args: string[]): Promise<void> {
   const parsed = parseArgs(args);

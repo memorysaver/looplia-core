@@ -1,16 +1,21 @@
 /**
- * Workflow Domain Types (v0.5.1)
+ * Workflow Domain Types (v0.6.0)
  *
  * Defines the structure for workflow definitions using the
  * Workflow-as-Markdown pattern: YAML frontmatter + markdown instructions.
  *
- * Replaces Pipeline types from v0.5.0.
+ * v0.6.0 Changes:
+ * - `steps:` array replaces `outputs:` object
+ * - `run: agents/{name}` replaces `agent:`
+ * - `needs:` replaces `requires:`
+ * - `output:` replaces `artifact:`
+ * - `${{ }}` variable substitution syntax
  *
- * @see docs/DESIGN-0.5.1.md
+ * @see docs/DESIGN-0.6.0.md
  */
 
 /**
- * Validation criteria for a workflow output.
+ * Validation criteria for a workflow step output.
  * Used by the workflow-validator skill to verify artifacts.
  *
  * Extensible: custom keys are allowed for workflow-specific validation.
@@ -31,33 +36,41 @@ export type ValidationCriteria = {
 };
 
 /**
- * A single output step in the workflow
+ * A single step in the workflow (v0.6.0)
+ *
+ * GitHub Actions-inspired format with explicit ordering.
  */
-export type WorkflowOutput = {
-  /** Artifact filename (e.g., "summary.json") */
-  artifact: string;
-  /** Agent to invoke for this step */
-  agent: string;
-  /** Dependencies - other output names that must complete first */
-  requires?: string[];
+export type WorkflowStep = {
+  /** Unique step identifier */
+  id: string;
+  /** Action to execute: "agents/{name}" format */
+  run: string;
+  /** Input file path(s) with ${{ }} variable substitution */
+  input: string | string[];
+  /** Output file path with ${{ }} variable substitution */
+  output: string;
+  /** Dependencies - other step IDs that must complete first */
+  needs?: string[];
   /** Whether this is the final output of the workflow */
   final?: boolean;
-  /** Validation criteria for this output */
+  /** Validation criteria for this step's output */
   validate?: ValidationCriteria;
 };
 
 /**
- * Workflow Definition - declarative workflow configuration
+ * Workflow Definition - declarative workflow configuration (v0.6.0)
  *
  * Parsed from YAML frontmatter in ~/.looplia/workflows/{name}.md
  */
 export type WorkflowDefinition = {
   /** Workflow name (e.g., "writing-kit") */
   name: string;
+  /** Semantic version */
+  version?: string;
   /** Human-readable description */
   description: string;
-  /** Output steps keyed by output name */
-  outputs: Record<string, WorkflowOutput>;
+  /** Ordered list of steps (v0.6.0 - replaces outputs) */
+  steps: WorkflowStep[];
 };
 
 /**
@@ -72,28 +85,34 @@ export type ParsedWorkflow = {
 };
 
 /**
- * Validation state for a single output in a workflow session
+ * Validation state for a single step in a workflow session (v0.6.0)
  */
-export type OutputValidationState = {
-  /** Artifact filename */
-  artifact: string;
+export type StepValidationState = {
+  /** Output file path */
+  output: string;
   /** Validation criteria from workflow definition */
-  criteria: ValidationCriteria;
-  /** Whether this output has passed validation */
+  validate?: ValidationCriteria;
+  /** Whether this step's output has passed validation */
   validated: boolean;
 };
 
 /**
- * Validation manifest for a workflow session
+ * Validation manifest for a workflow session (v0.6.0)
  *
  * Generated from workflow frontmatter when session starts.
- * Stored in contentItem/{id}/validation.json
+ * Stored in sandbox/{id}/validation.json
  */
 export type ValidationManifest = {
   /** Workflow name */
   workflow: string;
-  /** Validation state for each output */
-  outputs: Record<string, OutputValidationState>;
+  /** Workflow version */
+  version?: string;
+  /** Sandbox ID */
+  sandboxId?: string;
+  /** Creation timestamp */
+  createdAt?: string;
+  /** Validation state for each step (v0.6.0 - replaces outputs) */
+  steps: Record<string, StepValidationState>;
 };
 
 /**
@@ -117,3 +136,9 @@ export type ValidationCheck = {
   /** Human-readable message */
   message: string;
 };
+
+// Legacy type aliases for backwards compatibility
+/** @deprecated Use WorkflowStep instead */
+export type WorkflowOutput = WorkflowStep;
+/** @deprecated Use StepValidationState instead */
+export type OutputValidationState = StepValidationState;

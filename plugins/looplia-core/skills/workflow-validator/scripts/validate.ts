@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Workflow Validator Script (v0.5.2)
+ * Workflow Validator Script (v0.6.0)
  *
  * Deterministic validation of workflow artifacts against criteria.
  * Runs outside LLM context - no tokens consumed.

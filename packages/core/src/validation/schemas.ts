@@ -176,7 +176,7 @@ export const PipelineDefinitionSchema = z.object({
 });
 
 // ─────────────────────────────────────────────────────────────
-// Workflow Schemas (v0.5.1)
+// Workflow Schemas (v0.6.0)
 // ─────────────────────────────────────────────────────────────
 
 /**
@@ -367,7 +367,7 @@ export function validatePipelineOutput(
 }
 
 // ─────────────────────────────────────────────────────────────
-// Workflow Validation Helpers (v0.5.1)
+// Workflow Validation Helpers (v0.6.0)
 // ─────────────────────────────────────────────────────────────
 
 export function validateWorkflowDefinition(

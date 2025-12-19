@@ -5,7 +5,7 @@ import type { ContentItem } from "@looplia-core/core";
 /**
  * Write ContentItem to workspace as markdown file with frontmatter
  *
- * Creates sandbox folder structure (v0.5.2):
+ * Creates sandbox folder structure (v0.6.0):
  * ```
  * sandbox/{id}/
  * ├── inputs/

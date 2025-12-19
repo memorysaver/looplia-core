@@ -158,7 +158,7 @@ export type PromptContext = {
   /** Workspace root path */
   workspace: string;
 
-  // v0.5.1 Workflow fields
+  // v0.6.0 Workflow fields
   /** Workflow name (e.g., "writing-kit") */
   workflowName?: string;
   /** Path to workflow file relative to workspace (e.g., "workflows/writing-kit.md") */
@@ -188,7 +188,7 @@ export type CommandDefinition<TOutput = unknown> = {
 };
 
 /**
- * v0.5.2: Generic workflow result for prompt-based execution
+ * v0.6.0: Generic workflow result for prompt-based execution
  */
 export type WorkflowResult = {
   status: "success" | "error" | "partial";
@@ -226,7 +226,7 @@ export type AgentExecutor = {
   ): Promise<CommandResult<T>>;
 
   /**
-   * v0.5.2: Execute a prompt without schema (thin wrapper pattern)
+   * v0.6.0: Execute a prompt without schema (thin wrapper pattern)
    * Used by CLI to inject /run commands
    */
   executePromptStreaming(
@@ -235,7 +235,7 @@ export type AgentExecutor = {
   ): AsyncGenerator<StreamingEvent, CommandResult<WorkflowResult>>;
 
   /**
-   * v0.5.2: Execute a prompt without schema (non-streaming)
+   * v0.6.0: Execute a prompt without schema (non-streaming)
    */
   executePrompt(
     prompt: string,

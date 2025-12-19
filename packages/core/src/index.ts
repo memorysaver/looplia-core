@@ -18,7 +18,7 @@ export type {
 } from "./commands";
 // Command Framework
 export {
-  // Workflow Command (v0.5.1)
+  // Workflow Command (v0.6.0)
   buildWorkflowPrompt,
   // Registry
   clearCommands,
@@ -52,7 +52,7 @@ export type {
   UserTopic,
   WritingStyle,
 } from "./domain/user-profile";
-// Workflow Types (v0.5.1)
+// Workflow Types (v0.6.0)
 export type {
   OutputValidationState,
   ParsedWorkflow,
@@ -63,7 +63,7 @@ export type {
   WorkflowDefinition,
   WorkflowOutput,
 } from "./domain/workflow";
-// Workflow Parser (v0.5.1)
+// Workflow Parser (v0.6.0)
 export {
   generateValidationManifest,
   getExecutionOrder,
@@ -95,7 +95,7 @@ export {
 export {
   ContentItemSchema,
   ContentSummarySchema,
-  // Workflow Validation (v0.5.1)
+  // Workflow Validation (v0.6.0)
   OutputValidationStateSchema,
   PipelineDefinitionSchema,
   PipelineOutputSchema,

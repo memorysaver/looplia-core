@@ -1,5 +1,5 @@
 /**
- * Workflow Command Definition (v0.5.1)
+ * Workflow Command Definition (v0.6.0)
  *
  * Generic workflow executor using workflow-as-markdown pattern.
  * Replaces the hardcoded kit command.
