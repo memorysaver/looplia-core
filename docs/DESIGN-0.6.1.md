@@ -6,6 +6,7 @@
 > **Date:** 2025-12-20
 > **Related:** [DESIGN-0.6.0.md](./DESIGN-0.6.0.md) | [CONTEXT-INJECTION.md](./CONTEXT-INJECTION.md) | [GLOSSARY.md](./GLOSSARY.md)
 > **Cleanup:** [CLEANUP-0.6.1.md](./CLEANUP-0.6.1.md) - Legacy code removal plan
+> **Next:** [DESIGN-0.6.2.md](./DESIGN-0.6.2.md) - Plugin-first domain types refactor
 
 ---
 
@@ -2134,6 +2135,7 @@ The hook system doesn't care whether the Write came from content-analyzer or ski
 - **Context Injection:** See [CONTEXT-INJECTION.md](./CONTEXT-INJECTION.md) for skill loading
 - **Plugin Architecture:** See [CLAUDE_PLUGINS.md](./CLAUDE_PLUGINS.md) for plugin structure
 - **Ubiquitous Language:** See [GLOSSARY.md](./GLOSSARY.md) for term definitions
+- **Next Version (v0.6.2):** See [DESIGN-0.6.2.md](./DESIGN-0.6.2.md) for plugin-first domain types refactor
 
 ---
 

@@ -2,12 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type {
-  ContentItem,
-  ContentSummary,
-  UserProfile,
-  WritingIdeas,
-} from "@looplia-core/core";
+import type { ContentItem, UserProfile } from "@looplia-core/core";
 
 /**
  * Test content item fixture
@@ -57,76 +52,6 @@ export const testUser: UserProfile = {
     targetWordCount: 1200,
     voice: "first-person",
   },
-};
-
-/**
- * Test content summary fixture
- */
-export const testSummary: ContentSummary = {
-  contentId: "test-content-1",
-  headline: "AI is Transforming How We Write Code",
-  tldr:
-    "AI tools like GitHub Copilot and Claude are revolutionizing software development " +
-    "by automating code generation, testing, and review processes. Developers can now " +
-    "focus more on architecture and design while AI handles routine tasks.",
-  bullets: [
-    "AI-powered code completion is now mainstream",
-    "Automated testing and bug detection are improving",
-    "Natural language programming is emerging",
-    "Developers can focus on higher-level design",
-  ],
-  tags: [
-    "AI",
-    "software development",
-    "code generation",
-    "automation",
-    "future of work",
-  ],
-  sentiment: "positive",
-  category: "article",
-  score: {
-    relevanceToUser: 0.85,
-  },
-};
-
-/**
- * Test writing ideas fixture
- */
-export const testIdeas: WritingIdeas = {
-  contentId: "test-content-1",
-  hooks: [
-    {
-      text: "What if your next coding partner wasn't human at all?",
-      type: "curiosity",
-    },
-    {
-      text: "I wrote 1000 lines of code last week. AI wrote half of them.",
-      type: "story",
-    },
-  ],
-  angles: [
-    {
-      title: "The Human-AI Collaboration",
-      description:
-        "Exploring how developers and AI tools work together to create better software",
-      relevanceScore: 0.9,
-    },
-    {
-      title: "The Skills That Matter Now",
-      description: "What developers need to learn in an AI-augmented world",
-      relevanceScore: 0.75,
-    },
-  ],
-  questions: [
-    {
-      question: "How will AI change the job market for software developers?",
-      type: "analytical",
-    },
-    {
-      question: "What coding tasks should you still do manually?",
-      type: "practical",
-    },
-  ],
 };
 
 /**

@@ -1,23 +1,10 @@
-import { ContentSummarySchema, WritingIdeasSchema } from "@looplia-core/core";
-import { zodToJsonSchema } from "zod-to-json-schema";
-
 /**
- * JSON Schema for ContentSummary output
- * Uses openApi3 target to get inline schema without $ref (required by Claude API)
+ * JSON Schemas for Claude structured output
+ *
+ * These inline schemas define output formats for agentic queries.
+ * In v0.6.2+, skill-specific schemas are defined in SKILL.md files.
+ * These remain for backwards compatibility with legacy provider code.
  */
-export const SUMMARY_OUTPUT_SCHEMA = zodToJsonSchema(ContentSummarySchema, {
-  target: "openApi3",
-  $refStrategy: "none",
-});
-
-/**
- * JSON Schema for WritingIdeas output
- * Uses openApi3 target to get inline schema without $ref (required by Claude API)
- */
-export const IDEAS_OUTPUT_SCHEMA = zodToJsonSchema(WritingIdeasSchema, {
-  target: "openApi3",
-  $refStrategy: "none",
-});
 
 /**
  * JSON Schema for OutlineSection[] output
@@ -58,6 +45,8 @@ export const OUTLINE_OUTPUT_SCHEMA = {
  *
  * Combines summary, ideas, and outline into a single schema for the
  * agentic writing kit builder.
+ *
+ * @deprecated Use skill-specific schemas in SKILL.md files instead (v0.6.2+)
  */
 export const WRITING_KIT_OUTPUT_SCHEMA = {
   type: "object",

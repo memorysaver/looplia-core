@@ -1,39 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import {
-  IDEAS_OUTPUT_SCHEMA,
   OUTLINE_OUTPUT_SCHEMA,
-  SUMMARY_OUTPUT_SCHEMA,
+  WRITING_KIT_OUTPUT_SCHEMA,
 } from "../../src/claude-agent-sdk/utils/schema-converter";
 
 describe("schema-converter", () => {
-  describe("SUMMARY_OUTPUT_SCHEMA", () => {
-    it("should be a valid JSON schema object", () => {
-      expect(typeof SUMMARY_OUTPUT_SCHEMA).toBe("object");
-      expect(SUMMARY_OUTPUT_SCHEMA).toBeTruthy();
-    });
-
-    it("should have required properties for ContentSummary", () => {
-      // openApi3 target generates inline schema with type at root (required by Claude API)
-      expect(SUMMARY_OUTPUT_SCHEMA).toHaveProperty("type", "object");
-      expect(SUMMARY_OUTPUT_SCHEMA).toHaveProperty("properties");
-      expect(SUMMARY_OUTPUT_SCHEMA).toHaveProperty("required");
-    });
-  });
-
-  describe("IDEAS_OUTPUT_SCHEMA", () => {
-    it("should be a valid JSON schema object", () => {
-      expect(typeof IDEAS_OUTPUT_SCHEMA).toBe("object");
-      expect(IDEAS_OUTPUT_SCHEMA).toBeTruthy();
-    });
-
-    it("should have required properties for WritingIdeas", () => {
-      // openApi3 target generates inline schema with type at root (required by Claude API)
-      expect(IDEAS_OUTPUT_SCHEMA).toHaveProperty("type", "object");
-      expect(IDEAS_OUTPUT_SCHEMA).toHaveProperty("properties");
-      expect(IDEAS_OUTPUT_SCHEMA).toHaveProperty("required");
-    });
-  });
-
   describe("OUTLINE_OUTPUT_SCHEMA", () => {
     it("should be an object schema (Claude API requirement)", () => {
       expect(OUTLINE_OUTPUT_SCHEMA.type).toBe("object");
@@ -62,6 +33,21 @@ describe("schema-converter", () => {
     it("should not require estimatedWords", () => {
       const items = OUTLINE_OUTPUT_SCHEMA.properties.sections.items;
       expect(items.required).not.toContain("estimatedWords");
+    });
+  });
+
+  describe("WRITING_KIT_OUTPUT_SCHEMA", () => {
+    it("should be an object schema", () => {
+      expect(WRITING_KIT_OUTPUT_SCHEMA.type).toBe("object");
+    });
+
+    it("should have required top-level properties", () => {
+      expect(WRITING_KIT_OUTPUT_SCHEMA.required).toContain("contentId");
+      expect(WRITING_KIT_OUTPUT_SCHEMA.required).toContain("source");
+      expect(WRITING_KIT_OUTPUT_SCHEMA.required).toContain("summary");
+      expect(WRITING_KIT_OUTPUT_SCHEMA.required).toContain("ideas");
+      expect(WRITING_KIT_OUTPUT_SCHEMA.required).toContain("suggestedOutline");
+      expect(WRITING_KIT_OUTPUT_SCHEMA.required).toContain("meta");
     });
   });
 });

@@ -6,7 +6,7 @@
  * Prefer using subpath imports for tree-shaking:
  * @example
  * ```typescript
- * import { createClaudeSummarizer } from "@looplia-core/provider/claude-agent-sdk";
+ * import { ensureWorkspace } from "@looplia-core/provider/claude-agent-sdk";
  * ```
  */
 
@@ -18,9 +18,6 @@ export type {
 } from "./claude-agent-sdk/config";
 // Re-export factory functions for convenience
 // (prefer subpath import for better tree-shaking)
-export {
-  createClaudeSummarizer,
-  ensureWorkspace,
-} from "./claude-agent-sdk/index";
+export { ensureWorkspace } from "./claude-agent-sdk/index";
 // Re-export streaming types
 export type { StreamingEvent } from "./claude-agent-sdk/streaming/types";
