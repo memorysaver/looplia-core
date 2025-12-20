@@ -1,0 +1,44 @@
+---
+name: {{name}}
+version: 1.0.0
+description: {{description}}
+
+steps:
+{{#each steps}}
+  - id: {{id}}
+    skill: {{skill}}
+    mission: |
+      {{mission}}
+{{#if needs}}
+    needs: [{{needs}}]
+{{/if}}
+    input: {{input}}
+    output: {{output}}
+{{#if model}}
+    model: {{model}}
+{{/if}}
+{{#if final}}
+    final: true
+{{/if}}
+{{#if validate}}
+    validate:
+      required_fields: [{{validate.required_fields}}]
+{{/if}}
+{{/each}}
+---
+
+# {{title}}
+
+{{description}}
+
+## Usage
+
+```bash
+looplia run {{name}} --file <content.md>
+```
+
+## Steps
+
+{{#each steps}}
+{{@index}}. **{{id}}**: {{brief}}
+{{/each}}

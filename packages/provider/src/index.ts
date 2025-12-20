@@ -20,7 +20,6 @@ export type {
 // (prefer subpath import for better tree-shaking)
 export {
   createClaudeSummarizer,
-  createClaudeWritingKitProvider,
   ensureWorkspace,
 } from "./claude-agent-sdk/index";
 // Re-export streaming types

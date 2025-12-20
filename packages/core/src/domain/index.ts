@@ -4,7 +4,6 @@ export type {
   Source,
   SourceType,
 } from "./content";
-export type { CoreIdea } from "./core-idea";
 export type { ProviderError, ProviderResult } from "./errors";
 export { err, ok } from "./errors";
 export type {
@@ -14,7 +13,7 @@ export type {
   WritingQuestion,
 } from "./ideas";
 export type { Quote } from "./quote";
-export type { ContentSummary, SummaryScore } from "./summary";
+export type { ContentSummary, CoreIdea, SummaryScore } from "./summary";
 export type { UserProfile, UserTopic, WritingStyle } from "./user-profile";
 export type {
   OutlineSection,

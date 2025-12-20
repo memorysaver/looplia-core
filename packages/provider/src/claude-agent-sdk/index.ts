@@ -9,8 +9,6 @@ export type {
   ProviderUsage,
 } from "./config";
 export { validateConfig } from "./config";
-// Re-export content I/O utilities
-export { writeContentItem } from "./content-io";
 // Re-export executor (Clean Architecture)
 export { createClaudeAgentExecutor } from "./executor";
 // Re-export logger
@@ -58,6 +56,3 @@ export {
   readUserProfile,
   writeUserProfile,
 } from "./workspace";
-// Re-export v0.3.1 writing kit provider
-export type { WritingKitProvider } from "./writing-kit-provider";
-export { createClaudeWritingKitProvider } from "./writing-kit-provider";

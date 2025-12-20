@@ -1,8 +1,9 @@
+import { runBuildCommand } from "./commands/build";
 import { runConfigCommand } from "./commands/config";
 import { runInitCommand } from "./commands/init";
 import { runRunCommand } from "./commands/run";
 
-const VERSION = "0.6.0";
+const VERSION = "0.6.1";
 
 function printHelp(): void {
   console.log(`
@@ -14,6 +15,7 @@ Usage:
 Commands:
   init         Initialize or refresh workspace
   run          Execute a workflow on content
+  build        Build workflow from natural language
   config       Manage user profile settings
 
 Options:
@@ -53,6 +55,9 @@ async function main(): Promise<void> {
       break;
     case "run":
       await runRunCommand(rest);
+      break;
+    case "build":
+      await runBuildCommand(rest);
       break;
     case "config":
       await runConfigCommand(rest);

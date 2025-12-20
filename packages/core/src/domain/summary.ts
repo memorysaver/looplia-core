@@ -1,5 +1,16 @@
-import type { CoreIdea } from "./core-idea";
 import type { Quote } from "./quote";
+
+/**
+ * Core idea with explanation and examples
+ */
+export type CoreIdea = {
+  /** The idea name/concept */
+  concept: string;
+  /** What it means in this context */
+  explanation: string;
+  /** Specific examples from content */
+  examples?: string[];
+};
 
 /**
  * Summary scoring metrics

@@ -1,12 +1,7 @@
 // Domain Types
 
 // Mock Adapters
-export {
-  createMockIdeaGenerator,
-  createMockOutlineGenerator,
-  createMockSummarizer,
-  createMockWritingKitProvider,
-} from "./adapters/mock";
+export { createMockSummarizer } from "./adapters/mock";
 export type {
   AgentExecutor,
   CommandDefinition,
@@ -26,7 +21,6 @@ export {
   getCommandNames,
   hasCommand,
   // Command Definitions
-  kitCommand,
   registerCommand,
   workflowCommand,
 } from "./commands";
@@ -50,7 +44,6 @@ export type {
   WritingIdeas,
   WritingQuestion,
 } from "./domain/ideas";
-export type { PipelineDefinition, PipelineOutput } from "./domain/pipeline";
 export type { SessionManifest } from "./domain/session";
 export type { ContentSummary, SummaryScore } from "./domain/summary";
 export type {
@@ -83,20 +76,13 @@ export type {
   WritingKitMeta,
   WritingKitSource,
 } from "./domain/writing-kit";
-export type { IdeaProvider } from "./ports/idea-generator";
-export type { OutlineProvider } from "./ports/outline-generator";
 export type { ScoringPolicy } from "./ports/scoring";
 export { defaultScoringPolicy } from "./ports/scoring";
 // Provider Interfaces
 export type { SummarizerProvider } from "./ports/summarizer";
-export { generateIdeas } from "./services/idea-engine";
 export { rankKits } from "./services/ranking-engine";
 // Services
 export { summarizeContent } from "./services/summarization-engine";
-export {
-  buildWritingKit,
-  type WritingKitProviders,
-} from "./services/writing-kit-engine";
 // Validation
 export {
   ContentItemSchema,
