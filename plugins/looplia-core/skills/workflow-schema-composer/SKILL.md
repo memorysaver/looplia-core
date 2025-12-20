@@ -6,7 +6,7 @@ description: |
   Takes skill recommendations and creates v0.6.1 compliant workflow schema with steps,
   dependencies, missions, and validation criteria.
   Triggered by /build command after skill-capability-matcher.
-model: sonnet
+model: claude-haiku-4-5-20251001
 ---
 
 # Workflow Schema Composer

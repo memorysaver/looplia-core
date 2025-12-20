@@ -188,8 +188,8 @@ async function createTestWorkspace(
  * Bootstrap workspace from both looplia-core and looplia-writer plugins
  *
  * Copies files in order:
- * 1. From looplia-core: commands/, skills/, hooks/, CLAUDE.md
- * 2. From looplia-writer: agents/, skills/ (merged), workflows/
+ * 1. From looplia-core: commands/, skills/, hooks/, agents/, scripts/, CLAUDE.md
+ * 2. From looplia-writer: agents/ (merged), skills/ (merged), workflows/
  */
 async function bootstrapFromPlugins(
   workspaceDir: string,
@@ -227,6 +227,23 @@ async function bootstrapFromPlugins(
   const coreHooksDir = join(plugins.core, "hooks");
   if (await pathExists(coreHooksDir)) {
     await cp(coreHooksDir, join(workspaceDir, ".claude", "hooks"), {
+      recursive: true,
+    });
+  }
+
+  // agents/ → ~/.looplia/.claude/agents/ (from core - includes skill-executor)
+  const coreAgentsDir = join(plugins.core, "agents");
+  if (await pathExists(coreAgentsDir)) {
+    await mkdir(join(workspaceDir, ".claude", "agents"), { recursive: true });
+    await cp(coreAgentsDir, join(workspaceDir, ".claude", "agents"), {
+      recursive: true,
+    });
+  }
+
+  // scripts/ → ~/.looplia/scripts/ (hook scripts for validation)
+  const coreScriptsDir = join(plugins.core, "scripts");
+  if (await pathExists(coreScriptsDir)) {
+    await cp(coreScriptsDir, join(workspaceDir, "scripts"), {
       recursive: true,
     });
   }
@@ -275,8 +292,8 @@ async function bootstrapFromPlugins(
  * Ensure the Looplia workspace exists and is properly initialized
  *
  * Creates ~/.looplia/ with .claude/ structure and copies from both plugins:
- * - looplia-core: commands/, skills/ (core), hooks/, CLAUDE.md
- * - looplia-writer: agents/, skills/ (domain), workflows/
+ * - looplia-core: commands/, skills/ (core), hooks/, agents/, scripts/, CLAUDE.md
+ * - looplia-writer: agents/ (merged), skills/ (domain), workflows/
  *
  * On first run or when force=true, performs destructive refresh from plugins.
  *

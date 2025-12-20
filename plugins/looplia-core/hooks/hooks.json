@@ -3,24 +3,24 @@
   "hooks": [
     {
       "event": "SessionStart",
-      "command": "echo '>>> Looplia session started'",
+      "command": "echo '🚀 Looplia session started'",
       "description": "Log session start"
     },
     {
       "event": "PostToolUse",
       "matcher": "Write",
-      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/hooks/post-write-validate.sh",
+      "command": "./scripts/hooks/post-write-validate.sh",
       "description": "Auto-validate artifacts written to sandbox outputs"
     },
     {
       "event": "Stop",
-      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/hooks/stop-guard.sh",
+      "command": "./scripts/hooks/stop-guard.sh",
       "description": "Guard workflow completion - block until all validated"
     },
     {
       "event": "SessionStart",
       "matcher": "compact",
-      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/hooks/compact-inject-state.sh",
+      "command": "./scripts/hooks/compact-inject-state.sh",
       "description": "Re-inject sandbox state after context compact"
     }
   ]

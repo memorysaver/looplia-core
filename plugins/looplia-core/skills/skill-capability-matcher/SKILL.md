@@ -6,7 +6,7 @@ description: |
   Analyzes natural language descriptions and recommends skill sequences with rationale.
   Triggered by /build command after plugin-registry-scanner.
   Skills-first: prioritizes skills over agents for workflow steps.
-model: sonnet
+model: claude-haiku-4-5-20251001
 ---
 
 # Skill Capability Matcher

@@ -171,6 +171,24 @@ export async function* executeAgenticQueryStreaming<T>(
         // v0.6.0: Enable Task for subagent spawning, Write/Glob for file operations
         allowedTools: ["Read", "Write", "Glob", "Task", "Skill"],
         outputFormat: { type: "json_schema", schema: jsonSchema },
+        // v0.6.2: Programmatic agent definition ensures skill-executor uses haiku
+        agents: {
+          "skill-executor": {
+            description:
+              "Universal skill orchestrator for looplia workflow steps. Use this agent for all skill-based workflow steps.",
+            prompt: `You are the skill executor for looplia workflows. Your job is to execute workflow steps.
+
+CRITICAL: You MUST call the Write tool to save output to the specified path. Never return results as text.
+
+1. Read input files
+2. Invoke the specified skill using the Skill tool
+3. Execute the mission
+4. ALWAYS call Write tool to save JSON output to the exact path specified
+5. Verify the file was written before completing`,
+            tools: ["Read", "Write", "Skill", "Glob", "Grep"],
+            model: "haiku",
+          },
+        },
       },
     });
 

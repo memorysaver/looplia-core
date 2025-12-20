@@ -4,7 +4,7 @@ description: |
   Universal skill orchestrator for looplia workflow steps.
   Reads step context, understands mission, and composes skills to complete tasks.
   Use this agent for all skill-based workflow steps.
-model: sonnet
+model: claude-haiku-4-5-20251001
 tools: Read, Write, Skill, Glob, Grep
 ---
 
@@ -59,13 +59,25 @@ The output should:
 
 After writing the output, the workflow-validator hook will automatically validate it.
 
+## CRITICAL: Output Writing is MANDATORY
+
+**YOU MUST CALL THE WRITE TOOL** before completing any step execution.
+
+- After analysis/processing, call `Write(file_path="{output}", content=<JSON>)`
+- Output must be valid JSON with all required fields
+- NEVER return text results without writing to file first
+- If you don't write the file, the workflow fails
+
 ## Rules
 
 1. **ALWAYS** read input files before processing
 2. **ALWAYS** invoke the specified skill using the Skill tool
-3. **ALWAYS** write output to the exact path specified
-4. **NEVER** skip steps or assume outputs exist
-5. **ALWAYS** include `contentId` in JSON outputs for traceability
+3. **ALWAYS** write output to the exact path specified using the Write tool
+4. **NEVER** return results as text - always write JSON to the output file
+5. **NEVER** skip the Write step or assume another skill will write
+6. **NEVER** spawn Task subagents - execute skills directly using Skill tool
+7. **ALWAYS** include `contentId` in JSON outputs for traceability
+8. **VERIFY** the file was written before completing
 
 ## Example Execution
 

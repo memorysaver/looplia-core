@@ -1,11 +1,15 @@
 ---
 name: writing-kit
-version: 1.0.0
+version: 1.1.0
 description: Transform content into structured writing kit with summary, ideas, and outline
 
 steps:
   - id: summary
-    run: agents/content-analyzer
+    skill: media-reviewer
+    mission: |
+      Deep analysis of content to extract key themes, concepts, and narrative structure.
+      Extract minimum 3 verbatim quotes with context, at least 5 key bullet points,
+      and analyze the narrative flow. Identify related concepts for exploration.
     input: ${{ sandbox }}/inputs/content.md
     output: ${{ sandbox }}/outputs/summary.json
     validate:
@@ -14,7 +18,12 @@ steps:
       min_key_points: 5
 
   - id: ideas
-    run: agents/idea-generator
+    skill: idea-synthesis
+    mission: |
+      Generate creative writing ideas, hooks, and angles based on the content summary.
+      Create 5 types of hooks: emotional, curiosity, controversy, statistic, and story.
+      Develop multiple narrative angles with relevance scores.
+      Generate exploratory questions by type (analytical, practical, philosophical, comparative).
     needs: [summary]
     input: ${{ steps.summary.output }}
     output: ${{ sandbox }}/outputs/ideas.json
@@ -23,7 +32,12 @@ steps:
       has_hooks: true
 
   - id: writing-kit
-    run: agents/writing-kit-builder
+    skill: writing-kit-assembler
+    mission: |
+      Assemble final writing kit combining summary and ideas.
+      Create structured outline with estimated word counts.
+      Include meta information (difficulty, time to write, audience).
+      Calculate relevance scores based on user profile.
     needs: [summary, ideas]
     input:
       - ${{ steps.summary.output }}
@@ -47,26 +61,26 @@ content.md
     │
     ▼
 ┌─────────────────────┐
-│  content-analyzer   │  Step 1: Deep content analysis
-│  (summary.json)     │
+│   media-reviewer    │  Step 1: Deep content analysis
+│   (summary.json)    │
 └──────────┬──────────┘
            │
            ▼
 ┌─────────────────────┐
-│   idea-generator    │  Step 2: Generate creative hooks and angles
+│   idea-synthesis    │  Step 2: Generate creative hooks and angles
 │   (ideas.json)      │
 └──────────┬──────────┘
            │
            ▼
-┌─────────────────────┐
-│ writing-kit-builder │  Step 3: Assemble final writing kit
-│ (writing-kit.json)  │
-└─────────────────────┘
+┌─────────────────────────┐
+│ writing-kit-assembler   │  Step 3: Assemble final writing kit
+│ (writing-kit.json)      │
+└─────────────────────────┘
 ```
 
 ## Step Details
 
-### Step 1: Summary (content-analyzer)
+### Step 1: Summary (media-reviewer)
 
 Deep analysis of content to extract:
 - Key themes and concepts
@@ -75,14 +89,14 @@ Deep analysis of content to extract:
 - Narrative flow analysis
 - Related concepts for exploration
 
-### Step 2: Ideas (idea-generator)
+### Step 2: Ideas (idea-synthesis)
 
 Generate creative writing inspiration:
 - 5 types of hooks: emotional, curiosity, controversy, statistic, story
 - Multiple narrative angles with relevance scores
 - Exploratory questions by type (analytical, practical, philosophical, comparative)
 
-### Step 3: Writing Kit (writing-kit-builder)
+### Step 3: Writing Kit (writing-kit-assembler)
 
 Assemble final kit with:
 - Structured outline with estimated word counts
@@ -106,15 +120,15 @@ Read `user-profile.json` from workspace root to personalize:
 
 ## Validation Criteria
 
-| Step | Required Fields | Additional Checks |
-|------|-----------------|-------------------|
-| summary | contentId, headline, tldr, bullets... | min_quotes: 3, min_key_points: 5 |
-| ideas | contentId, hooks, angles, questions | has_hooks: true |
-| writing-kit | contentId, source, summary, ideas... | min_outline_sections: 4 |
+| Step | Skill | Required Fields | Additional Checks |
+|------|-------|-----------------|-------------------|
+| summary | media-reviewer | contentId, headline, tldr, bullets... | min_quotes: 3, min_key_points: 5 |
+| ideas | idea-synthesis | contentId, hooks, angles, questions | has_hooks: true |
+| writing-kit | writing-kit-assembler | contentId, source, summary, ideas... | min_outline_sections: 4 |
 
 ## Error Handling
 
 If validation fails:
 1. Review the failed checks in validation result
-2. Retry the subagent with specific feedback
+2. Retry the skill-executor with specific feedback
 3. Report to user if retry also fails

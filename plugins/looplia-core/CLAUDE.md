@@ -139,6 +139,38 @@ When step with `final: true` completes:
 
 ---
 
+## Output Validation Enforcement
+
+### After Each skill-executor Task Completes
+
+1. **Check output file exists** at the path specified in the step's `output` field
+2. **If file missing** → Call skill-executor again with explicit instruction:
+   ```
+   "You MUST write the result to {output_path}. The previous attempt did not write the file.
+   Use the Write tool to save the JSON output NOW."
+   ```
+3. **If file exists** → Proceed to next step
+
+### When Stop Hook Blocks
+
+If stop-guard blocks with "Workflow incomplete. Pending steps: X":
+
+1. Read `validation.json` to identify which steps have `validated: false`
+2. For each pending step:
+   - Check if output file exists on disk
+   - If NOT exists → Retry skill-executor with explicit Write instruction
+   - If exists but not validated → Re-write the file to trigger validation hook
+3. Do NOT complete until all steps show `validated: true`
+
+### CRITICAL: Output Files Must Exist
+
+Before returning workflow result:
+- Verify ALL expected output files exist in `sandbox/{id}/outputs/`
+- If any are missing, the workflow is NOT complete
+- Retry the missing steps until files are written
+
+---
+
 ## Workflow Building
 
 When you receive a `/build` command, create a workflow from natural language requirements.

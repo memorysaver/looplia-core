@@ -6,7 +6,7 @@ description: |
   Triggered by /build command or when user asks about available looplia skills.
   Skills-first: scans skills only, no agent discovery.
 tools: Bash, Read, Glob
-model: haiku
+model: claude-haiku-4-5-20251001
 ---
 
 # Plugin Registry Scanner
