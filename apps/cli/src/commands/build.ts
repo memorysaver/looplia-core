@@ -180,13 +180,18 @@ function validateEnvironment(mock: boolean): void {
 }
 
 /**
- * Build the /build prompt to inject into the agent
+ * Build the /build prompt to inject into the agent.
+ * Sanitizes user input to prevent prompt injection.
  */
 function buildPrompt(args: BuildArgs): string {
   let prompt = "/build";
 
   if (args.description) {
-    prompt += ` ${args.description}`;
+    const sanitized = args.description
+      .trim()
+      .slice(0, 500)
+      .replace(/[\n\r]/g, " ");
+    prompt += ` ${sanitized}`;
   }
 
   return prompt;
@@ -211,42 +216,51 @@ function executeMock(args: BuildArgs): BuildResult {
 }
 
 /**
- * Execute with streaming UI
+ * Execute with streaming UI.
+ * Wraps streaming execution with error handling and proper session tracking.
  */
 async function executeStreaming(
   prompt: string,
   workspace: string
 ): Promise<BuildResult> {
-  const executor = createClaudeAgentExecutor({ workspace });
+  try {
+    const contentId = crypto.randomUUID();
+    const executor = createClaudeAgentExecutor({ workspace });
 
-  const generator = executor.executePromptStreaming(prompt, {
-    workspace,
-    contentId: "",
-  });
+    const generator = executor.executePromptStreaming(prompt, {
+      workspace,
+      contentId,
+    });
 
-  const { result, error } = await renderStreamingQuery<BuildResult>({
-    title: "Workflow Builder",
-    subtitle: "Creating workflow from description",
-    streamGenerator: () =>
-      generator as AsyncGenerator<
-        StreamingEvent,
-        { success: boolean; data?: BuildResult; error?: { message: string } }
-      >,
-  });
+    const { result, error } = await renderStreamingQuery<BuildResult>({
+      title: "Workflow Builder",
+      subtitle: "Creating workflow from description",
+      streamGenerator: () =>
+        generator as AsyncGenerator<
+          StreamingEvent,
+          { success: boolean; data?: BuildResult; error?: { message: string } }
+        >,
+    });
 
-  if (error) {
+    if (error) {
+      return {
+        status: "error",
+        error: error.message,
+      };
+    }
+
+    return (
+      result ?? {
+        status: "error",
+        error: "No result received",
+      }
+    );
+  } catch (error) {
     return {
       status: "error",
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     };
   }
-
-  return (
-    result ?? {
-      status: "error",
-      error: "No result received",
-    }
-  );
 }
 
 /**
@@ -258,10 +272,11 @@ async function executeBatch(
 ): Promise<BuildResult> {
   console.error("⏳ Building workflow...");
 
+  const contentId = crypto.randomUUID();
   const executor = createClaudeAgentExecutor({ workspace });
   const result = await executor.executePrompt(prompt, {
     workspace,
-    contentId: "",
+    contentId,
   });
 
   if (result.success && result.data) {

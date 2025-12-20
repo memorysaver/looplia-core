@@ -265,11 +265,12 @@ async function executeStreaming(
   workspace: string,
   workflowId: string
 ): Promise<WorkflowResult> {
+  const contentId = crypto.randomUUID();
   const executor = createClaudeAgentExecutor({ workspace });
 
   const generator = executor.executePromptStreaming(prompt, {
     workspace,
-    contentId: "",
+    contentId,
   });
 
   // Format workflow name for display (e.g., "writing-kit" -> "Writing Kit")
@@ -315,10 +316,11 @@ async function executeBatch(
 ): Promise<WorkflowResult> {
   console.error("⏳ Processing...");
 
+  const contentId = crypto.randomUUID();
   const executor = createClaudeAgentExecutor({ workspace });
   const result = await executor.executePrompt(prompt, {
     workspace,
-    contentId: "",
+    contentId,
   });
 
   if (result.success && result.data) {
