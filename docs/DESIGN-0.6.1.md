@@ -18,6 +18,7 @@
 6. [Terminal UI (TUI)](#6-terminal-ui-tui)
 7. [Data Flow](#7-data-flow)
 8. [Implementation Guide](#8-implementation-guide)
+9. [Testing Strategy](#9-testing-strategy)
 
 ---
 
@@ -542,7 +543,92 @@ Workflow building follows the same pattern as workflow execution:
 
 **No wrapper agent needed** - Claude uses skills directly based on CLAUDE.md instructions.
 
-### 4.2 CLAUDE.md Additions
+### 4.2 Skill Invocation Protocol
+
+> **Critical:** Skills MUST be invoked explicitly using the Skill tool. Do NOT rely on automatic skill triggering.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     EXPLICIT SKILL INVOCATION                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Step 1: Skill("plugin-registry-scanner")
+        └── Output: Registry JSON (held in context)
+
+Step 2: Skill("agent-capability-matcher")
+        └── Input: User requirements + Registry JSON from Step 1
+        └── Output: Agent sequence JSON (held in context)
+
+Step 3: Skill("workflow-schema-composer")
+        └── Input: Requirements + Agent sequence from Step 2
+        └── Output: Complete workflow markdown
+```
+
+**Rules:**
+- **ALWAYS** invoke skills in sequence (1 → 2 → 3)
+- **NEVER** skip skills or change order
+- **ALWAYS** pass previous skill output as context to next skill
+- **NEVER** rely on automatic skill triggering based on description
+
+### 4.3 Inter-Skill Data Flow
+
+Data passes between skills via Claude's context window (not files):
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        DATA FLOW PROTOCOL                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+1. plugin-registry-scanner
+   └── Outputs: Registry JSON to context
+   └── Claude holds: { plugins: [...], summary: {...} }
+
+2. agent-capability-matcher
+   └── Receives: User description + Registry JSON (from context)
+   └── Outputs: Matcher result JSON to context
+   └── Claude holds: { requirements: {...}, recommendations: [...] }
+
+3. workflow-schema-composer
+   └── Receives: Requirements + Matcher result (from context)
+   └── Outputs: Complete workflow markdown
+   └── Claude returns: { filename: "...", content: "..." }
+```
+
+**Why context-based (not file-based):**
+- Simpler implementation
+- No temp file cleanup needed
+- Natural for LLM orchestration
+- Skills are read-only (no file writes during build)
+
+### 4.4 Error Handling Protocol
+
+Define behavior for failure scenarios:
+
+| Scenario | Detection | Response |
+|----------|-----------|----------|
+| No plugins installed | `summary.totalAgents === 0` | Error: "No agents found. Install looplia-writer plugin first." |
+| No matching agents | `recommendations.length === 0` | Warning: Show gaps, offer partial workflow or cancel |
+| Capability gaps | `gaps.length > 0` | Warning: "No agent for: {gaps}. Proceed with partial?" |
+| Invalid YAML generated | Parse error | Retry generation with explicit schema reminder |
+| User cancels | Ctrl+C / Esc | Clean exit, no partial files written |
+
+**Capability Gap Handling:**
+
+```
+When gaps are detected:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  ⚠ Capability Gap Detected                                                   │
+│                                                                              │
+│  No agent found for: "pdf-extraction"                                        │
+│                                                                              │
+│  Options:                                                                    │
+│  [p] Proceed with partial workflow (skip this capability)                    │
+│  [c] Cancel build                                                            │
+│  [?] Show available agents                                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 4.5 CLAUDE.md Additions
 
 Add this section to `plugins/looplia-core/CLAUDE.md`:
 
@@ -581,7 +667,7 @@ Return workflow definition with:
 - Complete workflow markdown content
 ```
 
-### 4.3 Slash Command Definition
+### 4.6 Slash Command Definition
 
 **Location:** `plugins/looplia-core/commands/build.md`
 
@@ -645,7 +731,7 @@ Run with:
 ```
 ```
 
-### 4.4 Execution Flow
+### 4.7 Execution Flow
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -682,7 +768,41 @@ Input: "/build analyze YouTube videos and create blog outlines"
 
 ## 5. CLI Command
 
-### 5.1 Command Specification
+### 5.1 Entry Points Clarification
+
+There are TWO entry points for workflow building:
+
+| Entry Point | Context | UI | Use Case |
+|-------------|---------|-----|----------|
+| `looplia build` | Terminal CLI | TUI (Ink) | Interactive workflow creation |
+| `/build` | Claude Code session | Text-based | Quick build inside Claude Code |
+
+**Relationship:**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        ENTRY POINT RELATIONSHIP                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+looplia build (CLI)                    /build (Slash Command)
+      │                                      │
+      ▼                                      ▼
+┌─────────────────┐                  ┌─────────────────┐
+│ TUI Application │                  │ Claude Code     │
+│ (React/Ink)     │                  │ Session         │
+└────────┬────────┘                  └────────┬────────┘
+         │                                    │
+         ▼                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│              Claude Agent (reads CLAUDE.md + commands/build.md)              │
+│                    Uses 3 skills in sequence                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+         │                                    │
+         ▼                                    ▼
+   TUI Preview + Save                  Text output + Write
+```
+
+### 5.2 Command Specification
 
 **Location:** `apps/cli/src/commands/build.ts`
 
@@ -690,13 +810,13 @@ Input: "/build analyze YouTube videos and create blog outlines"
 looplia build [description] [options]
 ```
 
-### 5.2 Arguments
+### 5.3 Arguments
 
 | Argument | Type | Description |
 |----------|------|-------------|
 | `description` | string (optional) | Natural language workflow description |
 
-### 5.3 Options
+### 5.4 Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
@@ -704,7 +824,7 @@ looplia build [description] [options]
 | `--name`, `-n` | string | (derived) | Workflow filename |
 | `--no-interactive` | boolean | false | Skip TUI, batch mode |
 
-### 5.4 Examples
+### 5.5 Examples
 
 ```bash
 # Interactive TUI (default)
@@ -720,11 +840,13 @@ looplia build --output ./my-workflows/
 looplia build "analyze videos" --no-interactive --name video-analyzer
 ```
 
-### 5.5 Output Location
+### 5.6 Output Location
 
 **Default:** `~/.looplia/workflows/`
 
 This global workspace allows workflows to be shared across projects. Users can override with `--output` for project-local workflows.
+
+**Clarification:** User-created workflows go to `~/.looplia/workflows/`. Plugin-bundled workflows stay in `plugins/{plugin}/workflows/`. These are separate locations.
 
 ```
 ~/.looplia/
@@ -740,7 +862,46 @@ This global workspace allows workflows to be shared across projects. Users can o
 
 ## 6. Terminal UI (TUI)
 
-### 6.1 Component Architecture
+### 6.1 TUI-Claude Integration
+
+The TUI coordinates with Claude agent for workflow generation:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      TUI-CLAUDE INTEGRATION                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   TUI Phase 1   │────▶│   TUI Phase 2   │────▶│   TUI Phase 3   │
+│  Requirements   │     │   Processing    │     │    Preview      │
+└─────────────────┘     └────────┬────────┘     └─────────────────┘
+                                 │
+                                 ▼
+                    ┌────────────────────────┐
+                    │ createClaudeAgentExecutor()
+                    │ executePromptStreaming()
+                    └────────────┬───────────┘
+                                 │
+                    ┌────────────▼───────────┐
+                    │ Streaming Events:      │
+                    │ - ToolStartEvent       │◀── Skill invocations
+                    │ - TextEvent            │◀── Progress messages
+                    │ - CompleteEvent        │◀── Final workflow
+                    └────────────────────────┘
+```
+
+**Integration Flow:**
+
+1. **TUI Phase 1** collects user description
+2. **TUI Phase 2** calls `executePromptStreaming("/build {description}")`
+3. **TUI** receives streaming events:
+   - `ToolStartEvent` → Update progress ("Scanning plugins...")
+   - `TextEvent` → Show Claude's reasoning
+   - `CompleteEvent` → Extract workflow from result
+4. **TUI Phase 3** parses workflow JSON from Claude's response
+5. **TUI Phase 4** writes file and shows confirmation
+
+### 6.2 Component Architecture (MVP)
 
 ```
 apps/cli/src/components/build/
@@ -748,21 +909,22 @@ apps/cli/src/components/build/
 ├── phases/
 │   ├── requirements-phase.tsx  # Phase 1: Text input
 │   ├── processing-phase.tsx    # Phase 2: AI processing
-│   ├── preview-phase.tsx       # Phase 3: Preview + edit
+│   ├── preview-phase.tsx       # Phase 3: Preview (read-only)
 │   └── save-phase.tsx          # Phase 4: Confirm + save
 ├── step-card.tsx               # Individual step display
-├── step-editor.tsx             # Edit step modal
 └── yaml-viewer.tsx             # Raw YAML preview
+
+# Deferred to v0.6.2:
+# ├── step-editor.tsx           # Edit step modal
 ```
 
-### 6.2 State Machine
+### 6.3 State Machine
 
 ```typescript
 type BuildPhase =
   | 'requirements'   // User typing description
   | 'processing'     // AI generating workflow
-  | 'preview'        // Viewing/editing workflow
-  | 'yaml-view'      // Raw YAML preview
+  | 'preview'        // Viewing generated workflow (MVP: read-only)
   | 'save'           // Confirming save location
   | 'complete'       // Success state
   | 'error';         // Error recovery
@@ -772,13 +934,14 @@ type BuildState = {
   description: string;
   progressMessages: string[];
   workflow: WorkflowDefinition | null;
-  selectedStep: number;
   savePath: string;
   error: Error | null;
 };
 ```
 
-### 6.3 Phase Flow
+> **MVP Scope:** For v0.6.1, the preview phase is **read-only**. Editing capabilities (add/edit/remove steps) are deferred to v0.6.2.
+
+### 6.4 Phase Flow (MVP)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -806,26 +969,26 @@ type BuildState = {
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  PHASE 3: PREVIEW & CUSTOMIZE                                                │
+│  PHASE 3: PREVIEW (Read-Only for MVP)                                        │
 │                                                                              │
 │  video-to-blog (3 steps)                                                     │
 │  ┌────────────────────────────────────────────────────────────────────────┐  │
-│  │ ► 1. analyze-content                                                   │  │
-│  │     Agent: content-analyzer                                            │  │
-│  │     Output: analysis.json                                              │  │
+│  │ 1. analyze-content                                                     │  │
+│  │    Agent: content-analyzer                                             │  │
+│  │    Output: analysis.json                                               │  │
 │  ├────────────────────────────────────────────────────────────────────────┤  │
-│  │   2. generate-ideas                                                    │  │
-│  │     Agent: idea-generator                                              │  │
-│  │     Needs: analyze-content                                             │  │
-│  │     Output: ideas.json                                                 │  │
+│  │ 2. generate-ideas                                                      │  │
+│  │    Agent: idea-generator                                               │  │
+│  │    Needs: analyze-content                                              │  │
+│  │    Output: ideas.json                                                  │  │
 │  ├────────────────────────────────────────────────────────────────────────┤  │
-│  │   3. build-outline                               [FINAL]               │  │
-│  │     Agent: writing-kit-builder                                         │  │
-│  │     Needs: analyze-content, generate-ideas                             │  │
-│  │     Output: outline.json                                               │  │
+│  │ 3. build-outline                                [FINAL]                │  │
+│  │    Agent: writing-kit-builder                                          │  │
+│  │    Needs: analyze-content, generate-ideas                              │  │
+│  │    Output: outline.json                                                │  │
 │  └────────────────────────────────────────────────────────────────────────┘  │
 │                                                                              │
-│  [↑↓] Navigate  [e] Edit  [+] Add  [-] Remove  [y] YAML  [s] Save           │
+│  [y] View YAML   [s] Save   [r] Regenerate   [c] Cancel                      │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
@@ -842,19 +1005,65 @@ type BuildState = {
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 6.4 Keyboard Controls
+### 6.5 Keyboard Controls (MVP)
 
 | Phase | Key | Action |
 |-------|-----|--------|
 | Requirements | `Enter` | Continue to processing |
 | Requirements | `Ctrl+C` | Cancel |
-| Preview | `↑` / `↓` | Navigate steps |
-| Preview | `e` | Edit selected step |
-| Preview | `+` | Add new step |
-| Preview | `-` | Remove selected step |
 | Preview | `y` | View raw YAML |
 | Preview | `s` | Save workflow |
-| Preview | `Esc` | Back / Cancel |
+| Preview | `r` | Regenerate (restart from Phase 1) |
+| Preview | `c` / `Esc` | Cancel |
+
+> **Future (v0.6.2):** Add editing capabilities: `[e]` Edit step, `[+]` Add step, `[-]` Remove step
+
+### 6.6 Pre-Save Validation
+
+Before saving the generated workflow, validate it to catch errors early:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        PRE-SAVE VALIDATION                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Generated Workflow
+       │
+       ▼
+┌─────────────────────┐
+│ 1. YAML Syntax      │──▶ Parse frontmatter, check for syntax errors
+└─────────────────────┘
+       │
+       ▼
+┌─────────────────────┐
+│ 2. Schema Validation│──▶ Validate against WorkflowDefinition schema
+└─────────────────────┘
+       │
+       ▼
+┌─────────────────────┐
+│ 3. Agent Existence  │──▶ Verify all `run: agents/{name}` reference real agents
+└─────────────────────┘
+       │
+       ▼
+┌─────────────────────┐
+│ 4. Dependency Check │──▶ Run getExecutionOrder() to detect cycles
+└─────────────────────┘
+       │
+       ▼
+   Save or Show Errors
+```
+
+**Validation Checks:**
+
+| Check | Method | Error Message |
+|-------|--------|---------------|
+| YAML syntax | `parseWorkflow()` | "Invalid YAML syntax: {details}" |
+| Required fields | Schema validation | "Missing required field: {field}" |
+| Agent existence | Glob for agent files | "Agent not found: {name}" |
+| Circular deps | `getExecutionOrder()` | "Circular dependency detected: {cycle}" |
+| Step ID uniqueness | Set comparison | "Duplicate step ID: {id}" |
+
+**On validation failure:** Show error in TUI, offer to regenerate or cancel.
 
 ---
 
@@ -1034,6 +1243,82 @@ Use existing Ink patterns from `streaming-query-ui.tsx`:
 - Add `build` case to CLI router in `index.ts`
 - Update documentation
 - Test end-to-end flow
+
+---
+
+## 9. Testing Strategy
+
+### 9.1 Test Categories
+
+| Category | Scope | Location |
+|----------|-------|----------|
+| Unit Tests | Individual functions | `packages/core/test/`, `apps/cli/test/` |
+| Skill Tests | Skill invocation with mocked Claude | `plugins/looplia-core/test/` |
+| Integration Tests | Multi-skill flow | `apps/cli/test/integration/` |
+| E2E Tests | Full CLI command | `apps/cli/test/e2e/` |
+
+### 9.2 Unit Tests
+
+**scan-plugins.ts script:**
+```typescript
+// plugins/looplia-core/skills/plugin-registry-scanner/scripts/scan-plugins.test.ts
+describe('scan-plugins', () => {
+  it('should find all agent files in plugins directory');
+  it('should extract frontmatter from agent files');
+  it('should handle missing plugins directory gracefully');
+  it('should return empty array when no agents found');
+});
+```
+
+**Workflow parser validation:**
+```typescript
+// packages/core/test/domain/workflow-builder.test.ts
+describe('workflow validation', () => {
+  it('should detect circular dependencies');
+  it('should validate agent references exist');
+  it('should validate step ID uniqueness');
+});
+```
+
+### 9.3 Skill Tests (Mocked Claude)
+
+```typescript
+// plugins/looplia-core/test/skills/build-flow.test.ts
+describe('build workflow skill flow', () => {
+  it('should invoke skills in correct order');
+  it('should pass registry to matcher');
+  it('should pass matcher output to composer');
+  it('should handle no matching agents gracefully');
+});
+```
+
+### 9.4 E2E Tests
+
+```typescript
+// apps/cli/test/e2e/build.test.ts
+describe('looplia build', () => {
+  it('should show help with --help flag');
+  it('should error when no plugins installed (mock mode)');
+  it('should generate valid workflow in non-interactive mode');
+  it('should save workflow to specified output path');
+});
+```
+
+### 9.5 Test Commands
+
+```bash
+# Run all tests
+bun test
+
+# Run build-specific tests
+bun test --grep "build"
+
+# Run E2E tests only
+bun test apps/cli/test/e2e/
+
+# Run with coverage
+bun test --coverage
+```
 
 ---
 
