@@ -1,6 +1,6 @@
 # Looplia-Core Architecture Design v0.6.1
 
-> AI-Assisted Workflow Builder with Skill Decomposition
+> **BREAKING CHANGE:** Skills-First Architecture - Skills as First-Class Citizens
 >
 > **Version:** 0.6.1
 > **Date:** 2025-12-20
@@ -20,69 +20,85 @@
 8. [Implementation Guide](#8-implementation-guide)
 9. [Testing Strategy](#9-testing-strategy)
 10. [Universal Skill-Executor Architecture](#10-universal-skill-executor-architecture)
+11. [Agent to Skill Migration](#11-agent-to-skill-migration)
 
 ---
 
 ## 1. Executive Summary
 
-### Evolution from v0.6.0 to v0.6.1
+### BREAKING CHANGE: v0.6.0 → v0.6.1
 
 | Version | Focus | Key Achievement |
 |---------|-------|-----------------|
-| v0.6.0 | Deterministic Execution | Steps-based workflow schema, explicit subagent mapping |
-| **v0.6.1** | **Workflow Creation** | **AI-assisted workflow builder with skill decomposition** |
+| v0.6.0 | Deterministic Execution | Steps-based workflow schema, per-agent subagent mapping |
+| **v0.6.1** | **Skills-First Architecture** | **Skills as first-class citizens, universal skill-executor** |
 
-### What v0.6.1 Adds
+### What Changes in v0.6.1
 
-v0.6.1 introduces `looplia build` - an interactive command that transforms natural language requirements into valid workflow definitions:
+v0.6.1 is a **breaking change** that:
+
+1. **REMOVES** the `run: agents/X` workflow syntax entirely
+2. **REQUIRES** `skill:` + `mission:` for all workflow steps
+3. **INTRODUCES** `skill-executor` as the ONLY subagent for workflow execution
+4. **ELIMINATES** thin wrapper agents (content-analyzer, idea-generator, writing-kit-builder)
+5. **MIGRATES** agent logic to skills (idea-synthesis, writing-kit-assembler)
 
 ```
-User: "I want to analyze YouTube videos and create blog outlines"
-                                    │
-                                    ▼
-                         ┌──────────────────┐
-                         │  looplia build   │
-                         └────────┬─────────┘
-                                  │
-                                  ▼
-                    ┌─────────────────────────┐
-                    │  ~/.looplia/workflows/  │
-                    │  video-to-blog.md       │
-                    └─────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    v0.6.1 SKILLS-FIRST ARCHITECTURE                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+                          /run command
+                                │
+                                ▼
+                    ┌───────────────────────┐
+                    │  Workflow Parser      │
+                    │  (skill: ONLY)        │
+                    └───────────┬───────────┘
+                                │
+                    ┌───────────▼───────────┐
+                    │  skill-executor       │  ← UNIVERSAL subagent (ONE)
+                    │  (handles ALL steps)  │
+                    └───────────┬───────────┘
+                                │
+                    ┌───────────▼───────────┐
+                    │  Skills (first-class) │
+                    │  - media-reviewer     │
+                    │  - idea-synthesis     │
+                    │  - writing-kit-assembler │
+                    └───────────────────────┘
 ```
 
-### Key Architectural Additions
+### Key Architectural Changes
 
 | Component | Type | Purpose |
 |-----------|------|---------|
-| `skill-executor` | **Agent** | **Universal skill orchestrator for workflow steps** |
-| `plugin-registry-scanner` | Skill | Discover available skills (primary) and agents (fallback) |
+| `skill-executor` | **Agent** | **ONLY subagent for ALL workflow steps** |
+| `plugin-registry-scanner` | Skill | Discover available skills ONLY |
 | `skill-capability-matcher` | Skill | Match requirements to skills |
 | `workflow-schema-composer` | Skill | Generate valid workflow YAML with `skill:` steps |
-| `commands/build.md` | Command | Slash command definition |
-| `looplia build` | CLI Command | Interactive TUI entry point |
+| `idea-synthesis` | **NEW Skill** | Migrated from idea-generator agent |
+| `writing-kit-assembler` | **NEW Skill** | Migrated from writing-kit-builder agent |
 
-### Paradigm Shift: Skills-First
+### Paradigm Shift: Skills as First-Class Citizens
 
-v0.6.1 introduces a **skills-first** paradigm where:
-
-| Before (v0.6.0) | After (v0.6.1) |
-|-----------------|----------------|
-| Steps use `run: agents/X` | Steps use `skill: Y` (default) |
-| Agents wrap skills | Skills run directly via skill-executor |
-| Search agents first | **Search skills first**, agents as fallback |
-| Many thin wrapper agents | ONE universal skill-executor |
+| Removed (v0.6.0) | Required (v0.6.1) |
+|------------------|-------------------|
+| `run: agents/X` | `skill: Y` + `mission:` |
+| Per-agent subagent_type | `skill-executor` for ALL |
+| Thin wrapper agents | Direct skill invocation |
+| Agent files for orchestration | Workflow + mission defines orchestration |
 
 ### Design Pattern
 
-Following the established looplia-core pattern, workflow building uses **skills directly** rather than a wrapper agent:
+ALL workflow execution uses ONE pattern:
 
 | Command | Pattern |
 |---------|---------|
-| `/run` | CLAUDE.md instructions + `workflow-executor` skill |
-| `/build` | CLAUDE.md instructions + 3 builder skills |
+| `/run` | skill-executor → Skill tool → skills |
+| `/build` | CLAUDE.md → 3 builder skills |
 
-This ensures consistency across all commands.
+Skills are the primary unit of domain logic. skill-executor handles orchestration.
 
 ---
 
@@ -466,15 +482,22 @@ description: Analyze YouTube videos and create blog outlines with key points
 
 steps:
   - id: analyze-content
-    run: agents/content-analyzer
+    skill: media-reviewer
+    mission: |
+      Deep analysis of video transcript. Detect source type,
+      extract key themes, important quotes, and narrative structure.
     input: ${{ sandbox }}/inputs/content.md
     output: ${{ sandbox }}/outputs/analysis.json
+    model: haiku
     validate:
       required_fields: [contentId, headline, tldr, bullets]
       min_key_points: 5
 
   - id: generate-ideas
-    run: agents/idea-generator
+    skill: idea-synthesis
+    mission: |
+      Generate hooks, angles, and questions from the analysis.
+      Read user profile for personalization.
     needs: [analyze-content]
     input: ${{ steps.analyze-content.output }}
     output: ${{ sandbox }}/outputs/ideas.json
@@ -483,7 +506,10 @@ steps:
       has_hooks: true
 
   - id: build-outline
-    run: agents/writing-kit-builder
+    skill: writing-kit-assembler
+    mission: |
+      Create structured blog outline with sections, key points,
+      and supporting quotes from the analysis.
     needs: [analyze-content, generate-ideas]
     input:
       - ${{ steps.analyze-content.output }}
@@ -507,9 +533,9 @@ looplia run video-to-blog --file <transcript.md>
 
 ## Steps
 
-1. **analyze-content**: Deep analysis of video transcript
-2. **generate-ideas**: Extract hooks, angles, and questions
-3. **build-outline**: Create structured blog outline
+1. **analyze-content**: Deep analysis using media-reviewer skill
+2. **generate-ideas**: Idea synthesis with user personalization
+3. **build-outline**: Assemble outline using writing-kit-assembler skill
 ```
 
 ---
@@ -1450,42 +1476,49 @@ tools: Read, Write, Skill, Glob, Grep
 6. Return for validation
 ```
 
-### 10.3 Enhanced Workflow Schema
+### 10.3 Workflow Schema (v0.6.1 - Skills Only)
 
-v0.6.1 introduces the `skill:` field as the **default** for workflow steps:
+v0.6.1 **requires** `skill:` + `mission:` for all workflow steps. The `run:` syntax is removed.
 
 ```yaml
-# v0.6.0 syntax (still supported for backward compatibility)
-steps:
-  - id: summary
-    run: agents/content-analyzer
-    input: ${{ sandbox }}/inputs/content.md
-    output: ${{ sandbox }}/outputs/summary.json
+---
+name: workflow-name
+version: 1.0.0
+description: What this workflow does
 
-# v0.6.1 syntax (DEFAULT for /build-generated workflows)
 steps:
-  - id: summary
-    skill: media-reviewer             # Primary skill to use
-    mission: |                        # What needs to be accomplished
-      Analyze the input content deeply. Extract key themes,
-      quotes, and narrative structure. Output as structured JSON
-      following the ContentSummary schema.
+  - id: step-id
+    skill: skill-name           # REQUIRED: Skill to execute
+    mission: |                  # REQUIRED: What needs to be accomplished
+      Natural language description of the task goal.
+      Guides skill-executor in understanding what to accomplish.
     input: ${{ sandbox }}/inputs/content.md
-    output: ${{ sandbox }}/outputs/summary.json
-    model: haiku                      # Optional model override
-    validate:
-      required_fields: [contentId, headline, tldr, bullets]
+    output: ${{ sandbox }}/outputs/result.json
+    model: haiku                # Optional: Model override (haiku/sonnet/opus)
+    validate:                   # Optional: Validation criteria
+      required_fields: [field1, field2]
+---
 ```
 
-#### New Step Fields
+#### Step Fields Reference (v0.6.1)
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `skill` | string | No* | Primary skill to execute |
-| `mission` | string | No | Natural language description of the goal |
-| `model` | string | No | Model override (haiku/sonnet/opus) |
+| `id` | string | **Yes** | Unique step identifier |
+| `skill` | string | **Yes** | Skill to execute (no `run:` allowed) |
+| `mission` | string | **Yes** | Natural language task description |
+| `input` | string/array | Yes | Input file path(s) |
+| `output` | string | Yes | Output file path |
+| `needs` | string[] | No | Step dependencies |
+| `model` | string | No | Model override |
+| `validate` | object | No | Validation criteria |
+| `final` | boolean | No | Mark as final output |
 
-*Step must have EITHER `run` OR `skill` (not both, not neither).
+#### Validation Rules
+
+- `skill` field is **REQUIRED** (not optional)
+- `mission` field is **REQUIRED** (not optional)
+- `run` field is **NOT RECOGNIZED** (validation error if present)
 
 ### 10.4 Enhanced Skill Frontmatter
 
@@ -1507,13 +1540,13 @@ model: haiku                     # NEW: Preferred model (optional)
 - If skill specifies `model:`, use it unless step overrides with `model:`
 - If skill omits these fields, executor uses defaults (all tools, sonnet)
 
-### 10.5 Skills-First Search Protocol
+### 10.5 Skills-Only Search Protocol
 
-The `plugin-registry-scanner` skill now prioritizes skills over agents:
+The `plugin-registry-scanner` skill scans skills exclusively (no agents):
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    SKILLS-FIRST SEARCH PROTOCOL                              │
+│                    SKILLS-ONLY SEARCH PROTOCOL                               │
 └─────────────────────────────────────────────────────────────────────────────┘
 
                      /build command
@@ -1524,19 +1557,21 @@ The `plugin-registry-scanner` skill now prioritizes skills over agents:
               └───────────┬─────────────┘
                           │
               ┌───────────▼───────────┐
-              │ 1. Scan skills/*      │  ← PRIMARY (check these first)
-              │    Extract frontmatter │
-              │    Catalog capabilities│
-              ├───────────────────────┤
-              │ 2. Scan agents/* only │  ← FALLBACK (for complex orchestration)
-              │    if skill not found │
+              │ Scan skills/* ONLY    │
+              │ - Extract frontmatter │
+              │ - Catalog capabilities│
+              │ - Note tools/model    │
+              │                       │
+              │ (NO agent scanning)   │
               └───────────┬───────────┘
                           │
               ┌───────────▼───────────┐
               │ Output: Registry JSON │
               │ {                     │
-              │   skills: [...],      │  ← Listed first
-              │   agents: [...]       │  ← Listed second
+              │   skills: [...],      │  ← Skills only
+              │   summary: {          │
+              │     totalSkills: N    │
+              │   }                   │
               │ }                     │
               └───────────────────────┘
 ```
@@ -1566,47 +1601,48 @@ step.skill = "media-reviewer"
                             skill(s) by capability
 ```
 
-### 10.7 Workflow-Executor Protocol Update
+### 10.7 Workflow-Executor Protocol (v0.6.1)
 
-The `workflow-executor` skill handles both patterns:
+The `workflow-executor` skill uses ONE pattern for ALL steps:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    STEP EXECUTION PROTOCOL                                   │
+│                    STEP EXECUTION PROTOCOL (v0.6.1)                          │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 FOR EACH step in execution order:
     │
-    ├─▶ IF step.run exists:
-    │       │
-    │       ▼
-    │   ┌─────────────────────────────────────┐
-    │   │ subagent_type = extractAgentName()  │
-    │   │ e.g., "content-analyzer"            │
-    │   │                                     │
-    │   │ Invoke specific agent (v0.6.0)      │
-    │   └─────────────────────────────────────┘
-    │
-    └─▶ ELSE IF step.skill exists:
-            │
-            ▼
-        ┌─────────────────────────────────────┐
-        │ subagent_type = "skill-executor"    │
-        │                                     │
-        │ Pass to skill-executor:             │
-        │ - step.skill                        │
-        │ - step.mission                      │
-        │ - step.input                        │
-        │ - step.output                       │
-        │ - step.model (if specified)         │
-        │                                     │
-        │ skill-executor orchestrates         │
-        └─────────────────────────────────────┘
+    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1. Validate step has `skill` and `mission` fields                            │
+│    (reject `run:` field with error)                                          │
+│                                                                              │
+│ 2. subagent_type = "skill-executor"  ← ALWAYS (no branching)                 │
+│                                                                              │
+│ 3. Invoke Task tool with step context:                                       │
+│    {                                                                         │
+│      "subagent_type": "skill-executor",                                      │
+│      "description": "Execute step: {step.id}",                               │
+│      "prompt": "Execute skill '{step.skill}' for step '{step.id}'.\n\n"      │
+│                "Mission: {step.mission}\n\n"                                 │
+│                "Input: {resolved input paths}\n"                             │
+│                "Output: {step.output}\n"                                     │
+│                "Validation: {step.validate}"                                 │
+│    }                                                                         │
+│                                                                              │
+│ 4. skill-executor invokes the skill via Skill tool                           │
+│                                                                              │
+│ 5. Validate output                                                           │
+│                                                                              │
+│ 6. Update validation.json                                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+CRITICAL: There is NO conditional branching. ALL steps use skill-executor.
 ```
 
 ### 10.8 /build Integration
 
-When `/build` generates a workflow, it now uses `skill:` by default:
+When `/build` generates a workflow, it **exclusively** uses `skill:` + `mission:` syntax:
 
 ```yaml
 # Generated by /build "analyze videos and create blog outlines"
@@ -1617,20 +1653,22 @@ description: Analyze videos and create blog outlines
 
 steps:
   - id: analyze-content
-    skill: media-reviewer                    # ← Uses skill directly
-    mission: |
+    skill: media-reviewer                    # ← REQUIRED: skill name
+    mission: |                               # ← REQUIRED: task description
       Deep analysis of video transcript. Extract key themes,
       important quotes, and narrative structure.
     input: ${{ sandbox }}/inputs/content.md
     output: ${{ sandbox }}/outputs/analysis.json
+    model: haiku
     validate:
       required_fields: [contentId, headline, tldr, bullets]
       min_quotes: 3
 
   - id: generate-ideas
-    skill: idea-synthesis                    # ← Uses skill directly
+    skill: idea-synthesis
     mission: |
       Generate hooks, angles, and questions from the analysis.
+      Read user profile for personalization context.
       Focus on engaging content ideas for blog posts.
     needs: [analyze-content]
     input: ${{ steps.analyze-content.output }}
@@ -1640,10 +1678,10 @@ steps:
       has_hooks: true
 
   - id: build-outline
-    skill: content-documenter                # ← Uses skill directly
+    skill: writing-kit-assembler
     mission: |
       Create a structured blog outline with sections, key points,
-      and supporting quotes from the analysis.
+      and supporting quotes from the analysis and ideas.
     needs: [analyze-content, generate-ideas]
     input:
       - ${{ steps.analyze-content.output }}
@@ -1666,6 +1704,8 @@ looplia run video-to-blog --file <transcript.md>
 ```
 ```
 
+**Note:** `/build` will NEVER generate `run: agents/X` syntax. All generated workflows use the skills-first pattern.
+
 ### 10.9 Renamed Skills
 
 To reflect the skills-first approach, the following skill is renamed:
@@ -1675,47 +1715,423 @@ To reflect the skills-first approach, the following skill is renamed:
 | `agent-capability-matcher` | `skill-capability-matcher` | Matches to skills, not agents |
 
 The `skill-capability-matcher` now:
-1. Receives user requirements + registry (skills-first)
-2. Matches requirements to **skills** primarily
-3. Falls back to agents only for complex multi-skill orchestration
-4. Outputs skill sequence (not agent sequence)
+1. Receives user requirements + registry (skills only)
+2. Matches requirements to **skills** exclusively
+3. **No agent fallback** - agents are not searched
+4. Outputs skill sequence with missions
 
-### 10.10 Backward Compatibility
+### 10.10 Breaking Changes (No Backward Compatibility)
 
-Both patterns are fully supported:
+v0.6.1 is a **breaking change**. The following patterns are removed:
 
-| Pattern | Status | Use Case |
-|---------|--------|----------|
-| `run: agents/X` | **Supported** | Existing workflows, complex orchestration |
-| `skill: Y` | **NEW (Default)** | New workflows, simple skill execution |
-| Both fields | **Error** | Validation prevents ambiguity |
+| v0.6.0 Pattern | v0.6.1 Status | Migration |
+|----------------|---------------|-----------|
+| `run: agents/X` | **REMOVED** | Convert to `skill:` + `mission:` |
+| Custom subagent_type per agent | **REMOVED** | Use `skill-executor` for all |
+| Agent files for workflow steps | **REMOVED** | Migrate to skills or use `mission:` |
 
-**Migration path:**
-1. Existing workflows with `run:` continue to work unchanged
-2. New workflows generated by `/build` use `skill:` by default
-3. Users can gradually migrate simple agents to skill-based steps
-4. Complex agents (multi-skill orchestration) remain as agents
+**What this means:**
+1. Existing workflows with `run:` **WILL NOT WORK** - must be migrated
+2. Agent files like `content-analyzer.md` are **DELETED** or archived
+3. ALL workflow steps use `skill-executor` subagent
+4. Skill logic moved from agents to skill files
+
+See [Section 11: Agent to Skill Migration](#11-agent-to-skill-migration) for migration guide.
 
 ### 10.11 Design Decisions Summary
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Default for /build | `skill:` steps | Skills-first simplifies workflow creation |
+| Backward compatibility | **None** | Clean architecture > migration complexity |
+| Workflow step syntax | `skill:` + `mission:` ONLY | Simple, explicit, consistent |
+| Subagent for workflow | `skill-executor` ONLY | ONE universal orchestrator |
 | Skill field interpretation | Both specific and category | Flexible - exact match or capability search |
 | Tool restrictions | Add `tools:` to skill frontmatter | Fine-grained control per skill |
 | Model selection | `model:` in skill and step | Skill default, step override |
-| Backward compatibility | Support both patterns | No breaking changes for existing workflows |
-| Search order | Skills first, agents fallback | Skills are primary building blocks |
+| Agent migration | Delete agents, create skills | Skills are first-class citizens |
+
+---
+
+## 11. Agent to Skill Migration
+
+### 11.1 Overview
+
+v0.6.1 eliminates thin wrapper agents from looplia-writer. This section details the migration path.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    AGENT TO SKILL MIGRATION                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+DELETED (v0.6.0 agents):          CREATED/RETAINED (v0.6.1 skills):
+┌───────────────────────┐         ┌───────────────────────┐
+│ content-analyzer.md   │ ──────▶ │ media-reviewer        │ (EXISTS)
+│                       │         │ content-documenter    │ (EXISTS)
+└───────────────────────┘         └───────────────────────┘
+
+┌───────────────────────┐         ┌───────────────────────┐
+│ idea-generator.md     │ ──────▶ │ idea-synthesis        │ (NEW)
+└───────────────────────┘         └───────────────────────┘
+
+┌───────────────────────┐         ┌───────────────────────┐
+│ writing-kit-builder.md│ ──────▶ │ writing-kit-assembler │ (NEW)
+└───────────────────────┘         └───────────────────────┘
+```
+
+### 11.2 content-analyzer.md → Direct Skill Usage
+
+**Current agent logic (DELETED):**
+- Detect source type (video/audio/text)
+- Invoke media-reviewer skill
+- Invoke content-documenter skill
+- Write summary.json
+
+**Migration approach:**
+- Detection logic → `mission:` field in workflow step
+- Skills invoked directly by skill-executor based on mission
+- No separate content-analyzer skill needed
+
+**Workflow step replacement:**
+
+```yaml
+# Before (v0.6.0)
+- id: summary
+  run: agents/content-analyzer
+  input: ${{ sandbox }}/inputs/content.md
+  output: ${{ sandbox }}/outputs/summary.json
+
+# After (v0.6.1)
+- id: analyze-content
+  skill: media-reviewer
+  mission: |
+    Detect source type (video transcript, audio transcript, or text article).
+    Perform deep analysis: extract key themes, important quotes,
+    narrative structure, sentiment, and core ideas.
+    Output comprehensive analysis as structured JSON.
+  input: ${{ sandbox }}/inputs/content.md
+  output: ${{ sandbox }}/outputs/analysis.json
+  model: haiku
+  validate:
+    required_fields: [contentId, headline, keyThemes, importantQuotes]
+```
+
+### 11.3 idea-generator.md → idea-synthesis Skill
+
+**Current agent logic (DELETED):**
+- Read user-profile.json via user-profile-reader skill
+- Generate hooks, angles, questions
+- Personalize based on user preferences
+- Write ideas.json
+
+**New skill: `idea-synthesis`**
+
+**Path:** `plugins/looplia-writer/skills/idea-synthesis/SKILL.md`
+
+```yaml
+---
+name: idea-synthesis
+description: |
+  Looplia writer skill for generating content ideas.
+  Reads user profile for personalization context.
+  Generates hooks, angles, and thought-provoking questions.
+tools: Read, Skill
+model: haiku
+---
+
+## Process
+
+1. Use user-profile-reader skill to get user context
+2. Read content analysis from input
+3. Generate:
+   - 3-5 hooks (attention-grabbing openers)
+   - 3-5 angles (unique perspectives)
+   - 5-7 questions (discussion starters)
+4. Personalize based on user interests/style
+5. Write JSON output
+
+## Output Schema
+
+{
+  "contentId": "string",
+  "hooks": [
+    { "text": "string", "type": "question|statistic|story|contrast" }
+  ],
+  "angles": [
+    { "perspective": "string", "approach": "string" }
+  ],
+  "questions": [
+    { "text": "string", "depth": "surface|medium|deep" }
+  ]
+}
+```
+
+**Workflow step:**
+
+```yaml
+- id: generate-ideas
+  skill: idea-synthesis
+  mission: |
+    Read user profile for personalization context.
+    Generate hooks, angles, and questions based on content analysis.
+    Focus on user's interests and writing style preferences.
+  needs: [analyze-content]
+  input: ${{ steps.analyze-content.output }}
+  output: ${{ sandbox }}/outputs/ideas.json
+  validate:
+    required_fields: [contentId, hooks, angles, questions]
+```
+
+### 11.4 writing-kit-builder.md → writing-kit-assembler Skill
+
+**Current agent logic (DELETED):**
+- Read summary.json and ideas.json
+- Create structured outline
+- Build comprehensive WritingKit
+- Write writing-kit.json
+
+**New skill: `writing-kit-assembler`**
+
+**Path:** `plugins/looplia-writer/skills/writing-kit-assembler/SKILL.md`
+
+```yaml
+---
+name: writing-kit-assembler
+description: |
+  Looplia writer skill for assembling final writing kits.
+  Combines content analysis and ideas into structured output.
+  Creates suggested outlines with sections.
+tools: Read, Write
+model: sonnet
+---
+
+## Process
+
+1. Read content analysis from first input
+2. Read ideas from second input
+3. Create suggested outline:
+   - Introduction with hook
+   - 3-5 body sections with themes
+   - Conclusion with call-to-action
+4. Assemble WritingKit structure
+5. Write JSON output
+
+## Output Schema
+
+{
+  "contentId": "string",
+  "source": {
+    "type": "video|audio|article",
+    "title": "string",
+    "url": "string"
+  },
+  "summary": {
+    "headline": "string",
+    "tldr": "string",
+    "bullets": ["string"],
+    "keyThemes": ["string"],
+    "importantQuotes": [{ "text": "string", "context": "string" }]
+  },
+  "ideas": {
+    "hooks": [...],
+    "angles": [...],
+    "questions": [...]
+  },
+  "suggestedOutline": {
+    "title": "string",
+    "sections": [
+      {
+        "heading": "string",
+        "points": ["string"],
+        "supportingQuote": "string"
+      }
+    ]
+  },
+  "meta": {
+    "generatedAt": "ISO timestamp",
+    "workflowVersion": "1.0.0"
+  }
+}
+```
+
+**Workflow step:**
+
+```yaml
+- id: build-writing-kit
+  skill: writing-kit-assembler
+  mission: |
+    Combine analysis and ideas into comprehensive writing kit.
+    Create structured outline with introduction, body sections, conclusion.
+    Include all metadata and source references.
+  needs: [analyze-content, generate-ideas]
+  input:
+    - ${{ steps.analyze-content.output }}
+    - ${{ steps.generate-ideas.output }}
+  output: ${{ sandbox }}/outputs/writing-kit.json
+  final: true
+  validate:
+    required_fields: [contentId, summary, ideas, suggestedOutline]
+```
+
+### 11.5 Complete Migrated Workflow Example
+
+```yaml
+---
+name: writing-kit
+version: 2.0.0
+description: Transform content into structured writing kit
+
+steps:
+  - id: analyze-content
+    skill: media-reviewer
+    mission: |
+      Analyze content deeply. Detect source type (video/audio/text).
+      Extract key themes, important quotes, narrative structure.
+      Output comprehensive analysis as structured JSON.
+    input: ${{ sandbox }}/inputs/content.md
+    output: ${{ sandbox }}/outputs/analysis.json
+    model: haiku
+    validate:
+      required_fields: [contentId, headline, keyThemes, importantQuotes]
+
+  - id: generate-ideas
+    skill: idea-synthesis
+    mission: |
+      Read user profile for personalization context.
+      Generate hooks, angles, and questions based on content analysis.
+      Focus on user's interests and writing style preferences.
+    needs: [analyze-content]
+    input: ${{ steps.analyze-content.output }}
+    output: ${{ sandbox }}/outputs/ideas.json
+    validate:
+      required_fields: [contentId, hooks, angles, questions]
+
+  - id: build-writing-kit
+    skill: writing-kit-assembler
+    mission: |
+      Combine analysis and ideas into comprehensive writing kit.
+      Create structured outline with introduction, body sections, conclusion.
+      Include all metadata and source references.
+    needs: [analyze-content, generate-ideas]
+    input:
+      - ${{ steps.analyze-content.output }}
+      - ${{ steps.generate-ideas.output }}
+    output: ${{ sandbox }}/outputs/writing-kit.json
+    final: true
+    validate:
+      required_fields: [contentId, summary, ideas, suggestedOutline]
+---
+
+# Writing Kit Workflow
+
+Transform raw content into a comprehensive writing kit.
+
+## Usage
+
+```bash
+looplia run writing-kit --file <content.md>
+```
+
+## Steps
+
+1. **analyze-content**: Deep analysis using media-reviewer skill
+2. **generate-ideas**: Idea synthesis with user personalization
+3. **build-writing-kit**: Assemble final writing kit
+```
+
+### 11.6 Files Summary
+
+#### Files to Delete (Agents)
+
+| File | Reason |
+|------|--------|
+| `plugins/looplia-writer/agents/content-analyzer.md` | Replaced by direct media-reviewer usage |
+| `plugins/looplia-writer/agents/idea-generator.md` | Replaced by idea-synthesis skill |
+| `plugins/looplia-writer/agents/writing-kit-builder.md` | Replaced by writing-kit-assembler skill |
+
+#### Files to Create (Skills)
+
+| File | Purpose |
+|------|---------|
+| `plugins/looplia-writer/skills/idea-synthesis/SKILL.md` | Idea generation with personalization |
+| `plugins/looplia-writer/skills/writing-kit-assembler/SKILL.md` | Final kit assembly |
+
+#### Files to Modify
+
+| File | Change |
+|------|--------|
+| `plugins/looplia-writer/workflows/writing-kit.md` | Migrate to `skill:` + `mission:` syntax |
+| `plugins/looplia-core/CLAUDE.md` | Update to skill-executor protocol |
+| `plugins/looplia-core/skills/workflow-executor/SKILL.md` | Handle `skill:` field ONLY |
+
+### 11.7 CLAUDE.md Update
+
+The `plugins/looplia-core/CLAUDE.md` should be updated to:
+
+```markdown
+# Looplia Workflow Engine (v0.6.1)
+
+You are a workflow execution engine. Execute workflows by orchestrating skills through skill-executor.
+
+---
+
+## CRITICAL: Skill-Executor Invocation Rule
+
+When a workflow step specifies `skill: {name}`, you MUST invoke:
+
+{
+  "subagent_type": "skill-executor",
+  "description": "Execute step: {step-id}",
+  "prompt": "Execute skill '{name}' for step '{step-id}'.\n\nMission: {mission}\n\nInput: {input}\nOutput: {output}\nValidation: {validate}"
+}
+
+### Rules
+
+- **ALWAYS**: Use `subagent_type: "skill-executor"` for ALL workflow steps
+- **NEVER**: Use custom subagent_type per step
+- **NEVER**: Use `subagent_type: "general-purpose"` for workflow steps
+
+---
+
+## Workflow Schema (v0.6.1)
+
+steps:
+  - id: step-name
+    skill: skill-name      # REQUIRED: Which skill to execute
+    mission: |             # REQUIRED: What to accomplish
+      Natural language description...
+    input: ${{ sandbox }}/inputs/...
+    output: ${{ sandbox }}/outputs/...
+    validate:
+      required_fields: [...]
+```
+
+### 11.8 Hook Validation System
+
+**Unchanged from v0.6.0:** Hooks trigger on tool calls, not subagent identity.
+
+```
+skill-executor uses Write tool
+         ↓
+PostToolUse:Write hook fires
+         ↓
+workflow-validator runs
+         ↓
+Checks output against step.validate
+         ↓
+Updates validation.json
+```
+
+The hook system doesn't care whether the Write came from content-analyzer or skill-executor. It validates the output file regardless.
 
 ---
 
 ## Cross-References
 
-- **Workflow Schema:** See [DESIGN-0.6.0.md](./DESIGN-0.6.0.md) for v0.6.0 schema specification
+- **Workflow Schema (v0.6.0):** See [DESIGN-0.6.0.md](./DESIGN-0.6.0.md) for previous schema (deprecated)
 - **Context Injection:** See [CONTEXT-INJECTION.md](./CONTEXT-INJECTION.md) for skill loading
 - **Plugin Architecture:** See [CLAUDE_PLUGINS.md](./CLAUDE_PLUGINS.md) for plugin structure
 - **Ubiquitous Language:** See [GLOSSARY.md](./GLOSSARY.md) for term definitions
 
 ---
 
-*This document serves as the single source of truth for Looplia-Core v0.6.1 workflow builder architecture.*
+*This document serves as the single source of truth for Looplia-Core v0.6.1 skills-first architecture.*
