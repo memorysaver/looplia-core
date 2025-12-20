@@ -5,6 +5,7 @@
 > **Version:** 0.6.1
 > **Date:** 2025-12-20
 > **Related:** [DESIGN-0.6.0.md](./DESIGN-0.6.0.md) | [CONTEXT-INJECTION.md](./CONTEXT-INJECTION.md) | [GLOSSARY.md](./GLOSSARY.md)
+> **Cleanup:** [CLEANUP-0.6.1.md](./CLEANUP-0.6.1.md) - Legacy code removal plan
 
 ---
 
@@ -1737,6 +1738,8 @@ v0.6.1 is a **breaking change**. The following patterns are removed:
 4. Skill logic moved from agents to skill files
 
 See [Section 11: Agent to Skill Migration](#11-agent-to-skill-migration) for migration guide.
+
+> **Legacy Code Cleanup:** Execute [CLEANUP-0.6.1.md](./CLEANUP-0.6.1.md) to remove pre-v0.4.0 legacy code (20 files to delete, 15 documents to archive).
 
 ### 10.11 Design Decisions Summary
 
