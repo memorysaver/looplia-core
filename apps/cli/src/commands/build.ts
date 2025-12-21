@@ -35,7 +35,7 @@ type BuildResult = {
 /**
  * Parsed command arguments
  */
-type BuildArgs = {
+export type BuildArgs = {
   description: string;
   output?: string;
   name?: string;
@@ -78,7 +78,7 @@ function processArg(
 /**
  * Parse command line arguments
  */
-function parseArgs(args: string[]): BuildArgs {
+export function parseArgs(args: string[]): BuildArgs {
   const descriptionParts: string[] = [];
   const result: BuildArgs = {
     description: "",
@@ -164,7 +164,7 @@ function ensureWorkspace(mock: boolean): string {
 /**
  * Validate environment (API key)
  */
-function validateEnvironment(mock: boolean): void {
+export function validateEnvironment(mock: boolean): void {
   if (mock) {
     return;
   }
@@ -183,7 +183,7 @@ function validateEnvironment(mock: boolean): void {
  * Build the /build prompt to inject into the agent.
  * Sanitizes user input to prevent prompt injection.
  */
-function buildPrompt(args: BuildArgs): string {
+export function buildPrompt(args: BuildArgs): string {
   let prompt = "/build";
 
   if (args.description) {

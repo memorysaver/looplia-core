@@ -13,10 +13,10 @@ import { basename, join } from "node:path";
 import { parse as parseYaml } from "yaml";
 
 // Top-level regex for frontmatter extraction
-const FRONTMATTER_REGEX = /^---\n([\s\S]*?)\n---/;
+export const FRONTMATTER_REGEX = /^---\n([\s\S]*?)\n---/;
 
 // Capability inference lookup table
-const CAPABILITY_PATTERNS: [string, string][] = [
+export const CAPABILITY_PATTERNS: [string, string][] = [
   ["analy", "content analysis"],
   ["review", "content review"],
   ["theme", "theme extraction"],
@@ -36,7 +36,7 @@ const CAPABILITY_PATTERNS: [string, string][] = [
   ["valid", "validation"],
 ];
 
-type SkillInfo = {
+export type SkillInfo = {
   name: string;
   description: string;
   tools?: string[];
@@ -44,13 +44,13 @@ type SkillInfo = {
   capabilities: string[];
 };
 
-type PluginInfo = {
+export type PluginInfo = {
   name: string;
   path: string;
   skills: SkillInfo[];
 };
 
-type Registry = {
+export type Registry = {
   plugins: PluginInfo[];
   summary: {
     totalPlugins: number;
@@ -61,7 +61,9 @@ type Registry = {
 /**
  * Extract YAML frontmatter from markdown content
  */
-function extractFrontmatter(content: string): Record<string, unknown> | null {
+export function extractFrontmatter(
+  content: string
+): Record<string, unknown> | null {
   const match = content.match(FRONTMATTER_REGEX);
   if (!match) {
     return null;
@@ -77,7 +79,7 @@ function extractFrontmatter(content: string): Record<string, unknown> | null {
 /**
  * Infer capabilities from skill description using pattern matching
  */
-function inferCapabilities(description: string): string[] {
+export function inferCapabilities(description: string): string[] {
   const descLower = description.toLowerCase();
   const capabilities = new Set<string>();
 
@@ -179,7 +181,7 @@ async function scanPlugin(pluginPath: string): Promise<PluginInfo | null> {
 /**
  * Main scanner function
  */
-async function scanPlugins(pluginsPath: string): Promise<Registry> {
+export async function scanPlugins(pluginsPath: string): Promise<Registry> {
   const plugins: PluginInfo[] = [];
 
   try {
@@ -211,7 +213,9 @@ async function scanPlugins(pluginsPath: string): Promise<Registry> {
   };
 }
 
-// Main execution
-const pluginsDir = process.argv[2] || "plugins";
-const registry = await scanPlugins(pluginsDir);
-console.log(JSON.stringify(registry, null, 2));
+// Main execution (only when run directly, not when imported)
+if (import.meta.main) {
+  const pluginsDir = process.argv[2] || "plugins";
+  const registry = await scanPlugins(pluginsDir);
+  console.log(JSON.stringify(registry, null, 2));
+}

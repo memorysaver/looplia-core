@@ -1,7 +1,10 @@
 ---
 name: media-reviewer
-description: Deep content analysis for structure, themes, narrative flow,
-key moments, and important quotes. Use before content-documenter.
+description: |
+  Deep content analysis for structure, themes, narrative flow,
+  key moments, and important quotes. Use before content-documenter.
+tools: Read, Glob
+model: claude-haiku-4-5-20251001
 ---
 
 # Media Reviewer Skill
