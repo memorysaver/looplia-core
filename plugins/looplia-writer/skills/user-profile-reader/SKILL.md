@@ -1,7 +1,10 @@
 ---
 name: user-profile-reader
-description: Read user profile from workspace and calculate content relevance.
-Use to personalize output based on user interests.
+description: |
+  Read user profile from workspace and calculate content relevance.
+  Use to personalize output based on user interests.
+tools: Read
+model: claude-haiku-4-5-20251001
 ---
 
 # User Profile Reader Skill

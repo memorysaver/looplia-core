@@ -1,7 +1,7 @@
 #!/bin/bash
-# Workflow Completion Guard Hook (v0.6.0)
+# Workflow Completion Guard Hook (v0.6.1)
 # Triggered: When main agent attempts to stop
-# Action: Block if any step has validated: false
+# Action: Block if any step has validated: false OR output files missing
 
 set -euo pipefail
 
@@ -30,11 +30,25 @@ if [[ ! -f "$VALIDATION_JSON" ]]; then
   exit 0
 fi
 
+# Check for missing output files first (more actionable feedback)
+MISSING=""
+for step in $(jq -r '.steps | keys[]' "$VALIDATION_JSON" 2>/dev/null); do
+  OUTPUT_PATH=$(jq -r --arg s "$step" '.steps[$s].output // empty' "$VALIDATION_JSON" 2>/dev/null)
+  if [[ -n "$OUTPUT_PATH" && ! -f "$OUTPUT_PATH" ]]; then
+    MISSING="$MISSING $step"
+  fi
+done
+
+if [[ -n "$MISSING" ]]; then
+  echo "{\"decision\": \"block\", \"reason\": \"Missing output files for steps:$MISSING. You MUST call the Write tool to create these files at the paths specified in the workflow.\"}"
+  exit 0
+fi
+
 # Check all steps are validated (v0.6.0 uses "steps" not "outputs")
 PENDING=$(jq -r '.steps | to_entries[] | select(.value.validated == false) | .key' "$VALIDATION_JSON" 2>/dev/null | tr '\n' ', ' | sed 's/,$//')
 
 if [[ -n "$PENDING" ]]; then
-  echo "{\"decision\": \"block\", \"reason\": \"Workflow incomplete. Pending steps: $PENDING\"}"
+  echo "{\"decision\": \"block\", \"reason\": \"Workflow incomplete. Pending validation for steps: $PENDING. Output files exist but need validation - re-write them to trigger validation.\"}"
   exit 0
 fi
 

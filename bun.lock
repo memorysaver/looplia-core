@@ -5,6 +5,7 @@
       "name": "looplia-core",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "^0.1.71",
+        "yaml": "^2.7.0",
       },
       "devDependencies": {
         "@biomejs/biome": "2.3.8",
@@ -16,7 +17,7 @@
     },
     "apps/cli": {
       "name": "@looplia-core/cli",
-      "version": "0.4.0",
+      "version": "0.6.0",
       "bin": {
         "looplia": "./dist/index.js",
       },
@@ -36,7 +37,7 @@
     },
     "apps/docs": {
       "name": "docs",
-      "version": "0.0.1",
+      "version": "0.6.0",
       "dependencies": {
         "@astrojs/starlight": "^0.37.0",
         "astro": "^5.6.1",
@@ -45,11 +46,11 @@
     },
     "packages/config": {
       "name": "@looplia-core/config",
-      "version": "0.0.0",
+      "version": "0.6.0",
     },
     "packages/core": {
       "name": "@looplia-core/core",
-      "version": "0.4.0",
+      "version": "0.6.0",
       "dependencies": {
         "zod": "^3.23.0",
       },
@@ -62,7 +63,7 @@
     },
     "packages/provider": {
       "name": "@looplia-core/provider",
-      "version": "0.4.0",
+      "version": "0.6.0",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "^0.1.60",
         "@looplia-core/core": "workspace:*",

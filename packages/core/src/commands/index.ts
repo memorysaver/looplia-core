@@ -4,8 +4,6 @@
  * Clean Architecture: Commands are defined in core, used by CLI and Provider.
  */
 
-// Command Definitions
-export { kitCommand } from "./kit";
 // Registry
 export {
   clearCommands,
@@ -40,9 +38,7 @@ export type {
 export { buildWorkflowPrompt, workflowCommand } from "./workflow";
 
 // Auto-register commands on import
-import { kitCommand } from "./kit";
 import { registerCommand } from "./registry";
 import { workflowCommand } from "./workflow";
 
-registerCommand(kitCommand);
 registerCommand(workflowCommand);

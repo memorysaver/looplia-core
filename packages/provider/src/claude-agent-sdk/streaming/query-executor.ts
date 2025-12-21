@@ -6,7 +6,6 @@
  */
 
 import { query } from "@anthropic-ai/claude-agent-sdk";
-
 import type { ClaudeAgentConfig, ProviderUsage } from "../config";
 import { resolveConfig } from "../config";
 import { createQueryLogger } from "../logger";
@@ -16,6 +15,7 @@ import {
   extractContentIdFromPrompt,
   getOrInitWorkspace,
 } from "../utils/shared";
+import { skillExecutorPrompt } from "./prompts/skill-executor";
 
 // Re-export for backward compatibility - intentional to maintain API surface
 // biome-ignore lint/performance/noBarrelFile: intentional re-export for backward compatibility
@@ -171,6 +171,17 @@ export async function* executeAgenticQueryStreaming<T>(
         // v0.6.0: Enable Task for subagent spawning, Write/Glob for file operations
         allowedTools: ["Read", "Write", "Glob", "Task", "Skill"],
         outputFormat: { type: "json_schema", schema: jsonSchema },
+        // v0.6.2: Programmatic agent definition ensures skill-executor uses haiku
+        // Prompt loaded from external file for maintainability
+        agents: {
+          "skill-executor": {
+            description:
+              "Universal skill orchestrator for looplia workflow steps. Reads step context, understands mission, and composes skills to complete tasks. Use this agent for all skill-based workflow steps.",
+            prompt: skillExecutorPrompt,
+            tools: ["Read", "Write", "Skill", "Glob", "Grep"],
+            model: "haiku",
+          },
+        },
       },
     });
 

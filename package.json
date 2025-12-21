@@ -17,7 +17,8 @@
     "dev:web": "turbo -F web dev"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.1.71"
+    "@anthropic-ai/claude-agent-sdk": "^0.1.71",
+    "yaml": "^2.7.0"
   },
   "devDependencies": {
     "turbo": "^2.5.4",

@@ -2,8 +2,8 @@
 set -e
 
 # Looplia Docker E2E Test Script
-# Runs real API tests inside Docker container with v0.6.0 sandbox architecture
-# Tests: Workflow-as-Markdown with custom subagents, skills auto-loading, and sandbox isolation
+# Runs real API tests inside Docker container with v0.6.1 skills-first architecture
+# Tests: Workflow-as-Markdown with skill-executor, skills auto-loading, and sandbox isolation
 
 # Colors for output
 RED='\033[0;31m'
@@ -159,7 +159,7 @@ build_project() {
   print_pass "Docker image built: $IMAGE_NAME"
 }
 
-# Verify workflow logs for subagent and skill usage
+# Verify workflow logs for subagent and skill usage (v0.6.1 skills-first)
 verify_workflow_log() {
   local SESSION_DIR=$1
   local LOG_FILE=$(ls "$SESSION_DIR/logs/"*.log 2>/dev/null | head -1)
@@ -169,33 +169,31 @@ verify_workflow_log() {
     return 1
   fi
 
-  print_step "Verifying workflow execution logs..."
+  print_step "Verifying workflow execution logs (v0.6.1 skills-first)..."
 
   local pass=true
 
-  # Check for custom subagent types (CRITICAL)
-  if grep -q '"subagent_type".*"content-analyzer"' "$LOG_FILE"; then
-    print_pass "content-analyzer subagent used"
+  # Check for universal skill-executor (CRITICAL for v0.6.1)
+  SKILL_EXEC_COUNT=$(grep -c '"subagent_type".*"skill-executor"' "$LOG_FILE" 2>/dev/null || echo "0")
+  if [ "$SKILL_EXEC_COUNT" -ge 3 ]; then
+    print_pass "skill-executor used $SKILL_EXEC_COUNT times"
   else
-    print_fail "content-analyzer subagent NOT FOUND"
+    print_fail "skill-executor count: $SKILL_EXEC_COUNT (expected >= 3)"
     pass=false
   fi
 
-  if grep -q '"subagent_type".*"idea-generator"' "$LOG_FILE"; then
-    print_pass "idea-generator subagent used"
-  else
-    print_fail "idea-generator subagent NOT FOUND"
-    pass=false
+  # Check for legacy agents (should NOT exist in v0.6.1)
+  for legacy in content-analyzer idea-generator writing-kit-builder; do
+    if grep -q "\"subagent_type\".*\"$legacy\"" "$LOG_FILE"; then
+      print_fail "Legacy agent $legacy detected!"
+      pass=false
+    fi
+  done
+  if [ "$pass" = true ]; then
+    print_pass "No legacy agents found"
   fi
 
-  if grep -q '"subagent_type".*"writing-kit-builder"' "$LOG_FILE"; then
-    print_pass "writing-kit-builder subagent used"
-  else
-    print_fail "writing-kit-builder subagent NOT FOUND"
-    pass=false
-  fi
-
-  # Check for general-purpose (should NOT exist)
+  # Check for general-purpose fallback (should NOT exist)
   if grep -q '"subagent_type".*"general-purpose"' "$LOG_FILE"; then
     print_fail "FAIL: general-purpose subagent detected!"
     pass=false
@@ -215,13 +213,31 @@ verify_workflow_log() {
   SKILL_COUNT=$(grep -c '"name".*"Skill"' "$LOG_FILE" 2>/dev/null || echo "0")
   print_info "Skill tool invocations: $SKILL_COUNT"
 
-  # Check for validation script calls
-  VALIDATE_COUNT=$(grep -c "validate.ts" "$LOG_FILE" 2>/dev/null || echo "0")
-  if [ "$VALIDATE_COUNT" -ge 3 ]; then
-    print_pass "Validation script calls: $VALIDATE_COUNT"
-  else
-    print_warn "Validation script calls: $VALIDATE_COUNT (expected >= 3)"
-  fi
+  # Verify correct skills used for each step
+  # Log format: Task tool calls have:
+  # { "subagent_type": "skill-executor",
+  #   "description": "Execute step: {step-id}",
+  #   "prompt": "Execute skill '{skill-name}' for step '{step-id}'..." }
+  print_step "Checking skill-to-step mapping..."
+
+  # Define expected mappings: step → skill
+  declare -A STEP_SKILL_MAP=(
+    ["summary"]="media-reviewer"
+    ["ideas"]="idea-synthesis"
+    ["writing-kit"]="writing-kit-assembler"
+  )
+
+  for step in "${!STEP_SKILL_MAP[@]}"; do
+    expected_skill="${STEP_SKILL_MAP[$step]}"
+
+    # Find Task call for this step and check if prompt contains expected skill
+    if grep -B5 "\"description\".*\"Execute step: $step\"" "$LOG_FILE" | grep -q "\"prompt\".*$expected_skill"; then
+      print_pass "Step '$step' uses skill '$expected_skill'"
+    else
+      print_fail "Step '$step' should use skill '$expected_skill'"
+      pass=false
+    fi
+  done
 
   [ "$pass" = true ] && return 0 || return 1
 }
@@ -531,7 +547,7 @@ print_summary() {
   # echo "  - vtt-test/ (Test 2: VTT caption)"      # Commented out
   # echo "  - srt-test/ (Test 3: SRT transcript)"   # Commented out
   echo ""
-  echo "Each sandbox folder contains (v0.6.0 architecture):"
+  echo "Each sandbox folder contains (v0.6.1 skills-first architecture):"
   echo "  - inputs/content.md (raw input)"
   echo "  - outputs/summary.json (Stage 1)"
   echo "  - outputs/ideas.json (Stage 2)"
@@ -544,9 +560,9 @@ print_summary() {
 # Main execution
 main() {
   print_header "Looplia Docker E2E Test Suite"
-  echo "  Version: 0.6.0"
+  echo "  Version: 0.6.1"
   echo "  Date: $(date '+%Y-%m-%d %H:%M:%S')"
-  echo "  Architecture: Steps-Based Workflow with Sandbox Isolation"
+  echo "  Architecture: Skills-First Workflow with Sandbox Isolation"
 
   check_prerequisites
   prepare_workspace

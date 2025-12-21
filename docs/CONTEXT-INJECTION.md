@@ -1,7 +1,8 @@
 # Context Injection Flow
 
-> **Version:** 0.6.0
+> **Version:** 0.6.1
 > **Last Updated:** December 2025
+> **Related:** [AGENTIC_CONCEPT_1.0.md](./AGENTIC_CONCEPT_1.0.md) | [DESIGN-0.6.1.md](./DESIGN-0.6.1.md)
 
 This document illustrates what content gets injected into Claude's context when running a Looplia workflow.
 
@@ -66,42 +67,51 @@ When you run `looplia run writing-kit --file article.md`, multiple layers of con
                                             │ Claude reads workflow definition
                                             ▼
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ BOX 4: workflows/writing-kit.md (Workflow Definition - READ BY CLAUDE) [v0.6.0]         ┃
+┃ BOX 4: workflows/writing-kit.md (Workflow Definition - READ BY CLAUDE) [v0.6.1]         ┃
 ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃ YAML Frontmatter (steps-based format):                                                  ┃
-┃ • steps[0]: id=summary, run=agents/content-analyzer, output=outputs/summary.json        ┃
-┃ • steps[1]: id=ideas, run=agents/idea-generator, needs=[summary]                        ┃
-┃ • steps[2]: id=writing-kit, run=agents/writing-kit-builder, needs=[summary,ideas]       ┃
+┃ YAML Frontmatter (skills-first format):                                                 ┃
+┃ • steps[0]: id=summary, skill=media-reviewer, mission="Analyze content..."              ┃
+┃ • steps[1]: id=ideas, skill=idea-synthesis, mission="Generate angles...", needs=[summary]┃
+┃ • steps[2]: id=writing-kit, skill=writing-kit-assembler, needs=[summary,ideas]          ┃
 ┃                                                                                         ┃
-┃ Key: `run: agents/{name}` → Task tool `subagent_type: "{name}"`                         ┃
+┃ Key: `skill:` + `mission:` → Task tool `subagent_type: "skill-executor"`                ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
                                             │
                                             │ Claude generates validation.json, then invokes subagents
                                             ▼
 ┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│ SUBAGENT SPAWN (via Task tool with subagent_type)                                       │
+│ SUBAGENT SPAWN (via Task tool with subagent_type: "skill-executor") [v0.6.1]            │
 └───────────────────────────────────────────┬─────────────────────────────────────────────┘
                                             │
           ┌─────────────────────────────────┼─────────────────────────────────────────────┐
           │                                 │                                             │
           ▼                                 ▼                                             ▼
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓  ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓  ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ BOX 5A: content-analyzer.md ┃  ┃ BOX 5B: idea-generator.md   ┃  ┃ BOX 5C: writing-kit-builder ┃
-┃ (Agent Definition)          ┃  ┃ (Agent Definition)          ┃  ┃ (Agent Definition)          ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫  ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫  ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃ model: haiku                ┃  ┃ model: haiku                ┃  ┃ model: haiku                ┃
-┃ tools: Read, Write, Skill   ┃  ┃ tools: Read, Write, Skill   ┃  ┃ tools: Read, Write, Skill   ┃
-┃ skills: media-reviewer,     ┃  ┃ skills: user-profile-reader ┃  ┃ skills: (as needed)         ┃
-┃         content-documenter  ┃  ┃                             ┃  ┃                             ┃
-┃                             ┃  ┃                             ┃  ┃                             ┃
-┃ Task:                       ┃  ┃ Task:                       ┃  ┃ Task:                       ┃
-┃ • Read inputs/content.md    ┃  ┃ • Read outputs/summary.json ┃  ┃ • Read summary + ideas      ┃
-┃ • Detect source type        ┃  ┃ • Read user-profile.json    ┃  ┃ • Read user-profile.json    ┃
-┃ • Use media-reviewer skill  ┃  ┃ • Generate hooks, angles    ┃  ┃ • Build final writing-kit   ┃
-┃ • Write outputs/summary.json┃  ┃ • Write outputs/ideas.json  ┃  ┃ • Write writing-kit.json    ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ BOX 5: skill-executor Subagent (UNIVERSAL - Same for ALL workflow steps)                ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃                                                                                         ┃
+┃  Task tool invocation (same subagent_type for every step):                              ┃
+┃  {                                                                                      ┃
+┃    "subagent_type": "skill-executor",                                                   ┃
+┃    "prompt": "Execute {skill} skill with mission: {mission}"                            ┃
+┃  }                                                                                      ┃
+┃                                                                                         ┃
+┃  ┌────────────────────┐  ┌────────────────────┐  ┌────────────────────────────┐         ┃
+┃  │ Step 1: summary    │  │ Step 2: ideas      │  │ Step 3: writing-kit        │         ┃
+┃  │ skill: media-      │  │ skill: idea-       │  │ skill: writing-kit-        │         ┃
+┃  │        reviewer    │  │        synthesis   │  │        assembler           │         ┃
+┃  │ mission: Analyze   │  │ mission: Generate  │  │ mission: Combine summary   │         ┃
+┃  │ content...         │  │ angles...          │  │ and ideas...               │         ┃
+┃  └────────────────────┘  └────────────────────┘  └────────────────────────────┘         ┃
+┃                                                                                         ┃
+┃  The skill-executor:                                                                    ┃
+┃  • Loads the specified skill's SKILL.md                                                 ┃
+┃  • Executes the mission using skill's guidance                                          ┃
+┃  • Writes output to the step's defined output path                                      ┃
+┃                                                                                         ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
           │                                 │                                             │
-          │ Each subagent loads skills      │                                             │
+          │ Each step loads its skill       │                                             │
           ▼                                 ▼                                             ▼
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃ BOX 6: skills/{name}/SKILL.md (Skills - LOADED WHEN SUBAGENT USES Skill TOOL)           ┃
@@ -170,9 +180,9 @@ Each workflow execution creates an isolated sandbox:
 | 2 | Slash command definition | `commands/run.md` | When `/run` is invoked |
 | 3 | Core execution skill | `skills/workflow-executor/SKILL.md` | Via `Skill` tool |
 | 4 | Workflow definition | `workflows/writing-kit.md` | Read by workflow-executor |
-| 5 | Agent definition | `.claude/agents/{name}.md` | Via `Task` tool (subagent spawn) |
-| 6 | Agent skills | `skills/{skill}/SKILL.md` | Via `Skill` tool in subagent |
-| 7 | Validation skill | `skills/workflow-validator/SKILL.md` | After artifact write |
+| 5 | skill-executor subagent | (universal - no file) | Via `Task` tool with step's skill+mission |
+| 6 | Step skill | `skills/{skill}/SKILL.md` | Via `Skill` tool in skill-executor |
+| 7 | Validation hook | `post-write-validate.sh` | After artifact write |
 | 8 | State re-injection | `compact-inject-state.sh` | On context compaction |
 
 ---
@@ -220,24 +230,26 @@ The core execution engine. Contains the 8-phase protocol:
 **Location:** `~/.looplia/workflows/writing-kit.md`
 **Trigger:** Read by workflow-executor during Phase 2
 
-Workflow definition with YAML frontmatter (v0.6.0 steps-based format):
+Workflow definition with YAML frontmatter (v0.6.1 skills-first format):
 - `steps:` array with ordered step definitions
-- `run: agents/{name}` specifies which agent to execute
+- `skill:` specifies which skill to load
+- `mission:` provides natural language guidance for the skill
 - `needs:` defines dependencies between steps
 - `final: true` marks the final output step
 
-**Critical mapping:** `run: agents/content-analyzer` → `subagent_type: "content-analyzer"`
+**Critical mapping:** `skill:` + `mission:` → `subagent_type: "skill-executor"`
 
-### BOX 5A-C: Agent Definitions
+### BOX 5: skill-executor Subagent (v0.6.1)
 
-**Location:** `~/.looplia/.claude/agents/{name}.md`
-**Trigger:** Via `Task` tool with `subagent_type`
+**Trigger:** Via `Task` tool with `subagent_type: "skill-executor"`
 
-Each subagent has its own definition specifying:
-- Model to use (e.g., `haiku`)
-- Available tools
-- Skills to auto-load
-- Task instructions
+In v0.6.1, ONE universal subagent handles all workflow steps:
+- Receives skill name and mission from workflow step
+- Loads the specified skill's SKILL.md
+- Executes the mission using skill's domain expertise
+- Writes output to the step's defined path
+
+**Key change from v0.6.0:** No more per-step agent definitions. The skill-executor is universal.
 
 ### BOX 6: Skills
 
@@ -575,38 +587,44 @@ $ looplia run writing-kit --file ~/articles/draft.md
 8. [CLAUDE] Generate validation.json
 9. [CLAUDE] Compute order: [summary, ideas, writing-kit]
 
-10. [CLAUDE] Task tool → content-analyzer (BOX 5A)
+10. [CLAUDE] Task tool → skill-executor (BOX 5) with skill=media-reviewer
     [SUBAGENT] Load media-reviewer skill (BOX 6)
+    [SUBAGENT] Execute mission: "Analyze content..."
     [SUBAGENT] Read inputs/content.md
     [SUBAGENT] Write outputs/summary.json
-11. [CLAUDE] Validate summary.json (BOX 7) → PASSED
-12. [CLAUDE] Update validation.json
+    [HOOK] PostToolUse:Write → post-write-validate.sh → validates JSON
+11. [CLAUDE] Update validation.json: summary.validated = true
 
-13. [CLAUDE] Task tool → idea-generator (BOX 5B)
-    [SUBAGENT] Load user-profile-reader skill (BOX 6)
-    [SUBAGENT] Read outputs/summary.json
+12. [CLAUDE] Task tool → skill-executor (BOX 5) with skill=idea-synthesis
+    [SUBAGENT] Load idea-synthesis skill (BOX 6)
+    [SUBAGENT] Execute mission: "Generate angles..."
+    [SUBAGENT] Read outputs/summary.json + user-profile.json
     [SUBAGENT] Write outputs/ideas.json
-14. [CLAUDE] Validate ideas.json (BOX 7) → PASSED
-15. [CLAUDE] Update validation.json
+    [HOOK] PostToolUse:Write → validates JSON
+13. [CLAUDE] Update validation.json: ideas.validated = true
 
-16. [CLAUDE] Task tool → writing-kit-builder (BOX 5C)
+14. [CLAUDE] Task tool → skill-executor (BOX 5) with skill=writing-kit-assembler
+    [SUBAGENT] Load writing-kit-assembler skill (BOX 6)
+    [SUBAGENT] Execute mission: "Combine summary and ideas..."
     [SUBAGENT] Read summary.json + ideas.json
     [SUBAGENT] Write outputs/writing-kit.json
-17. [CLAUDE] Validate writing-kit.json (BOX 7) → PASSED
-18. [CLAUDE] Update validation.json (all validated)
+    [HOOK] PostToolUse:Write → validates JSON
+15. [CLAUDE] Update validation.json: writing-kit.validated = true (all done)
 
-19. [CLAUDE] Return final artifact: writing-kit.json
+16. [CLAUDE] Return final artifact: writing-kit.json
+    [HOOK] Stop → stop-guard.sh → all validated → allows completion
 ```
 
 ---
 
 ## Related Documents
 
-- [DESIGN-0.6.0.md](./DESIGN-0.6.0.md) - v0.6.0 architecture with steps-based workflows
-- [DESIGN-0.5.2.md](./DESIGN-0.5.2.md) - Two-plugin architecture (historical)
-- [AGENTIC_CONCEPT-0.5.md](./AGENTIC_CONCEPT-0.5.md) - Agent system design
-- [CLAUDE_PLUGINS.md](./CLAUDE_PLUGINS.md) - Claude Code plugin reference
+- [AGENTIC_CONCEPT_1.0.md](./AGENTIC_CONCEPT_1.0.md) - Skills-first architecture overview
+- [DESIGN-0.6.1.md](./DESIGN-0.6.1.md) - v0.6.1 skills-first architecture
+- [DESIGN-0.6.2.md](./DESIGN-0.6.2.md) - v0.6.2 schema-in-skill architecture
+- [HOOK_VALIDATOR.md](./HOOK_VALIDATOR.md) - Hook system implementation
+- [archive/AGENTIC_CONCEPT-0.5.md](./archive/AGENTIC_CONCEPT-0.5.md) - Agent system design (historical)
 
 ---
 
-*This document illustrates the context injection flow for Looplia-Core v0.6.0.*
+*This document illustrates the context injection flow for Looplia-Core v0.6.1.*

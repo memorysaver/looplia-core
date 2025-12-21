@@ -155,7 +155,7 @@ steps:
     expect(() => parseWorkflow(invalid)).toThrow("at least one step");
   });
 
-  it("should throw error for missing run field", () => {
+  it("should throw error for missing skill or run field", () => {
     const invalid = `---
 name: test
 description: Test
@@ -165,7 +165,10 @@ steps:
     output: output.json
 ---`;
 
-    expect(() => parseWorkflow(invalid)).toThrow("'run' field");
+    // v0.6.1: requires either skill+mission OR run
+    expect(() => parseWorkflow(invalid)).toThrow(
+      "must have either 'skill' + 'mission'"
+    );
   });
 
   it("should throw error for invalid run format", () => {
@@ -194,6 +197,63 @@ steps:
 ---`;
 
     expect(() => parseWorkflow(invalid)).toThrow("invalid run format");
+  });
+
+  it("should parse v0.6.1 skill+mission syntax", () => {
+    // Use escaped template syntax to prevent JS interpretation
+    const valid = `---
+name: test-workflow
+description: Test v0.6.1 skills-first syntax
+steps:
+  - id: analyze
+    skill: media-reviewer
+    mission: Analyze and summarize the content
+    input: \${{ sandbox }}/inputs/content.md
+    output: \${{ sandbox }}/outputs/summary.json
+---
+Custom instructions here`;
+
+    const result = parseWorkflow(valid);
+    expect(result.definition.name).toBe("test-workflow");
+    expect(result.definition.steps[0].skill).toBe("media-reviewer");
+    expect(result.definition.steps[0].mission).toBe(
+      "Analyze and summarize the content"
+    );
+    expect(result.definition.steps[0].run).toBeUndefined();
+  });
+
+  it("should throw error for step with both skill and run", () => {
+    const invalid = `---
+name: test
+description: Test
+steps:
+  - id: test
+    skill: media-reviewer
+    mission: Analyze content
+    run: agents/test
+    input: input.md
+    output: output.json
+---`;
+
+    expect(() => parseWorkflow(invalid)).toThrow(
+      "cannot have both 'skill' and 'run'"
+    );
+  });
+
+  it("should throw error for skill without mission", () => {
+    const invalid = `---
+name: test
+description: Test
+steps:
+  - id: test
+    skill: media-reviewer
+    input: input.md
+    output: output.json
+---`;
+
+    expect(() => parseWorkflow(invalid)).toThrow(
+      "must have either 'skill' + 'mission'"
+    );
   });
 
   it("should throw error for missing input field", () => {

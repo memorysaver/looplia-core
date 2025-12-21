@@ -1,23 +1,28 @@
 export {
   ContentItemSchema,
   ContentMetadataSchema,
-  ContentSummarySchema,
+  // Workflow Schemas (v0.6.0)
+  SessionManifestSchema,
   SourceSchema,
   // Schemas
   SourceTypeSchema,
-  SummaryScoreSchema,
+  StepValidationStateSchema,
   UserProfileSchema,
   UserTopicSchema,
+  ValidationCheckSchema,
+  ValidationCriteriaSchema,
+  ValidationManifestSchema,
   // Types
   type ValidationResult,
+  ValidationResultSchema,
   // Validators
   validateContentItem,
-  validateContentSummary,
+  validateSessionManifest,
   validateUserProfile,
-  validateWritingIdeas,
-  WritingAngleSchema,
-  WritingHookSchema,
-  WritingIdeasSchema,
-  WritingQuestionSchema,
+  validateValidationManifest,
+  validateValidationResult,
+  validateWorkflowDefinition,
+  WorkflowDefinitionSchema,
+  WorkflowStepSchema,
   WritingStyleSchema,
 } from "./schemas";

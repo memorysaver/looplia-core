@@ -174,7 +174,7 @@ jobs:
             fi
           done
 
-      - name: Verify subagent execution
+      - name: Verify subagent execution (v0.6.1 skills-first)
         run: |
           SANDBOX_DIR=$(find test-workspace/sandbox -maxdepth 1 -type d ! -name sandbox | head -1)
           LOG_FILE=$(ls "$SANDBOX_DIR/logs/"*.log 2>/dev/null | head -1)
@@ -184,28 +184,27 @@ jobs:
             exit 0
           fi
 
-          echo "=== Checking subagent types ==="
+          echo "=== Checking skill-executor usage (v0.6.1) ==="
 
-          # Check for custom subagent types
-          if grep -q '"subagent_type".*"content-analyzer"' "$LOG_FILE"; then
-            echo "✓ content-analyzer subagent used"
+          # Check for universal skill-executor (should appear for all steps)
+          SKILL_EXEC_COUNT=$(grep -c '"subagent_type".*"skill-executor"' "$LOG_FILE" 2>/dev/null || echo "0")
+          if [ "$SKILL_EXEC_COUNT" -ge 3 ]; then
+            echo "✓ skill-executor used $SKILL_EXEC_COUNT times (expected >= 3)"
           else
-            echo "✗ content-analyzer NOT found"
+            echo "✗ skill-executor count: $SKILL_EXEC_COUNT (expected >= 3)"
+            exit 1
           fi
 
-          if grep -q '"subagent_type".*"idea-generator"' "$LOG_FILE"; then
-            echo "✓ idea-generator subagent used"
-          else
-            echo "✗ idea-generator NOT found"
-          fi
+          # CRITICAL: Check for legacy agents (should NOT exist in v0.6.1)
+          for legacy in content-analyzer idea-generator writing-kit-builder; do
+            if grep -q "\"subagent_type\".*\"$legacy\"" "$LOG_FILE"; then
+              echo "✗ FAIL: Legacy agent $legacy detected!"
+              exit 1
+            fi
+          done
+          echo "✓ No legacy agents found"
 
-          if grep -q '"subagent_type".*"writing-kit-builder"' "$LOG_FILE"; then
-            echo "✓ writing-kit-builder subagent used"
-          else
-            echo "✗ writing-kit-builder NOT found"
-          fi
-
-          # CRITICAL: Check for general-purpose (should NOT exist)
+          # Check for general-purpose fallback (should NOT exist)
           if grep -q '"subagent_type".*"general-purpose"' "$LOG_FILE"; then
             echo "✗ FAIL: general-purpose subagent detected!"
             exit 1
@@ -217,12 +216,184 @@ jobs:
           TASK_COUNT=$(grep -c '"name".*"Task"' "$LOG_FILE" 2>/dev/null || echo "0")
           echo "Task tool invocations: $TASK_COUNT (expected >= 3)"
 
+          # Verify correct skills used for each step
+          # Log format: Task tool calls have:
+          # { "subagent_type": "skill-executor",
+          #   "description": "Execute step: {step-id}",
+          #   "prompt": "Execute skill '{skill-name}' for step '{step-id}'..." }
+
+          echo "=== Checking skill-to-step mapping ==="
+
+          # Check step 'summary' uses skill 'media-reviewer'
+          if grep -B5 '"description".*"Execute step: summary"' "$LOG_FILE" | grep -q '"prompt".*media-reviewer'; then
+            echo "✓ Step 'summary' uses skill 'media-reviewer'"
+          else
+            echo "✗ Step 'summary' should use skill 'media-reviewer'"
+            exit 1
+          fi
+
+          # Check step 'ideas' uses skill 'idea-synthesis'
+          if grep -B5 '"description".*"Execute step: ideas"' "$LOG_FILE" | grep -q '"prompt".*idea-synthesis'; then
+            echo "✓ Step 'ideas' uses skill 'idea-synthesis'"
+          else
+            echo "✗ Step 'ideas' should use skill 'idea-synthesis'"
+            exit 1
+          fi
+
+          # Check step 'writing-kit' uses skill 'writing-kit-assembler'
+          if grep -B5 '"description".*"Execute step: writing-kit"' "$LOG_FILE" | grep -q '"prompt".*writing-kit-assembler'; then
+            echo "✓ Step 'writing-kit' uses skill 'writing-kit-assembler'"
+          else
+            echo "✗ Step 'writing-kit' should use skill 'writing-kit-assembler'"
+            exit 1
+          fi
+
       - name: Upload test artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results-markdown
           path: test-workspace/
+          retention-days: 7
+
+  # Test: Build command - generate workflow from natural language
+  test-build:
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker image
+        run: gunzip -c looplia-image.tar.gz | docker load
+
+      - name: Create test workspace
+        run: mkdir -p build-test-workspace
+
+      - name: Run build command
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          CONTAINER_ID=$(docker create \
+            -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
+            $IMAGE_NAME \
+            build "summarize articles and extract key points" \
+            --name article-summary \
+            --no-interactive)
+
+          # Run container and capture exit code
+          docker start -a "$CONTAINER_ID" || EXIT_CODE=$?
+
+          # Copy workspace for validation
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." build-test-workspace/ || true
+          docker rm "$CONTAINER_ID"
+
+          # Exit with original code
+          exit ${EXIT_CODE:-0}
+
+      - name: Debug - List workspace contents
+        if: always()
+        run: |
+          echo "=== Build Test Workspace Structure ==="
+          find build-test-workspace -type f 2>/dev/null | head -50 || echo "No files found"
+          echo ""
+          echo "=== Workflows directory ==="
+          ls -la build-test-workspace/workflows/ 2>/dev/null || echo "No workflows directory"
+          echo ""
+          echo "=== Generated workflow content ==="
+          cat build-test-workspace/workflows/article-summary.md 2>/dev/null || echo "No article-summary.md"
+
+      - name: Validate workflow file created
+        run: |
+          WORKFLOW_FILE="build-test-workspace/workflows/article-summary.md"
+
+          # Check file exists
+          [ -f "$WORKFLOW_FILE" ] || (echo "ERROR: Workflow file not created" && exit 1)
+          echo "✓ Workflow file exists: $WORKFLOW_FILE"
+
+          # Check file is not empty
+          [ -s "$WORKFLOW_FILE" ] || (echo "ERROR: Workflow file is empty" && exit 1)
+          echo "✓ Workflow file has content"
+
+      - name: Validate YAML frontmatter schema
+        run: |
+          WORKFLOW_FILE="build-test-workspace/workflows/article-summary.md"
+
+          # Extract YAML frontmatter (between first --- and second ---)
+          sed -n '/^---$/,/^---$/p' "$WORKFLOW_FILE" | sed '1d;$d' > frontmatter.yaml
+          echo "=== Frontmatter YAML ==="
+          cat frontmatter.yaml
+
+          # Validate required top-level fields
+          yq -e '.name' frontmatter.yaml > /dev/null || (echo "ERROR: missing 'name' field" && exit 1)
+          echo "✓ Has 'name' field"
+
+          yq -e '.steps' frontmatter.yaml > /dev/null || (echo "ERROR: missing 'steps' array" && exit 1)
+          echo "✓ Has 'steps' array"
+
+          STEPS_COUNT=$(yq '.steps | length' frontmatter.yaml)
+          echo "✓ Found $STEPS_COUNT steps"
+          [ "$STEPS_COUNT" -ge 1 ] || (echo "ERROR: No steps defined" && exit 1)
+
+      - name: Validate v0.6.1 skill syntax
+        run: |
+          WORKFLOW_FILE="build-test-workspace/workflows/article-summary.md"
+          sed -n '/^---$/,/^---$/p' "$WORKFLOW_FILE" | sed '1d;$d' > frontmatter.yaml
+
+          echo "=== Checking v0.6.1 skill syntax ==="
+
+          # Each step should have 'skill:' field
+          SKILL_COUNT=$(yq '.steps[].skill | select(. != null)' frontmatter.yaml | wc -l)
+          STEP_COUNT=$(yq '.steps | length' frontmatter.yaml)
+
+          echo "Steps with 'skill:' field: $SKILL_COUNT / $STEP_COUNT"
+          [ "$SKILL_COUNT" -eq "$STEP_COUNT" ] || (echo "ERROR: Not all steps have 'skill:' field" && exit 1)
+          echo "✓ All steps have 'skill:' field"
+
+          # Each step should have 'mission:' field
+          MISSION_COUNT=$(yq '.steps[].mission | select(. != null)' frontmatter.yaml | wc -l)
+          echo "Steps with 'mission:' field: $MISSION_COUNT / $STEP_COUNT"
+          [ "$MISSION_COUNT" -eq "$STEP_COUNT" ] || (echo "ERROR: Not all steps have 'mission:' field" && exit 1)
+          echo "✓ All steps have 'mission:' field"
+
+          # No step should have legacy 'run:' field
+          RUN_COUNT=$(yq '.steps[].run | select(. != null)' frontmatter.yaml | wc -l)
+          [ "$RUN_COUNT" -eq 0 ] || (echo "ERROR: Found legacy 'run:' syntax in $RUN_COUNT steps" && exit 1)
+          echo "✓ No legacy 'run:' syntax found"
+
+      - name: Validate referenced skills exist
+        run: |
+          WORKFLOW_FILE="build-test-workspace/workflows/article-summary.md"
+          sed -n '/^---$/,/^---$/p' "$WORKFLOW_FILE" | sed '1d;$d' > frontmatter.yaml
+
+          echo "=== Checking referenced skills ==="
+
+          # Get list of referenced skills
+          SKILLS=$(yq -r '.steps[].skill' frontmatter.yaml | sort -u)
+
+          # Check each skill exists in plugins directory
+          for skill in $SKILLS; do
+            SKILL_PATH=$(find build-test-workspace/plugins -name "$skill" -type d 2>/dev/null | head -1)
+            if [ -n "$SKILL_PATH" ]; then
+              echo "✓ Skill '$skill' found at: $SKILL_PATH"
+            else
+              echo "⚠ Skill '$skill' not found in plugins (may be external)"
+            fi
+          done
+
+      - name: Upload build test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-build
+          path: build-test-workspace/
           retention-days: 7
 
   # Commented out for now - focus on markdown test first

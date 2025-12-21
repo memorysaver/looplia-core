@@ -1,4 +1,4 @@
-# Hook-Based Workflow Validator (v0.5.2)
+# Hook-Based Workflow Validator (v0.6.2)
 
 Use Claude Code hooks to enforce workflow validation at key events - auto-validate artifacts, guard completion, and preserve context across compaction.
 
@@ -36,6 +36,114 @@ Use Claude Code hooks to enforce workflow validation at key events - auto-valida
 │ Workflow Done   │
 └─────────────────┘
 ```
+
+## Validation Architecture: Schema vs Criteria
+
+### Design Decision
+
+Looplia separates **output schemas** from **validation criteria** to enable skill reusability:
+
+| Responsibility | Owner | Location | Purpose |
+|----------------|-------|----------|---------|
+| **Output Schema** | Skill | `SKILL.md` | Defines output structure for LLM guidance |
+| **Validation Criteria** | Workflow | YAML frontmatter `validate:` block | Defines acceptance tests for this workflow |
+
+### Why This Separation?
+
+**Same skill, different thresholds.** A `media-reviewer` skill produces a ContentSummary. But:
+- A "quick-scan" workflow might accept `min_quotes: 1`
+- A "deep-analysis" workflow might require `min_quotes: 5`
+
+The skill doesn't decide strictness - the workflow does.
+
+### Criteria Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  writing-kit.md (Workflow Definition)                           │
+│  ─────────────────────────────────────────────────────────────  │
+│  steps:                                                          │
+│    - id: summary                                                 │
+│      skill: media-reviewer                                       │
+│      validate:                      ◄─── Criteria defined here   │
+│        required_fields: [contentId, headline, tldr]              │
+│        min_quotes: 3                                             │
+│        min_key_points: 5                                         │
+└─────────────────────────────────────────────────────────────────┘
+        │
+        │ workflow-executor (Phase 3)
+        ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  validation.json (Generated in sandbox)                          │
+│  ─────────────────────────────────────────────────────────────  │
+│  {                                                               │
+│    "workflow": "writing-kit",                                    │
+│    "steps": {                                                    │
+│      "summary": {                                                │
+│        "validated": false,                                       │
+│        "validate": {                ◄─── Criteria copied here    │
+│          "required_fields": [...],                               │
+│          "min_quotes": 3                                         │
+│        }                                                         │
+│      }                                                           │
+│    }                                                             │
+│  }                                                               │
+└─────────────────────────────────────────────────────────────────┘
+        │
+        │ PostToolUse:Write hook
+        ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  post-write-validate.sh                                          │
+│  ─────────────────────────────────────────────────────────────  │
+│  CRITERIA=$(jq '.steps[$art].validate' validation.json)          │
+│  bun validate.ts "$FILE_PATH" "$CRITERIA"                        │
+└─────────────────────────────────────────────────────────────────┘
+        │
+        │ Deterministic validation (no LLM)
+        ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  validate.ts                                                     │
+│  ─────────────────────────────────────────────────────────────  │
+│  Supported criteria:                                             │
+│    - required_fields: string[]                                   │
+│    - min_quotes: number                                          │
+│    - min_key_points: number                                      │
+│    - min_outline_sections: number                                │
+│    - has_hooks: boolean                                          │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Skill vs workflow-validator Skill
+
+The `workflow-validator` skill in looplia-core is for **manual debugging**, not normal validation:
+- Normal validation: Hooks run `validate.ts` deterministically (no token cost)
+- Debugging: Agent invokes workflow-validator skill to inspect validation state
+
+### Adding Stricter Validation
+
+To make validation more strict, modify the workflow's YAML frontmatter:
+
+```yaml
+# Before: lenient
+steps:
+  - id: summary
+    skill: media-reviewer
+    validate:
+      min_quotes: 1
+
+# After: strict
+steps:
+  - id: summary
+    skill: media-reviewer
+    validate:
+      min_quotes: 5
+      min_key_points: 10
+      required_fields: [contentId, headline, tldr, coreIdeas, keyQuotes]
+```
+
+The skill itself (`media-reviewer`) remains unchanged - only the workflow's expectations change.
+
+---
 
 ## Hook Implementations
 
@@ -145,19 +253,28 @@ All hooks are configured in `plugins/looplia-core/hooks/hooks.json`:
 
 ## Validation JSON Schema
 
-Each sandbox should have a `validation.json` file that tracks outputs:
+Each sandbox has a `validation.json` file generated by workflow-executor from workflow frontmatter:
 
 ```json
 {
   "workflow": "writing-kit",
-  "outputs": {
+  "steps": {
     "summary": {
       "validated": false,
-      "criteria": "summary-schema"
+      "artifact": "outputs/summary.json",
+      "validate": {
+        "required_fields": ["contentId", "headline", "tldr", "coreIdeas"],
+        "min_quotes": 3,
+        "min_key_points": 5
+      }
     },
     "ideas": {
       "validated": false,
-      "criteria": "ideas-schema"
+      "artifact": "outputs/ideas.json",
+      "validate": {
+        "required_fields": ["hooks", "angles", "questions"],
+        "has_hooks": true
+      }
     }
   }
 }
@@ -198,3 +315,5 @@ Run a full workflow and verify:
 ## Related Documentation
 
 - [Claude Code Hooks](./HOOKS.md) - Claude Code hooks system overview
+- [Context Injection](./CONTEXT-INJECTION.md) - How context flows into workflows
+- [DESIGN-0.6.2](./DESIGN-0.6.2.md) - Schema-in-Skill architecture design

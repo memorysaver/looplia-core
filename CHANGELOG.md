@@ -5,6 +5,76 @@ All notable changes to Looplia-Core will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2025-12-22
+
+### Added
+
+- **Programmatic Agent Configuration** - SDK-based agent config with explicit model enforcement
+  - `skill-executor` agent defined in `query-executor.ts` with haiku model
+  - Multi-layered output enforcement (agent instructions + orchestrator + hooks + SDK)
+  - Removes filesystem ambiguity for agent definitions
+- **Build Command Test Suite** - Comprehensive 5-level test pyramid
+  - L1: Unit tests for parseArgs, buildPrompt, validateEnvironment (27 tests)
+  - L2: Script tests for plugin-registry-scanner (25 tests)
+  - L3: Integration tests with mock executor (16 tests)
+  - L4: Docker E2E tests in CI workflow
+  - L5: Snapshot tests for mock mode (3 tests)
+
+### Changed
+
+- **Domain Type Cleanup** - Removed legacy domain types
+  - Removed: `Summary`, `Ideas`, `WritingKit`, `Pipeline` types
+  - Removed: Mock implementations and legacy validation schemas
+  - Simplified: `packages/core/src/domain/` to workflow types only
+
+### Fixed
+
+- **WorkflowStep Type Mismatch** - Added `skill` and `mission` fields to type
+- **Workflow Parser** - Now handles v0.6.1 skill/mission syntax
+- **Empty contentId** - Build command now generates UUID for session tracking
+
+## [0.6.1] - 2025-12-21
+
+### Added
+
+- **Skills-First Architecture** - Major paradigm shift from agents to skills
+  - `skill:` + `mission:` replaces `run: agents/{name}` in workflow steps
+  - Universal `skill-executor` subagent for all workflow steps
+  - Skills as first-class citizens with SKILL.md definitions
+- **Builder Skills** - AI-assisted workflow generation
+  - `plugin-registry-scanner`: Deterministic script to discover available skills
+  - `skill-capability-matcher`: LLM-based matching of requirements to skills
+  - `workflow-schema-composer`: LLM-based workflow YAML generation
+- **Build Command** - New `looplia build` CLI command
+  - Natural language workflow creation: `looplia build "summarize articles"`
+  - Mock mode for testing: `--mock` flag
+  - Batch mode for CI: `--no-interactive` flag
+- **Variable Substitution** - GitHub Actions-like syntax
+  - `${{ sandbox }}` for sandbox path
+  - `${{ steps.X.output }}` for step output references
+
+### Changed
+
+- **Subagent Invocation** - Deterministic mapping from workflow to Task tool
+  - All steps use `subagent_type: "skill-executor"` (no custom types)
+  - Removed: `content-analyzer`, `idea-generator`, `writing-kit-builder` subagent types
+- **Workflow Schema** - Breaking change from v0.6.0 format
+  - `run: agents/{name}` → `skill: {skill-name}` + `mission: {description}`
+  - Backward compatibility: `run:` still parsed but deprecated
+
+### Removed
+
+- **Legacy Agents** - Thin wrapper agents migrated to skills
+  - `agents/content-analyzer.md` → `skills/media-reviewer/SKILL.md`
+  - `agents/idea-generator.md` → `skills/idea-synthesis/SKILL.md`
+  - `agents/writing-kit-builder.md` → `skills/writing-kit-assembler/SKILL.md`
+
+### Documentation
+
+- **DESIGN-0.6.1.md** - Skills-first architecture design
+- **CLEANUP-0.6.1.md** - Migration and cleanup plan
+- **BUILD-COMMAND-TESTS.md** - Test pyramid documentation
+
 ## [0.6.0] - 2025-12-20
 
 ### Added
@@ -302,7 +372,9 @@ The following were considered but **intentionally deferred** to v0.6+:
 
 ---
 
-[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/memorysaver/looplia-core/compare/v0.6.1...v0.6.2
+[0.6.1]: https://github.com/memorysaver/looplia-core/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/memorysaver/looplia-core/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/memorysaver/looplia-core/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/memorysaver/looplia-core/compare/v0.5.0...v0.5.1
