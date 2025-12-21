@@ -24,12 +24,26 @@ import { isInteractive } from "../utils/terminal";
 /**
  * Build result type
  */
-type BuildResult = {
+export type BuildResult = {
   status: "success" | "error";
   workflowPath?: string;
   workflowName?: string;
   stepsCount?: number;
   error?: string;
+};
+
+/**
+ * Executor interface for dependency injection in tests
+ */
+export type BuildExecutor = {
+  executePrompt: (
+    prompt: string,
+    options: { workspace: string; contentId: string }
+  ) => Promise<{
+    success: boolean;
+    data?: BuildResult;
+    error?: { message: string };
+  }>;
 };
 
 /**
@@ -136,14 +150,14 @@ Examples:
 /**
  * Get workspace path
  */
-function getWorkspacePath(): string {
+export function getWorkspacePath(): string {
   return resolve(homedir(), ".looplia");
 }
 
 /**
  * Ensure workspace and workflows directory exist
  */
-function ensureWorkspace(mock: boolean): string {
+export function ensureWorkspace(mock: boolean): string {
   const workspace = getWorkspacePath();
   const workflowsDir = resolve(workspace, "workflows");
 
@@ -265,16 +279,18 @@ async function executeStreaming(
 
 /**
  * Execute in batch mode (non-streaming)
+ * @param executor Optional executor for dependency injection (testing)
  */
-async function executeBatch(
+export async function executeBatch(
   prompt: string,
-  workspace: string
+  workspace: string,
+  executor?: BuildExecutor
 ): Promise<BuildResult> {
   console.error("⏳ Building workflow...");
 
   const contentId = crypto.randomUUID();
-  const executor = createClaudeAgentExecutor({ workspace });
-  const result = await executor.executePrompt(prompt, {
+  const exec = executor ?? createClaudeAgentExecutor({ workspace });
+  const result = await exec.executePrompt(prompt, {
     workspace,
     contentId,
   });
@@ -311,7 +327,7 @@ function executeBuild(
 /**
  * Render the result
  */
-function renderResult(result: BuildResult): void {
+export function renderResult(result: BuildResult): void {
   if (result.status === "success") {
     console.log("\n✅ Workflow created successfully");
     if (result.workflowPath) {
