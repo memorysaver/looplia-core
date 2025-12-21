@@ -55,7 +55,17 @@ When making changes to the codebase, ensure the following documents are updated 
   - Sandbox architecture
   - Hook-based validation
 
-- [ ] **[docs/AGENTIC_CONCEPT-0.5.md](./AGENTIC_CONCEPT-0.5.md)**
+- [ ] **[docs/DESIGN-0.6.1.md](./DESIGN-0.6.1.md)**
+  - Skills-first architecture
+  - Universal skill-executor
+  - `/build` command
+  - Agent to skill migration
+
+- [ ] **[docs/DESIGN-0.6.2.md](./DESIGN-0.6.2.md)**
+  - Schema-in-Skill architecture
+  - Domain types cleanup
+
+- [ ] **[docs/archive/AGENTIC_CONCEPT-0.5.md](./archive/AGENTIC_CONCEPT-0.5.md)** (historical)
   - Agent system design
   - Subagent definitions
   - Skills auto-loading
@@ -69,7 +79,7 @@ When making changes to the codebase, ensure the following documents are updated 
   - Workspace structure changes
   - Deprecated terms marked
 
-- [ ] **[docs/TEST_PLAN-0.6.md](./TEST_PLAN-0.6.md)**
+- [ ] **[docs/archive/TEST_PLAN-0.6.md](./archive/TEST_PLAN-0.6.md)** (historical)
   - Test commands and paths
   - Log verification examples
   - Troubleshooting section
@@ -167,7 +177,7 @@ When creating a PR, include:
 - [ ] README.md
 - [ ] docs/README.md
 - [ ] docs/GLOSSARY.md
-- [ ] docs/TEST_PLAN-0.6.md
+- [ ] docs/DESIGN-0.6.1.md or docs/DESIGN-0.6.2.md (if architecture changes)
 - [ ] Other: ___
 
 ## CI/CD Verified

@@ -1,6 +1,6 @@
 # Looplia-Core Documentation
 
-> **Version:** 0.6.0
+> **Version:** 0.6.2
 > **Last Updated:** December 2025
 
 This directory contains the core documentation for Looplia-Core, a Claude Agent SDK-based agentic workflow platform.
@@ -9,19 +9,87 @@ This directory contains the core documentation for Looplia-Core, a Claude Agent 
 
 ## Core Documents (Latest)
 
-These are the current, authoritative documents for the v0.6.0 architecture:
+These are the current, authoritative documents for the v0.6.2 architecture:
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
-| [DESIGN-0.6.0.md](./DESIGN-0.6.0.md) | **Steps-based workflow schema**, deterministic subagent invocation, GitHub Actions-inspired syntax | Developers, Architects |
+| [AGENTIC_CONCEPT_1.0.md](./AGENTIC_CONCEPT_1.0.md) | **Skills-first architecture overview** - comprehensive guide to v0.6.1/v0.6.2 | All team members |
+| [DESIGN-0.6.2.md](./DESIGN-0.6.2.md) | **Schema-in-Skill architecture**, plugin-first domain types | Developers, Architects |
+| [DESIGN-0.6.1.md](./DESIGN-0.6.1.md) | **Skills-first architecture**, universal skill-executor, `/build` command | Developers, Architects |
+| [DESIGN-0.6.0.md](./DESIGN-0.6.0.md) | Steps-based workflow schema, deterministic subagent invocation | Developers, Architects |
+| [CLEANUP-0.6.1.md](./CLEANUP-0.6.1.md) | Legacy code removal plan for v0.6.1 | Developers |
 | [CONTEXT-INJECTION.md](./CONTEXT-INJECTION.md) | **Context injection flow** when running workflows (ASCII diagram) | Developers, Architects |
-| [AGENTIC_CONCEPT-0.5.md](./AGENTIC_CONCEPT-0.5.md) | Agent system design: Two-plugin model, workflow-executor skill, commands | Architects, System Designers |
-| [TEST_PLAN-0.5.md](./TEST_PLAN-0.5.md) | Test architecture with real API testing, log verification, bun link workflow | QA, Developers |
 | [GLOSSARY.md](./GLOSSARY.md) | Ubiquitous language reference (domain terms + TypeScript types) | All team members |
+| [HOOK_VALIDATOR.md](./HOOK_VALIDATOR.md) | Hook system implementation details | Developers |
 | [PR_CHECKLIST.md](./PR_CHECKLIST.md) | **PR checklist** for docs, CI/CD alignment, version consistency | Contributors, Claude Code |
 | [CLAUDE_PLUGINS.md](./CLAUDE_PLUGINS.md) | Claude Code plugin system reference | Developers |
 | [SUBAGENTS.md](./SUBAGENTS.md) | Anthropic official Subagents documentation (reference) | Developers |
 | [AGENT-SKILLS.md](./AGENT-SKILLS.md) | Anthropic official Agent Skills documentation (reference) | Developers |
+
+### Archived Documents
+
+| Document | Purpose |
+|----------|---------|
+| [AGENTIC_CONCEPT-0.5.md](./archive/AGENTIC_CONCEPT-0.5.md) | Agent system design: Two-plugin model (historical) |
+| [TEST_PLAN-0.6.md](./archive/TEST_PLAN-0.6.md) | Test architecture with real API testing (historical) |
+
+---
+
+## What's New in v0.6.2 (BREAKING CHANGE)
+
+### Schema-in-Skill Architecture
+
+v0.6.2 removes workflow-specific domain types from `packages/core`. Skills define their own output schemas in SKILL.md files.
+
+| Before (v0.6.1) | After (v0.6.2) |
+|-----------------|----------------|
+| TypeScript types in `packages/core` | JSON schemas in SKILL.md |
+| `ContentSummary`, `WritingIdeas` types | Skills own their output schemas |
+| Core knows about all workflows | Core is workflow-agnostic |
+
+**Key Principle:** Skills Define Schemas, Not TypeScript.
+
+See [DESIGN-0.6.2.md](./DESIGN-0.6.2.md) for full details.
+
+---
+
+## What's New in v0.6.1 (BREAKING CHANGE)
+
+### Skills-First Architecture
+
+v0.6.1 introduces **skills as first-class citizens** with a universal skill-executor:
+
+| v0.6.0 | v0.6.1 | Rationale |
+|--------|--------|-----------|
+| `run: agents/X` | `skill:` + `mission:` | Skills are primary units |
+| Per-agent subagent_type | Universal `skill-executor` | Single orchestrator |
+| Thin wrapper agents | Direct skill invocation | Eliminate indirection |
+
+### Universal Skill-Executor
+
+ALL workflow steps now use ONE pattern:
+
+```
+skill: media-reviewer
+mission: "Analyze content for themes and structure"
+```
+
+The `skill-executor` subagent handles ALL workflow step execution.
+
+### New `/build` Command
+
+AI-assisted workflow creation using 3 builder skills:
+
+```
+/build my-workflow "Transform podcast transcripts into blog posts"
+```
+
+**Builder Skills:**
+- `plugin-registry-scanner` - Discover available skills
+- `skill-capability-matcher` - Match requirements to skills
+- `workflow-schema-composer` - Generate valid workflow YAML
+
+See [DESIGN-0.6.1.md](./DESIGN-0.6.1.md) for full details.
 
 ---
 
@@ -38,16 +106,7 @@ v0.6.0 introduces a GitHub Actions-inspired workflow schema for **deterministic 
 | `requires:` | `needs:` | GitHub Actions familiarity |
 | Implicit paths | `${{ }}` syntax | Explicit variable substitution |
 
-### Critical Subagent Mapping
-
-When `run: agents/{name}` is specified, the Task tool MUST use `subagent_type: "{name}"`:
-
-```
-run: agents/content-analyzer  →  subagent_type: "content-analyzer"
-run: agents/idea-generator    →  subagent_type: "idea-generator"
-```
-
-**FORBIDDEN:** `subagent_type: "general-purpose"` for workflow steps.
+> **Note:** v0.6.0's `run: agents/X` syntax is deprecated in v0.6.1. Use `skill:` + `mission:` instead.
 
 ### Two-Plugin Architecture
 
@@ -99,35 +158,33 @@ New commands exposed via Claude Code plugin system:
 
 ## Document Overview
 
-### DESIGN-0.5.2.md
+### DESIGN-0.6.2.md (Current)
 
-The v0.5.2 architecture document covering:
+The v0.6.2 architecture document covering:
 
-- **Two-Plugin Architecture** - looplia-core (infrastructure) + looplia-writer (domain)
-- **Slash Commands** - `/run`, `/build-workflow`, `/list-workflows`
-- **workflow-executor Skill** - Core skill that interprets workflow.md files
-- **Plugin Manifest Updates** - Proper plugin.json for both plugins
-- **Installation Flow** - How `looplia init` installs both plugins
-- **Workflow Files Solution** - How workflows fit as a Looplia extension
+- **Schema-in-Skill Architecture** - Skills define JSON schemas in SKILL.md
+- **Domain Types Cleanup** - Remove workflow-specific types from core
+- **Plugin-First Design** - looplia-writer as standard Claude Code plugin
 
-### AGENTIC_CONCEPT-0.5.md
+### DESIGN-0.6.1.md (Current)
 
-The v0.5.2 agent system design document covering:
+The v0.6.1 architecture document covering:
 
-- **Plugin Separation** - Infrastructure vs domain concerns
-- **Workflow-as-Markdown** - YAML frontmatter + markdown instructions in single file
-- **Custom Subagents** - Task tool with custom `subagent_type`
-- **Skills Auto-Loading** - `skills:` frontmatter field in agent definitions
-- **Validation-Driven Completion** - `validation.json` with deterministic script validation
+- **Skills-First Architecture** - Skills as first-class citizens
+- **Universal Skill-Executor** - ONE subagent for ALL workflow steps
+- **`/build` Command** - AI-assisted workflow creation with 3 builder skills
+- **Skill Decomposition** - plugin-registry-scanner, skill-capability-matcher, workflow-schema-composer
+- **Agent to Skill Migration** - Removing thin wrapper agents
 
-### DESIGN-0.5.1.md
+### DESIGN-0.6.0.md
 
-The workflow-as-markdown architecture document covering:
+The v0.6.0 architecture document covering:
 
-- **Workflow.md Format** - YAML frontmatter structure with outputs, agents, validation criteria
-- **Validation Skill System** - workflow-validator skill with deterministic scripts
-- **Generic Workflow Interpreter** - CLAUDE.md that executes ANY workflow
-- **CLI Command Updates** - `looplia run <workflow-id> --file <path>`
+- **Steps-based Workflow Schema** - GitHub Actions-inspired syntax
+- **Deterministic Subagent Invocation** - `run: agents/X` → `subagent_type: "X"`
+- **Variable Substitution** - `${{ }}` syntax for paths
+
+> **Note:** v0.6.0's `run: agents/X` syntax is deprecated. See DESIGN-0.6.1.md for skills-first approach.
 
 ### GLOSSARY.md
 
@@ -149,17 +206,17 @@ Reference document containing the official Anthropic documentation for Agent Ski
 
 ## Historical Documents
 
-Previous versions are preserved for reference:
+Previous versions are preserved in `/docs/archive/` for reference:
 
 | Document | Version | Notes |
 |----------|---------|-------|
 | [DESIGN-0.5.2.md](./DESIGN-0.5.2.md) | v0.5.2 | Two-plugin architecture, slash commands |
 | [DESIGN-0.5.1.md](./DESIGN-0.5.1.md) | v0.5.1 | Workflow-as-Markdown, single plugin |
-| [AGENTIC_CONCEPT-0.4.md](./AGENTIC_CONCEPT-0.4.md) | v0.5.1 | Pre-two-plugin agent design |
-| [AGENTIC_CONCEPT-0.3.md](./AGENTIC_CONCEPT-0.3.md) | v0.3 | Pipeline-as-Configuration (YAML), session.json |
-| [TEST_PLAN-0.4.md](./TEST_PLAN-0.4.md) | v0.4 | Pre-real-API-testing plan |
-| [DESIGN-0.4.0.md](./DESIGN-0.4.0.md) | v0.4.0 | CommandDefinition abstraction, Clean Architecture |
-| [AGENTIC_CONCEPT-0.2.md](./AGENTIC_CONCEPT-0.2.md) | v0.2 | Pre-pipeline agent design |
+| [AGENTIC_CONCEPT-0.5.md](./archive/AGENTIC_CONCEPT-0.5.md) | v0.5.2 | Two-plugin agent design |
+| [AGENTIC_CONCEPT-0.4.md](./archive/AGENTIC_CONCEPT-0.4.md) | v0.5.1 | Pre-two-plugin agent design |
+| [TEST_PLAN-0.6.md](./archive/TEST_PLAN-0.6.md) | v0.6.0 | Steps-based validation schema |
+| [TEST_PLAN-0.4.md](./archive/TEST_PLAN-0.4.md) | v0.4 | Pre-real-API-testing plan |
+| [DESIGN-0.4.0.md](./archive/DESIGN-0.4.0.md) | v0.4.0 | CommandDefinition abstraction, Clean Architecture |
 
 ---
 
@@ -168,26 +225,25 @@ Previous versions are preserved for reference:
 ### For New Contributors
 
 1. Start with [GLOSSARY.md](./GLOSSARY.md) to understand the terminology
-2. Read [DESIGN-0.5.2.md](./DESIGN-0.5.2.md) for the two-plugin architecture
-3. Review [AGENTIC_CONCEPT-0.5.md](./AGENTIC_CONCEPT-0.5.md) for agent system design
+2. Read [DESIGN-0.6.1.md](./DESIGN-0.6.1.md) for the skills-first architecture
+3. Review [DESIGN-0.6.2.md](./DESIGN-0.6.2.md) for schema-in-skill architecture
 4. **Before PRs:** Use [PR_CHECKLIST.md](./PR_CHECKLIST.md) to ensure docs and CI/CD are updated
 
 ### For Developers
 
 - **Context injection flow?** See [CONTEXT-INJECTION.md](./CONTEXT-INJECTION.md) for ASCII diagram of what gets loaded
-- **Workflow schema v0.6.0?** See [DESIGN-0.6.0.md § Workflow Schema](./DESIGN-0.6.0.md#3-workflow-schema-v060)
-- **Subagent invocation?** See [DESIGN-0.6.0.md § Subagent Invocation Protocol](./DESIGN-0.6.0.md#4-subagent-invocation-protocol)
-- Adding a workflow? See [DESIGN-0.5.2.md § Plugin 2: looplia-writer](./DESIGN-0.5.2.md#5-plugin-2-looplia-writer)
-- Creating commands? See [DESIGN-0.5.2.md § Command Specifications](./DESIGN-0.5.2.md#8-command-specifications)
-- Running tests? See [TEST_PLAN-0.5.md](./TEST_PLAN-0.5.md)
+- **Skills-first architecture?** See [DESIGN-0.6.1.md](./DESIGN-0.6.1.md) for `skill:` + `mission:` syntax
+- **Universal skill-executor?** See [DESIGN-0.6.1.md § Universal Skill-Executor](./DESIGN-0.6.1.md#10-universal-skill-executor-architecture)
+- **Building workflows?** See [DESIGN-0.6.1.md § CLI Command](./DESIGN-0.6.1.md#5-cli-command) for `/build` command
+- **Legacy code cleanup?** See [CLEANUP-0.6.1.md](./CLEANUP-0.6.1.md)
 - Plugin system? See [CLAUDE_PLUGINS.md](./CLAUDE_PLUGINS.md)
 
 ### For Architects
 
-- **v0.6.0 schema design**: [DESIGN-0.6.0.md](./DESIGN-0.6.0.md) for steps-based workflow format
+- **v0.6.2 schema design**: [DESIGN-0.6.2.md](./DESIGN-0.6.2.md) for schema-in-skill architecture
+- **v0.6.1 skills-first**: [DESIGN-0.6.1.md](./DESIGN-0.6.1.md) for universal skill-executor pattern
 - Two-plugin architecture: [DESIGN-0.5.2.md § Two-Plugin Architecture](./DESIGN-0.5.2.md#3-two-plugin-architecture)
-- Workflow files solution: [DESIGN-0.5.2.md § Workflow Files Solution](./DESIGN-0.5.2.md#6-workflow-files-solution)
-- Validation-driven completion: [AGENTIC_CONCEPT-0.5.md](./AGENTIC_CONCEPT-0.5.md)
+- Validation-driven completion: [archive/AGENTIC_CONCEPT-0.5.md](./archive/AGENTIC_CONCEPT-0.5.md)
 
 ---
 
@@ -195,7 +251,7 @@ Previous versions are preserved for reference:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        DOCUMENT RELATIONSHIPS (v0.6.0)                       │
+│                        DOCUMENT RELATIONSHIPS (v0.6.2)                       │
 └─────────────────────────────────────────────────────────────────────────────┘
 
                               ┌──────────────┐
@@ -203,92 +259,99 @@ Previous versions are preserved for reference:
                               │  (Terms)     │
                               └──────┬───────┘
                                      │
-         ┌───────────────────────────┼───────────────────────────┐
-         │                           │                           │
-         ▼                           ▼                           ▼
-┌─────────────────┐        ┌─────────────────┐        ┌───────────────┐
-│ AGENTIC_        │        │ DESIGN-0.6.0.md │        │TEST_PLAN-0.5 │
-│ CONCEPT-0.5     │        │ (Schema v0.6.0) │        │  (Testing)   │
-│ (Agent Design)  │        └────────┬────────┘        └──────────────┘
-└────────┬────────┘                 │
-         │                          │
-         │            ┌─────────────┴─────────────┐
-         │            │                           │
-         │            ▼                           ▼
-         │  ┌───────────────────┐    ┌─────────────────────────────────────┐
-         │  │ CONTEXT-INJECTION │    │  CLAUDE_PLUGINS.md                  │
-         │  │ (Execution Flow)  │    │  SUBAGENTS.md │ AGENT-SKILLS.md     │
-         │  └───────────────────┘    │       (SDK Reference)               │
-         │                           └─────────────────────────────────────┘
-         │                                        ▲
-         └────────────────────────────────────────┘
+    ┌────────────────────────────────┼────────────────────────────────┐
+    │                                │                                │
+    ▼                                ▼                                ▼
+┌─────────────────┐    ┌────────────────────────────┐    ┌───────────────────┐
+│ DESIGN-0.6.2.md │───▶│     DESIGN-0.6.1.md        │───▶│  DESIGN-0.6.0.md  │
+│ (Schema-in-Skill│    │   (Skills-First)           │    │  (Steps-Based)    │
+│  Architecture)  │    │   + CLEANUP-0.6.1.md       │    │                   │
+└─────────────────┘    └────────────┬───────────────┘    └───────────────────┘
+                                    │
+                     ┌──────────────┼──────────────┐
+                     │              │              │
+                     ▼              ▼              ▼
+           ┌─────────────┐  ┌────────────┐  ┌─────────────────────────────┐
+           │ CONTEXT-    │  │ HOOK_      │  │  CLAUDE_PLUGINS.md          │
+           │ INJECTION   │  │ VALIDATOR  │  │  SUBAGENTS.md               │
+           │ (Flow)      │  │ (Hooks)    │  │  AGENT-SKILLS.md            │
+           └─────────────┘  └────────────┘  │       (SDK Reference)       │
+                                            └─────────────────────────────┘
 ```
 
+**Version Progression:**
+- **v0.6.0** → v0.6.1 → v0.6.2 (each is a BREAKING CHANGE)
+
+**Key Documents:**
 - **GLOSSARY.md** defines terms used across all documents
-- **AGENTIC_CONCEPT-0.5.md** documents the two-plugin agent design
-- **DESIGN-0.6.0.md** documents the steps-based workflow schema
+- **DESIGN-0.6.2.md** documents schema-in-skill architecture (skills define JSON schemas)
+- **DESIGN-0.6.1.md** documents skills-first architecture with universal skill-executor
+- **CLEANUP-0.6.1.md** documents legacy code removal plan
 - **CONTEXT-INJECTION.md** illustrates what content is injected during workflow execution
+- **HOOK_VALIDATOR.md** documents hook-based validation system
 - **CLAUDE_PLUGINS.md** provides Claude Code plugin reference
 - **SUBAGENTS.md** / **AGENT-SKILLS.md** provide Anthropic SDK reference
-- **TEST_PLAN-0.5.md** covers testing strategy
 
 ---
 
-## Key v0.6.0 Concepts
+## Key v0.6.1/v0.6.2 Concepts
 
-### Steps-Based Workflow Schema
+### Skills-First Workflow Schema (v0.6.1)
 
 ```yaml
-# v0.6.0 Workflow Format (GitHub Actions-inspired)
+# v0.6.1 Workflow Format (Skills as first-class citizens)
 steps:
   - id: summary
-    run: agents/content-analyzer          # Agent to execute
+    skill: media-reviewer                 # Skill to execute (NOT agents/X)
+    mission: "Analyze content structure and themes"
     input: ${{ sandbox }}/inputs/content.md
     output: ${{ sandbox }}/outputs/summary.json
-    validate:
-      required_fields: [contentId, headline]
 
   - id: ideas
-    run: agents/idea-generator
-    needs: [summary]                      # Dependencies
-    input: ${{ steps.summary.output }}    # Variable substitution
+    skill: idea-synthesis
+    mission: "Generate creative hooks and angles"
+    needs: [summary]
+    input: ${{ steps.summary.output }}
     output: ${{ sandbox }}/outputs/ideas.json
 ```
 
-### Critical Subagent Mapping
+### Universal Skill-Executor (v0.6.1)
 
 ```
+ALL workflow steps use ONE pattern:
+
 Workflow YAML                      Task Tool Call
 ─────────────────────────────────  ──────────────────────────────────────
-run: agents/content-analyzer   →   subagent_type: "content-analyzer"
-run: agents/idea-generator     →   subagent_type: "idea-generator"
-run: agents/writing-kit-builder→   subagent_type: "writing-kit-builder"
+skill: media-reviewer          →   subagent_type: "skill-executor"
+skill: idea-synthesis          →   subagent_type: "skill-executor"
+skill: writing-kit-assembler   →   subagent_type: "skill-executor"
 
-FORBIDDEN: subagent_type: "general-purpose" for workflow steps
+ONLY ONE subagent for ALL steps: skill-executor
 ```
 
-### Two-Plugin Model
+### Two-Plugin Model (v0.6.1 - Skills-First)
 
 ```
 ┌─────────────────────────────────┐    ┌─────────────────────────────────────┐
 │        LOOPLIA-CORE              │    │         LOOPLIA-WRITER               │
 │     (Infrastructure Plugin)      │    │        (Domain Plugin)               │
 ├─────────────────────────────────┤    ├─────────────────────────────────────┤
-│ commands/                        │    │ agents/                              │
-│   ├── run.md                     │    │   ├── content-analyzer.md            │
-│   ├── build-workflow.md          │    │   ├── idea-generator.md              │
-│   └── list-workflows.md          │    │   └── writing-kit-builder.md         │
-├─────────────────────────────────┤    ├─────────────────────────────────────┤
-│ skills/                          │    │ skills/                              │
-│   ├── workflow-executor/         │    │   ├── media-reviewer/                │
-│   └── workflow-validator/        │    │   └── ...                            │
-├─────────────────────────────────┤    ├─────────────────────────────────────┤
-│ hooks/                           │    │ workflows/                           │
-│   └── hooks.json                 │    │   └── writing-kit.md                 │
-├─────────────────────────────────┤    └─────────────────────────────────────┘
+│ commands/                        │    │ skills/                              │
+│   ├── run.md                     │    │   ├── media-reviewer/                │
+│   └── build.md                   │    │   ├── idea-synthesis/                │
+├─────────────────────────────────┤    │   └── writing-kit-assembler/         │
+│ skills/                          │    ├─────────────────────────────────────┤
+│   ├── workflow-executor/         │    │ workflows/                           │
+│   ├── workflow-validator/        │    │   └── writing-kit.md                 │
+│   ├── plugin-registry-scanner/   │    └─────────────────────────────────────┘
+│   ├── skill-capability-matcher/  │
+│   └── workflow-schema-composer/  │
+├─────────────────────────────────┤
 │ CLAUDE.md                        │
 │   (Generic interpreter)          │
 └─────────────────────────────────┘
+
+Note: agents/ directory removed in v0.6.1 - skills are first-class citizens
 ```
 
 ### Sandbox Architecture
@@ -308,7 +371,7 @@ Benefits:
 - **Resumable**: Use `--sandbox-id` to continue from last validated step
 - **Auditable**: Full logs preserved for debugging
 
-### Workflow-as-Markdown (v0.6.0 Format)
+### Workflow-as-Markdown (v0.6.1 Format)
 
 Workflows are defined in `workflows/*.md` with YAML frontmatter:
 
@@ -320,20 +383,23 @@ description: Transform content into structured writing kit
 
 steps:
   - id: summary
-    run: agents/content-analyzer
+    skill: media-reviewer                    # v0.6.1: skill: instead of run:
+    mission: "Deep content analysis"         # v0.6.1: mission required
     input: ${{ sandbox }}/inputs/content.md
     output: ${{ sandbox }}/outputs/summary.json
     validate:
       required_fields: [contentId, headline, tldr]
 
   - id: ideas
-    run: agents/idea-generator
+    skill: idea-synthesis
+    mission: "Generate hooks, angles, questions"
     needs: [summary]
     input: ${{ steps.summary.output }}
     output: ${{ sandbox }}/outputs/ideas.json
 
   - id: writing-kit
-    run: agents/writing-kit-builder
+    skill: writing-kit-assembler
+    mission: "Assemble final writing kit"
     needs: [summary, ideas]
     input:
       - ${{ steps.summary.output }}
@@ -350,8 +416,7 @@ Execute workflows via Claude Code commands:
 ```
 /run writing-kit --file article.md           # Create new sandbox
 /run writing-kit --sandbox-id text-2025-12-18-abc1  # Resume existing
-/list-workflows
-/build-workflow my-new-workflow
+/build my-workflow "Description of workflow"  # v0.6.1: AI-assisted workflow creation
 ```
 
 ### Validation-Driven Completion
@@ -373,4 +438,4 @@ Steps complete when `validation.json` shows `validated: true`:
 
 ---
 
-*This README provides navigation for Looplia-Core v0.6.0 documentation.*
+*This README provides navigation for Looplia-Core v0.6.2 documentation.*

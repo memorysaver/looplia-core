@@ -416,7 +416,7 @@ name: workflow-schema-composer
 description: |
   Looplia core skill for generating valid workflow YAML/Markdown files.
   Use when building looplia workflows to compose the final workflow definition.
-  Takes agent recommendations and creates v0.6.0 compliant workflow schema with steps,
+  Takes skill recommendations and creates v0.6.1 compliant workflow schema with steps,
   dependencies, and validation criteria. Triggered by /build command after skill-capability-matcher.
 ---
 ```

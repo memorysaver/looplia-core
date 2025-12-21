@@ -2,10 +2,12 @@
 
 > Ubiquitous Language Reference for Domain-Driven Design
 >
-> **Version:** 0.6.0
-> **Last Updated:** 2025-12-20
+> **Version:** 0.6.2
+> **Last Updated:** 2025-12-21
 
 This glossary defines the shared vocabulary used throughout Looplia-Core. Consistent terminology enables clear communication between code, documentation, and team discussions.
+
+> **Note:** v0.6.2 removes workflow-specific domain types from `packages/core`. Types like `ContentSummary`, `WritingIdeas`, and `WritingKit` are deprecated and will be defined by skill schemas instead. See [DESIGN-0.6.2.md](./DESIGN-0.6.2.md).
 
 ---
 
@@ -28,6 +30,7 @@ Raw content to be processed. Contains source material with metadata for analysis
 
 ### ContentSummary
 **Type:** `packages/core/src/domain/summary.ts`
+**Status:** ⚠️ *Deprecated in v0.6.2 - Schema now defined in skill SKILL.md files*
 
 Structured analysis of content with 15+ fields. Enhanced in v0.3 with documentary-style analysis.
 
@@ -53,6 +56,7 @@ Structured analysis of content with 15+ fields. Enhanced in v0.3 with documentar
 
 ### WritingKit
 **Type:** `packages/core/src/domain/writing-kit.ts`
+**Status:** ⚠️ *Deprecated in v0.6.2 - Schema now defined in skill SKILL.md files*
 
 Complete writing scaffold combining summary, ideas, and outline. The primary output of the `kit` command.
 
@@ -67,6 +71,7 @@ Complete writing scaffold combining summary, ideas, and outline. The primary out
 
 ### WritingIdeas
 **Type:** `packages/core/src/domain/ideas.ts`
+**Status:** ⚠️ *Deprecated in v0.6.2 - Schema now defined in skill SKILL.md files*
 
 Creative expansion of summarized content into writing materials.
 
