@@ -21,6 +21,9 @@ import { createClaudeAgentExecutor } from "@looplia-core/provider/claude-agent-s
 import { renderStreamingQuery } from "../components";
 import { isInteractive } from "../utils/terminal";
 
+/** Maximum description length to prevent excessive prompt size */
+const MAX_DESCRIPTION_LENGTH = 500;
+
 /**
  * Build result type
  */
@@ -66,6 +69,17 @@ function isValueFlag(arg: string): boolean {
 }
 
 /**
+ * Validate that a value flag has a valid value
+ * @throws Error if value is missing or invalid
+ */
+function validateValueFlag(flag: string, value: string | undefined): string {
+  if (!value || value.startsWith("-")) {
+    throw new Error(`${flag} requires a value`);
+  }
+  return value;
+}
+
+/**
  * Process a single argument and its value
  */
 function processArg(
@@ -77,9 +91,9 @@ function processArg(
   if (arg === "--help" || arg === "-h") {
     result.help = true;
   } else if (arg === "--output" || arg === "-o") {
-    result.output = nextArg;
+    result.output = validateValueFlag(arg, nextArg);
   } else if (arg === "--name" || arg === "-n") {
-    result.name = nextArg;
+    result.name = validateValueFlag(arg, nextArg);
   } else if (arg === "--no-interactive") {
     result.noInteractive = true;
   } else if (arg === "--mock") {
@@ -203,9 +217,14 @@ export function buildPrompt(args: BuildArgs): string {
   if (args.description) {
     const sanitized = args.description
       .trim()
-      .slice(0, 500)
-      .replace(/[\n\r]/g, " ");
-    prompt += ` ${sanitized}`;
+      .slice(0, MAX_DESCRIPTION_LENGTH)
+      .replace(/[\n\r\t]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (sanitized) {
+      prompt += ` ${sanitized}`;
+    }
   }
 
   return prompt;

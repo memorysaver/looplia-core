@@ -1,10 +1,11 @@
 /**
- * Workflow Parser (v0.6.0)
+ * Workflow Parser (v0.6.1)
  *
  * Parses workflow.md files with YAML frontmatter + markdown body.
- * v0.6.0: Steps-based format with GitHub Actions-inspired syntax.
+ * v0.6.1: Skills-first format with `skill:` + `mission:` fields.
+ * v0.6.0: Steps-based format with `run: agents/{name}` (deprecated).
  *
- * @see docs/DESIGN-0.6.0.md
+ * @see docs/DESIGN-0.6.1.md
  */
 
 import { isValidRunFormat } from "./agent-utils";
@@ -145,6 +146,12 @@ function handleStepProperty(
     case "id":
       step.id = value;
       break;
+    case "skill":
+      step.skill = value;
+      break;
+    case "mission":
+      step.mission = value;
+      break;
     case "run":
       step.run = value;
       break;
@@ -271,21 +278,42 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
 }
 
 /**
- * Validate a single workflow step has all required fields and correct format
+ * Validate a single workflow step has all required fields and correct format.
+ *
+ * v0.6.1: Requires `skill` + `mission` (skills-first)
+ * v0.6.0: Requires `run` in "agents/{name}" format (deprecated)
+ *
  * @throws Error if step is invalid
  */
 function validateStep(step: WorkflowStep): void {
   if (!step.id) {
     throw new Error("Each step must have an 'id' field");
   }
-  if (!step.run) {
-    throw new Error(`Step '${step.id}' must have a 'run' field`);
+
+  // v0.6.1: skill + mission (preferred)
+  // v0.6.0: run (deprecated but still supported)
+  const hasSkill = step.skill && step.mission;
+  const hasRun = Boolean(step.run);
+
+  if (!(hasSkill || hasRun)) {
+    throw new Error(
+      `Step '${step.id}' must have either 'skill' + 'mission' (v0.6.1) or 'run' (v0.6.0 deprecated)`
+    );
   }
-  if (!isValidRunFormat(step.run)) {
+
+  if (hasSkill && hasRun) {
+    throw new Error(
+      `Step '${step.id}' cannot have both 'skill' and 'run' - use one or the other`
+    );
+  }
+
+  // Validate legacy run format if used
+  if (hasRun && step.run && !isValidRunFormat(step.run)) {
     throw new Error(
       `Step '${step.id}' has invalid run format '${step.run}'. Expected 'agents/{name}' where name is lowercase alphanumeric with hyphens.`
     );
   }
+
   if (!step.input) {
     throw new Error(`Step '${step.id}' must have an 'input' field`);
   }

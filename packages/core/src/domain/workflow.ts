@@ -1,8 +1,12 @@
 /**
- * Workflow Domain Types (v0.6.0)
+ * Workflow Domain Types (v0.6.1)
  *
  * Defines the structure for workflow definitions using the
  * Workflow-as-Markdown pattern: YAML frontmatter + markdown instructions.
+ *
+ * v0.6.1 Changes:
+ * - `skill:` + `mission:` replaces `run: agents/{name}` (skills-first)
+ * - Universal skill-executor replaces custom subagent types
  *
  * v0.6.0 Changes:
  * - `steps:` array replaces `outputs:` object
@@ -11,7 +15,7 @@
  * - `output:` replaces `artifact:`
  * - `${{ }}` variable substitution syntax
  *
- * @see docs/DESIGN-0.6.0.md
+ * @see docs/DESIGN-0.6.1.md
  */
 
 /**
@@ -36,15 +40,24 @@ export type ValidationCriteria = {
 };
 
 /**
- * A single step in the workflow (v0.6.0)
+ * A single step in the workflow (v0.6.1)
  *
  * GitHub Actions-inspired format with explicit ordering.
+ *
+ * v0.6.1: Uses `skill` + `mission` (skills-first architecture)
+ * v0.6.0: Uses `run: agents/{name}` (legacy, deprecated)
+ *
+ * One of `skill` or `run` must be provided (mutually exclusive).
  */
 export type WorkflowStep = {
   /** Unique step identifier */
   id: string;
-  /** Action to execute: "agents/{name}" format */
-  run: string;
+  /** v0.6.1: Skill to invoke (e.g., "media-reviewer", "idea-synthesis") */
+  skill?: string;
+  /** v0.6.1: Mission description - what this step should accomplish */
+  mission?: string;
+  /** v0.6.0 (deprecated): Action to execute in "agents/{name}" format */
+  run?: string;
   /** Input file path(s) with ${{ }} variable substitution */
   input: string | string[];
   /** Output file path with ${{ }} variable substitution */

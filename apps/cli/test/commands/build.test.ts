@@ -96,6 +96,22 @@ describe("build command", () => {
       expect(result.description).toBe("summarize");
     });
 
+    it("should throw error when --name flag has no value", () => {
+      expect(() => parseArgs(["--name"])).toThrow("--name requires a value");
+    });
+
+    it("should throw error when --output flag has no value", () => {
+      expect(() => parseArgs(["--output"])).toThrow(
+        "--output requires a value"
+      );
+    });
+
+    it("should throw error when value flag is followed by another flag", () => {
+      expect(() => parseArgs(["--name", "--mock"])).toThrow(
+        "--name requires a value"
+      );
+    });
+
     it("should handle all flags together", () => {
       const result = parseArgs([
         "create",
@@ -189,8 +205,8 @@ describe("build command", () => {
     });
 
     it("should handle description with only whitespace", () => {
-      // Note: Current behavior adds empty sanitized string after /build
-      // because the check happens before trim. This is a known edge case.
+      // Whitespace-only descriptions are sanitized to empty string
+      // and not appended to the prompt
       const args: BuildArgs = {
         description: "   ",
         noInteractive: false,
@@ -198,9 +214,7 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      // After trim, description becomes "", but since original was truthy,
-      // it still adds " " + "" = " "
-      expect(result).toBe("/build ");
+      expect(result).toBe("/build");
     });
   });
 
