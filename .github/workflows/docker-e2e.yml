@@ -174,7 +174,7 @@ jobs:
             fi
           done
 
-      - name: Verify subagent execution
+      - name: Verify subagent execution (v0.6.1 skills-first)
         run: |
           SANDBOX_DIR=$(find test-workspace/sandbox -maxdepth 1 -type d ! -name sandbox | head -1)
           LOG_FILE=$(ls "$SANDBOX_DIR/logs/"*.log 2>/dev/null | head -1)
@@ -184,28 +184,27 @@ jobs:
             exit 0
           fi
 
-          echo "=== Checking subagent types ==="
+          echo "=== Checking skill-executor usage (v0.6.1) ==="
 
-          # Check for custom subagent types
-          if grep -q '"subagent_type".*"content-analyzer"' "$LOG_FILE"; then
-            echo "✓ content-analyzer subagent used"
+          # Check for universal skill-executor (should appear for all steps)
+          SKILL_EXEC_COUNT=$(grep -c '"subagent_type".*"skill-executor"' "$LOG_FILE" 2>/dev/null || echo "0")
+          if [ "$SKILL_EXEC_COUNT" -ge 3 ]; then
+            echo "✓ skill-executor used $SKILL_EXEC_COUNT times (expected >= 3)"
           else
-            echo "✗ content-analyzer NOT found"
+            echo "✗ skill-executor count: $SKILL_EXEC_COUNT (expected >= 3)"
+            exit 1
           fi
 
-          if grep -q '"subagent_type".*"idea-generator"' "$LOG_FILE"; then
-            echo "✓ idea-generator subagent used"
-          else
-            echo "✗ idea-generator NOT found"
-          fi
+          # CRITICAL: Check for legacy agents (should NOT exist in v0.6.1)
+          for legacy in content-analyzer idea-generator writing-kit-builder; do
+            if grep -q "\"subagent_type\".*\"$legacy\"" "$LOG_FILE"; then
+              echo "✗ FAIL: Legacy agent $legacy detected!"
+              exit 1
+            fi
+          done
+          echo "✓ No legacy agents found"
 
-          if grep -q '"subagent_type".*"writing-kit-builder"' "$LOG_FILE"; then
-            echo "✓ writing-kit-builder subagent used"
-          else
-            echo "✗ writing-kit-builder NOT found"
-          fi
-
-          # CRITICAL: Check for general-purpose (should NOT exist)
+          # Check for general-purpose fallback (should NOT exist)
           if grep -q '"subagent_type".*"general-purpose"' "$LOG_FILE"; then
             echo "✗ FAIL: general-purpose subagent detected!"
             exit 1
@@ -216,6 +215,38 @@ jobs:
           # Count Task tool invocations
           TASK_COUNT=$(grep -c '"name".*"Task"' "$LOG_FILE" 2>/dev/null || echo "0")
           echo "Task tool invocations: $TASK_COUNT (expected >= 3)"
+
+          # Verify correct skills used for each step
+          # Log format: Task tool calls have:
+          # { "subagent_type": "skill-executor",
+          #   "description": "Execute step: {step-id}",
+          #   "prompt": "Execute skill '{skill-name}' for step '{step-id}'..." }
+
+          echo "=== Checking skill-to-step mapping ==="
+
+          # Check step 'summary' uses skill 'media-reviewer'
+          if grep -B5 '"description".*"Execute step: summary"' "$LOG_FILE" | grep -q '"prompt".*media-reviewer'; then
+            echo "✓ Step 'summary' uses skill 'media-reviewer'"
+          else
+            echo "✗ Step 'summary' should use skill 'media-reviewer'"
+            exit 1
+          fi
+
+          # Check step 'ideas' uses skill 'idea-synthesis'
+          if grep -B5 '"description".*"Execute step: ideas"' "$LOG_FILE" | grep -q '"prompt".*idea-synthesis'; then
+            echo "✓ Step 'ideas' uses skill 'idea-synthesis'"
+          else
+            echo "✗ Step 'ideas' should use skill 'idea-synthesis'"
+            exit 1
+          fi
+
+          # Check step 'writing-kit' uses skill 'writing-kit-assembler'
+          if grep -B5 '"description".*"Execute step: writing-kit"' "$LOG_FILE" | grep -q '"prompt".*writing-kit-assembler'; then
+            echo "✓ Step 'writing-kit' uses skill 'writing-kit-assembler'"
+          else
+            echo "✗ Step 'writing-kit' should use skill 'writing-kit-assembler'"
+            exit 1
+          fi
 
       - name: Upload test artifacts
         if: always()
