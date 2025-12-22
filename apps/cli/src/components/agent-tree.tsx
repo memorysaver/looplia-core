@@ -14,7 +14,7 @@ import { Spinner } from "./spinner";
  */
 export type AgentNode = {
   id: string;
-  type: "agent" | "skill" | "tool";
+  type: "agent" | "skill" | "tool" | "subagent";
   name: string;
   status: "running" | "complete" | "error";
   detail?: string;
@@ -60,6 +60,9 @@ function getStatusIndicator(
   if (type === "skill") {
     return { icon: "\u2713", color: "green" }; // ✓
   }
+  if (type === "subagent") {
+    return { icon: "\u21B3", color: "magenta" }; // ↳
+  }
   if (type === "tool") {
     return { icon: "\u25CF", color: "blue" }; // ●
   }
@@ -75,6 +78,8 @@ function getTypeIcon(type: AgentNode["type"]): string {
       return "\u25B6"; // ▶
     case "skill":
       return "\u2726"; // ✦
+    case "subagent":
+      return "\u21B3"; // ↳
     case "tool":
       return "\u25CF"; // ●
     default:

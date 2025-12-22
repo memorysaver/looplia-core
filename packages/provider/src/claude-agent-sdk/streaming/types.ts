@@ -98,6 +98,8 @@ export type ToolStartEvent = {
   type: "tool_start";
   /** Unique ID for correlating with tool_end */
   toolUseId: string;
+  /** Parent Task tool_use_id for hierarchical display (from SDK parent_tool_use_id) */
+  parentToolUseId?: string;
   tool: string;
   input: {
     /** For Read/Write: file path */
@@ -106,6 +108,9 @@ export type ToolStartEvent = {
     skill?: string;
     /** For Glob/Grep: search pattern */
     pattern?: string;
+    /** For Task: subagent type and description */
+    subagentType?: string;
+    description?: string;
     /** For other tools: raw input */
     raw?: unknown;
   };

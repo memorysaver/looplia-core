@@ -82,17 +82,55 @@ function mapActivityStatus(status: Activity["status"]): AgentNode["status"] {
 }
 
 /**
- * Convert activities to agent tree nodes
+ * Convert activities to hierarchical agent tree nodes
+ *
+ * Builds a tree structure where child activities (e.g., tools inside a subagent)
+ * are nested under their parent activity using parentActivityId.
  */
 function activitiesToNodes(activities: Activity[]): AgentNode[] {
-  return activities.map((activity) => ({
-    id: activity.id,
-    type: activity.type === "skill" ? "skill" : "tool",
-    name: activity.label,
-    status: mapActivityStatus(activity.status),
-    detail: activity.detail,
-    durationMs: activity.durationMs,
-  }));
+  const nodesById = new Map<string, AgentNode>();
+  const roots: AgentNode[] = [];
+
+  // First pass: create all nodes
+  for (const activity of activities) {
+    // Determine node type
+    let nodeType: AgentNode["type"] = "tool";
+    if (activity.type === "skill") {
+      nodeType = "skill";
+    } else if (activity.type === "subagent") {
+      nodeType = "subagent";
+    }
+
+    const node: AgentNode = {
+      id: activity.id,
+      type: nodeType,
+      name: activity.label,
+      status: mapActivityStatus(activity.status),
+      detail: activity.detail,
+      durationMs: activity.durationMs,
+      children: [],
+    };
+    nodesById.set(activity.id, node);
+  }
+
+  // Second pass: build hierarchy
+  for (const activity of activities) {
+    const node = nodesById.get(activity.id);
+    if (!node) {
+      continue;
+    }
+
+    if (activity.parentActivityId) {
+      const parent = nodesById.get(activity.parentActivityId);
+      if (parent?.children) {
+        parent.children.push(node);
+        continue; // Don't add to roots
+      }
+    }
+    roots.push(node);
+  }
+
+  return roots;
 }
 
 /**

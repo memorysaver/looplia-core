@@ -62,6 +62,8 @@ export type TransformContext = {
   pendingTools: Map<string, PendingTool>;
   /** Accumulated usage from assistant messages */
   cumulativeUsage: { inputTokens: number; outputTokens: number };
+  /** Current parent_tool_use_id for hierarchical subagent tracking */
+  currentParentToolUseId: string | null;
 };
 
 /**
@@ -74,6 +76,7 @@ export function createTransformContext(model: string): TransformContext {
     startTime: Date.now(),
     pendingTools: new Map(),
     cumulativeUsage: { inputTokens: 0, outputTokens: 0 },
+    currentParentToolUseId: null,
   };
 }
 
@@ -171,6 +174,9 @@ function* handleAssistantMessage(
   context: TransformContext,
   timestamp: number
 ): Generator<StreamingEvent> {
+  // Track parent_tool_use_id for hierarchical subagent display
+  context.currentParentToolUseId = message.parent_tool_use_id;
+
   const apiMessage = message.message;
   if (!apiMessage?.content) {
     return;
@@ -349,6 +355,7 @@ function processToolUseBlock(
   return {
     type: "tool_start",
     toolUseId: block.id,
+    parentToolUseId: context.currentParentToolUseId ?? undefined,
     tool: block.name,
     input: extractToolInput(block.name, block.input),
     timestamp,
@@ -412,6 +419,11 @@ function extractToolInput(
     case "Glob":
     case "Grep":
       return { pattern: input.pattern as string | undefined };
+    case "Task":
+      return {
+        subagentType: input.subagent_type as string | undefined,
+        description: input.description as string | undefined,
+      };
     default:
       return { raw: input };
   }

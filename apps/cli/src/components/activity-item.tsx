@@ -8,8 +8,10 @@ import { Spinner } from "./spinner";
 
 export type Activity = {
   id: string;
+  /** Parent activity ID for hierarchical display (subagent children) */
+  parentActivityId?: string;
   status: "pending" | "running" | "complete" | "error";
-  type: "read" | "skill" | "thinking" | "write";
+  type: "read" | "skill" | "thinking" | "write" | "subagent";
   label: string;
   detail?: string;
   durationMs?: number;
