@@ -24,6 +24,9 @@ import { isInteractive } from "../utils/terminal";
 /** Maximum description length to prevent excessive prompt size */
 const MAX_DESCRIPTION_LENGTH = 500;
 
+/** Maximum workflow name length for filesystem compatibility */
+const MAX_WORKFLOW_NAME_LENGTH = 50;
+
 /**
  * Build result type
  */
@@ -213,6 +216,19 @@ export function validateEnvironment(mock: boolean): void {
  */
 export function buildPrompt(args: BuildArgs): string {
   let prompt = "/build";
+
+  // Include --name flag if provided (must come before description)
+  if (args.name) {
+    const sanitizedName = args.name
+      .trim()
+      .replace(/[^a-zA-Z0-9-_]/g, "-") // Only allow safe filename characters
+      .replace(/-+/g, "-") // Collapse consecutive hyphens
+      .replace(/^-|-$/g, "") // Remove leading/trailing hyphens
+      .slice(0, MAX_WORKFLOW_NAME_LENGTH); // Limit name length
+    if (sanitizedName) {
+      prompt += ` --name ${sanitizedName}`;
+    }
+  }
 
   if (args.description) {
     const sanitized = args.description

@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - L3: Integration tests with mock executor (16 tests)
   - L4: Docker E2E tests in CI workflow
   - L5: Snapshot tests for mock mode (3 tests)
+- **Progressive Disclosure Architecture** - Layered context for agent instructions
+  - CLAUDE.md (~100 lines) routes commands to skills
+  - Commands (~50-70 lines) reference skill SKILL.md files
+  - Skills contain full implementation details
+  - Documented in AGENTIC_CONCEPT_1.0.md
 
 ### Changed
 
@@ -26,12 +31,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed: `Summary`, `Ideas`, `WritingKit`, `Pipeline` types
   - Removed: Mock implementations and legacy validation schemas
   - Simplified: `packages/core/src/domain/` to workflow types only
+- **CLAUDE.md Redesign** - Reduced from 395 to 98 lines
+  - Delegates orchestration to workflow-executor skill
+  - Explicit tool usage rules (no subagents for file operations)
+  - Commands reference skills for implementation details
+- **Command Simplification** - Applied Progressive Disclosure pattern
+  - `run.md`: Reduced from 84 to 50 lines
+  - `build.md`: Reduced from 200 to 71 lines
 
 ### Fixed
 
 - **WorkflowStep Type Mismatch** - Added `skill` and `mission` fields to type
 - **Workflow Parser** - Now handles v0.6.1 skill/mission syntax
 - **Empty contentId** - Build command now generates UUID for session tracking
+- **E2E Test Reliability** - Multiple fixes for Docker CI tests
+  - Fixed grep direction (`-B5` → `-A5`) for JSON log parsing
+  - Added yq raw output flag (`-r`) for proper number handling
+  - Fixed frontmatter extraction to handle embedded YAML examples
+  - Fixed array length counting with proper yq syntax
 
 ## [0.6.1] - 2025-12-21
 

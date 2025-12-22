@@ -216,6 +216,93 @@ describe("build command", () => {
       const result = buildPrompt(args);
       expect(result).toBe("/build");
     });
+
+    it("should include --name flag in prompt when provided", () => {
+      const args: BuildArgs = {
+        description: "summarize articles",
+        name: "article-summary",
+        noInteractive: false,
+        mock: false,
+        help: false,
+      };
+      const result = buildPrompt(args);
+      expect(result).toBe("/build --name article-summary summarize articles");
+    });
+
+    it("should include --name flag even with empty description", () => {
+      const args: BuildArgs = {
+        description: "",
+        name: "my-workflow",
+        noInteractive: false,
+        mock: false,
+        help: false,
+      };
+      const result = buildPrompt(args);
+      expect(result).toBe("/build --name my-workflow");
+    });
+
+    it("should sanitize --name to safe filename characters", () => {
+      const args: BuildArgs = {
+        description: "test",
+        name: "my workflow@#$%",
+        noInteractive: false,
+        mock: false,
+        help: false,
+      };
+      const result = buildPrompt(args);
+      // Special characters replaced with hyphens, consecutive hyphens collapsed
+      expect(result).toBe("/build --name my-workflow test");
+    });
+
+    it("should collapse consecutive hyphens in --name", () => {
+      const args: BuildArgs = {
+        description: "test",
+        name: "my---workflow---name",
+        noInteractive: false,
+        mock: false,
+        help: false,
+      };
+      const result = buildPrompt(args);
+      expect(result).toBe("/build --name my-workflow-name test");
+    });
+
+    it("should omit --name when it becomes empty after sanitization", () => {
+      const args: BuildArgs = {
+        description: "test",
+        name: "@#$%^&*()", // All special characters, becomes empty
+        noInteractive: false,
+        mock: false,
+        help: false,
+      };
+      const result = buildPrompt(args);
+      // --name should not be included since sanitized name is empty
+      expect(result).toBe("/build test");
+    });
+
+    it("should limit --name to 50 characters", () => {
+      const args: BuildArgs = {
+        description: "test",
+        name: "a".repeat(60),
+        noInteractive: false,
+        mock: false,
+        help: false,
+      };
+      const result = buildPrompt(args);
+      // Name should be truncated to 50 chars
+      expect(result).toBe(`/build --name ${"a".repeat(50)} test`);
+    });
+
+    it("should trim whitespace from --name", () => {
+      const args: BuildArgs = {
+        description: "test",
+        name: "  my-workflow  ",
+        noInteractive: false,
+        mock: false,
+        help: false,
+      };
+      const result = buildPrompt(args);
+      expect(result).toBe("/build --name my-workflow test");
+    });
   });
 
   describe("validateEnvironment", () => {

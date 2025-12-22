@@ -1,11 +1,14 @@
 ---
 name: skill-capability-matcher
 description: |
-  Looplia core skill for matching user requirements to available skills.
-  Use when building looplia workflows to determine which skills should handle each step.
-  Analyzes natural language descriptions and recommends skill sequences with rationale.
-  Triggered by /build command after plugin-registry-scanner.
-  Skills-first: prioritizes skills over agents for workflow steps.
+  This skill should be used when the user wants to find the right looplia skills for a task,
+  match requirements to available capabilities, or determine which skills should handle each
+  workflow step. Use when someone says "which looplia skill handles X", "find skills for this
+  task", "match my requirements to skills", or "/build" (after registry scan).
+
+  Second step in looplia workflow building: takes user requirements and skill registry,
+  recommends skill sequences with missions. Designs one workflow step → one skill-executor
+  → multiple skills orchestration pattern.
 model: claude-haiku-4-5-20251001
 ---
 

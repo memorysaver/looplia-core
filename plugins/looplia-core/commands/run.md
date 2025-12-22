@@ -1,10 +1,10 @@
 ---
-description: Run a Looplia workflow on content
+description: Execute a looplia workflow on content. Run looplia pipeline, start workflow automation.
 ---
 
-# Run Workflow
+# Execute Looplia Workflow
 
-Execute a workflow from `workflows/` on provided content.
+Run a looplia workflow from `workflows/` on provided content.
 
 ## Usage
 
@@ -30,31 +30,16 @@ Execute a workflow from `workflows/` on provided content.
 
 ## Execution
 
-Use the **workflow-executor** skill to handle all execution:
+**Use the `Skill("workflow-executor")` to handle all execution.**
 
-1. **Validate workflow exists**
-   - Check `workflows/{workflow-id}.md` exists
-   - Report error if not found
+The workflow-executor skill:
+1. Parses workflow YAML from `workflows/{workflow-id}.md`
+2. Creates/resumes sandbox
+3. Executes each step via `Task(skill-executor)`
+4. Manages validation state
+5. Returns final artifact
 
-2. **Sandbox handling**
-   - If `--file`: Create new sandbox with structure:
-     ```
-     sandbox/{sandbox-id}/
-       inputs/content.md    # Copy content file here
-       outputs/             # Empty - outputs go here
-       logs/                # Session logs
-       validation.json      # Validation state
-     ```
-   - If `--sandbox-id`: Load existing sandbox from `sandbox/{sandbox-id}/`
-
-3. **Execute workflow**
-   - Invoke workflow-executor skill
-   - Pass session ID and workflow ID
-   - Skill handles all orchestration
-
-4. **Return result**
-   - When final output passes validation
-   - Return the final artifact JSON
+See `plugins/looplia-core/skills/workflow-executor/SKILL.md` for implementation details.
 
 ## Error Handling
 
@@ -63,9 +48,3 @@ Use the **workflow-executor** skill to handle all execution:
 | Workflow not found | Report available workflows via `/list-workflows` |
 | File not found | Report specific error with path |
 | Sandbox not found | Report available sandboxes |
-| Validation failed | Retry subagent or report details |
-
-## Related Commands
-
-- `/list-workflows` - Show available workflows
-- `/build-workflow` - Create a new workflow

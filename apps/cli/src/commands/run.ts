@@ -9,7 +9,7 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
 
@@ -56,12 +56,58 @@ function generateSandboxId(filePath: string): string {
 /** Standard filename for content input in sandbox */
 const SANDBOX_CONTENT_FILENAME = "content.md";
 
+/** Validation schema version */
+const VALIDATION_SCHEMA_VERSION = "1.0.0";
+
+/**
+ * Structure of validation.json file
+ * Tracks workflow execution state per sandbox
+ */
+export type ValidationJson = {
+  workflow: string;
+  version: string;
+  sandboxId: string;
+  createdAt: string;
+  status: "pending" | "in_progress" | "completed" | "failed";
+  steps: Record<string, { validated: boolean; validatedAt?: string }>;
+};
+
+/**
+ * Create initial validation.json for a new sandbox
+ * This ensures deterministic behavior - the workflow-executor skill
+ * can always detect the sandbox exists and will populate steps from workflow
+ */
+/** @internal Exported for testing */
+export function createInitialValidationJson(
+  sandboxDir: string,
+  sandboxId: string,
+  workflowId: string
+): void {
+  const validation: ValidationJson = {
+    workflow: workflowId,
+    version: VALIDATION_SCHEMA_VERSION,
+    sandboxId,
+    createdAt: new Date().toISOString(),
+    status: "pending",
+    steps: {},
+  };
+  writeFileSync(
+    join(sandboxDir, "validation.json"),
+    JSON.stringify(validation, null, 2),
+    "utf-8"
+  );
+}
+
 /**
  * Create sandbox folder structure and copy content file
  * Returns the sandbox ID
  * @throws Error if sandbox creation or file copy fails
  */
-function createSandbox(workspace: string, filePath: string): string {
+function createSandbox(
+  workspace: string,
+  filePath: string,
+  workflowId: string
+): string {
   const sandboxId = generateSandboxId(filePath);
   const sandboxDir = join(workspace, "sandbox", sandboxId);
 
@@ -77,6 +123,9 @@ function createSandbox(workspace: string, filePath: string): string {
       absolutePath,
       join(sandboxDir, "inputs", SANDBOX_CONTENT_FILENAME)
     );
+
+    // Create initial validation.json so workflow-executor can detect sandbox
+    createInitialValidationJson(sandboxDir, sandboxId, workflowId);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to create sandbox "${sandboxId}": ${message}`);
@@ -356,7 +405,7 @@ function resolveSandboxId(workspace: string, parsed: RunArgs): string {
       console.error(`Error: File not found: ${parsed.file}`);
       process.exit(1);
     }
-    const sandboxId = createSandbox(workspace, parsed.file);
+    const sandboxId = createSandbox(workspace, parsed.file, parsed.workflowId);
     console.error(`Created sandbox: ${sandboxId}`);
     return sandboxId;
   }

@@ -1,49 +1,57 @@
 # Looplia Core
 
-> **Universal agentic workflow CLI — compose AI agents and skills for any task.**
+> **Skills-first agentic workflow CLI — compose AI skills and workflows for any task.**
 
-Looplia Core is an agentic workflow platform powered by the Claude Agent SDK. It provides a composable architecture of custom subagents with auto-loading skills that can be extended to any domain.
+Looplia Core is an agentic workflow platform powered by the Claude Agent SDK. It provides a **skills-first architecture** where workflows declare which skill to execute and provide natural language missions, letting Claude determine the best approach.
 
 **Current focus:** Content writing workflows (summarization, idea generation, writing kit construction)
 
-**Vision:** A universal swiss knife for AI-powered workflows — one CLI, many domains, powered by the same agent infrastructure.
+**Vision:** A universal CLI for AI-powered workflows — one tool, many domains, powered by composable skills.
 
-## How It Works
+## v0.6.2 Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  CLI Commands                                               │
-│  └─ looplia init   → Initialize workspace                   │
-│  └─ looplia run    → Execute workflow (e.g., writing-kit)   │
-│  └─ looplia config → Manage user settings                   │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  CLI Commands                                                               │
+│  └─ looplia init   → Initialize workspace (merge plugins)                   │
+│  └─ looplia run    → Execute workflow on content                            │
+│  └─ looplia build  → Build workflow from natural language                   │
+│  └─ looplia config → Manage user profile                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
                            │
                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Workflow-as-Markdown + AgentExecutor                       │
-│  • Workflow definitions (workflows/*.md with frontmatter)   │
-│  • Validation-driven completion (validation.json)           │
-│  • Real-time streaming events                               │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Workflow-as-Markdown + Per-Step Orchestration                              │
+│  • Workflow definitions (workflows/*.md with YAML frontmatter)              │
+│  • Each step: skill: + mission: syntax                                      │
+│  • One step → one skill-executor call → multiple skills execution           │
+│  • Validation-driven completion (validation.json)                           │
+└─────────────────────────────────────────────────────────────────────────────┘
                            │
                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Custom Subagents & Auto-Loading Skills                     │
-│  • Custom subagents via Task tool (.claude/agents/)         │
-│  • Skills auto-load via frontmatter (.claude/skills/)       │
-│  • Validation-driven state & smart continuation             │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Two-Plugin Model                                                           │
+│  ┌─────────────────────────────┬───────────────────────────────────────────┐│
+│  │ looplia-core                │ looplia-writer                            ││
+│  │ (Infrastructure)            │ (Domain)                                  ││
+│  ├─────────────────────────────┼───────────────────────────────────────────┤│
+│  │ • CLAUDE.md (entry point)   │ • workflows/writing-kit.md                ││
+│  │ • commands/run.md, build.md │ • skills/media-reviewer/                  ││
+│  │ • skills/workflow-executor/ │ • skills/idea-synthesis/                  ││
+│  │ • skills/workflow-validator/│ • skills/writing-kit-assembler/           ││
+│  │ • hooks/                    │ • user-profile.json                       ││
+│  └─────────────────────────────┴───────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Features
 
-- **Claude Agent SDK** - Agentic runtime with custom subagents and skills
-- **Workflow-as-Markdown** - YAML frontmatter + markdown instructions
+- **Skills-First Architecture** - Workflows declare skills + missions, not rigid agent definitions
+- **Per-Step Orchestration** - One workflow step → one skill-executor call → multiple skills
+- **Workflow-as-Markdown** - YAML frontmatter + markdown documentation
 - **Sandbox Isolation** - Each run in `sandbox/{id}/inputs/outputs/logs/`
-- **Custom Subagents** - Task tool with custom `subagent_type`
-- **Skills Auto-Loading** - `skills:` frontmatter for automatic skill loading
 - **Validation-Driven** - Deterministic script-based output validation
-- **Clean Architecture** - CLI → Core → Provider separation
+- **Two-Plugin Model** - Separate infrastructure (core) from domain logic (writer)
 - **Streaming TUI** - Real-time progress with tool execution display
 - **Smart Continuation** - Resume workflows via `--sandbox-id`
 - **TypeScript** - Full type safety with Zod schemas
@@ -57,7 +65,7 @@ bun install
 # 2. Build the project
 bun run build
 
-# 3. Initialize workspace (creates ~/.looplia/ with agents, skills, workflows)
+# 3. Initialize workspace (creates ~/.looplia/ with plugins)
 bun run apps/cli/dist/index.js init --yes
 
 # 4. Run a workflow
@@ -69,66 +77,165 @@ bun run apps/cli/dist/index.js run writing-kit --file ./examples/ai-healthcare.m
 
 | Command | Description |
 |---------|-------------|
-| `looplia init` | Initialize workspace with plugin files (agents, skills, workflows, CLAUDE.md) |
-| `looplia run <workflow-id>` | Execute workflow to build output (e.g., `run writing-kit --file article.md`) |
+| `looplia init` | Initialize workspace from plugins (destructive refresh) |
+| `looplia run <workflow-id>` | Execute workflow on content |
+| `looplia build [description]` | Build workflow from natural language |
 | `looplia config` | Manage user profile settings |
 
-### Writing Kit Workflow
+### Run Command
 
-The `run writing-kit` command executes a 3-stage pipeline:
-
-```
-content-analyzer → summary.json
-       ↓
-idea-generator → ideas.json
-       ↓
-writing-kit-builder → writing-kit.json
-```
-
-**Output includes:**
-- **Summary**: Headline, TL;DR, key bullets, tags, themes, core ideas, quotes
-- **Ideas**: 5 hooks (emotional, curiosity, controversy, statistic, story), angles, questions
-- **Outline**: Structured sections with word estimates
-- **Meta**: Relevance score, estimated reading time
+Execute a workflow from `~/.looplia/workflows/` on provided content:
 
 ```bash
-# Build kit from content
+# Create new sandbox and run workflow
 looplia run writing-kit --file ./article.md
 
-# With user profile options
-looplia run writing-kit --file ./article.md --topics "ai,productivity"
+# Resume existing sandbox
+looplia run writing-kit --sandbox-id article-2025-12-18-abc123
 
-# Resume existing session
-looplia run writing-kit --session-id article-2024-12-09-abc123
-
-# Output formats
-looplia run writing-kit --file ./article.md --format markdown --output kit.md
+# Options
+looplia run <workflow-id> --file <path>       # New sandbox
+looplia run <workflow-id> --sandbox-id <id>   # Resume sandbox
+looplia run <workflow-id> --mock              # Mock mode (no API)
+looplia run <workflow-id> --no-streaming      # Batch mode
 ```
 
-### Sandbox Architecture (v0.5.2)
+### Build Command
 
-Each `--file` creates an isolated sandbox folder:
+Create a workflow definition from natural language:
+
+```bash
+# Interactive mode
+looplia build
+
+# Direct mode
+looplia build "analyze videos and create blog outlines"
+
+# With explicit name
+looplia build --name article-summary "summarize articles and extract key points"
+```
+
+The build command uses three skills in sequence:
+1. **plugin-registry-scanner** - Discover available skills
+2. **skill-capability-matcher** - Match requirements to skills
+3. **workflow-schema-composer** - Generate workflow YAML/Markdown
+
+### Config Command
+
+Manage user profile for personalized content:
+
+```bash
+# Set topics of interest
+looplia config topics "AI, productivity, writing"
+
+# Set writing style
+looplia config style --tone expert --word-count 1500 --voice first-person
+
+# Show current profile
+looplia config show
+```
+
+## Workflow Schema (v0.6.2)
+
+Workflows are markdown files with YAML frontmatter:
+
+```yaml
+---
+name: writing-kit
+version: 1.1.0
+description: Transform content into structured writing kit
+
+steps:
+  - id: summary
+    skill: media-reviewer
+    mission: |
+      Deep analysis of content to extract key themes, concepts.
+      Extract minimum 3 verbatim quotes, at least 5 key points.
+    input: ${{ sandbox }}/inputs/content.md
+    output: ${{ sandbox }}/outputs/summary.json
+    validate:
+      required_fields: [contentId, headline, keyThemes]
+      min_quotes: 3
+
+  - id: ideas
+    skill: idea-synthesis
+    mission: |
+      Generate creative writing ideas, hooks, and angles.
+    needs: [summary]
+    input: ${{ steps.summary.output }}
+    output: ${{ sandbox }}/outputs/ideas.json
+
+  - id: writing-kit
+    skill: writing-kit-assembler
+    mission: |
+      Assemble final writing kit combining summary and ideas.
+    needs: [summary, ideas]
+    input:
+      - ${{ steps.summary.output }}
+      - ${{ steps.ideas.output }}
+    output: ${{ sandbox }}/outputs/writing-kit.json
+    final: true
+---
+
+# Writing Kit Workflow
+
+Documentation and usage instructions...
+```
+
+### Schema Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | **Yes** | Unique step identifier |
+| `skill` | string | **Yes** | Skill to execute |
+| `mission` | string | **Yes** | Natural language task description |
+| `input` | string/array | Yes | Input file path(s) |
+| `output` | string | Yes | Output file path |
+| `needs` | array | No | Step dependencies |
+| `model` | string | No | Model override (haiku/sonnet/opus) |
+| `validate` | object | No | Validation criteria |
+| `final` | boolean | No | Mark as final output |
+
+## Sandbox Architecture
+
+Each `--file` creates an isolated sandbox:
 
 ```
 ~/.looplia/sandbox/{sandbox-id}/
 ├── inputs/content.md      # Copied from --file
-├── outputs/               # Generated artifacts (summary.json, ideas.json, etc.)
-├── logs/                  # Session logs for debugging
-└── validation.json        # Tracks validated: true/false per output
+├── outputs/               # Generated artifacts
+│   ├── summary.json
+│   ├── ideas.json
+│   └── writing-kit.json
+├── logs/                  # Session logs
+└── validation.json        # Step completion tracking
 ```
 
 **Sandbox ID format:** `{slug}-{YYYY-MM-DD}-{random4chars}` (e.g., `my-article-2025-12-18-xk7m`)
 
-```bash
-# Create new sandbox
-looplia run writing-kit --file ./article.md
-# Output: Created sandbox: my-article-2025-12-18-xk7m
+## Available Skills
 
-# Resume existing sandbox (skips validated steps)
-looplia run writing-kit --sandbox-id my-article-2025-12-18-xk7m
-```
+### Infrastructure (looplia-core)
 
-## Architecture
+| Skill | Purpose |
+|-------|---------|
+| **workflow-executor** | Execute looplia workflows, orchestrate steps |
+| **workflow-validator** | Validate JSON artifacts against criteria |
+| **plugin-registry-scanner** | Discover available skills from plugins |
+| **skill-capability-matcher** | Match requirements to skills |
+| **workflow-schema-composer** | Generate workflow definitions |
+
+### Domain (looplia-writer)
+
+| Skill | Purpose |
+|-------|---------|
+| **media-reviewer** | Deep content analysis, extract themes and quotes |
+| **content-documenter** | Structure content into documentation format |
+| **idea-synthesis** | Generate hooks, angles, and questions |
+| **writing-kit-assembler** | Assemble final writing kit with outline |
+| **user-profile-reader** | Read user preferences for personalization |
+
+## Project Structure
 
 ```
 looplia-core/
@@ -139,15 +246,17 @@ looplia-core/
 │   ├── core/             # Domain models, command framework
 │   └── provider/         # Claude Agent SDK integration
 ├── plugins/
-│   ├── looplia-core/     # Infrastructure plugin (commands, skills, hooks)
-│   └── looplia-writer/   # Domain plugin (agents, workflows)
-├── scripts/
-│   └── verify-workflow-log.sh  # Log verification script
+│   ├── looplia-core/     # Infrastructure plugin
+│   │   ├── CLAUDE.md
+│   │   ├── commands/
+│   │   ├── skills/
+│   │   └── hooks/
+│   └── looplia-writer/   # Domain plugin
+│       ├── workflows/
+│       ├── skills/
+│       └── user-profile.json
+├── examples/             # Sample content files
 └── docs/                 # Architecture documentation
-    ├── DESIGN-0.5.2.md
-    ├── AGENTIC_CONCEPT-0.5.md
-    ├── TEST_PLAN-0.5.md
-    └── GLOSSARY.md
 ```
 
 ## Development
@@ -168,28 +277,32 @@ looplia --help
 
 # Test with real API
 env $(cat .env) looplia run writing-kit --file test.md
-
-# Verify workflow logs
-./scripts/verify-workflow-log.sh
 ```
 
 ## Environment Variables
 
 | Variable | Description |
 |----------|-------------|
-| `ANTHROPIC_API_KEY` | Required for Claude API (skip with `--mock` flag) |
+| `ANTHROPIC_API_KEY` | Required for Claude API |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Alternative: OAuth token |
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [DESIGN-0.5.2.md](./docs/DESIGN-0.5.2.md) | Two-plugin architecture, sandbox folder design |
-| [AGENTIC_CONCEPT-0.5.md](./docs/AGENTIC_CONCEPT-0.5.md) | Agent system design with validation-driven completion |
-| [TEST_PLAN-0.5.md](./docs/TEST_PLAN-0.5.md) | Test strategy with real API testing |
+| [AGENTIC_CONCEPT_1.0.md](./docs/AGENTIC_CONCEPT_1.0.md) | Skills-first architecture design |
+| [DESIGN-0.6.2.md](./docs/DESIGN-0.6.2.md) | Per-step orchestration design |
 | [GLOSSARY.md](./docs/GLOSSARY.md) | Ubiquitous language reference |
-| [PR_CHECKLIST.md](./docs/PR_CHECKLIST.md) | PR checklist for docs and CI/CD alignment |
-| [SUBAGENTS.md](./docs/SUBAGENTS.md) | Anthropic SDK subagents reference |
-| [AGENT-SKILLS.md](./docs/AGENT-SKILLS.md) | Anthropic SDK skills reference |
+| [PR_CHECKLIST.md](./docs/PR_CHECKLIST.md) | PR checklist for contributors |
+
+## Version History
+
+| Version | Focus |
+|---------|-------|
+| v0.5.x | Agent system, two-plugin model |
+| v0.6.0 | Steps-based workflows, `run: agents/X` syntax |
+| v0.6.1 | Skills-first, universal skill-executor |
+| **v0.6.2** | **Per-step orchestration** |
 
 ## License
 

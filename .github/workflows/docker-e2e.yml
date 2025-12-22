@@ -225,7 +225,7 @@ jobs:
           echo "=== Checking skill-to-step mapping ==="
 
           # Check step 'summary' uses skill 'media-reviewer'
-          if grep -B5 '"description".*"Execute step: summary"' "$LOG_FILE" | grep -q '"prompt".*media-reviewer'; then
+          if grep -A5 '"description".*"Execute step: summary"' "$LOG_FILE" | grep -q '"prompt".*media-reviewer'; then
             echo "✓ Step 'summary' uses skill 'media-reviewer'"
           else
             echo "✗ Step 'summary' should use skill 'media-reviewer'"
@@ -233,7 +233,7 @@ jobs:
           fi
 
           # Check step 'ideas' uses skill 'idea-synthesis'
-          if grep -B5 '"description".*"Execute step: ideas"' "$LOG_FILE" | grep -q '"prompt".*idea-synthesis'; then
+          if grep -A5 '"description".*"Execute step: ideas"' "$LOG_FILE" | grep -q '"prompt".*idea-synthesis'; then
             echo "✓ Step 'ideas' uses skill 'idea-synthesis'"
           else
             echo "✗ Step 'ideas' should use skill 'idea-synthesis'"
@@ -241,7 +241,7 @@ jobs:
           fi
 
           # Check step 'writing-kit' uses skill 'writing-kit-assembler'
-          if grep -B5 '"description".*"Execute step: writing-kit"' "$LOG_FILE" | grep -q '"prompt".*writing-kit-assembler'; then
+          if grep -A5 '"description".*"Execute step: writing-kit"' "$LOG_FILE" | grep -q '"prompt".*writing-kit-assembler'; then
             echo "✓ Step 'writing-kit' uses skill 'writing-kit-assembler'"
           else
             echo "✗ Step 'writing-kit' should use skill 'writing-kit-assembler'"
@@ -326,8 +326,9 @@ jobs:
         run: |
           WORKFLOW_FILE="build-test-workspace/workflows/article-summary.md"
 
-          # Extract YAML frontmatter (between first --- and second ---)
-          sed -n '/^---$/,/^---$/p' "$WORKFLOW_FILE" | sed '1d;$d' > frontmatter.yaml
+          # Extract ONLY the first YAML frontmatter (lines between first --- and second ---)
+          # Use awk to stop after finding the second ---
+          sed -n '2,/^---$/{ /^---$/!p }' "$WORKFLOW_FILE" > frontmatter.yaml
           echo "=== Frontmatter YAML ==="
           cat frontmatter.yaml
 
@@ -338,19 +339,20 @@ jobs:
           yq -e '.steps' frontmatter.yaml > /dev/null || (echo "ERROR: missing 'steps' array" && exit 1)
           echo "✓ Has 'steps' array"
 
-          STEPS_COUNT=$(yq '.steps | length' frontmatter.yaml)
+          STEPS_COUNT=$(yq -r '.steps | length' frontmatter.yaml)
           echo "✓ Found $STEPS_COUNT steps"
           [ "$STEPS_COUNT" -ge 1 ] || (echo "ERROR: No steps defined" && exit 1)
 
       - name: Validate v0.6.1 skill syntax
         run: |
           WORKFLOW_FILE="build-test-workspace/workflows/article-summary.md"
-          sed -n '/^---$/,/^---$/p' "$WORKFLOW_FILE" | sed '1d;$d' > frontmatter.yaml
+          sed -n '2,/^---$/{ /^---$/!p }' "$WORKFLOW_FILE" > frontmatter.yaml
 
           echo "=== Checking v0.6.1 skill syntax ==="
 
           # Each step should have 'skill:' field
-          SKILL_COUNT=$(yq '.steps[].skill | select(. != null)' frontmatter.yaml | wc -l)
+          # Use proper yq length counting (not wc -l which counts lines, not entries)
+          SKILL_COUNT=$(yq '[.steps[].skill | select(. != null)] | length' frontmatter.yaml)
           STEP_COUNT=$(yq '.steps | length' frontmatter.yaml)
 
           echo "Steps with 'skill:' field: $SKILL_COUNT / $STEP_COUNT"
@@ -358,20 +360,21 @@ jobs:
           echo "✓ All steps have 'skill:' field"
 
           # Each step should have 'mission:' field
-          MISSION_COUNT=$(yq '.steps[].mission | select(. != null)' frontmatter.yaml | wc -l)
+          # Use proper yq length counting (not wc -l which counts lines for multi-line values)
+          MISSION_COUNT=$(yq '[.steps[].mission | select(. != null)] | length' frontmatter.yaml)
           echo "Steps with 'mission:' field: $MISSION_COUNT / $STEP_COUNT"
           [ "$MISSION_COUNT" -eq "$STEP_COUNT" ] || (echo "ERROR: Not all steps have 'mission:' field" && exit 1)
           echo "✓ All steps have 'mission:' field"
 
           # No step should have legacy 'run:' field
-          RUN_COUNT=$(yq '.steps[].run | select(. != null)' frontmatter.yaml | wc -l)
+          RUN_COUNT=$(yq '[.steps[].run | select(. != null)] | length' frontmatter.yaml)
           [ "$RUN_COUNT" -eq 0 ] || (echo "ERROR: Found legacy 'run:' syntax in $RUN_COUNT steps" && exit 1)
           echo "✓ No legacy 'run:' syntax found"
 
       - name: Validate referenced skills exist
         run: |
           WORKFLOW_FILE="build-test-workspace/workflows/article-summary.md"
-          sed -n '/^---$/,/^---$/p' "$WORKFLOW_FILE" | sed '1d;$d' > frontmatter.yaml
+          sed -n '2,/^---$/{ /^---$/!p }' "$WORKFLOW_FILE" > frontmatter.yaml
 
           echo "=== Checking referenced skills ==="
 

@@ -1,11 +1,14 @@
 ---
 name: workflow-schema-composer
 description: |
-  Looplia core skill for generating valid workflow YAML/Markdown files.
-  Use when building looplia workflows to compose the final workflow definition.
-  Takes skill recommendations and creates v0.6.1 compliant workflow schema with steps,
-  dependencies, missions, and validation criteria.
-  Triggered by /build command after skill-capability-matcher.
+  This skill should be used when the user wants to create a new looplia workflow, generate
+  a workflow definition file, or compose workflow steps from skill recommendations. Use when
+  someone says "create a looplia workflow", "generate workflow.md", "compose workflow steps",
+  "build me an automation pipeline", or "/build" (final step).
+
+  Final step in looplia workflow building: transforms skill recommendations into valid v0.6.2
+  workflow YAML/Markdown files. Each step uses skill: + mission: syntax, following the one
+  workflow step → one skill-executor → multiple skills architecture.
 model: claude-haiku-4-5-20251001
 ---
 
@@ -15,7 +18,7 @@ Generate complete, valid workflow definitions from skill recommendations.
 
 ## Purpose
 
-Transform the output from skill-capability-matcher into a ready-to-use workflow markdown file that follows the v0.6.1 schema.
+Transform the output from skill-capability-matcher into a ready-to-use looplia workflow markdown file that follows the v0.6.2 schema.
 
 ## Process
 
@@ -26,6 +29,7 @@ From skill-capability-matcher output:
 - Mission descriptions for each step
 - Data flow dependencies
 - Original user requirements
+- **Explicit name (if `--name` flag was provided)** - use this exact name for the workflow
 
 ### Step 2: Design Steps
 
@@ -67,9 +71,11 @@ Based on skill output type:
 
 ### Step 6: Compose Frontmatter
 
+**CRITICAL: If `--name` flag was provided, use that exact name. Do not derive or modify it.**
+
 ```yaml
 ---
-name: {workflow-name}
+name: {explicit-name OR derived-from-description}
 version: 1.0.0
 description: {user's original description, cleaned up}
 
@@ -77,6 +83,11 @@ steps:
   - id: ...
 ---
 ```
+
+Naming rules:
+1. If `--name article-summary` was provided → use `article-summary` exactly
+2. If no `--name` → derive from description (e.g., "analyze videos" → "video-analyzer")
+3. Always use kebab-case for names
 
 ### Step 7: Generate Markdown Body
 
@@ -111,9 +122,9 @@ Return a JSON object:
 
 ## Schema Reference
 
-See SCHEMA.md in this skill directory for the complete v0.6.1 workflow schema.
+See SCHEMA.md in this skill directory for the complete v0.6.2 workflow schema.
 
-## Validation Rules (v0.6.1)
+## Validation Rules (v0.6.2)
 
 1. **`skill:` is REQUIRED** - Every step must have a skill
 2. **`mission:` is REQUIRED** - Every step must have a mission
@@ -121,6 +132,7 @@ See SCHEMA.md in this skill directory for the complete v0.6.1 workflow schema.
 4. **Step IDs must be unique** - No duplicates
 5. **Dependencies must exist** - All `needs:` references must be valid
 6. **No circular dependencies** - Validate topological ordering
+7. **Respect explicit `--name`** - If provided, use that exact name for filename and `name:` field
 
 ## Example Output
 
@@ -192,3 +204,4 @@ looplia run video-to-blog --file <transcript.md>
 3. **Use valid YAML** - Proper indentation and quoting
 4. **Include validation** - Add `validate:` with appropriate fields
 5. **Mark final step** - Last step gets `final: true`
+6. **Respect --name flag** - If `--name X` is provided, the workflow MUST be named `X` and saved as `X.md`

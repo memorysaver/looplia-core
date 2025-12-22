@@ -1,15 +1,19 @@
 ---
 name: workflow-executor
 description: |
-  Looplia core skill for executing workflow-as-markdown definitions.
-  Use when running looplia workflows with /run command.
-  Handles sandbox management, step execution via skill-executor, and validation state tracking.
-  v0.6.1: Uses skill-executor subagent for ALL workflow steps.
+  This skill should be used when the user wants to execute a looplia workflow, run workflow
+  steps, or process a workflow.md file. Use when someone says "run the looplia workflow",
+  "execute this looplia pipeline", "/run writing-kit", "start the looplia automation", or
+  "process these workflow steps".
+
+  Architecture: One workflow step triggers one skill-executor subagent call, which then
+  invokes multiple skills to accomplish the step's mission. Handles sandbox management,
+  per-step skill-executor orchestration, and validation state tracking per v0.6.2.
 ---
 
-# Workflow Executor Skill (v0.6.1)
+# Workflow Executor Skill (v0.6.2)
 
-Execute workflows defined in `workflows/*.md` files using the skills-first format.
+Execute looplia workflows defined in `workflows/*.md` files using the skills-first architecture.
 
 ## When to Use
 
@@ -343,7 +347,7 @@ input: ${{ steps.analyze-content.output }}
 ## File References
 
 - Workflow definitions: `workflows/*.md`
-- Skill-executor agent: `plugins/looplia-core/agents/skill-executor.md`
+- Skill-executor: Inline subagent defined in CLI (see query-executor.ts)
 - Skill definitions: `plugins/*/skills/*/SKILL.md`
 - Sandbox storage: `sandbox/{sandbox-id}/`
 - Validator script: `.claude/skills/workflow-validator/scripts/validate.ts`
