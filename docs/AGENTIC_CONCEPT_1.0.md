@@ -45,7 +45,7 @@ Looplia v0.6.1 introduces a **breaking change**: the transition from agent-centr
 | v0.5.x | Agent System | Two-plugin model, agent definitions |
 | **v0.6.0** | Steps-Based Workflows | `run: agents/X` syntax, validation.json |
 | **v0.6.1** | **Skills-First** | Universal skill-executor, `skill:` + `mission:` |
-| **v0.6.2** | **Schema-in-Skill** | Skills own JSON schemas, core types minimal |
+| **v0.6.2** | **Per-Step Orchestration** | One step → one skill-executor → multiple skills |
 
 ---
 
@@ -359,6 +359,85 @@ steps:
 ```
 
 This lets Claude adapt its approach while staying within skill guardrails.
+
+### Per-Step Orchestration (v0.6.2)
+
+A critical architectural principle: **One workflow step triggers exactly one skill-executor call, which may invoke multiple skills to accomplish the step's mission.**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    PER-STEP ORCHESTRATION PRINCIPLE                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Workflow Definition (writing-kit.md):
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  steps:                                                                      │
+│    - id: summary         ──────► Task(skill-executor) #1                    │
+│    - id: ideas           ──────► Task(skill-executor) #2                    │
+│    - id: writing-kit     ──────► Task(skill-executor) #3                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Each Task(skill-executor) call:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Task({                                                                      │
+│    "subagent_type": "skill-executor",                                        │
+│    "description": "Execute step: summary",                                   │
+│    "prompt": "Execute skill 'media-reviewer' for step 'summary'.\n           │
+│               Mission: Deep analysis of content...\n                         │
+│               Input: sandbox/.../inputs/content.md\n                         │
+│               Output: sandbox/.../outputs/summary.json"                      │
+│  })                                                                          │
+│                                                                              │
+│  skill-executor receives this and may:                                       │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │ • Skill("media-reviewer")  ← Primary skill for this step               │ │
+│  │ • Skill("user-profile-reader")  ← Supporting skill if needed           │ │
+│  │ • Write output to sandbox/outputs/summary.json                          │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Key Rules:**
+
+| Rule | Description |
+|------|-------------|
+| **One Step = One Task** | Each workflow step triggers exactly one `Task(skill-executor)` call |
+| **Never Batch Steps** | Never call skill-executor once for the entire workflow |
+| **Multiple Skills OK** | skill-executor can invoke multiple skills via `Skill` tool |
+| **Mission Defines Goal** | The `mission:` field tells skill-executor what to accomplish |
+| **Output Required** | Each step must write its output to the specified path |
+
+**Why This Matters:**
+
+1. **Isolation**: Each step runs in its own subagent context
+2. **Validation**: Hooks can validate each step's output independently
+3. **Retry**: Failed steps can be retried without re-running the entire workflow
+4. **Logging**: Each Task call is logged separately for debugging
+5. **Resumability**: Workflow can resume from any validated checkpoint
+
+### Skill Description Best Practices
+
+Skills should have descriptions that enable accurate triggering:
+
+```yaml
+# Good: Specific trigger phrases, looplia-specific terminology
+description: |
+  This skill should be used when the user wants to execute a looplia workflow,
+  run workflow steps, or process a workflow.md file. Use when someone says
+  "run the looplia workflow", "execute this looplia pipeline", "/run writing-kit",
+  or "start the looplia automation".
+
+# Bad: Too terse, no trigger phrases
+description: Execute workflow steps, invoke skills, manage state
+```
+
+**Description Guidelines:**
+
+1. Use third person: "This skill should be used when..."
+2. Include specific trigger phrases users would say
+3. Reference "looplia workflow" (not just "workflow")
+4. Explain the skill's role in the architecture
+5. Target 50-100 words for optimal triggering
 
 ---
 
