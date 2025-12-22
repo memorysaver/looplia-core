@@ -9,7 +9,7 @@ Create a complete looplia workflow definition from a natural language descriptio
 ## Usage
 
 ```
-/build [description]
+/build [--name <name>] [description]
 ```
 
 ## Arguments
@@ -17,6 +17,7 @@ Create a complete looplia workflow definition from a natural language descriptio
 | Argument | Description |
 |----------|-------------|
 | `description` | (Optional) Natural language description of what the workflow should do |
+| `--name <name>` | (Optional) Explicit workflow filename. If provided, use this exact name instead of deriving from description |
 
 ## Execution
 
@@ -65,10 +66,11 @@ Skill("workflow-schema-composer")
 Provide:
 - Original requirements
 - Skill sequence from step 3
+- **Explicit name (if `--name` was provided)** - use this exact name, do not derive from description
 
 This returns:
 - Complete workflow YAML/Markdown with `skill:` + `mission:` syntax
-- Suggested filename
+- Filename (user-specified or auto-derived)
 
 ### 5. Save Workflow
 
@@ -114,6 +116,24 @@ Steps:
 
 Run with:
   looplia run video-to-blog --file <transcript.md>
+```
+
+### With Explicit Name
+
+```
+/build --name article-summary summarize articles and extract key points
+```
+
+Output:
+```
+Created workflow: ~/.looplia/workflows/article-summary.md
+
+Steps:
+1. analyze-article (media-reviewer)
+2. structure-summary (content-documenter)
+
+Run with:
+  looplia run article-summary --file <article.md>
 ```
 
 ## Generated Workflow Format

@@ -214,6 +214,15 @@ export function validateEnvironment(mock: boolean): void {
 export function buildPrompt(args: BuildArgs): string {
   let prompt = "/build";
 
+  // Include --name flag if provided (must come before description)
+  if (args.name) {
+    const sanitizedName = args.name
+      .trim()
+      .replace(/[^a-zA-Z0-9-_]/g, "-") // Only allow safe filename characters
+      .slice(0, 50); // Limit name length
+    prompt += ` --name ${sanitizedName}`;
+  }
+
   if (args.description) {
     const sanitized = args.description
       .trim()

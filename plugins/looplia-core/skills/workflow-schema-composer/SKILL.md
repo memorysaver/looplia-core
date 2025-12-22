@@ -26,6 +26,7 @@ From skill-capability-matcher output:
 - Mission descriptions for each step
 - Data flow dependencies
 - Original user requirements
+- **Explicit name (if `--name` flag was provided)** - use this exact name for the workflow
 
 ### Step 2: Design Steps
 
@@ -67,9 +68,11 @@ Based on skill output type:
 
 ### Step 6: Compose Frontmatter
 
+**CRITICAL: If `--name` flag was provided, use that exact name. Do not derive or modify it.**
+
 ```yaml
 ---
-name: {workflow-name}
+name: {explicit-name OR derived-from-description}
 version: 1.0.0
 description: {user's original description, cleaned up}
 
@@ -77,6 +80,11 @@ steps:
   - id: ...
 ---
 ```
+
+Naming rules:
+1. If `--name article-summary` was provided → use `article-summary` exactly
+2. If no `--name` → derive from description (e.g., "analyze videos" → "video-analyzer")
+3. Always use kebab-case for names
 
 ### Step 7: Generate Markdown Body
 
@@ -121,6 +129,7 @@ See SCHEMA.md in this skill directory for the complete v0.6.1 workflow schema.
 4. **Step IDs must be unique** - No duplicates
 5. **Dependencies must exist** - All `needs:` references must be valid
 6. **No circular dependencies** - Validate topological ordering
+7. **Respect explicit `--name`** - If provided, use that exact name for filename and `name:` field
 
 ## Example Output
 
@@ -192,3 +201,4 @@ looplia run video-to-blog --file <transcript.md>
 3. **Use valid YAML** - Proper indentation and quoting
 4. **Include validation** - Add `validate:` with appropriate fields
 5. **Mark final step** - Last step gets `final: true`
+6. **Respect --name flag** - If `--name X` is provided, the workflow MUST be named `X` and saved as `X.md`
