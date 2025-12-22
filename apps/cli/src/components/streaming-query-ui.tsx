@@ -117,15 +117,18 @@ function activitiesToNodes(activities: Activity[]): AgentNode[] {
   for (const activity of activities) {
     const node = nodesById.get(activity.id);
     if (!node) {
+      // This should never happen because all nodes are created in the first pass
       continue;
     }
 
     if (activity.parentActivityId) {
       const parent = nodesById.get(activity.parentActivityId);
-      if (parent?.children) {
-        parent.children.push(node);
+      if (parent) {
+        parent.children?.push(node);
         continue; // Don't add to roots
       }
+      // Intentional fallback: if the declared parent activity cannot be found,
+      // treat this activity as a root node (may happen during streaming)
     }
     roots.push(node);
   }
@@ -240,8 +243,11 @@ function StreamingQueryUIInner<T>({
   const isComplete = state.status === "complete";
   const isError = state.status === "error";
 
-  // Convert activities to tree nodes
-  const treeNodes = activitiesToNodes(state.activities);
+  // Convert activities to tree nodes (memoized to prevent rebuilding on unrelated state changes)
+  const treeNodes = useMemo(
+    () => activitiesToNodes(state.activities),
+    [state.activities]
+  );
 
   // Determine border color based on status
   const borderColor = useMemo(() => {

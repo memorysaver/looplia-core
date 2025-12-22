@@ -79,7 +79,7 @@ export function formatToolLabel(event: {
     return `Searching: ${input.pattern}`;
   }
   // Task tool: show subagent type and description
-  if (tool === "Task" && input.description) {
+  if (tool === "Task" && input.description?.trim()) {
     const subagentType = input.subagentType ?? "subagent";
     return `${subagentType}: ${input.description}`;
   }

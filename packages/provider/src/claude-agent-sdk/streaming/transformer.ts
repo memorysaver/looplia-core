@@ -174,8 +174,9 @@ function* handleAssistantMessage(
   context: TransformContext,
   timestamp: number
 ): Generator<StreamingEvent> {
-  // Track parent_tool_use_id for hierarchical subagent display
-  context.currentParentToolUseId = message.parent_tool_use_id;
+  // Track parent_tool_use_id for hierarchical subagent display.
+  // If the message has no parent_tool_use_id, explicitly clear the context field.
+  context.currentParentToolUseId = message.parent_tool_use_id ?? null;
 
   const apiMessage = message.message;
   if (!apiMessage?.content) {
