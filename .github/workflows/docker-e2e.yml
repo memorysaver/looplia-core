@@ -326,8 +326,9 @@ jobs:
         run: |
           WORKFLOW_FILE="build-test-workspace/workflows/article-summary.md"
 
-          # Extract YAML frontmatter (between first --- and second ---)
-          sed -n '/^---$/,/^---$/p' "$WORKFLOW_FILE" | sed '1d;$d' > frontmatter.yaml
+          # Extract ONLY the first YAML frontmatter (lines between first --- and second ---)
+          # Use awk to stop after finding the second ---
+          sed -n '2,/^---$/{ /^---$/!p }' "$WORKFLOW_FILE" > frontmatter.yaml
           echo "=== Frontmatter YAML ==="
           cat frontmatter.yaml
 
@@ -345,7 +346,7 @@ jobs:
       - name: Validate v0.6.1 skill syntax
         run: |
           WORKFLOW_FILE="build-test-workspace/workflows/article-summary.md"
-          sed -n '/^---$/,/^---$/p' "$WORKFLOW_FILE" | sed '1d;$d' > frontmatter.yaml
+          sed -n '2,/^---$/{ /^---$/!p }' "$WORKFLOW_FILE" > frontmatter.yaml
 
           echo "=== Checking v0.6.1 skill syntax ==="
 
@@ -373,7 +374,7 @@ jobs:
       - name: Validate referenced skills exist
         run: |
           WORKFLOW_FILE="build-test-workspace/workflows/article-summary.md"
-          sed -n '/^---$/,/^---$/p' "$WORKFLOW_FILE" | sed '1d;$d' > frontmatter.yaml
+          sed -n '2,/^---$/{ /^---$/!p }' "$WORKFLOW_FILE" > frontmatter.yaml
 
           echo "=== Checking referenced skills ==="
 
