@@ -250,8 +250,33 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      // Special characters replaced with hyphens
-      expect(result).toBe("/build --name my-workflow---- test");
+      // Special characters replaced with hyphens, consecutive hyphens collapsed
+      expect(result).toBe("/build --name my-workflow test");
+    });
+
+    it("should collapse consecutive hyphens in --name", () => {
+      const args: BuildArgs = {
+        description: "test",
+        name: "my---workflow---name",
+        noInteractive: false,
+        mock: false,
+        help: false,
+      };
+      const result = buildPrompt(args);
+      expect(result).toBe("/build --name my-workflow-name test");
+    });
+
+    it("should omit --name when it becomes empty after sanitization", () => {
+      const args: BuildArgs = {
+        description: "test",
+        name: "@#$%^&*()", // All special characters, becomes empty
+        noInteractive: false,
+        mock: false,
+        help: false,
+      };
+      const result = buildPrompt(args);
+      // --name should not be included since sanitized name is empty
+      expect(result).toBe("/build test");
     });
 
     it("should limit --name to 50 characters", () => {

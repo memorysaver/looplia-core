@@ -56,19 +56,36 @@ function generateSandboxId(filePath: string): string {
 /** Standard filename for content input in sandbox */
 const SANDBOX_CONTENT_FILENAME = "content.md";
 
+/** Validation schema version */
+const VALIDATION_SCHEMA_VERSION = "1.0.0";
+
+/**
+ * Structure of validation.json file
+ * Tracks workflow execution state per sandbox
+ */
+export type ValidationJson = {
+  workflow: string;
+  version: string;
+  sandboxId: string;
+  createdAt: string;
+  status: "pending" | "in_progress" | "completed" | "failed";
+  steps: Record<string, { validated: boolean; validatedAt?: string }>;
+};
+
 /**
  * Create initial validation.json for a new sandbox
  * This ensures deterministic behavior - the workflow-executor skill
  * can always detect the sandbox exists and will populate steps from workflow
  */
-function createInitialValidationJson(
+/** @internal Exported for testing */
+export function createInitialValidationJson(
   sandboxDir: string,
   sandboxId: string,
   workflowId: string
 ): void {
-  const validation = {
+  const validation: ValidationJson = {
     workflow: workflowId,
-    version: "1.0.0",
+    version: VALIDATION_SCHEMA_VERSION,
     sandboxId,
     createdAt: new Date().toISOString(),
     status: "pending",
