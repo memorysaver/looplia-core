@@ -82,17 +82,58 @@ function mapActivityStatus(status: Activity["status"]): AgentNode["status"] {
 }
 
 /**
- * Convert activities to agent tree nodes
+ * Convert activities to hierarchical agent tree nodes
+ *
+ * Builds a tree structure where child activities (e.g., tools inside a subagent)
+ * are nested under their parent activity using parentActivityId.
  */
 function activitiesToNodes(activities: Activity[]): AgentNode[] {
-  return activities.map((activity) => ({
-    id: activity.id,
-    type: activity.type === "skill" ? "skill" : "tool",
-    name: activity.label,
-    status: mapActivityStatus(activity.status),
-    detail: activity.detail,
-    durationMs: activity.durationMs,
-  }));
+  const nodesById = new Map<string, AgentNode>();
+  const roots: AgentNode[] = [];
+
+  // First pass: create all nodes
+  for (const activity of activities) {
+    // Determine node type
+    let nodeType: AgentNode["type"] = "tool";
+    if (activity.type === "skill") {
+      nodeType = "skill";
+    } else if (activity.type === "subagent") {
+      nodeType = "subagent";
+    }
+
+    const node: AgentNode = {
+      id: activity.id,
+      type: nodeType,
+      name: activity.label,
+      status: mapActivityStatus(activity.status),
+      detail: activity.detail,
+      durationMs: activity.durationMs,
+      children: [],
+    };
+    nodesById.set(activity.id, node);
+  }
+
+  // Second pass: build hierarchy
+  for (const activity of activities) {
+    const node = nodesById.get(activity.id);
+    if (!node) {
+      // This should never happen because all nodes are created in the first pass
+      continue;
+    }
+
+    if (activity.parentActivityId) {
+      const parent = nodesById.get(activity.parentActivityId);
+      if (parent) {
+        parent.children?.push(node);
+        continue; // Don't add to roots
+      }
+      // Intentional fallback: if the declared parent activity cannot be found,
+      // treat this activity as a root node (may happen during streaming)
+    }
+    roots.push(node);
+  }
+
+  return roots;
 }
 
 /**
@@ -202,8 +243,11 @@ function StreamingQueryUIInner<T>({
   const isComplete = state.status === "complete";
   const isError = state.status === "error";
 
-  // Convert activities to tree nodes
-  const treeNodes = activitiesToNodes(state.activities);
+  // Convert activities to tree nodes (memoized to prevent rebuilding on unrelated state changes)
+  const treeNodes = useMemo(
+    () => activitiesToNodes(state.activities),
+    [state.activities]
+  );
 
   // Determine border color based on status
   const borderColor = useMemo(() => {

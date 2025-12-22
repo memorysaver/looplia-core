@@ -66,6 +66,35 @@ When executing a step with `skill: {name}` and `mission:`:
 - **VALIDATE** that step has both `skill:` and `mission:` fields
 - **REJECT** steps using deprecated `run:` syntax
 
+### Why Per-Step Task Calls (Context Isolation)
+
+Each `Task(skill-executor)` creates a **separate context window**:
+- Isolates step processing from main agent context
+- Prevents context pollution across steps
+- Enables focused execution with only relevant inputs
+
+**NEVER batch multiple steps** - this defeats context isolation.
+
+### Anti-Patterns
+
+❌ **WRONG - Delegating entire workflow:**
+```json
+{
+  "description": "Execute workflow: writing-kit",
+  "prompt": "Run all workflow steps..."
+}
+```
+This pollutes the subagent context with ALL steps.
+
+✅ **CORRECT - One step per Task:**
+```json
+{
+  "description": "Execute step: summary",
+  "prompt": "Execute skill 'media-reviewer' for step 'summary'..."
+}
+```
+Each step gets a fresh, focused context window.
+
 ---
 
 ## Step Field Validation
@@ -172,6 +201,17 @@ Computed order: [analyze-content, generate-ideas, build-writing-kit]
 ```
 
 ### Phase 5: Step Execution Loop
+
+**Execute steps ONE AT A TIME (context isolation):**
+
+1. Get first unvalidated step from dependency order
+2. Make ONE `Task(skill-executor)` call for THIS step only
+3. WAIT for Task completion before proceeding
+4. Validate output, update validation.json
+5. REPEAT for next unvalidated step
+6. STOP when ALL steps are validated
+
+**MANDATORY:** Each step = separate context window = separate Task call.
 
 ```
 FOR EACH step in dependency order:

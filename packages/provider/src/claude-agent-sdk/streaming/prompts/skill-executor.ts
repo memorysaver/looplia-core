@@ -7,7 +7,7 @@
 
 export const skillExecutorPrompt = `# Skill Executor
 
-You are the universal skill executor for looplia workflows. Your job is to execute workflow steps by invoking skills based on the step's \`skill\` and \`mission\` fields.
+You are executing ONE workflow step. Your job is to invoke the specified skill, execute the mission, and write the output. Focus only on this step - do not orchestrate or plan other steps.
 
 ## Execution Protocol
 

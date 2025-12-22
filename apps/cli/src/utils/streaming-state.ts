@@ -59,7 +59,13 @@ export function generateActivityId(): string {
  */
 export function formatToolLabel(event: {
   tool: string;
-  input: { path?: string; skill?: string; pattern?: string };
+  input: {
+    path?: string;
+    skill?: string;
+    pattern?: string;
+    subagentType?: string;
+    description?: string;
+  };
 }): string {
   const { tool, input } = event;
 
@@ -71,6 +77,11 @@ export function formatToolLabel(event: {
   }
   if ((tool === "Glob" || tool === "Grep") && input.pattern) {
     return `Searching: ${input.pattern}`;
+  }
+  // Task tool: show subagent type and description
+  if (tool === "Task" && input.description?.trim()) {
+    const subagentType = input.subagentType ?? "subagent";
+    return `${subagentType}: ${input.description}`;
   }
   return `Using ${tool}`;
 }
@@ -172,15 +183,38 @@ function handleTextDelta<T>(
 function handleToolStart(
   event: {
     toolUseId: string;
+    parentToolUseId?: string;
     tool: string;
-    input: { path?: string; skill?: string; pattern?: string };
+    input: {
+      path?: string;
+      skill?: string;
+      pattern?: string;
+      subagentType?: string;
+      description?: string;
+    };
   },
   context: EventHandlerContext
 ): null {
+  // Determine activity type based on tool
+  let activityType: Activity["type"] = "read";
+  if (event.tool === "Skill") {
+    activityType = "skill";
+  } else if (event.tool === "Task") {
+    activityType = "subagent";
+  } else if (event.tool === "Write") {
+    activityType = "write";
+  }
+
+  // Map parentToolUseId to parentActivityId for hierarchical display
+  const parentActivityId = event.parentToolUseId
+    ? context.toolIdMap.get(event.parentToolUseId)
+    : undefined;
+
   const activityId = context.addActivity({
     status: "running",
-    type: event.tool === "Skill" ? "skill" : "read",
+    type: activityType,
     label: formatToolLabel(event),
+    parentActivityId,
   });
   context.toolIdMap.set(event.toolUseId, activityId);
   return null; // Activity added via callback

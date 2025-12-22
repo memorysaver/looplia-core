@@ -25,6 +25,7 @@ These are the current, authoritative documents for the v0.6.2 architecture:
 | [CLAUDE_PLUGINS.md](./CLAUDE_PLUGINS.md) | Claude Code plugin system reference | Developers |
 | [SUBAGENTS.md](./SUBAGENTS.md) | Anthropic official Subagents documentation (reference) | Developers |
 | [AGENT-SKILLS.md](./AGENT-SKILLS.md) | Anthropic official Agent Skills documentation (reference) | Developers |
+| [AGENT-SDK.md](./AGENT-SDK.md) | Claude Agent SDK TypeScript reference (message types, tools, hooks) | Developers |
 
 ### Archived Documents
 
@@ -202,6 +203,14 @@ Reference document containing the official Anthropic documentation for Subagents
 
 Reference document containing the official Anthropic documentation for Agent Skills.
 
+### AGENT-SDK.md
+
+Reference document containing the Claude Agent SDK TypeScript reference, including:
+- SDK message types (`SDKAssistantMessage`, `SDKUserMessage`, etc.)
+- Tool definitions (Task, Skill, Read, Write, etc.)
+- Hook events (`PreToolUse`, `PostToolUse`, `SubagentStart`, etc.)
+- Streaming event structures with `parent_tool_use_id` for hierarchical tracking
+
 ---
 
 ## Historical Documents
@@ -275,7 +284,8 @@ Previous versions are preserved in `/docs/archive/` for reference:
            │ CONTEXT-    │  │ HOOK_      │  │  CLAUDE_PLUGINS.md          │
            │ INJECTION   │  │ VALIDATOR  │  │  SUBAGENTS.md               │
            │ (Flow)      │  │ (Hooks)    │  │  AGENT-SKILLS.md            │
-           └─────────────┘  └────────────┘  │       (SDK Reference)       │
+           └─────────────┘  └────────────┘  │  AGENT-SDK.md               │
+                                            │       (SDK Reference)       │
                                             └─────────────────────────────┘
 ```
 
@@ -290,7 +300,7 @@ Previous versions are preserved in `/docs/archive/` for reference:
 - **CONTEXT-INJECTION.md** illustrates what content is injected during workflow execution
 - **HOOK_VALIDATOR.md** documents hook-based validation system
 - **CLAUDE_PLUGINS.md** provides Claude Code plugin reference
-- **SUBAGENTS.md** / **AGENT-SKILLS.md** provide Anthropic SDK reference
+- **SUBAGENTS.md** / **AGENT-SKILLS.md** / **AGENT-SDK.md** provide Anthropic SDK reference
 
 ---
 
