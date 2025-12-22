@@ -4,7 +4,7 @@ description: Execute a looplia workflow on content. Run looplia pipeline, start 
 
 # Execute Looplia Workflow
 
-Run a looplia workflow from `workflows/` on provided content using the skills-first architecture.
+Run a looplia workflow from `workflows/` on provided content.
 
 ## Usage
 
@@ -30,43 +30,16 @@ Run a looplia workflow from `workflows/` on provided content using the skills-fi
 
 ## Execution
 
-Use the **workflow-executor** skill to handle all execution:
+**Use the `Skill("workflow-executor")` to handle all execution.**
 
-1. **Validate workflow exists**
-   - Check `workflows/{workflow-id}.md` exists
-   - Report error if not found
+The workflow-executor skill:
+1. Parses workflow YAML from `workflows/{workflow-id}.md`
+2. Creates/resumes sandbox
+3. Executes each step via `Task(skill-executor)`
+4. Manages validation state
+5. Returns final artifact
 
-2. **Sandbox handling**
-   - If `--file`: Create new sandbox with structure:
-     ```
-     sandbox/{sandbox-id}/
-       inputs/content.md    # Copy content file here
-       outputs/             # Empty - outputs go here
-       logs/                # Session logs
-       validation.json      # Validation state
-     ```
-   - If `--sandbox-id`: Load existing sandbox from `sandbox/{sandbox-id}/`
-
-3. **Execute workflow steps** (v0.6.2 Per-Step Orchestration)
-   - Read workflow YAML frontmatter from `workflows/{workflow-id}.md`
-   - Parse `steps:` array and resolve dependencies
-   - **FOR EACH step in dependency order:**
-     ```json
-     Task({
-       "subagent_type": "skill-executor",
-       "description": "Execute step: {step.id}",
-       "prompt": "Execute skill '{step.skill}' for step '{step.id}'.\n\nMission: {step.mission}\n\nInput: {resolved input path}\nOutput: {step.output}\nValidation: {step.validate}"
-     })
-     ```
-   - After each Task completes, verify output file exists
-   - Update `validation.json` with step completion
-
-   **CRITICAL**: You MUST call Task(skill-executor) separately for EACH step.
-   Do NOT delegate the entire workflow to one skill-executor call.
-
-4. **Return result**
-   - When step with `final: true` passes validation
-   - Read and return the final artifact JSON
+See `plugins/looplia-core/skills/workflow-executor/SKILL.md` for implementation details.
 
 ## Error Handling
 
@@ -75,9 +48,3 @@ Use the **workflow-executor** skill to handle all execution:
 | Workflow not found | Report available workflows via `/list-workflows` |
 | File not found | Report specific error with path |
 | Sandbox not found | Report available sandboxes |
-| Validation failed | Retry subagent or report details |
-
-## Related Commands
-
-- `/list-workflows` - Show available workflows
-- `/build-workflow` - Create a new workflow
