@@ -1,10 +1,14 @@
 ---
 name: plugin-registry-scanner
 description: |
-  Looplia core skill for discovering available skills from installed plugins.
-  Use when building looplia workflows, matching capabilities, or listing available skills.
-  Triggered by /build command or when user asks about available looplia skills.
-  Skills-first: scans skills only, no agent discovery.
+  This skill should be used when the user wants to discover available looplia skills,
+  scan installed plugins, or list what capabilities are available. Use when someone says
+  "what looplia skills are installed", "list available skills", "scan plugins", "/build",
+  "what can looplia do", or "show me all looplia capabilities".
+
+  First step in looplia workflow building: scans plugins/*/skills/*/SKILL.md to build
+  a registry of available skills. Part of the skills-first architecture where one workflow
+  step invokes one skill-executor to orchestrate multiple skills.
 tools: Bash, Read, Glob
 model: claude-haiku-4-5-20251001
 ---

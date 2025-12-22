@@ -1,10 +1,11 @@
 ---
-description: Build a looplia workflow from natural language requirements
+description: Build a looplia workflow from natural language. Create looplia pipeline, generate workflow automation.
 ---
 
 # Build Looplia Workflow
 
-Create a complete looplia workflow definition from a natural language description using AI-assisted workflow generation.
+Create a complete looplia workflow definition from natural language using the skills-first architecture.
+Each workflow step invokes one skill-executor subagent to orchestrate multiple skills.
 
 ## Usage
 
@@ -138,7 +139,7 @@ Run with:
 
 ## Generated Workflow Format
 
-All generated workflows use v0.6.1 `skill:` + `mission:` syntax:
+All generated workflows use v0.6.2 `skill:` + `mission:` syntax:
 
 ```yaml
 ---
@@ -195,5 +196,5 @@ steps:
 ## Notes
 
 - Generated workflows are saved to `~/.looplia/workflows/`
-- All workflows use v0.6.1 `skill:` + `mission:` format
+- All workflows use v0.6.2 `skill:` + `mission:` format
 - The deprecated `run: agents/X` syntax is never generated

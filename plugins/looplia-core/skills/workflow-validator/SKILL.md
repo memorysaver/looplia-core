@@ -1,7 +1,14 @@
 ---
 name: workflow-validator
-description: Validate workflow outputs against criteria defined in validation.json.
-  Primarily used for manual retry/debugging - automatic validation is handled by hooks.
+description: |
+  This skill should be used when the user wants to validate a looplia workflow output,
+  check if an artifact meets validation criteria, or debug validation failures. Use when
+  someone says "validate this looplia output", "check if the workflow output is valid",
+  "verify the artifact JSON", or "debug why validation failed".
+
+  Runs deterministic validation scripts against JSON artifacts. Primarily used for manual
+  retry/debugging since automatic validation is handled by PostToolUse hooks. Part of
+  looplia's one step → one skill-executor → multiple skills architecture.
 ---
 
 # Workflow Validator Skill

@@ -1,10 +1,10 @@
 ---
-description: Run a Looplia workflow on content
+description: Execute a looplia workflow on content. Run looplia pipeline, start workflow automation.
 ---
 
-# Run Workflow
+# Execute Looplia Workflow
 
-Execute a workflow from `workflows/` on provided content.
+Run a looplia workflow from `workflows/` on provided content using the skills-first architecture.
 
 ## Usage
 
