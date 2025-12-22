@@ -47,14 +47,26 @@ Use the **workflow-executor** skill to handle all execution:
      ```
    - If `--sandbox-id`: Load existing sandbox from `sandbox/{sandbox-id}/`
 
-3. **Execute workflow**
-   - Invoke workflow-executor skill
-   - Pass session ID and workflow ID
-   - Skill handles all orchestration
+3. **Execute workflow steps** (v0.6.2 Per-Step Orchestration)
+   - Read workflow YAML frontmatter from `workflows/{workflow-id}.md`
+   - Parse `steps:` array and resolve dependencies
+   - **FOR EACH step in dependency order:**
+     ```json
+     Task({
+       "subagent_type": "skill-executor",
+       "description": "Execute step: {step.id}",
+       "prompt": "Execute skill '{step.skill}' for step '{step.id}'.\n\nMission: {step.mission}\n\nInput: {resolved input path}\nOutput: {step.output}\nValidation: {step.validate}"
+     })
+     ```
+   - After each Task completes, verify output file exists
+   - Update `validation.json` with step completion
+
+   **CRITICAL**: You MUST call Task(skill-executor) separately for EACH step.
+   Do NOT delegate the entire workflow to one skill-executor call.
 
 4. **Return result**
-   - When final output passes validation
-   - Return the final artifact JSON
+   - When step with `final: true` passes validation
+   - Read and return the final artifact JSON
 
 ## Error Handling
 

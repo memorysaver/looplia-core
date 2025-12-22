@@ -350,7 +350,8 @@ jobs:
           echo "=== Checking v0.6.1 skill syntax ==="
 
           # Each step should have 'skill:' field
-          SKILL_COUNT=$(yq '.steps[].skill | select(. != null)' frontmatter.yaml | wc -l)
+          # Use proper yq length counting (not wc -l which counts lines, not entries)
+          SKILL_COUNT=$(yq '[.steps[].skill | select(. != null)] | length' frontmatter.yaml)
           STEP_COUNT=$(yq '.steps | length' frontmatter.yaml)
 
           echo "Steps with 'skill:' field: $SKILL_COUNT / $STEP_COUNT"
@@ -358,13 +359,14 @@ jobs:
           echo "✓ All steps have 'skill:' field"
 
           # Each step should have 'mission:' field
-          MISSION_COUNT=$(yq '.steps[].mission | select(. != null)' frontmatter.yaml | wc -l)
+          # Use proper yq length counting (not wc -l which counts lines for multi-line values)
+          MISSION_COUNT=$(yq '[.steps[].mission | select(. != null)] | length' frontmatter.yaml)
           echo "Steps with 'mission:' field: $MISSION_COUNT / $STEP_COUNT"
           [ "$MISSION_COUNT" -eq "$STEP_COUNT" ] || (echo "ERROR: Not all steps have 'mission:' field" && exit 1)
           echo "✓ All steps have 'mission:' field"
 
           # No step should have legacy 'run:' field
-          RUN_COUNT=$(yq '.steps[].run | select(. != null)' frontmatter.yaml | wc -l)
+          RUN_COUNT=$(yq '[.steps[].run | select(. != null)] | length' frontmatter.yaml)
           [ "$RUN_COUNT" -eq 0 ] || (echo "ERROR: Found legacy 'run:' syntax in $RUN_COUNT steps" && exit 1)
           echo "✓ No legacy 'run:' syntax found"
 
