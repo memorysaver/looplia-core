@@ -308,6 +308,7 @@ export type { UserProfile, UserTopic, WritingStyle } from "./user-profile";
 
 ## Cross-References
 
+- **Web-Capable Skills (v0.6.3):** See [DESIGN-0.6.3.md](./DESIGN-0.6.3.md)
 - **Skills-First Architecture (v0.6.1):** See [DESIGN-0.6.1.md](./DESIGN-0.6.1.md)
 - **Legacy Cleanup (v0.6.1):** See [CLEANUP-0.6.1.md](./CLEANUP-0.6.1.md)
 - **Context Injection:** See [CONTEXT-INJECTION.md](./CONTEXT-INJECTION.md)
