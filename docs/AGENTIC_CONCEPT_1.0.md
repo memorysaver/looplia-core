@@ -156,9 +156,54 @@ $ looplia init
 - Available slash commands (`/run`, `/build`)
 - Workspace structure overview
 - Core skill references
-- Validation-driven completion rules
+- Tool usage rules (no subagents for file operations)
 
 This is the **first layer of context injection** in the progressive disclosure model.
+
+### Progressive Disclosure: File-to-File Flow
+
+Each layer adds context incrementally, avoiding duplication:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    PROGRESSIVE DISCLOSURE ARCHITECTURE                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+CLAUDE.md (~100 lines)
+├── Identity: "You are a looplia workflow engine"
+├── Commands: /run → Skill("workflow-executor"), /build → 3-skill pipeline
+├── Tool rules: "No subagents for file operations"
+└── Points to: commands/ and skills/
+         │
+         ▼
+commands/run.md (~50 lines)
+├── Usage: /run <workflow> --file <path>
+├── Execution: "Use Skill('workflow-executor')"
+└── Points to: workflow-executor SKILL.md for details
+         │
+         ▼
+skills/workflow-executor/SKILL.md (~350 lines)
+├── Full orchestration protocol
+├── Per-step Task(skill-executor) invocation
+├── Validation state management
+└── Error handling and retries
+         │
+         ▼
+skill-executor (inline subagent)
+├── Receives: skill name + mission
+├── Loads: skills/{name}/SKILL.md
+└── Executes: mission-driven task
+```
+
+**Key Principle:** Each file contains ONLY its layer's logic, never duplicating lower layers.
+
+| Layer | Responsibility | Size |
+|-------|----------------|------|
+| CLAUDE.md | Route commands to skills | ~100 lines |
+| commands/*.md | Document usage, point to skills | ~50 lines |
+| skills/*/SKILL.md | Implement domain logic | 100-400 lines |
+
+**Anti-Pattern:** Putting orchestration logic in CLAUDE.md (duplicates workflow-executor).
 
 ---
 
