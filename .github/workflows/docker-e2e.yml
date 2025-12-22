@@ -225,7 +225,7 @@ jobs:
           echo "=== Checking skill-to-step mapping ==="
 
           # Check step 'summary' uses skill 'media-reviewer'
-          if grep -B5 '"description".*"Execute step: summary"' "$LOG_FILE" | grep -q '"prompt".*media-reviewer'; then
+          if grep -A5 '"description".*"Execute step: summary"' "$LOG_FILE" | grep -q '"prompt".*media-reviewer'; then
             echo "✓ Step 'summary' uses skill 'media-reviewer'"
           else
             echo "✗ Step 'summary' should use skill 'media-reviewer'"
@@ -233,7 +233,7 @@ jobs:
           fi
 
           # Check step 'ideas' uses skill 'idea-synthesis'
-          if grep -B5 '"description".*"Execute step: ideas"' "$LOG_FILE" | grep -q '"prompt".*idea-synthesis'; then
+          if grep -A5 '"description".*"Execute step: ideas"' "$LOG_FILE" | grep -q '"prompt".*idea-synthesis'; then
             echo "✓ Step 'ideas' uses skill 'idea-synthesis'"
           else
             echo "✗ Step 'ideas' should use skill 'idea-synthesis'"
@@ -241,7 +241,7 @@ jobs:
           fi
 
           # Check step 'writing-kit' uses skill 'writing-kit-assembler'
-          if grep -B5 '"description".*"Execute step: writing-kit"' "$LOG_FILE" | grep -q '"prompt".*writing-kit-assembler'; then
+          if grep -A5 '"description".*"Execute step: writing-kit"' "$LOG_FILE" | grep -q '"prompt".*writing-kit-assembler'; then
             echo "✓ Step 'writing-kit' uses skill 'writing-kit-assembler'"
           else
             echo "✗ Step 'writing-kit' should use skill 'writing-kit-assembler'"
