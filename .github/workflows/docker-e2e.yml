@@ -338,7 +338,7 @@ jobs:
           yq -e '.steps' frontmatter.yaml > /dev/null || (echo "ERROR: missing 'steps' array" && exit 1)
           echo "✓ Has 'steps' array"
 
-          STEPS_COUNT=$(yq '.steps | length' frontmatter.yaml)
+          STEPS_COUNT=$(yq -r '.steps | length' frontmatter.yaml)
           echo "✓ Found $STEPS_COUNT steps"
           [ "$STEPS_COUNT" -ge 1 ] || (echo "ERROR: No steps defined" && exit 1)
 
