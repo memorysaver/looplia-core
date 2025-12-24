@@ -1,9 +1,9 @@
 # Looplia-Core Architecture Design v0.6.3
 
-> **FEATURE RELEASE:** Web-Capable Skills and Input-Less Workflows
+> **FEATURE RELEASE:** Web-Capable Skills and Flexible Input System
 >
 > **Version:** 0.6.3
-> **Date:** 2025-12-22
+> **Date:** 2025-12-24
 > **Related:** [DESIGN-0.6.2.md](./DESIGN-0.6.2.md) | [DESIGN-0.6.1.md](./DESIGN-0.6.1.md)
 
 ---
@@ -13,11 +13,15 @@
 1. [Executive Summary](#1-executive-summary)
 2. [Problem Statement](#2-problem-statement)
 3. [Architecture Change](#3-architecture-change)
-4. [Web-Content-Fetcher Skill](#4-web-content-fetcher-skill)
-5. [Input-Less Workflow Support](#5-input-less-workflow-support)
-6. [Build Pipeline Updates](#6-build-pipeline-updates)
-7. [Implementation Steps](#7-implementation-steps)
-8. [File Changes Summary](#8-file-changes-summary)
+4. [Workflow Inputs Declaration](#4-workflow-inputs-declaration)
+5. [CLI Input System](#5-cli-input-system)
+6. [Variable Resolution](#6-variable-resolution)
+7. [Web-Content-Fetcher Skill](#7-web-content-fetcher-skill)
+8. [Workspace Structure](#8-workspace-structure)
+9. [Type System Changes](#9-type-system-changes)
+10. [Build Pipeline Updates](#10-build-pipeline-updates)
+11. [Implementation Steps](#11-implementation-steps)
+12. [File Changes Summary](#12-file-changes-summary)
 
 ---
 
@@ -27,166 +31,444 @@
 
 | Version | Focus | Key Achievement |
 |---------|-------|-----------------|
-| v0.6.2 | Schema-in-Skill Architecture | Remove workflow-specific types; skills define JSON schemas in SKILL.md |
-| **v0.6.3** | **Web-Capable Skills + Input-Less Workflows** | **Skills can fetch web content; workflows can run without user-provided input files** |
+| v0.6.2 | Schema-in-Skill Architecture | Skills define JSON schemas in SKILL.md |
+| **v0.6.3** | **Web-Capable Skills + Flexible Input System** | **Skills can fetch web content; workflows support 0 to N named inputs** |
 
 ### What Changes in v0.6.3
 
-v0.6.3 introduces two complementary features:
+v0.6.3 introduces a flexible input system:
 
-1. **NEW SKILL:** `web-content-fetcher` with WebSearch/WebFetch tools
-2. **SCHEMA CHANGE:** `input` field becomes optional for input-less capable skills
-3. **BUILD ENHANCEMENT:** Matcher/composer recognize web tasks and generate input-less steps
+1. **FLEXIBLE INPUTS:** Workflows support 0, 1, or N named inputs
+2. **NEW SYNTAX:** `inputs:` declaration at workflow level
+3. **NEW CLI:** `--input name=value` for named inputs
+4. **NEW SKILL:** `web-content-fetcher` with WebSearch/WebFetch tools
+5. **INPUT-LESS:** Steps can omit input field for data-generating skills
+6. **BACKWARD COMPAT:** `--file` continues to work for legacy workflows
 
 ### Design Principle
 
-> **Self-Contained Workflows**
+> **Flexible Input System**
 >
-> Some workflows don't require user input - they generate their own data.
-> Example: "Read Hacker News and report the first news" needs no input file.
-> Skills with web capabilities can fetch data directly.
+> Workflows should accept exactly the inputs they need - zero, one, or many.
+> Named inputs are self-documenting and enable complex multi-source workflows.
+> Skills that generate data (web fetch, triggers) need no input at all.
 
-### Key Insight
+### The Shift
 
-The current architecture assumes ALL workflow steps need an `input` file:
-
-```yaml
-# Current (v0.6.2) - REQUIRES input file
-steps:
-  - id: fetch-news
-    skill: content-documenter
-    input: ${{ sandbox }}/inputs/hn-request.json  # User must provide this
-    output: ${{ sandbox }}/outputs/news.json
 ```
+BEFORE (v0.6.2):
+  looplia run workflow --file content.md     # Exactly 1 input, always
 
-This forces users to create placeholder input files for tasks that don't need them. v0.6.3 introduces **input-less steps** for skills that can generate their own data:
-
-```yaml
-# New (v0.6.3) - NO input required
-steps:
-  - id: fetch-news
-    skill: web-content-fetcher
-    mission: Fetch the top story from Hacker News
-    # No input field - skill fetches directly from web
-    output: ${{ sandbox }}/outputs/news.json
+AFTER (v0.6.3):
+  looplia run workflow                                    # 0 inputs (input-less)
+  looplia run workflow --file content.md                  # 1 input (legacy)
+  looplia run workflow --input video1=v1.md               # 1 named input
+  looplia run workflow --input v1=a.md --input v2=b.md    # N named inputs
+  looplia run workflow --input config='{"key": "value"}'  # Inline JSON
 ```
 
 ---
 
 ## 2. Problem Statement
 
-### 2.1 The User Experience Issue
+### 2.1 The Single-Input Limitation
 
-User runs:
+Current (v0.6.2) workflows require exactly ONE input file:
+
 ```bash
-looplia build "read hacker news and report the first news to user"
+looplia run writing-kit --file content.md
 ```
 
-System generates a workflow that:
-1. **Requires an input file** (`--file request.json`)
-2. **Uses `content-documenter`** which can't fetch web content
-3. **Forces artificial input** for a self-contained task
+This fails for common use cases:
 
-**Expected behavior:**
-- No input file needed
-- Skill directly fetches from Hacker News
-- User runs: `looplia run hn-news-reporter` (no `--file`)
+| Use Case | Required Inputs | Current Support |
+|----------|-----------------|-----------------|
+| "Read Hacker News and report" | 0 (web fetch) | Not supported |
+| "Analyze this video" | 1 | Supported |
+| "Compare two videos" | 2 | Not supported |
+| "Merge transcript + notes + config" | 3 | Not supported |
 
-### 2.2 Two Missing Capabilities
+### 2.2 Three Missing Capabilities
 
 | Gap | Description | Solution |
 |-----|-------------|----------|
-| No web skills | No skill has WebSearch/WebFetch tools | Create `web-content-fetcher` skill |
-| Mandatory input | All steps require `input` field | Make `input` optional for input-less skills |
+| No zero inputs | Can't run without `--file` | Input-less workflows |
+| No multi-inputs | Can't provide 2+ files | Named inputs system |
+| No web skills | No skill has WebSearch/WebFetch | web-content-fetcher skill |
 
-### 2.3 Current Skill Inventory
+### 2.3 User Experience Issues
 
-| Skill | Has Web Tools? | Can Work Without Input? |
-|-------|----------------|-------------------------|
-| `media-reviewer` | No | No - needs content to analyze |
-| `idea-synthesis` | No | No - needs analysis to generate ideas |
-| `content-documenter` | No | No - needs content to document |
-| `writing-kit-assembler` | No | No - needs inputs to assemble |
-| **`web-content-fetcher`** (NEW) | **Yes** | **Yes** |
+**Issue 1:** User runs `looplia build "read hacker news"` and gets:
+```yaml
+steps:
+  - id: fetch
+    input: ${{ sandbox }}/inputs/content.md  # Why? There's nothing to input!
+```
+
+**Issue 2:** User wants to compare two videos but can only provide one:
+```bash
+looplia run compare-videos --file ???  # How to provide TWO files?
+```
+
+**Issue 3:** No way to know what inputs a workflow expects:
+```bash
+looplia run some-workflow --file ???  # What should I provide?
+```
 
 ---
 
 ## 3. Architecture Change
 
-### 3.1 Before vs After
-
-```
-BEFORE (v0.6.2):                        AFTER (v0.6.3):
-┌─────────────────────────────┐         ┌─────────────────────────────┐
-│ ALL workflow steps          │         │ MOST workflow steps         │
-│                             │         │                             │
-│ REQUIRE:                    │         │ REQUIRE:                    │
-│ - skill: name               │         │ - skill: name               │
-│ - mission: description      │         │ - mission: description      │
-│ - input: file path     ←────┼───┐     │ - input: file path          │
-│ - output: file path         │   │     │ - output: file path         │
-└─────────────────────────────┘   │     └─────────────────────────────┘
-                                  │
-                                  │     ┌─────────────────────────────┐
-                                  │     │ INPUT-LESS capable steps    │
-                                  │     │ (e.g., web-content-fetcher) │
-                                  └────▶│                             │
-                                        │ REQUIRE:                    │
-                                        │ - skill: name               │
-                                        │ - mission: description      │
-                                        │ - output: file path         │
-                                        │                             │
-                                        │ OPTIONAL (can omit):        │
-                                        │ - input: (not required)     │
-                                        └─────────────────────────────┘
-```
-
-### 3.2 Skill Capability Matrix
+### 3.1 Input Modes
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        SKILL CAPABILITY MATRIX (v0.6.3)                      │
+│                     v0.6.3 FLEXIBLE INPUT SYSTEM                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-Skill                    │ Input-Less? │ Tools                  │ Use Case
-─────────────────────────┼─────────────┼────────────────────────┼──────────────
-web-content-fetcher      │ YES         │ WebSearch, WebFetch    │ Fetch from web
-media-reviewer           │ NO          │ Read, Glob, Grep       │ Analyze content
-idea-synthesis           │ NO          │ Read, Skill            │ Generate ideas
-content-documenter       │ NO          │ Read, Write            │ Document content
-writing-kit-assembler    │ NO          │ Read, Write            │ Assemble kit
-workflow-validator       │ NO          │ Bash                   │ Validate outputs
+MODE 1: Input-Less (0 inputs)
+┌────────────────────────────────┐
+│ Workflow has no inputs:        │
+│ declaration AND first step     │
+│ uses input-less capable skill  │
+│                                │
+│ CLI: looplia run workflow      │
+│ (no --file or --input needed)  │
+└────────────────────────────────┘
+
+MODE 2: Legacy Single Input (1 input)
+┌────────────────────────────────┐
+│ Workflow has NO inputs:        │
+│ declaration                    │
+│                                │
+│ CLI: looplia run workflow      │
+│      --file content.md         │
+│                                │
+│ File copied to:                │
+│ sandbox/inputs/content.md      │
+└────────────────────────────────┘
+
+MODE 3: Named Inputs (1 to N inputs)
+┌────────────────────────────────┐
+│ Workflow HAS inputs:           │
+│ declaration                    │
+│                                │
+│ CLI: looplia run workflow      │
+│      --input video1=v1.md      │
+│      --input video2=v2.md      │
+│                                │
+│ Files copied to:               │
+│ sandbox/inputs/video1.md       │
+│ sandbox/inputs/video2.md       │
+└────────────────────────────────┘
 ```
 
-### 3.3 Input-Less Skill Registry
+### 3.2 Decision Tree
 
-Skills that can operate without input are registered in the workflow parser:
+```
+                    ┌─────────────────────────┐
+                    │ Does workflow have      │
+                    │ inputs: declaration?    │
+                    └───────────┬─────────────┘
+                                │
+              ┌─────────────────┴─────────────────┐
+              │                                   │
+              ▼                                   ▼
+        NO inputs:                          HAS inputs:
+              │                                   │
+              │                           ┌───────┴───────┐
+              │                           │               │
+              ▼                           ▼               ▼
+    ┌─────────────────┐           Required         Optional
+    │ --file provided?│           inputs           inputs
+    └────────┬────────┘               │               │
+             │                        ▼               ▼
+    ┌────────┴────────┐         Validate all   Accept if
+    │                 │         are provided   provided
+    ▼                 ▼
+  YES               NO
+    │                 │
+    ▼                 ▼
+  Legacy        Input-less
+  mode          mode (if valid)
+```
 
-```typescript
-// packages/core/src/domain/workflow-parser.ts
-const INPUTLESS_CAPABLE_SKILLS = [
-  'web-content-fetcher',
-  // Future: 'scheduler-trigger', 'cron-trigger', etc.
-];
+### 3.3 Skill Capability Matrix
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      SKILL CAPABILITY MATRIX (v0.6.3)                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Skill                   │ Input-Less? │ Tools                 │ Use Case
+────────────────────────┼─────────────┼───────────────────────┼─────────────────
+web-content-fetcher     │ YES         │ WebSearch, WebFetch   │ Fetch from web
+media-reviewer          │ NO          │ Read, Glob, Grep      │ Analyze content
+idea-synthesis          │ NO          │ Read, Skill           │ Generate ideas
+content-documenter      │ NO          │ Read, Write           │ Document content
+writing-kit-assembler   │ NO          │ Read, Write           │ Assemble kit
+workflow-validator      │ NO          │ Bash                  │ Validate outputs
 ```
 
 ---
 
-## 4. Web-Content-Fetcher Skill
+## 4. Workflow Inputs Declaration
 
-### 4.1 Skill Overview
+### 4.1 Schema
+
+```yaml
+---
+name: workflow-name
+version: 1.0.0
+description: What this workflow does
+
+inputs:                           # NEW: Declare expected inputs
+  - name: video1                  # Input identifier (kebab-case)
+    required: true                # Is this input mandatory?
+    description: First video      # Human-readable description
+  - name: video2
+    required: true
+    description: Second video
+  - name: notes
+    required: false               # Optional input
+    description: Additional notes
+
+steps:
+  - id: compare
+    skill: media-reviewer
+    input:
+      - ${{ inputs.video1 }}      # Reference named inputs
+      - ${{ inputs.video2 }}
+    output: ${{ sandbox }}/outputs/comparison.json
+---
+```
+
+### 4.2 WorkflowInput Type
+
+```typescript
+export type WorkflowInput = {
+  name: string;           // Unique identifier (kebab-case)
+  required: boolean;      // Is this input mandatory?
+  description?: string;   // Human-readable description
+  type?: 'file' | 'json'; // Optional type hint (default: file)
+};
+```
+
+### 4.3 Input Name Rules
+
+- Must be kebab-case: `video-transcript`, `user-config`
+- Must be unique within workflow
+- Cannot be reserved names: `sandbox`, `steps`, `content`
+- Maximum 50 characters
+
+### 4.4 Examples
+
+**Zero Inputs (input-less):**
+```yaml
+---
+name: hn-news-reporter
+# No inputs: declaration
+steps:
+  - id: fetch-news
+    skill: web-content-fetcher
+    mission: Fetch top HN story
+    # No input field - input-less step
+    output: ${{ sandbox }}/outputs/news.json
+---
+```
+
+**One Required Input:**
+```yaml
+---
+name: video-analyzer
+inputs:
+  - name: video
+    required: true
+    description: Video transcript to analyze
+
+steps:
+  - id: analyze
+    skill: media-reviewer
+    input: ${{ inputs.video }}
+    output: ${{ sandbox }}/outputs/analysis.json
+---
+```
+
+**Multiple Inputs (Required + Optional):**
+```yaml
+---
+name: compare-videos
+inputs:
+  - name: video1
+    required: true
+    description: First video to compare
+  - name: video2
+    required: true
+    description: Second video to compare
+  - name: config
+    required: false
+    description: Optional comparison settings
+    type: json
+
+steps:
+  - id: analyze-first
+    skill: media-reviewer
+    input: ${{ inputs.video1 }}
+    output: ${{ sandbox }}/outputs/analysis1.json
+
+  - id: analyze-second
+    skill: media-reviewer
+    input: ${{ inputs.video2 }}
+    output: ${{ sandbox }}/outputs/analysis2.json
+
+  - id: compare
+    skill: content-documenter
+    needs: [analyze-first, analyze-second]
+    input:
+      - ${{ steps.analyze-first.output }}
+      - ${{ steps.analyze-second.output }}
+    output: ${{ sandbox }}/outputs/comparison.json
+    final: true
+---
+```
+
+---
+
+## 5. CLI Input System
+
+### 5.1 Command Syntax
+
+```bash
+looplia run <workflow> [options]
+
+Options:
+  --input <name>=<value>   Provide named input (repeatable)
+  --file <path>            Legacy single input (for workflows without inputs:)
+  --sandbox-id <id>        Resume existing sandbox
+  --mock                   Use mock executor
+  --help                   Show help with expected inputs
+```
+
+### 5.2 Input Value Formats
+
+**File path:**
+```bash
+--input video1=path/to/video.md
+--input config=settings.json
+```
+
+**Inline JSON:**
+```bash
+--input config='{"theme": "dark", "limit": 10}'
+--input params='["tag1", "tag2"]'
+```
+
+**Detection logic:**
+- If value starts with `{` or `[` → parse as inline JSON
+- Otherwise → treat as file path
+
+### 5.3 Help Output
+
+When user runs `looplia run workflow --help`, show expected inputs:
+
+```
+Usage: looplia run compare-videos [options]
+
+This workflow compares two videos and generates a report.
+
+Inputs:
+  --input video1=<path>   (required) First video to compare
+  --input video2=<path>   (required) Second video to compare
+  --input config=<json>   (optional) Comparison settings
+
+Examples:
+  looplia run compare-videos --input video1=v1.md --input video2=v2.md
+  looplia run compare-videos --input video1=v1.md --input video2=v2.md \
+                             --input config='{"detailed": true}'
+```
+
+### 5.4 Validation
+
+| Scenario | Behavior |
+|----------|----------|
+| Missing required input | Error: "Required input 'video1' not provided" |
+| Unknown input name | Warning: "Unknown input 'extra' - ignoring" |
+| Invalid JSON syntax | Error: "Invalid JSON for input 'config': ..." |
+| File not found | Error: "File not found for input 'video1': path/to/file.md" |
+| No inputs for input-less | OK - workflow runs without inputs |
+
+### 5.5 Backward Compatibility
+
+| Workflow Type | CLI Syntax |
+|---------------|------------|
+| No `inputs:` declaration | Use `--file` (legacy) |
+| Has `inputs:` declaration | Use `--input name=value` |
+| Input-less (first step needs no input) | No flags needed |
+
+---
+
+## 6. Variable Resolution
+
+### 6.1 Available Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `${{ sandbox }}` | Current sandbox directory | `sandbox/video-2025-01-15-abc1` |
+| `${{ steps.{id}.output }}` | Output path from step | `sandbox/.../outputs/analysis.json` |
+| `${{ inputs.{name} }}` | Named input file path | `sandbox/.../inputs/video1.md` |
+
+### 6.2 Resolution Examples
+
+**Workflow definition:**
+```yaml
+inputs:
+  - name: video1
+    required: true
+
+steps:
+  - id: analyze
+    skill: media-reviewer
+    input: ${{ inputs.video1 }}
+    output: ${{ sandbox }}/outputs/analysis.json
+
+  - id: summarize
+    skill: content-documenter
+    needs: [analyze]
+    input: ${{ steps.analyze.output }}
+    output: ${{ sandbox }}/outputs/summary.json
+```
+
+**After resolution (sandbox: `video-2025-12-24-x1y2`):**
+```yaml
+steps:
+  - id: analyze
+    input: sandbox/video-2025-12-24-x1y2/inputs/video1.md
+    output: sandbox/video-2025-12-24-x1y2/outputs/analysis.json
+
+  - id: summarize
+    input: sandbox/video-2025-12-24-x1y2/outputs/analysis.json
+    output: sandbox/video-2025-12-24-x1y2/outputs/summary.json
+```
+
+### 6.3 Resolution Order
+
+1. `${{ inputs.name }}` → resolved from CLI-provided inputs
+2. `${{ sandbox }}` → resolved from sandbox ID
+3. `${{ steps.id.output }}` → resolved from step definitions
+
+---
+
+## 7. Web-Content-Fetcher Skill
+
+### 7.1 Skill Overview
 
 **Domain:** Data Acquisition - Fetch content from external sources
 
 **Location:** `plugins/looplia-core/skills/web-content-fetcher/`
 
-**Purpose:** Fetch web content using WebSearch and WebFetch tools without requiring input files
+**Purpose:** Fetch web content without requiring input files (input-less capable)
 
-**Reusability:** HIGH - Any workflow needing external data
-
-### 4.2 Skill Definition
-
-**Path:** `plugins/looplia-core/skills/web-content-fetcher/SKILL.md`
+### 7.2 Skill Definition
 
 ```yaml
 ---
@@ -194,7 +476,7 @@ name: web-content-fetcher
 description: |
   Looplia core skill for fetching content from the web.
   Use when the user wants to search online, fetch web pages, get news,
-  read external URLs, or access any external web content.
+  or access any external web content.
 
   Trigger phrases:
   - "search the web for", "search online"
@@ -203,64 +485,36 @@ description: |
   - "access [website]", "look up"
 
   This skill can operate WITHOUT input files (input-less capable).
-  It generates its own data by fetching from the web.
 tools: WebSearch, WebFetch, Write
 model: claude-haiku-4-5-20251001
 ---
 ```
 
-### 4.3 Skill Process
+### 7.3 Process
 
-```markdown
-## Process
+1. **Parse Mission** - Extract target (URL or search query)
+2. **Determine Strategy**:
+   - Specific URL → WebFetch
+   - Search query → WebSearch
+   - Known source (HN, Reddit) → Appropriate endpoint
+3. **Structure Output** - Create JSON with contentId, source, content, metadata
+4. **Write Output** - Write to specified output path
 
-### 1. Parse Mission
-Extract from the mission:
-- Target source (URL or search query)
-- Data to extract (titles, content, metadata)
-- Output format requirements
-
-### 2. Determine Fetch Strategy
-
-**For specific URLs:**
-- Use WebFetch to retrieve page content
-- Parse and extract relevant data
-
-**For search queries:**
-- Use WebSearch to find relevant results
-- Optionally fetch top results with WebFetch
-
-**For known sources (Hacker News, Reddit, etc.):**
-- Use appropriate API endpoints or web pages
-- Parse structured data from responses
-
-### 3. Structure Output
-Create JSON output with:
-- contentId: Unique identifier for this fetch
-- source: Where data came from
-- fetchedAt: ISO timestamp
-- content: The fetched/extracted content
-- metadata: Additional context
-
-### 4. Write Output
-Write structured JSON to the specified output path.
-```
-
-### 4.4 Output Schema
+### 7.4 Output Schema
 
 ```json
 {
-  "contentId": "hn-2025-12-22-abc123",
+  "contentId": "hn-2025-12-24-abc123",
   "source": {
-    "type": "hacker-news|web-search|url-fetch",
+    "type": "hacker-news",
     "url": "https://news.ycombinator.com",
-    "query": "search query if applicable"
+    "query": null
   },
-  "fetchedAt": "2025-12-22T10:30:00Z",
+  "fetchedAt": "2025-12-24T10:30:00Z",
   "content": {
     "title": "Story title",
     "url": "https://example.com/story",
-    "text": "Full text content if available",
+    "text": "Full text if available",
     "summary": "Brief summary"
   },
   "metadata": {
@@ -271,60 +525,78 @@ Write structured JSON to the specified output path.
 }
 ```
 
-### 4.5 Example Missions
+---
 
-**Hacker News:**
-```yaml
-mission: |
-  Fetch the top story from Hacker News.
-  Extract title, URL, score, and comment count.
-  Format as structured JSON.
+## 8. Workspace Structure
+
+### 8.1 Sandbox Layout
+
+```
+~/.looplia/
+├── sandbox/
+│   └── {sandbox-id}/
+│       ├── inputs/
+│       │   ├── video1.md       # Named input
+│       │   ├── video2.md       # Named input
+│       │   ├── config.json     # JSON input
+│       │   └── content.md      # Legacy single input (if --file used)
+│       ├── outputs/
+│       │   ├── analysis.json   # Step outputs
+│       │   └── summary.json
+│       ├── logs/
+│       └── validation.json
+└── workflows/
+    ├── compare-videos.md
+    └── hn-reporter.md
 ```
 
-**Web Search:**
-```yaml
-mission: |
-  Search for "latest TypeScript features 2025".
-  Return top 5 results with titles and URLs.
-  Include brief snippets from each result.
-```
+### 8.2 Sandbox ID Generation
 
-**URL Fetch:**
-```yaml
-mission: |
-  Fetch content from https://example.com/article.
-  Extract the main article text and title.
-  Include any metadata (author, date, tags).
-```
+| Mode | Pattern | Example |
+|------|---------|---------|
+| Named inputs | `{workflow-name}-{date}-{random4}` | `compare-videos-2025-12-24-x1y2` |
+| Legacy --file | `{content-slug}-{date}-{random4}` | `my-video-2025-12-24-a3b4` |
+| Input-less | `{workflow-name}-{date}-{random4}` | `hn-reporter-2025-12-24-c5d6` |
 
 ---
 
-## 5. Input-Less Workflow Support
+## 9. Type System Changes
 
-### 5.1 Type Definition Change
+### 9.1 New Types
 
 **File:** `packages/core/src/domain/workflow.ts`
 
 ```typescript
-// Before (v0.6.2)
-export type WorkflowStep = {
-  id: string;
-  skill: string;
-  mission: string;
-  input: string | string[];  // REQUIRED
-  output: string;
-  needs?: string[];
-  model?: string;
-  validate?: ValidationCriteria;
-  final?: boolean;
+/**
+ * Declares an expected input for the workflow
+ */
+export type WorkflowInput = {
+  name: string;           // Unique identifier (kebab-case)
+  required: boolean;      // Is this input mandatory?
+  description?: string;   // Human-readable description
+  type?: 'file' | 'json'; // Optional type hint
 };
 
-// After (v0.6.3)
+/**
+ * Updated workflow definition with optional inputs
+ */
+export type WorkflowDefinition = {
+  name: string;
+  version?: string;
+  description: string;
+  inputs?: WorkflowInput[];  // NEW: Optional inputs declaration
+  steps: WorkflowStep[];
+};
+
+/**
+ * Updated step with optional input (for input-less steps)
+ */
 export type WorkflowStep = {
   id: string;
-  skill: string;
-  mission: string;
-  input?: string | string[] | null;  // OPTIONAL for input-less skills
+  skill?: string;
+  mission?: string;
+  run?: string;
+  input?: string | string[] | null;  // CHANGED: Now optional
   output: string;
   needs?: string[];
   model?: string;
@@ -333,17 +605,16 @@ export type WorkflowStep = {
 };
 ```
 
-### 5.2 Parser Validation Change
+### 9.2 Parser Changes
 
 **File:** `packages/core/src/domain/workflow-parser.ts`
 
 ```typescript
-// List of skills that can operate without input
+// Skills that can operate without input
 const INPUTLESS_CAPABLE_SKILLS = ['web-content-fetcher'];
 
-function validateStep(step: WorkflowStep): void {
+function validateStep(step: WorkflowStep, workflowInputs?: WorkflowInput[]): void {
   // ... existing id validation ...
-
   // ... existing skill/mission validation ...
 
   // v0.6.3: Input validation with input-less skill support
@@ -353,566 +624,274 @@ function validateStep(step: WorkflowStep): void {
   if (!step.input && !isInputlessCapable) {
     throw new Error(
       `Step '${step.id}' must have an 'input' field ` +
-      `(or use an input-less capable skill like: ${INPUTLESS_CAPABLE_SKILLS.join(', ')})`
+      `(or use an input-less capable skill)`
     );
   }
 
-  if (step.input && Array.isArray(step.input) && step.input.length === 0) {
-    throw new Error(`Step '${step.id}' input array cannot be empty`);
+  // Validate ${{ inputs.name }} references exist
+  if (step.input && workflowInputs) {
+    validateInputReferences(step.input, workflowInputs);
   }
 
   // ... existing output validation ...
 }
-```
 
-### 5.3 Skill Executor Prompt Update
+function validateInputReferences(
+  input: string | string[],
+  workflowInputs: WorkflowInput[]
+): void {
+  const inputs = Array.isArray(input) ? input : [input];
+  const inputNames = new Set(workflowInputs.map(i => i.name));
 
-**File:** `packages/provider/src/claude-agent-sdk/streaming/prompts/skill-executor.ts`
-
-```markdown
-## Execution Protocol
-
-When you receive a step execution request:
-
-### 1. Parse Step Context
-Extract from the prompt:
-- `skill`: The primary skill to invoke
-- `mission`: Natural language description of what to accomplish
-- `input`: Input file path(s) to read (MAY BE ABSENT for input-less steps)
-- `output`: Output file path to write
-- `validate`: Validation criteria (if any)
-
-### 2. Read Input Files (if provided)
-**IF** input paths are provided in the step:
-  - Use the Read tool to load the input file(s) specified in the step
-  - Pass the content to the skill
-
-**ELSE** (input-less step):
-  - Proceed directly to skill invocation
-  - The skill will generate its own data (e.g., by fetching from web)
-
-### 3. Invoke the Skill
-Use the Skill tool to invoke the specified skill.
-Pass the mission and any input content as context.
-
-### 4. Write Output
-Write the skill's output to the specified output path.
-
-### 5. Return for Validation
-Signal completion for validation hook.
-```
-
-### 5.4 Workflow Executor Update
-
-**File:** `plugins/looplia-core/skills/workflow-executor/SKILL.md`
-
-Update Phase 1 (Sandbox Setup) to handle workflows without `--file`:
-
-```markdown
-## Phase 1: Sandbox Setup
-
-**When `--file` is provided:**
-1. Read content file
-2. Generate sandbox ID: `{content-slug}-{YYYY-MM-DD}-{random4chars}`
-3. Create sandbox directory
-4. Copy content to `${{ sandbox }}/inputs/content.md`
-
-**When `--file` is NOT provided (input-less workflow):**
-1. Verify workflow can run without input (first step must be input-less capable)
-2. Generate sandbox ID: `{workflow-name}-{YYYY-MM-DD}-{random4chars}`
-3. Create sandbox directory
-4. Create empty inputs directory (steps will generate their own data)
-```
-
-Update Phase 6 (Task Tool Invocation) for input-less steps:
-
-```markdown
-## Phase 6: Execute Steps
-
-For each step in execution order:
-
-**Standard step (has input field):**
-```json
-{
-  "subagent_type": "skill-executor",
-  "description": "Execute step: {step-id}",
-  "prompt": "Execute skill '{skill}' for step '{step-id}'.\n\nMission: {mission}\n\nInput: {input}\nOutput: {output}\nValidation: {validate}"
+  for (const inp of inputs) {
+    const match = inp.match(/\$\{\{\s*inputs\.(\w+)\s*\}\}/);
+    if (match && !inputNames.has(match[1])) {
+      throw new Error(`Unknown input reference: $\{{ inputs.${match[1]} }}`);
+    }
+  }
 }
-```
-
-**Input-less step (no input field):**
-```json
-{
-  "subagent_type": "skill-executor",
-  "description": "Execute step: {step-id}",
-  "prompt": "Execute skill '{skill}' for step '{step-id}'.\n\nMission: {mission}\n\nInput: (none - input-less step, skill will generate its own data)\nOutput: {output}\nValidation: {validate}"
-}
-```
 ```
 
 ---
 
-## 6. Build Pipeline Updates
+## 10. Build Pipeline Updates
 
-### 6.1 Plugin Registry Scanner
+### 10.1 Plugin Registry Scanner
 
 **File:** `plugins/looplia-core/skills/plugin-registry-scanner/scripts/scan-plugins.ts`
 
-Add capability patterns for web-related skills:
-
+Add web capability patterns:
 ```typescript
 export const CAPABILITY_PATTERNS: [string, string][] = [
-  // Existing patterns...
+  // Existing...
   ["analy", "content analysis"],
   ["review", "content analysis"],
-  ["summar", "summarization"],
-  ["document", "structured output"],
-  ["generat", "content generation"],
 
-  // NEW: Web-related patterns
+  // NEW: Web patterns
   ["web", "web content fetching"],
   ["fetch", "web content fetching"],
   ["search", "web search"],
   ["url", "URL retrieval"],
   ["news", "news retrieval"],
-  ["http", "web content fetching"],
-  ["online", "web search"],
 ];
 ```
 
-### 6.2 Skill Capability Matcher
+### 10.2 Skill Capability Matcher
 
 **File:** `plugins/looplia-core/skills/skill-capability-matcher/SKILL.md`
 
-Add web task recognition:
-
+Add multi-input detection:
 ```markdown
-## Step 1: Parse Requirements
+## Recognizing Multi-Input Tasks
 
-**Input Types (updated):**
-- video transcript
-- audio transcript
-- article/blog post
-- documentation
-- raw text
-- structured data (JSON/YAML)
-- **web URL** (NEW)
-- **search query** (NEW)
-- **none (input-less)** (NEW)
+When analyzing requirements, detect:
+- "compare X and Y" → 2 inputs
+- "merge A, B, and C" → 3 inputs
+- "X with Y" → 2 inputs
 
-### Recognizing Web Tasks
-
-Tasks requiring web access:
-- "fetch from [URL]", "read [website]", "get content from [site]"
-- "search for", "find online", "look up"
-- "check news", "read hacker news", "latest from [source]"
-- Any task mentioning external websites or real-time data
-
-For these tasks:
-- Recommend `web-content-fetcher` skill
-- Mark step as input-less: `inputless: true`
-- Set `dataFlow.{stepId}.needs: []` (no dependencies on prior file inputs)
-```
-
-Update output schema:
-
+Output includes:
 ```json
 {
-  "requirements": {
-    "inputType": "none (input-less)",
-    "goals": ["fetch news", "generate report"],
-    "outputFormat": "structured JSON"
-  },
-  "recommendations": [
+  "suggestedInputs": [
     {
-      "skill": "web-content-fetcher",
-      "suggestedStepId": "fetch-content",
-      "matchScore": 0.95,
-      "capabilities": ["web content fetching", "URL retrieval"],
-      "mission": "Fetch the top news from Hacker News. Extract headline, URL, and summary.",
-      "rationale": "Required for accessing external web content",
-      "inputless": true
-    },
-    {
-      "skill": "content-documenter",
-      "suggestedStepId": "generate-report",
-      "matchScore": 0.88,
-      "capabilities": ["structured output"],
-      "mission": "Create a formatted report from the fetched content.",
-      "rationale": "Transforms raw data into user-friendly format",
-      "inputless": false
+      "name": "video1",
+      "required": true,
+      "description": "First video"
     }
   ],
-  "dataFlow": {
-    "fetch-content": {
-      "needs": [],
-      "provides": "news.json",
-      "inputless": true
-    },
-    "generate-report": {
-      "needs": ["fetch-content"],
-      "provides": "report.json",
-      "inputless": false
-    }
-  }
+  "inputless": false
 }
 ```
+```
 
-### 6.3 Workflow Schema Composer
+### 10.3 Workflow Schema Composer
 
 **File:** `plugins/looplia-core/skills/workflow-schema-composer/SKILL.md`
 
-Update Step 2 (Design Steps):
-
+Add inputs: generation:
 ```markdown
-## Step 2: Design Steps
+## Generate Inputs Declaration
 
-For each recommendation from skill-capability-matcher:
-
-**Standard step (inputless: false):**
+If matcher suggests inputs:
 ```yaml
-- id: {suggestedStepId}
-  skill: {skill-name}
-  mission: |
-    {mission description}
-  input: {input path or step reference}
-  output: ${{ sandbox }}/outputs/{step-id}.json
-  validate:
-    required_fields: [{fields}]
+inputs:
+  - name: {name}
+    required: {required}
+    description: {description}
 ```
 
-**Input-less step (inputless: true):**
+## Reference Inputs in Steps
+
 ```yaml
-- id: {suggestedStepId}
-  skill: {skill-name}
-  mission: |
-    {mission description}
-  # NO input field for input-less steps
-  output: ${{ sandbox }}/outputs/{step-id}.json
-  validate:
-    required_fields: [{fields}]
-```
-
-### CRITICAL: Input-less step rules
-
-1. **OMIT** the `input` field entirely (do not set to null or empty string)
-2. Input-less steps can be the **first step** in a workflow
-3. Subsequent steps can **depend on** input-less step outputs via `${{ steps.{id}.output }}`
-4. A workflow can have **multiple** input-less steps if needed
-```
-
-### 6.4 Schema Documentation Update
-
-**File:** `plugins/looplia-core/skills/workflow-schema-composer/SCHEMA.md`
-
-Update Step Fields table:
-
-```markdown
-## Step Fields Reference (v0.6.3)
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `id` | string | **Yes** | Unique step identifier (kebab-case) |
-| `skill` | string | **Yes** | Skill to execute |
-| `mission` | string | **Yes** | Natural language task description |
-| `input` | string/array | **Conditional** | Input file path(s). Required unless skill is input-less capable |
-| `output` | string | **Yes** | Output file path |
-| `needs` | string[] | No | Step dependencies (by step ID) |
-| `model` | string | No | Model override (haiku/sonnet/opus) |
-| `validate` | object | No | Validation criteria |
-| `final` | boolean | No | Mark as final output step |
-
-## Input-Less Steps (v0.6.3)
-
-Some skills can generate their own data without external input:
-
-**Currently supported:**
-- `web-content-fetcher` - Fetches content from web URLs or search queries
-
-**How to define:**
-```yaml
-# Input-less step - omit the input field entirely
-- id: fetch-data
-  skill: web-content-fetcher
-  mission: Search for latest AI news
-  output: ${{ sandbox }}/outputs/news.json
-  validate:
-    required_fields: [contentId, source, content]
-```
-
-**Downstream steps can reference input-less step outputs:**
-```yaml
-- id: analyze-data
-  skill: media-reviewer
-  needs: [fetch-data]
-  input: ${{ steps.fetch-data.output }}  # Uses output from input-less step
-  output: ${{ sandbox }}/outputs/analysis.json
+steps:
+  - id: step-id
+    input: ${{ inputs.{name} }}
 ```
 ```
 
 ---
 
-## 7. Implementation Steps
+## 11. Implementation Steps
 
-### 7.1 Implementation Order
+### 11.1 Implementation Order
 
 | Phase | Components | Dependencies |
 |-------|------------|--------------|
-| 1 | Create `web-content-fetcher` skill | None |
-| 2 | Update workflow type definition | None |
-| 3 | Update workflow parser validation | Phase 2 |
-| 4 | Update skill-executor prompt | Phase 3 |
-| 5 | Update workflow-executor skill | Phase 4 |
-| 6 | Update registry scanner capabilities | Phase 1 |
-| 7 | Update skill-capability-matcher | Phase 6 |
-| 8 | Update workflow-schema-composer | Phase 7 |
-| 9 | Update schema documentation | Phase 8 |
-| 10 | Add tests | All phases |
+| 1 | Core types (WorkflowInput, update WorkflowStep) | None |
+| 2 | Workflow parser (parse inputs:, validate) | Phase 1 |
+| 3 | CLI (--input parsing, sandbox creation) | Phase 2 |
+| 4 | Skill executor (variable resolution) | Phase 3 |
+| 5 | Workflow executor skill updates | Phase 4 |
+| 6 | Web-content-fetcher skill | None |
+| 7 | Build pipeline updates | Phase 6 |
+| 8 | Tests and documentation | All |
 
-### 7.2 Phase 1: Create Web-Content-Fetcher Skill
+### 11.2 Phase Details
 
-**Create:** `plugins/looplia-core/skills/web-content-fetcher/SKILL.md`
+**Phase 1: Core Types**
+- Add `WorkflowInput` type
+- Add `inputs?` to `WorkflowDefinition`
+- Make `input` optional in `WorkflowStep`
 
-Full content as specified in [Section 4](#4-web-content-fetcher-skill).
+**Phase 2: Parser**
+- Parse `inputs:` from YAML frontmatter
+- Validate input names are unique
+- Validate `${{ inputs.name }}` references
+- Allow missing `input` for input-less skills
 
-### 7.3 Phase 2: Update Type Definition
+**Phase 3: CLI**
+- Parse `--input name=value` flags
+- Detect JSON vs file path
+- Copy/write inputs to sandbox
+- Validate required inputs
 
-**Modify:** `packages/core/src/domain/workflow.ts`
+**Phase 4: Variable Resolution**
+- Update skill-executor prompt
+- Document `${{ inputs.name }}` pattern
 
-Change `input` from required to optional:
-```typescript
-input?: string | string[] | null;
-```
+**Phase 5: Workflow Executor**
+- Update sandbox setup for multiple inputs
+- Update step invocation for input-less
 
-### 7.4 Phase 3: Update Parser Validation
+**Phase 6: Web Skill**
+- Create `web-content-fetcher/SKILL.md`
 
-**Modify:** `packages/core/src/domain/workflow-parser.ts`
-
-Add:
-1. `INPUTLESS_CAPABLE_SKILLS` constant
-2. Conditional input validation in `validateStep()`
-
-### 7.5 Phase 4: Update Skill Executor Prompt
-
-**Modify:** `packages/provider/src/claude-agent-sdk/streaming/prompts/skill-executor.ts`
-
-Add conditional input handling as specified in [Section 5.3](#53-skill-executor-prompt-update).
-
-### 7.6 Phase 5: Update Workflow Executor
-
-**Modify:** `plugins/looplia-core/skills/workflow-executor/SKILL.md`
-
-1. Update Phase 1 for sandbox setup without `--file`
-2. Update Phase 6 for input-less step invocation
-
-### 7.7 Phase 6: Update Registry Scanner
-
-**Modify:** `plugins/looplia-core/skills/plugin-registry-scanner/scripts/scan-plugins.ts`
-
-Add web-related capability patterns.
-
-### 7.8 Phase 7: Update Skill Capability Matcher
-
-**Modify:** `plugins/looplia-core/skills/skill-capability-matcher/SKILL.md`
-
-1. Add web task recognition
-2. Add `inputless` field to output schema
-3. Update input types list
-
-### 7.9 Phase 8: Update Workflow Schema Composer
-
-**Modify:** `plugins/looplia-core/skills/workflow-schema-composer/SKILL.md`
-
-1. Add input-less step generation logic
-2. Update Step 2 documentation
-
-### 7.10 Phase 9: Update Schema Documentation
-
-**Modify:** `plugins/looplia-core/skills/workflow-schema-composer/SCHEMA.md`
-
-1. Update Step Fields table
-2. Add Input-Less Steps section
-
-### 7.11 Phase 10: Add Tests
-
-**Modify:** `packages/core/test/domain/workflow-parser.test.ts`
-
-```typescript
-describe('input-less workflow support (v0.6.3)', () => {
-  it('should allow steps without input for input-less capable skills', () => {
-    const valid = `---
-name: web-workflow
-description: Fetch web content
-steps:
-  - id: fetch-news
-    skill: web-content-fetcher
-    mission: Fetch the top story from Hacker News
-    output: \${{ sandbox }}/outputs/news.json
----`;
-
-    const result = parseWorkflow(valid);
-    expect(result.definition.steps[0].input).toBeUndefined();
-  });
-
-  it('should still require input for non-input-less skills', () => {
-    const invalid = `---
-name: test
-description: Test
-steps:
-  - id: analyze
-    skill: media-reviewer
-    mission: Analyze content
-    output: output.json
----`;
-
-    expect(() => parseWorkflow(invalid)).toThrow("'input' field");
-  });
-
-  it('should allow mixed workflows with input-less and standard steps', () => {
-    const valid = `---
-name: mixed-workflow
-description: Fetch and analyze
-steps:
-  - id: fetch
-    skill: web-content-fetcher
-    mission: Fetch news
-    output: \${{ sandbox }}/outputs/news.json
-  - id: analyze
-    skill: media-reviewer
-    mission: Analyze the news
-    needs: [fetch]
-    input: \${{ steps.fetch.output }}
-    output: \${{ sandbox }}/outputs/analysis.json
----`;
-
-    const result = parseWorkflow(valid);
-    expect(result.definition.steps[0].input).toBeUndefined();
-    expect(result.definition.steps[1].input).toBe('${{ steps.fetch.output }}');
-  });
-});
-```
+**Phase 7: Build Pipeline**
+- Update registry scanner patterns
+- Update capability matcher
+- Update schema composer
 
 ---
 
-## 8. File Changes Summary
+## 12. File Changes Summary
 
-### 8.1 New Files
+### 12.1 New Files
 
 | File | Purpose |
 |------|---------|
 | `plugins/looplia-core/skills/web-content-fetcher/SKILL.md` | Web content fetching skill |
 
-### 8.2 Modified Files
+### 12.2 Modified Files
 
-| File | Change |
-|------|--------|
-| `packages/core/src/domain/workflow.ts` | Make `input` field optional |
-| `packages/core/src/domain/workflow-parser.ts` | Add input-less skill validation |
-| `packages/core/test/domain/workflow-parser.test.ts` | Add input-less workflow tests |
-| `packages/provider/src/claude-agent-sdk/streaming/prompts/skill-executor.ts` | Handle steps without input |
-| `plugins/looplia-core/skills/workflow-executor/SKILL.md` | Handle input-less workflows |
-| `plugins/looplia-core/skills/plugin-registry-scanner/scripts/scan-plugins.ts` | Add web capability patterns |
-| `plugins/looplia-core/skills/skill-capability-matcher/SKILL.md` | Recognize web tasks |
-| `plugins/looplia-core/skills/workflow-schema-composer/SKILL.md` | Generate input-less steps |
-| `plugins/looplia-core/skills/workflow-schema-composer/SCHEMA.md` | Document input-less steps |
-
-### 8.3 Summary Table
-
-| Component | File | Action |
-|-----------|------|--------|
-| New Skill | `plugins/looplia-core/skills/web-content-fetcher/SKILL.md` | **Create** |
-| Type Definition | `packages/core/src/domain/workflow.ts` | Modify |
-| Parser | `packages/core/src/domain/workflow-parser.ts` | Modify |
-| Parser Tests | `packages/core/test/domain/workflow-parser.test.ts` | Modify |
-| Skill Executor | `packages/provider/.../skill-executor.ts` | Modify |
-| Workflow Executor | `plugins/looplia-core/skills/workflow-executor/SKILL.md` | Modify |
-| Registry Scanner | `plugins/looplia-core/.../scan-plugins.ts` | Modify |
-| Capability Matcher | `plugins/looplia-core/skills/skill-capability-matcher/SKILL.md` | Modify |
-| Schema Composer | `plugins/looplia-core/skills/workflow-schema-composer/SKILL.md` | Modify |
-| Schema Docs | `plugins/looplia-core/skills/workflow-schema-composer/SCHEMA.md` | Modify |
+| File | Changes |
+|------|---------|
+| `packages/core/src/domain/workflow.ts` | Add WorkflowInput, update types |
+| `packages/core/src/domain/workflow-parser.ts` | Parse inputs:, validate references |
+| `apps/cli/src/commands/run.ts` | Parse --input flags, multi-input sandbox |
+| `packages/provider/.../skill-executor.ts` | Document ${{ inputs }} resolution |
+| `plugins/looplia-core/skills/workflow-executor/SKILL.md` | Multi-input sandbox setup |
+| `plugins/looplia-core/skills/plugin-registry-scanner/scripts/scan-plugins.ts` | Web patterns |
+| `plugins/looplia-core/skills/skill-capability-matcher/SKILL.md` | Multi-input detection |
+| `plugins/looplia-core/skills/workflow-schema-composer/SKILL.md` | Generate inputs: |
+| `plugins/looplia-core/skills/workflow-schema-composer/SCHEMA.md` | Document inputs: |
+| `packages/core/test/domain/workflow-parser.test.ts` | Multi-input tests |
 
 ---
 
 ## Success Criteria
 
-1. **New skill works:** `web-content-fetcher` can fetch Hacker News content
-2. **Parser accepts input-less:** Workflows without `input` field for valid skills pass validation
-3. **Parser rejects invalid:** Workflows without `input` field for non-input-less skills fail validation
-4. **Build generates correctly:** `/build "read hacker news"` generates input-less workflow
-5. **Execution works:** `looplia run hn-news-reporter` works without `--file` flag
-6. **Mixed workflows work:** Workflows with both input-less and standard steps execute correctly
-7. **All tests pass:** Unit and integration tests pass
+1. **Input-less works:** `looplia run hn-reporter` fetches HN without --file
+2. **Named inputs work:** `--input video1=v1.md --input video2=v2.md`
+3. **JSON inputs work:** `--input config='{"key": "value"}'`
+4. **Legacy works:** `--file content.md` for old workflows
+5. **Validation works:** Required inputs enforced, unknown inputs warned
+6. **Help shows inputs:** `looplia run workflow --help` lists expected inputs
+7. **Build generates correctly:** `/build "compare two videos"` creates inputs: declaration
+8. **All tests pass**
 
 ---
 
-## Example: Expected Build Output
+## Example: Complete Workflow
 
-After v0.6.3 implementation:
-
+### Build Command
 ```bash
-looplia build "read hacker news and report the first news to user"
+looplia build "compare two videos and create a unified analysis"
 ```
 
-Generates:
-
+### Generated Workflow
 ```yaml
 ---
-name: hn-news-reporter
+name: compare-videos
 version: 1.0.0
-description: Fetch the top Hacker News story and generate a user report
+description: Compare two videos and create a unified analysis
+
+inputs:
+  - name: video1
+    required: true
+    description: First video to compare
+  - name: video2
+    required: true
+    description: Second video to compare
 
 steps:
-  - id: fetch-news
-    skill: web-content-fetcher
-    mission: |
-      Fetch the top story from Hacker News homepage.
-      Extract title, URL, score, and comment count.
-      Format as structured JSON.
-    # No input field - input-less step
-    output: ${{ sandbox }}/outputs/news.json
-    model: haiku
-    validate:
-      required_fields: [contentId, source, content, metadata]
-
-  - id: analyze-story
+  - id: analyze-first
     skill: media-reviewer
-    mission: |
-      Analyze the fetched Hacker News story.
-      Extract key themes and relevance indicators.
-      Provide context on why this story is trending.
-    needs: [fetch-news]
-    input: ${{ steps.fetch-news.output }}
-    output: ${{ sandbox }}/outputs/analysis.json
+    mission: Deep analysis of the first video
+    input: ${{ inputs.video1 }}
+    output: ${{ sandbox }}/outputs/analysis1.json
+    model: haiku
     validate:
       required_fields: [contentId, headline, keyThemes]
 
-  - id: generate-report
+  - id: analyze-second
+    skill: media-reviewer
+    mission: Deep analysis of the second video
+    input: ${{ inputs.video2 }}
+    output: ${{ sandbox }}/outputs/analysis2.json
+    model: haiku
+    validate:
+      required_fields: [contentId, headline, keyThemes]
+
+  - id: compare
     skill: content-documenter
     mission: |
-      Create a user-friendly report of the Hacker News story.
-      Include title, link, score, key insights, and importance.
-      Format as clean, readable summary.
-    needs: [fetch-news, analyze-story]
+      Compare the two video analyses.
+      Identify similarities, differences, and key insights.
+      Create a unified summary.
+    needs: [analyze-first, analyze-second]
     input:
-      - ${{ steps.fetch-news.output }}
-      - ${{ steps.analyze-story.output }}
-    output: ${{ sandbox }}/outputs/report.json
+      - ${{ steps.analyze-first.output }}
+      - ${{ steps.analyze-second.output }}
+    output: ${{ sandbox }}/outputs/comparison.json
     final: true
     validate:
-      required_fields: [title, url, summary, insights]
+      required_fields: [similarities, differences, insights]
 ---
 
-# Hacker News Reporter Workflow
+# Compare Videos Workflow
 
-Fetch the top Hacker News story and generate a comprehensive report.
+Compare two videos and generate a unified analysis.
 
 ## Usage
 
 ```bash
-looplia run hn-news-reporter
+looplia run compare-videos --input video1=first.md --input video2=second.md
 ```
 
-No `--file` required - the workflow fetches content directly from the web.
+## Inputs
+
+- **video1** (required): First video to compare
+- **video2** (required): Second video to compare
 ```
 
 ---
@@ -926,4 +905,4 @@ No `--file` required - the workflow fetches content directly from the web.
 
 ---
 
-*This document serves as the single source of truth for Looplia-Core v0.6.3 web-capable skills and input-less workflows.*
+*This document serves as the single source of truth for Looplia-Core v0.6.3 flexible input system and web-capable skills.*
