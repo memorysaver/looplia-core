@@ -61,14 +61,14 @@ describe("CLI E2E Tests", () => {
       const result = await execCLI(["--version"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia 0.6.2");
+      expect(result.stdout).toContain("looplia 0.6.3");
     });
 
     it("should show version with -v flag", async () => {
       const result = await execCLI(["-v"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia 0.6.2");
+      expect(result.stdout).toContain("looplia 0.6.3");
     });
 
     it("should error on unknown command", async () => {
