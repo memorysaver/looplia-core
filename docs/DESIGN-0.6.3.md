@@ -1,6 +1,6 @@
 # Looplia-Core Architecture Design v0.6.3
 
-> **FEATURE RELEASE:** Web-Capable Skills and Flexible Input System
+> **FEATURE RELEASE:** Flexible Input System and Input-Less Workflows
 >
 > **Version:** 0.6.3
 > **Date:** 2025-12-24
@@ -16,7 +16,7 @@
 4. [Workflow Inputs Declaration](#4-workflow-inputs-declaration)
 5. [CLI Input System](#5-cli-input-system)
 6. [Variable Resolution](#6-variable-resolution)
-7. [Web-Content-Fetcher Skill](#7-web-content-fetcher-skill)
+7. [Search Skill](#7-search-skill)
 8. [Workspace Structure](#8-workspace-structure)
 9. [Type System Changes](#9-type-system-changes)
 10. [Build Pipeline Updates](#10-build-pipeline-updates)
@@ -32,7 +32,7 @@
 | Version | Focus | Key Achievement |
 |---------|-------|-----------------|
 | v0.6.2 | Schema-in-Skill Architecture | Skills define JSON schemas in SKILL.md |
-| **v0.6.3** | **Web-Capable Skills + Flexible Input System** | **Skills can fetch web content; workflows support 0 to N named inputs** |
+| **v0.6.3** | **Flexible Input System** | **Workflows support 0 to N named inputs; skills can operate autonomously** |
 
 ### What Changes in v0.6.3
 
@@ -41,8 +41,8 @@ v0.6.3 introduces a flexible input system:
 1. **FLEXIBLE INPUTS:** Workflows support 0, 1, or N named inputs
 2. **NEW SYNTAX:** `inputs:` declaration at workflow level
 3. **NEW CLI:** `--input name=value` for named inputs
-4. **NEW SKILL:** `web-content-fetcher` with WebSearch/WebFetch tools
-5. **INPUT-LESS:** Steps can omit input field for data-generating skills
+4. **INPUT-LESS WORKFLOWS:** Skills can operate autonomously (local search, web search, generation)
+5. **SEARCH SKILL:** Generic search with provider abstraction (local, web, future: jina.ai, firecrawl, exa.ai)
 6. **BACKWARD COMPAT:** `--file` continues to work for legacy workflows
 
 ### Design Principle
@@ -51,7 +51,13 @@ v0.6.3 introduces a flexible input system:
 >
 > Workflows should accept exactly the inputs they need - zero, one, or many.
 > Named inputs are self-documenting and enable complex multi-source workflows.
-> Skills that generate data (web fetch, triggers) need no input at all.
+>
+> **Input-less ≠ Web-only**
+>
+> Input-less workflows can operate via:
+> - **Local execution:** Search files, scan codebase, analyze directories
+> - **Web execution:** Search online, fetch URLs, retrieve news
+> - **Generation:** Create content from scratch without external data
 
 ### The Shift
 
@@ -94,7 +100,7 @@ This fails for common use cases:
 |-----|-------------|----------|
 | No zero inputs | Can't run without `--file` | Input-less workflows |
 | No multi-inputs | Can't provide 2+ files | Named inputs system |
-| No web skills | No skill has WebSearch/WebFetch | web-content-fetcher skill |
+| No autonomous skills | No skill can operate without input | Generic search skill (local + web providers) |
 
 ### 2.3 User Experience Issues
 
@@ -200,15 +206,21 @@ MODE 3: Named Inputs (1 to N inputs)
 │                      SKILL CAPABILITY MATRIX (v0.6.3)                        │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-Skill                   │ Input-Less? │ Tools                 │ Use Case
-────────────────────────┼─────────────┼───────────────────────┼─────────────────
-web-content-fetcher     │ YES         │ WebSearch, WebFetch   │ Fetch from web
-media-reviewer          │ NO          │ Read, Glob, Grep      │ Analyze content
-idea-synthesis          │ NO          │ Read, Skill           │ Generate ideas
-content-documenter      │ NO          │ Read, Write           │ Document content
-writing-kit-assembler   │ NO          │ Read, Write           │ Assemble kit
-workflow-validator      │ NO          │ Bash                  │ Validate outputs
+Skill                   │ Input-Less? │ Tools                        │ Use Case
+────────────────────────┼─────────────┼──────────────────────────────┼─────────────────
+search                  │ YES         │ Glob, Grep, Read, Bash,      │ Local + web search
+                        │             │ WebSearch, WebFetch          │ (provider-agnostic)
+media-reviewer          │ NO          │ Read, Glob, Grep             │ Analyze content
+idea-synthesis          │ NO          │ Read, Skill                  │ Generate ideas
+content-documenter      │ NO          │ Read, Write                  │ Document content
+writing-kit-assembler   │ NO          │ Read, Write                  │ Assemble kit
+workflow-validator      │ NO          │ Bash                         │ Validate outputs
 ```
+
+**Search Skill Modes:**
+- **Local:** Glob, Grep, Read, Bash (search files, codebase, directories)
+- **Web:** WebSearch, WebFetch (search online, fetch URLs)
+- **Future providers:** jina.ai, firecrawl, exa.ai (pluggable backends)
 
 ---
 
@@ -263,17 +275,31 @@ export type WorkflowInput = {
 
 ### 4.4 Examples
 
-**Zero Inputs (input-less):**
+**Zero Inputs (input-less) - Web Search:**
 ```yaml
 ---
 name: hn-news-reporter
 # No inputs: declaration
 steps:
   - id: fetch-news
-    skill: web-content-fetcher
-    mission: Fetch top HN story
+    skill: search
+    mission: Search Hacker News for top story and compile results
     # No input field - input-less step
     output: ${{ sandbox }}/outputs/news.json
+---
+```
+
+**Zero Inputs (input-less) - Local Search:**
+```yaml
+---
+name: todo-finder
+# No inputs: declaration
+steps:
+  - id: find-todos
+    skill: search
+    mission: Search local codebase for TODO comments and compile a report
+    # No input field - input-less step (local mode)
+    output: ${{ sandbox }}/outputs/todos.json
 ---
 ```
 
@@ -458,72 +484,121 @@ steps:
 
 ---
 
-## 7. Web-Content-Fetcher Skill
+## 7. Search Skill
 
 ### 7.1 Skill Overview
 
-**Domain:** Data Acquisition - Fetch content from external sources
+**Domain:** Data Acquisition - Search and compile information from various sources
 
-**Location:** `plugins/looplia-core/skills/web-content-fetcher/`
+**Location:** `plugins/looplia-core/skills/search/`
 
-**Purpose:** Fetch web content without requiring input files (input-less capable)
+**Purpose:** Generic search with provider abstraction (input-less capable)
 
-### 7.2 Skill Definition
+### 7.2 Design Philosophy
+
+**Input-less ≠ Web-only**
+
+The search skill abstracts the data source:
+
+| Mode | Tools | Use Case |
+|------|-------|----------|
+| **Local** | Glob, Grep, Read, Bash | Search files, codebase, directories |
+| **Web** | WebSearch, WebFetch | Search online, fetch URLs |
+| **Future** | Provider API (jina.ai, firecrawl, exa.ai) | Pluggable backends |
+
+The skill auto-detects mode from the mission, or it can be explicitly specified.
+
+### 7.3 Skill Definition
 
 ```yaml
 ---
-name: web-content-fetcher
+name: search
 description: |
-  Looplia core skill for fetching content from the web.
-  Use when the user wants to search online, fetch web pages, get news,
-  or access any external web content.
+  Generic search skill for finding and compiling information from various sources.
+  Use when a workflow step needs to search for content without user-provided input files.
+
+  Supports multiple search modes:
+  - local: Search local filesystem using Glob, Grep, Read
+  - web: Search web content (future: jina.ai, firecrawl, exa.ai integration)
 
   Trigger phrases:
-  - "search the web for", "search online"
-  - "fetch from URL", "get content from"
-  - "read hacker news", "get news from"
-  - "access [website]", "look up"
+  - "search for", "find", "look up"
+  - "search the web", "search online", "fetch from URL"
+  - "search files", "scan codebase", "find in project"
+  - "get news from", "read hacker news"
 
   This skill can operate WITHOUT input files (input-less capable).
-tools: WebSearch, WebFetch, Write
-model: claude-haiku-4-5-20251001
+tools: Glob, Grep, Read, Bash, WebSearch, WebFetch
+model: claude-sonnet-4-20250514
 ---
 ```
 
-### 7.3 Process
+### 7.4 Process
 
-1. **Parse Mission** - Extract target (URL or search query)
-2. **Determine Strategy**:
-   - Specific URL → WebFetch
-   - Search query → WebSearch
-   - Known source (HN, Reddit) → Appropriate endpoint
-3. **Structure Output** - Create JSON with contentId, source, content, metadata
-4. **Write Output** - Write to specified output path
+1. **Parse Mission** - Extract search target and mode
+2. **Determine Mode**:
+   - File patterns, codebase, directory mentions → **Local**
+   - URLs, websites, online, news → **Web**
+   - Explicit mode in mission → Use specified
+3. **Execute Search**:
+   - Local: Glob → Grep → Read → Compile
+   - Web: WebSearch → WebFetch → Parse → Compile
+4. **Structure Output** - Create JSON with source attribution and results
+5. **Write Output** - Write to specified output path
 
-### 7.4 Output Schema
+### 7.5 Output Schema
 
 ```json
 {
-  "contentId": "hn-2025-12-24-abc123",
-  "source": {
-    "type": "hacker-news",
-    "url": "https://news.ycombinator.com",
-    "query": null
-  },
-  "fetchedAt": "2025-12-24T10:30:00Z",
-  "content": {
-    "title": "Story title",
-    "url": "https://example.com/story",
-    "text": "Full text if available",
-    "summary": "Brief summary"
-  },
-  "metadata": {
-    "score": 1234,
-    "comments": 456,
-    "author": "username"
-  }
+  "query": "original search query/mission",
+  "mode": "local | web",
+  "results": [
+    {
+      "source": "path/to/file.ts | https://example.com/page",
+      "type": "file | url",
+      "title": "Optional title or filename",
+      "content": "Extracted content or snippet",
+      "relevance": 0.95,
+      "metadata": {
+        "lineNumber": 42,
+        "matchContext": "surrounding context",
+        "date": "2025-12-24"
+      }
+    }
+  ],
+  "summary": "Brief summary of findings",
+  "totalMatches": 15,
+  "compiledAt": "2025-12-24T10:30:00Z"
 }
 ```
+
+### 7.6 Future Provider Integration
+
+The search skill is designed for pluggable backends:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    SEARCH SKILL ARCHITECTURE                      │
+└─────────────────────────────────────────────────────────────────┘
+
+                    ┌───────────────────┐
+                    │   search skill    │
+                    │  (mission input)  │
+                    └─────────┬─────────┘
+                              │
+              ┌───────────────┼───────────────┐
+              ▼               ▼               ▼
+    ┌─────────────────┐ ┌───────────┐ ┌─────────────────┐
+    │  Local Provider │ │ Web (Now) │ │ Future Providers│
+    │  Glob, Grep,    │ │ WebSearch │ │ jina.ai         │
+    │  Read, Bash     │ │ WebFetch  │ │ firecrawl       │
+    └─────────────────┘ └───────────┘ │ exa.ai          │
+                                      └─────────────────┘
+```
+
+Provider selection can be:
+- **Auto-detected** from mission keywords
+- **Explicit** via mission directive: `[mode: local]` or `[provider: jina]`
 
 ---
 
@@ -611,7 +686,7 @@ export type WorkflowStep = {
 
 ```typescript
 // Skills that can operate without input
-const INPUTLESS_CAPABLE_SKILLS = ['web-content-fetcher'];
+const INPUTLESS_CAPABLE_SKILLS = ['search'];
 
 function validateStep(step: WorkflowStep, workflowInputs?: WorkflowInput[]): void {
   // ... existing id validation ...
@@ -660,19 +735,22 @@ function validateInputReferences(
 
 **File:** `plugins/looplia-core/skills/plugin-registry-scanner/scripts/scan-plugins.ts`
 
-Add web capability patterns:
+Add search capability patterns:
 ```typescript
 export const CAPABILITY_PATTERNS: [string, string][] = [
   // Existing...
   ["analy", "content analysis"],
   ["review", "content analysis"],
 
-  // NEW: Web patterns
-  ["web", "web content fetching"],
-  ["fetch", "web content fetching"],
-  ["search", "web search"],
-  ["url", "URL retrieval"],
-  ["news", "news retrieval"],
+  // NEW: Search patterns (local + web)
+  ["search", "search and compile"],
+  ["find", "search and compile"],
+  ["scan", "search and compile"],
+  ["fetch", "content retrieval"],
+  ["web", "web search"],
+  ["news", "web search"],
+  ["codebase", "local search"],
+  ["files", "local search"],
 ];
 ```
 
@@ -789,7 +867,7 @@ steps:
 
 | File | Purpose |
 |------|---------|
-| `plugins/looplia-core/skills/web-content-fetcher/SKILL.md` | Web content fetching skill |
+| `plugins/looplia-core/skills/search/SKILL.md` | Generic search skill (local + web) |
 
 ### 12.2 Modified Files
 
@@ -810,14 +888,15 @@ steps:
 
 ## Success Criteria
 
-1. **Input-less works:** `looplia run hn-reporter` fetches HN without --file
+1. **Input-less works:** `looplia run hn-reporter` (web search) and `looplia run todo-finder` (local search) work without --file
 2. **Named inputs work:** `--input video1=v1.md --input video2=v2.md`
 3. **JSON inputs work:** `--input config='{"key": "value"}'`
 4. **Legacy works:** `--file content.md` for old workflows
 5. **Validation works:** Required inputs enforced, unknown inputs warned
 6. **Help shows inputs:** `looplia run workflow --help` lists expected inputs
 7. **Build generates correctly:** `/build "compare two videos"` creates inputs: declaration
-8. **All tests pass**
+8. **Search skill works:** Both local (Glob/Grep/Read) and web (WebSearch/WebFetch) modes
+9. **All tests pass**
 
 ---
 
@@ -905,4 +984,4 @@ looplia run compare-videos --input video1=first.md --input video2=second.md
 
 ---
 
-*This document serves as the single source of truth for Looplia-Core v0.6.3 flexible input system and web-capable skills.*
+*This document serves as the single source of truth for Looplia-Core v0.6.3 flexible input system and input-less workflows.*

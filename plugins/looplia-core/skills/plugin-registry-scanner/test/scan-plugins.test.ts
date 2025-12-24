@@ -245,11 +245,11 @@ description: Missing closing delimiter
       expect(result.summary.totalPlugins).toBe(result.plugins.length);
     });
 
-    it("should discover exactly 12 skills after frontmatter fixes", async () => {
+    it("should discover exactly 13 skills after adding search skill", async () => {
       const result = await scanPlugins("plugins");
 
-      // After fixing frontmatter, we should have all 12 skills
-      expect(result.summary.totalSkills).toBe(12);
+      // After adding search skill, we should have all 13 skills
+      expect(result.summary.totalSkills).toBe(13);
       expect(result.summary.totalPlugins).toBe(2);
     });
   });
