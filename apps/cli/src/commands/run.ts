@@ -721,16 +721,16 @@ export async function runRunCommand(args: string[]): Promise<void> {
   }
 
   try {
-    // 1. Validate environment
-    validateEnvironment(parsed.mock);
-
-    // 2. Ensure workspace
+    // 1. Ensure workspace (needed to check workflow definition)
     const workspace = ensureWorkspace(parsed.mock);
 
-    // 3. Resolve or create sandbox
+    // 2. Resolve or create sandbox (validates inputs before API key check)
     // v0.6.3: Check if workflow supports input-less execution
     const allowInputless = checkWorkflowInputless(workspace, parsed.workflowId);
     const sandboxId = resolveSandboxId(workspace, parsed, allowInputless);
+
+    // 3. Validate environment (after input validation for better error messages)
+    validateEnvironment(parsed.mock);
 
     // 4. Build /run prompt with sandbox ID
     const prompt = buildRunPrompt(parsed.workflowId, sandboxId);
