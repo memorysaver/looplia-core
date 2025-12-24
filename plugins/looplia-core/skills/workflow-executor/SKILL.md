@@ -8,10 +8,12 @@ description: |
 
   Architecture: One workflow step triggers one skill-executor subagent call, which then
   invokes multiple skills to accomplish the step's mission. Handles sandbox management,
-  per-step skill-executor orchestration, and validation state tracking per v0.6.2.
+  per-step skill-executor orchestration, and validation state tracking per v0.6.3.
+
+  v0.6.3: Named inputs (${{ inputs.name }}), input-less workflow support.
 ---
 
-# Workflow Executor Skill (v0.6.2)
+# Workflow Executor Skill (v0.6.3)
 
 Execute looplia workflows defined in `workflows/*.md` files using the skills-first architecture.
 
@@ -97,7 +99,7 @@ Each step gets a fresh, focused context window.
 
 ---
 
-## Step Field Validation
+## Step Field Validation (v0.6.3)
 
 Before executing a step, validate:
 
@@ -105,7 +107,25 @@ Before executing a step, validate:
 |-------|----------|------------------|
 | `skill` | **Yes** | "Step '{id}' missing required 'skill' field" |
 | `mission` | **Yes** | "Step '{id}' missing required 'mission' field" |
+| `input` | **Conditional** | Required unless skill is input-less capable (e.g., `search`) |
+| `output` | **Yes** | "Step '{id}' missing required 'output' field" |
 | `run` | **FORBIDDEN** | "Step '{id}' uses deprecated 'run:' syntax. Migrate to 'skill:' + 'mission:'" |
+
+### Input-less Capable Skills
+
+These skills can operate without an `input` field:
+- `search` - Executes search missions autonomously
+
+Example input-less step:
+```yaml
+- id: find-news
+  skill: search
+  mission: |
+    Search Hacker News for today's top 3 AI stories.
+    Extract title, URL, points, and brief summary.
+  output: ${{ sandbox }}/outputs/news.json
+  # No input field - search operates autonomously
+```
 
 ---
 
@@ -113,7 +133,28 @@ Before executing a step, validate:
 
 ### Phase 1: Sandbox Setup
 
-**New Sandbox** (when `--file` provided):
+**New Sandbox with Named Inputs** (v0.6.3 - when `--input` provided):
+
+1. Generate sandbox ID:
+   ```
+   {first-input-name}-{YYYY-MM-DD}-{random4chars}
+   Example: video-transcript-2025-12-18-xk7m
+   ```
+
+2. Create folder structure:
+   ```
+   sandbox/{sandbox-id}/
+   ├── inputs/
+   │   ├── video-transcript.md  # Named input files
+   │   └── user-notes.md
+   ├── outputs/             # Step outputs go here
+   ├── logs/                # Session logs
+   └── validation.json      # Validation state
+   ```
+
+3. Copy each input file to `inputs/{name}.md`
+
+**New Sandbox with Single File** (legacy - when `--file` provided):
 
 1. Generate sandbox ID:
    ```
@@ -121,16 +162,19 @@ Before executing a step, validate:
    Example: my-article-2025-12-18-xk7m
    ```
 
-2. Create folder structure:
+2. Create folder structure and copy to `inputs/content.md`
+
+**Input-less Sandbox** (v0.6.3 - no inputs required):
+
+For workflows using only input-less capable skills (e.g., `search`):
+
+1. Generate sandbox ID from workflow name:
    ```
-   sandbox/{sandbox-id}/
-   ├── inputs/content.md    # Copy content file here
-   ├── outputs/             # Step outputs go here
-   ├── logs/                # Session logs
-   └── validation.json      # Validation state
+   {workflow-slug}-{YYYY-MM-DD}-{random4chars}
+   Example: hn-reporter-2025-12-18-xk7m
    ```
 
-3. Copy content file to `inputs/content.md`
+2. Create folder structure with empty `inputs/` directory
 
 **Resume Sandbox** (when `--sandbox-id` provided):
 
@@ -306,16 +350,48 @@ When step with `final: true` passes validation:
 
 ---
 
-## Variable Substitution
+## Variable Substitution (v0.6.3)
 
 Resolve variables before passing to skill-executor:
 
-| Variable | Resolution |
-|----------|------------|
-| `${{ sandbox }}` | `sandbox/{sandbox-id}` |
-| `${{ steps.{id}.output }}` | Actual output path of step `{id}` |
+| Variable | Resolution | Example |
+|----------|------------|---------|
+| `${{ sandbox }}` | `sandbox/{sandbox-id}` | `sandbox/article-2025-12-18-xk7m` |
+| `${{ inputs.{name} }}` | `sandbox/{id}/inputs/{name}.md` | `sandbox/.../inputs/video1.md` |
+| `${{ steps.{id}.output }}` | Output path of step `{id}` | `sandbox/.../outputs/analysis.json` |
 
-Example:
+### Named Inputs (v0.6.3)
+
+Workflows can declare named inputs in their frontmatter:
+
+```yaml
+inputs:
+  - name: video-transcript
+    required: true
+    description: The video transcript to analyze
+  - name: user-notes
+    required: false
+    description: Optional user notes
+```
+
+Steps reference inputs via `${{ inputs.name }}`:
+
+```yaml
+steps:
+  - id: analyze
+    skill: media-reviewer
+    mission: Analyze the video content
+    input: ${{ inputs.video-transcript }}
+    output: ${{ sandbox }}/outputs/analysis.json
+```
+
+CLI provides inputs via `--input`:
+```bash
+looplia run writing-kit --input video-transcript=video.md --input user-notes=notes.md
+```
+
+### Step Output References
+
 ```yaml
 input: ${{ steps.analyze-content.output }}
 # Resolves to: sandbox/article-2025-12-18-xk7m/outputs/analysis.json

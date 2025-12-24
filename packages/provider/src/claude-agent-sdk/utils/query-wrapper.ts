@@ -169,7 +169,16 @@ export async function executeAgenticQuery<T>(
         // v0.6.0: Enable subagent & skill discovery from .claude/ directories
         settingSources: ["project"],
         // v0.6.0: Enable Task for subagent spawning, Write/Glob for file operations
-        allowedTools: ["Read", "Write", "Glob", "Task", "Skill"],
+        // v0.6.3: Added WebSearch/WebFetch for input-less search skill
+        allowedTools: [
+          "Read",
+          "Write",
+          "Glob",
+          "Task",
+          "Skill",
+          "WebSearch",
+          "WebFetch",
+        ],
         outputFormat: {
           type: "json_schema",
           schema: jsonSchema,

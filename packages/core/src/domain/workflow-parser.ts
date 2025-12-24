@@ -1,11 +1,12 @@
 /**
- * Workflow Parser (v0.6.1)
+ * Workflow Parser (v0.6.3)
  *
  * Parses workflow.md files with YAML frontmatter + markdown body.
+ * v0.6.3: Named inputs support with `inputs:` declaration
  * v0.6.1: Skills-first format with `skill:` + `mission:` fields.
  * v0.6.0: Steps-based format with `run: agents/{name}` (deprecated).
  *
- * @see docs/DESIGN-0.6.1.md
+ * @see docs/DESIGN-0.6.3.md
  */
 
 import { isValidRunFormat } from "./agent-utils";
@@ -16,6 +17,12 @@ import type {
   WorkflowDefinition,
   WorkflowStep,
 } from "./workflow";
+
+/**
+ * Skills that can operate without input files (input-less capable).
+ * These skills generate data autonomously (e.g., web search, local search).
+ */
+const INPUTLESS_CAPABLE_SKILLS = ["search"];
 
 // Top-level regex constants for performance
 const ARRAY_PATTERN = /^\[(.*)\]$/;
@@ -68,12 +75,22 @@ function parseYamlValue(value: string): unknown {
   return value;
 }
 
-/** State for YAML parser (v0.6.0 steps format) */
+/** Partial WorkflowInput during parsing */
+type PartialWorkflowInput = {
+  name?: string;
+  required?: boolean;
+  description?: string;
+  type?: "file" | "json";
+};
+
+/** State for YAML parser (v0.6.3 with inputs support) */
 type YamlParserState = {
   result: Record<string, unknown>;
   steps: WorkflowStep[];
+  inputs: PartialWorkflowInput[];
   currentKey: string;
   currentStep: Partial<WorkflowStep> | null;
+  currentInput: PartialWorkflowInput | null;
   currentValidate: Record<string, unknown> | null;
 };
 
@@ -88,8 +105,12 @@ function processYamlLine(state: YamlParserState, line: string): void {
 
   if (indent === 0) {
     processTopLevel(state, trimmed);
+  } else if (indent === 2 && state.currentKey === "inputs") {
+    processInputItem(state, trimmed);
   } else if (indent === 2 && state.currentKey === "steps") {
     processStepItem(state, trimmed);
+  } else if (indent === 4 && state.currentInput) {
+    processInputProperty(state, trimmed);
   } else if (indent === 4 && state.currentStep) {
     processStepProperty(state, trimmed);
   } else if (indent === 6 && state.currentValidate) {
@@ -105,15 +126,77 @@ function processTopLevel(state: YamlParserState, trimmed: string): void {
     state.currentStep = null;
   }
 
+  // Save current input before moving to new section
+  if (state.currentInput?.name) {
+    state.inputs.push(state.currentInput);
+    state.currentInput = null;
+  }
+
   const kv = parseKeyValue(trimmed);
   if (!kv) {
     return;
   }
   state.currentKey = kv.key;
-  if (kv.key !== "steps" && kv.value) {
+  if (kv.key !== "steps" && kv.key !== "inputs" && kv.value) {
     state.result[kv.key] = kv.value;
   }
   state.currentValidate = null;
+}
+
+/** Process input item start (indent 2, starts with - name:) */
+function processInputItem(state: YamlParserState, trimmed: string): void {
+  if (trimmed.startsWith("- ")) {
+    // Save previous input before starting new one
+    if (state.currentInput?.name) {
+      state.inputs.push(state.currentInput);
+    }
+    state.currentInput = {};
+
+    // Parse the first property on the same line (e.g., "- name: video-transcript")
+    const firstProp = trimmed.slice(2).trim();
+    const kv = parseKeyValue(firstProp);
+    if (kv) {
+      handleInputProperty(state.currentInput, kv.key, kv.value);
+    }
+  }
+}
+
+/** Handle input property assignment */
+function handleInputProperty(
+  input: PartialWorkflowInput,
+  key: string,
+  value: string
+): void {
+  switch (key) {
+    case "name":
+      input.name = value;
+      break;
+    case "required":
+      input.required = value === "true";
+      break;
+    case "description":
+      input.description = value;
+      break;
+    case "type":
+      if (value === "file" || value === "json") {
+        input.type = value;
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+/** Process input property (indent 4) */
+function processInputProperty(state: YamlParserState, trimmed: string): void {
+  if (!state.currentInput) {
+    return;
+  }
+  const kv = parseKeyValue(trimmed);
+  if (!kv) {
+    return;
+  }
+  handleInputProperty(state.currentInput, kv.key, kv.value);
 }
 
 /** Process step item start (indent 2, starts with - id:) */
@@ -242,13 +325,14 @@ export function parseFrontmatter(content: string): {
 }
 
 /**
- * Simple YAML parser for workflow frontmatter (v0.6.0)
+ * Simple YAML parser for workflow frontmatter (v0.6.3)
  *
- * Handles the v0.6.0 structure:
+ * Handles the v0.6.3 structure:
  * - name: string
  * - version: string
  * - description: string
- * - steps: array of step objects with id, run, input, output, needs, final, validate
+ * - inputs: array of input objects with name, required, description, type
+ * - steps: array of step objects with id, skill, mission, input, output, needs, final, validate
  *
  * Note: This is a simplified parser. For complex YAML, consider using a library.
  */
@@ -256,8 +340,10 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
   const state: YamlParserState = {
     result: {},
     steps: [],
+    inputs: [],
     currentKey: "",
     currentStep: null,
+    currentInput: null,
     currentValidate: null,
   };
 
@@ -265,9 +351,18 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
     processYamlLine(state, line);
   }
 
+  // Save final input if exists
+  if (state.currentInput?.name) {
+    state.inputs.push(state.currentInput);
+  }
+
   // Save final step if exists
   if (state.currentStep?.id) {
     state.steps.push(state.currentStep as WorkflowStep);
+  }
+
+  if (state.inputs.length > 0) {
+    state.result.inputs = state.inputs;
   }
 
   if (state.steps.length > 0) {
@@ -277,22 +372,44 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
   return state.result;
 }
 
-/**
- * Validate a single workflow step has all required fields and correct format.
- *
- * v0.6.1: Requires `skill` + `mission` (skills-first)
- * v0.6.0: Requires `run` in "agents/{name}" format (deprecated)
- *
- * @throws Error if step is invalid
- */
-function validateStep(step: WorkflowStep): void {
-  if (!step.id) {
-    throw new Error("Each step must have an 'id' field");
-  }
+/** Regex to match ${{ inputs.name }} variable references */
+const INPUT_REFERENCE_PATTERN = /\$\{\{\s*inputs\.(\w[\w-]*)\s*\}\}/g;
 
-  // v0.6.1: skill + mission (preferred)
-  // v0.6.0: run (deprecated but still supported)
-  const hasSkill = step.skill && step.mission;
+/**
+ * Validate that all ${{ inputs.name }} references in a step's input
+ * refer to declared workflow inputs.
+ *
+ * @param input - Step input (string or array of strings)
+ * @param workflowInputs - Declared workflow inputs
+ * @throws Error if unknown input reference found
+ */
+function validateInputReferences(
+  input: string | string[],
+  workflowInputs: PartialWorkflowInput[]
+): void {
+  const inputs = Array.isArray(input) ? input : [input];
+  const declaredNames = new Set(
+    workflowInputs.filter((i) => i.name).map((i) => i.name)
+  );
+
+  for (const inp of inputs) {
+    // Use matchAll to avoid assignment in loop condition
+    const matches = inp.matchAll(INPUT_REFERENCE_PATTERN);
+    for (const match of matches) {
+      const referencedName = match[1];
+      if (referencedName && !declaredNames.has(referencedName)) {
+        throw new Error(
+          `Unknown input reference: inputs.${referencedName}. ` +
+            `Declared inputs: ${[...declaredNames].join(", ") || "(none)"}`
+        );
+      }
+    }
+  }
+}
+
+/** Validate step has skill+mission or run (but not both) */
+function validateStepExecutionMode(step: WorkflowStep): void {
+  const hasSkill = Boolean(step.skill && step.mission);
   const hasRun = Boolean(step.run);
 
   if (!(hasSkill || hasRun)) {
@@ -307,26 +424,61 @@ function validateStep(step: WorkflowStep): void {
     );
   }
 
-  // Validate legacy run format if used
   if (hasRun && step.run && !isValidRunFormat(step.run)) {
     throw new Error(
       `Step '${step.id}' has invalid run format '${step.run}'. Expected 'agents/{name}' where name is lowercase alphanumeric with hyphens.`
     );
   }
+}
 
-  if (!step.input) {
-    throw new Error(`Step '${step.id}' must have an 'input' field`);
+/**
+ * Validate a single workflow step has all required fields and correct format.
+ *
+ * v0.6.3: Input optional for input-less capable skills
+ * v0.6.1: Requires `skill` + `mission` (skills-first)
+ * v0.6.0: Requires `run` in "agents/{name}" format (deprecated)
+ *
+ * @param step - Workflow step to validate
+ * @param workflowInputs - Declared workflow inputs for reference validation
+ * @throws Error if step is invalid
+ */
+function validateStep(
+  step: WorkflowStep,
+  workflowInputs: PartialWorkflowInput[] = []
+): void {
+  if (!step.id) {
+    throw new Error("Each step must have an 'id' field");
   }
+
+  validateStepExecutionMode(step);
+
+  // v0.6.3: Input is optional for input-less capable skills
+  const isInputlessCapable =
+    step.skill && INPUTLESS_CAPABLE_SKILLS.includes(step.skill);
+
+  if (!(step.input || isInputlessCapable)) {
+    throw new Error(
+      `Step '${step.id}' must have an 'input' field ` +
+        `(or use an input-less capable skill like: ${INPUTLESS_CAPABLE_SKILLS.join(", ")})`
+    );
+  }
+
   if (Array.isArray(step.input) && step.input.length === 0) {
     throw new Error(`Step '${step.id}' input array cannot be empty`);
   }
+
+  // Validate input references if input is provided and workflow has declared inputs
+  if (step.input && workflowInputs.length > 0) {
+    validateInputReferences(step.input, workflowInputs);
+  }
+
   if (!step.output) {
     throw new Error(`Step '${step.id}' must have an 'output' field`);
   }
 }
 
 /**
- * Parse a workflow.md file into structured data (v0.6.0)
+ * Parse a workflow.md file into structured data (v0.6.3)
  *
  * @param content - Full content of the workflow.md file
  * @returns ParsedWorkflow with definition and instructions
@@ -349,16 +501,32 @@ export function parseWorkflow(content: string): ParsedWorkflow {
     throw new Error("Workflow must have at least one step defined");
   }
 
-  // Validate each step
+  // Parse workflow inputs (v0.6.3)
+  const workflowInputs = Array.isArray(frontmatter.inputs)
+    ? (frontmatter.inputs as PartialWorkflowInput[])
+    : [];
+
+  // Validate each step with workflow inputs context
   for (const step of frontmatter.steps as WorkflowStep[]) {
-    validateStep(step);
+    validateStep(step, workflowInputs);
   }
+
+  // Build inputs array with defaults for required field
+  const inputs = workflowInputs
+    .filter((inp) => inp.name)
+    .map((inp) => ({
+      name: inp.name as string,
+      required: inp.required ?? true,
+      description: inp.description,
+      type: inp.type,
+    }));
 
   return {
     definition: {
       name: frontmatter.name,
       version: frontmatter.version as string | undefined,
       description: frontmatter.description,
+      inputs: inputs.length > 0 ? inputs : undefined,
       steps: frontmatter.steps as WorkflowStep[],
     },
     instructions: body,
@@ -461,4 +629,35 @@ export function getFinalStep(definition: WorkflowDefinition): string {
     throw new Error("Workflow has no steps");
   }
   return lastStep;
+}
+
+/**
+ * Check if a workflow supports input-less execution (v0.6.3)
+ *
+ * A workflow is input-less capable when:
+ * 1. It has no required inputs declaration
+ * 2. The first step (no dependencies) uses an input-less capable skill
+ *
+ * @param definition - Parsed workflow definition
+ * @returns true if workflow can run without user-provided inputs
+ */
+export function isInputlessWorkflow(definition: WorkflowDefinition): boolean {
+  // Check if any declared inputs are required
+  if (definition.inputs?.some((input) => input.required)) {
+    return false;
+  }
+
+  // Find the first step(s) - steps with no dependencies
+  const firstSteps = definition.steps.filter(
+    (step) => !step.needs || step.needs.length === 0
+  );
+
+  if (firstSteps.length === 0) {
+    return false;
+  }
+
+  // All first steps must use input-less capable skills
+  return firstSteps.every(
+    (step) => step.skill && INPUTLESS_CAPABLE_SKILLS.includes(step.skill)
+  );
 }

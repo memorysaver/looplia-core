@@ -40,7 +40,7 @@ export const ContentItemSchema = z.object({
 });
 
 // ─────────────────────────────────────────────────────────────
-// Workflow Schemas (v0.6.0)
+// Workflow Schemas (v0.6.3)
 // ─────────────────────────────────────────────────────────────
 
 /**
@@ -58,26 +58,57 @@ export const ValidationCriteriaSchema = z
   .passthrough();
 
 /**
- * Single step in a workflow definition (v0.6.0)
- * GitHub Actions-inspired format with explicit ordering
+ * Declares an expected input for the workflow (v0.6.3)
+ * Enables workflows to accept 0, 1, or N named inputs.
+ * Referenced in steps using ${{ inputs.name }} syntax.
  */
-export const WorkflowStepSchema = z.object({
-  id: z.string().min(1),
-  run: z.string().min(1),
-  input: z.union([z.string(), z.array(z.string())]),
-  output: z.string().min(1),
-  needs: z.array(z.string()).optional(),
-  final: z.boolean().optional(),
-  validate: ValidationCriteriaSchema.optional(),
+export const WorkflowInputSchema = z.object({
+  name: z
+    .string()
+    .min(1)
+    .regex(/^[a-z][a-z0-9-]*$/, "Input name must be kebab-case"),
+  required: z.boolean(),
+  description: z.string().optional(),
+  type: z.enum(["file", "json"]).optional(),
 });
 
 /**
- * Complete workflow definition from YAML frontmatter (v0.6.0)
+ * Single step in a workflow definition (v0.6.3)
+ * GitHub Actions-inspired format with explicit ordering
+ *
+ * v0.6.3: input optional for input-less capable skills
+ * v0.6.1: skill + mission (skills-first)
+ * v0.6.0: run (deprecated)
+ */
+export const WorkflowStepSchema = z
+  .object({
+    id: z.string().min(1),
+    skill: z.string().min(1).optional(),
+    mission: z.string().min(1).optional(),
+    run: z.string().min(1).optional(),
+    input: z.union([z.string(), z.array(z.string())]).optional(),
+    output: z.string().min(1),
+    needs: z.array(z.string()).optional(),
+    final: z.boolean().optional(),
+    validate: ValidationCriteriaSchema.optional(),
+  })
+  .refine(
+    (step) => (step.skill && step.mission) || step.run,
+    "Step must have either 'skill' + 'mission' or 'run'"
+  )
+  .refine(
+    (step) => !(step.skill && step.run),
+    "Step cannot have both 'skill' and 'run'"
+  );
+
+/**
+ * Complete workflow definition from YAML frontmatter (v0.6.3)
  */
 export const WorkflowDefinitionSchema = z.object({
   name: z.string().min(1),
   version: z.string().optional(),
   description: z.string().min(1),
+  inputs: z.array(WorkflowInputSchema).optional(),
   steps: z.array(WorkflowStepSchema),
 });
 

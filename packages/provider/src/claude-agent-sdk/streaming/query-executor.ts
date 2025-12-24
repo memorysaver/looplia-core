@@ -169,7 +169,16 @@ export async function* executeAgenticQueryStreaming<T>(
         // v0.6.0: Enable subagent & skill discovery from .claude/ directories
         settingSources: ["project"],
         // v0.6.0: Enable Task for subagent spawning, Write/Glob for file operations
-        allowedTools: ["Read", "Write", "Glob", "Task", "Skill"],
+        // v0.6.3: Added WebSearch/WebFetch for input-less search skill
+        allowedTools: [
+          "Read",
+          "Write",
+          "Glob",
+          "Task",
+          "Skill",
+          "WebSearch",
+          "WebFetch",
+        ],
         outputFormat: { type: "json_schema", schema: jsonSchema },
         // v0.6.2: Programmatic agent definition ensures skill-executor uses haiku
         // Prompt loaded from external file for maintainability
@@ -178,7 +187,15 @@ export async function* executeAgenticQueryStreaming<T>(
             description:
               "Universal skill orchestrator for looplia workflow steps. Reads step context, understands mission, and composes skills to complete tasks. Use this agent for all skill-based workflow steps.",
             prompt: skillExecutorPrompt,
-            tools: ["Read", "Write", "Skill", "Glob", "Grep"],
+            tools: [
+              "Read",
+              "Write",
+              "Skill",
+              "Glob",
+              "Grep",
+              "WebSearch",
+              "WebFetch",
+            ],
             model: "haiku",
           },
         },

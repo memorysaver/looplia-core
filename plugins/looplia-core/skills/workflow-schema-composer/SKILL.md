@@ -6,9 +6,11 @@ description: |
   someone says "create a looplia workflow", "generate workflow.md", "compose workflow steps",
   "build me an automation pipeline", or "/build" (final step).
 
-  Final step in looplia workflow building: transforms skill recommendations into valid v0.6.2
+  Final step in looplia workflow building: transforms skill recommendations into valid v0.6.3
   workflow YAML/Markdown files. Each step uses skill: + mission: syntax, following the one
   workflow step → one skill-executor → multiple skills architecture.
+
+  v0.6.3: Supports input-less workflows using input-less capable skills (e.g., search).
 model: claude-haiku-4-5-20251001
 ---
 
@@ -58,9 +60,33 @@ Use `dataFlow` from matcher:
 ### Step 4: Design Input/Output Paths
 
 Use variable substitution:
-- `${{ sandbox }}/inputs/content.md` - Initial input
+- `${{ sandbox }}/inputs/content.md` - Initial input (for workflows requiring input)
 - `${{ sandbox }}/outputs/{step-id}.json` - Step outputs
 - `${{ steps.{id}.output }}` - Reference previous step output
+
+#### Input-Less Capable Skills (v0.6.3)
+
+These skills can operate WITHOUT an input field - they fetch/generate data autonomously:
+
+| Skill | Capability |
+|-------|------------|
+| `search` | Web search, API queries, autonomous data fetching |
+
+**When a workflow's first step uses an input-less capable skill:**
+1. **OMIT the `input:` field entirely** from that step
+2. The mission description drives the skill's behavior
+3. Subsequent steps reference the output: `${{ steps.{id}.output }}`
+
+**Example input-less first step:**
+```yaml
+- id: fetch-data
+  skill: search
+  mission: |
+    Search the web for recent technology trends.
+    Extract titles, URLs, and key details.
+  output: ${{ sandbox }}/outputs/data.json
+  # NO input field - search operates autonomously
+```
 
 ### Step 5: Suggest Validation
 
@@ -92,6 +118,8 @@ Naming rules:
 ### Step 7: Generate Markdown Body
 
 Add usage documentation:
+
+**For workflows requiring input:**
 ```markdown
 # {Workflow Name}
 
@@ -102,7 +130,25 @@ Add usage documentation:
 ```bash
 looplia run {workflow-name} --file <content.md>
 ```
+```
 
+**For input-less workflows (v0.6.3):**
+```markdown
+# {Workflow Name}
+
+{Brief description}
+
+## Usage
+
+```bash
+looplia run {workflow-name}
+```
+
+No input required - this workflow uses autonomous skills to fetch data.
+```
+
+**Steps section:**
+```markdown
 ## Steps
 
 1. **{step-id}**: {brief description}
@@ -124,7 +170,7 @@ Return a JSON object:
 
 See SCHEMA.md in this skill directory for the complete v0.6.2 workflow schema.
 
-## Validation Rules (v0.6.2)
+## Validation Rules (v0.6.3)
 
 1. **`skill:` is REQUIRED** - Every step must have a skill
 2. **`mission:` is REQUIRED** - Every step must have a mission
@@ -133,6 +179,7 @@ See SCHEMA.md in this skill directory for the complete v0.6.2 workflow schema.
 5. **Dependencies must exist** - All `needs:` references must be valid
 6. **No circular dependencies** - Validate topological ordering
 7. **Respect explicit `--name`** - If provided, use that exact name for filename and `name:` field
+8. **Input-less steps (v0.6.3)** - Steps using `search` skill may OMIT `input:` field entirely
 
 ## Example Output
 
@@ -205,3 +252,50 @@ looplia run video-to-blog --file <transcript.md>
 4. **Include validation** - Add `validate:` with appropriate fields
 5. **Mark final step** - Last step gets `final: true`
 6. **Respect --name flag** - If `--name X` is provided, the workflow MUST be named `X` and saved as `X.md`
+7. **Detect input-less workflows** - If first step uses `search` skill, OMIT input field
+
+## Example: Input-Less Workflow (v0.6.3)
+
+When the workflow fetches data autonomously (no user input needed):
+
+```yaml
+---
+name: daily-news-digest
+version: 1.0.0
+description: Fetch trending news and compile a digest report
+
+steps:
+  - id: fetch-news
+    skill: search
+    mission: |
+      Search the web for today's trending technology news.
+      Extract title, URL, source, and brief summary for each story.
+    output: ${{ sandbox }}/outputs/news.json
+    # NO input field - search operates autonomously
+    validate:
+      required_fields: [query, mode, results]
+
+  - id: compile-digest
+    skill: content-documenter
+    mission: |
+      Compile the news into a formatted digest with categories and insights.
+    needs: [fetch-news]
+    input: ${{ steps.fetch-news.output }}
+    output: ${{ sandbox }}/outputs/digest.json
+    final: true
+    validate:
+      required_fields: [reportTitle, sections, summary]
+---
+
+# Daily News Digest
+
+Fetches and compiles trending news into a digest.
+
+## Usage
+
+```bash
+looplia run daily-news-digest
+```
+
+No input required - this workflow fetches data autonomously.
+```

@@ -1,19 +1,31 @@
 /**
- * Run Command (v0.6.0) - Thin Wrapper
+ * Run Command (v0.6.3) - Thin Wrapper
  *
  * Execute a workflow by injecting /run command into the agent.
  * All workflow logic is in the workflow-executor skill.
  *
- * @see docs/DESIGN-0.6.0.md § 7.3 CLI as Thin Wrapper
+ * v0.6.3: Named inputs with --input name=value syntax
+ *
+ * @see docs/DESIGN-0.6.3.md
  * @see plugins/looplia-core/skills/workflow-executor/SKILL.md
  */
 
 import { randomBytes } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
 
-import type { StreamingEvent } from "@looplia-core/core";
+import {
+  isInputlessWorkflow,
+  parseWorkflow,
+  type StreamingEvent,
+} from "@looplia-core/core";
 import {
   createClaudeAgentExecutor,
   type WorkflowResult,
@@ -135,16 +147,138 @@ function createSandbox(
 }
 
 /**
- * Parsed command arguments
+ * Generate sandbox ID from workflow ID (for input-less workflows)
+ * Format: {workflow-slug}-{YYYY-MM-DD}-{random4chars}
+ */
+function generateInputlessSandboxId(workflowId: string): string {
+  const slug = workflowId
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .substring(0, 30);
+  const date = new Date().toISOString().split("T")[0];
+  const suffix = generateRandomSuffix();
+  return `${slug}-${date}-${suffix}`;
+}
+
+/**
+ * Create sandbox with named inputs (v0.6.3)
+ * Supports 0, 1, or N named inputs
+ * @throws Error if sandbox creation fails
+ */
+function createSandboxWithInputs(
+  workspace: string,
+  workflowId: string,
+  inputs: Record<string, ParsedInput>
+): string {
+  // Use first input name for slug, or workflow name if no inputs
+  const inputNames = Object.keys(inputs);
+  const slugSource =
+    inputNames.length > 0 ? (inputNames[0] ?? workflowId) : workflowId;
+  const sandboxId = generateInputlessSandboxId(slugSource);
+  const sandboxDir = join(workspace, "sandbox", sandboxId);
+
+  try {
+    // Create sandbox folder structure
+    mkdirSync(join(sandboxDir, "inputs"), { recursive: true });
+    mkdirSync(join(sandboxDir, "outputs"), { recursive: true });
+    mkdirSync(join(sandboxDir, "logs"), { recursive: true });
+
+    // Write each input to inputs/{name}.md or inputs/{name}.json
+    for (const [name, parsedInput] of Object.entries(inputs)) {
+      if (parsedInput.type === "json") {
+        writeFileSync(
+          join(sandboxDir, "inputs", `${name}.json`),
+          parsedInput.value,
+          "utf-8"
+        );
+      } else {
+        // File input - copy the file
+        const absolutePath = resolve(parsedInput.value);
+        if (!existsSync(absolutePath)) {
+          throw new Error(`Input file not found: ${parsedInput.value}`);
+        }
+        copyFileSync(absolutePath, join(sandboxDir, "inputs", `${name}.md`));
+      }
+    }
+
+    // Create initial validation.json
+    createInitialValidationJson(sandboxDir, sandboxId, workflowId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to create sandbox "${sandboxId}": ${message}`);
+  }
+
+  return sandboxId;
+}
+
+/**
+ * Create an input-less sandbox (v0.6.3)
+ * For workflows that don't require any input files
+ */
+function createInputlessSandbox(workspace: string, workflowId: string): string {
+  const sandboxId = generateInputlessSandboxId(workflowId);
+  const sandboxDir = join(workspace, "sandbox", sandboxId);
+
+  try {
+    mkdirSync(join(sandboxDir, "inputs"), { recursive: true });
+    mkdirSync(join(sandboxDir, "outputs"), { recursive: true });
+    mkdirSync(join(sandboxDir, "logs"), { recursive: true });
+
+    createInitialValidationJson(sandboxDir, sandboxId, workflowId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to create sandbox "${sandboxId}": ${message}`);
+  }
+
+  return sandboxId;
+}
+
+/**
+ * Parsed input value (v0.6.3)
+ * Supports both file paths and inline JSON
+ */
+type ParsedInput = {
+  type: "json" | "file";
+  value: string;
+};
+
+/**
+ * Parsed command arguments (v0.6.3)
  */
 type RunArgs = {
   workflowId: string;
   file?: string;
+  inputs?: Record<string, ParsedInput>;
   sandboxId?: string;
   mock: boolean;
   noStreaming: boolean;
   help: boolean;
 };
+
+/**
+ * Check if a value looks like inline JSON
+ */
+function isJsonValue(value: string): boolean {
+  const trimmed = value.trim();
+  return trimmed.startsWith("{") || trimmed.startsWith("[");
+}
+
+/**
+ * Parse an input value into type and content
+ */
+function parseInputValue(value: string): ParsedInput {
+  if (isJsonValue(value)) {
+    // Validate JSON by parsing it
+    try {
+      JSON.parse(value);
+    } catch {
+      throw new Error(`Invalid JSON in input value: ${value}`);
+    }
+    return { type: "json", value };
+  }
+  return { type: "file", value };
+}
 
 /**
  * Check if argument is a flag that takes a value
@@ -153,10 +287,44 @@ function isValueFlag(arg: string): boolean {
   return (
     arg === "--file" ||
     arg === "-f" ||
+    arg === "--input" ||
+    arg === "-i" ||
     arg === "--sandbox" ||
     arg === "-s" ||
     arg === "--sandbox-id"
   );
+}
+
+/**
+ * Parse --input argument in name=value format
+ */
+function parseInputArg(value: string): {
+  name: string;
+  parsedValue: ParsedInput;
+} {
+  const equalsIndex = value.indexOf("=");
+  if (equalsIndex === -1) {
+    throw new Error(`Invalid input format: "${value}". Expected: name=value`);
+  }
+  const name = value.slice(0, equalsIndex);
+  const rawValue = value.slice(equalsIndex + 1);
+  if (!name) {
+    throw new Error(`Invalid input format: "${value}". Name cannot be empty`);
+  }
+  if (!rawValue) {
+    throw new Error(`Invalid input format: "${value}". Value cannot be empty`);
+  }
+  return { name, parsedValue: parseInputValue(rawValue) };
+}
+
+/** Handle --input argument processing */
+function handleInputArg(result: RunArgs, nextArg: string | undefined): void {
+  if (!nextArg) {
+    throw new Error("--input requires a value in format: name=value");
+  }
+  const { name, parsedValue } = parseInputArg(nextArg);
+  result.inputs = result.inputs ?? {};
+  result.inputs[name] = parsedValue;
 }
 
 /**
@@ -167,18 +335,34 @@ function processArg(
   arg: string,
   nextArg: string | undefined
 ): void {
-  if (arg === "--help" || arg === "-h") {
-    result.help = true;
-  } else if (arg === "--file" || arg === "-f") {
-    result.file = nextArg;
-  } else if (arg === "--sandbox-id" || arg === "--sandbox" || arg === "-s") {
-    result.sandboxId = nextArg;
-  } else if (arg === "--mock") {
-    result.mock = true;
-  } else if (arg === "--no-streaming") {
-    result.noStreaming = true;
-  } else if (!(arg.startsWith("-") || result.workflowId)) {
-    result.workflowId = arg;
+  switch (arg) {
+    case "--help":
+    case "-h":
+      result.help = true;
+      break;
+    case "--file":
+    case "-f":
+      result.file = nextArg;
+      break;
+    case "--input":
+    case "-i":
+      handleInputArg(result, nextArg);
+      break;
+    case "--sandbox-id":
+    case "--sandbox":
+    case "-s":
+      result.sandboxId = nextArg;
+      break;
+    case "--mock":
+      result.mock = true;
+      break;
+    case "--no-streaming":
+      result.noStreaming = true;
+      break;
+    default:
+      if (!(arg.startsWith("-") || result.workflowId)) {
+        result.workflowId = arg;
+      }
   }
 }
 
@@ -212,7 +396,7 @@ function parseArgs(args: string[]): RunArgs {
 }
 
 /**
- * Print help message
+ * Print help message (v0.6.3)
  */
 function printHelp(): void {
   console.log(`
@@ -221,17 +405,31 @@ Usage: looplia run <workflow-id> [options]
 Execute a workflow on content.
 
 Arguments:
-  workflow-id           Name of workflow (e.g., "writing-kit")
+  workflow-id               Name of workflow (e.g., "writing-kit", "hn-reporter")
 
 Options:
-  --file, -f <path>       Path to content file (creates new sandbox)
-  --sandbox-id, -s <id>   Resume existing sandbox
-  --mock                  Use mock mode (no API calls)
-  --no-streaming          Disable streaming output
-  --help, -h              Show this help
+  --file, -f <path>         Path to content file (creates new sandbox, legacy)
+  --input, -i <name=value>  Named input (can specify multiple times)
+                            Value can be a file path or inline JSON
+  --sandbox-id, -s <id>     Resume existing sandbox
+  --mock                    Use mock mode (no API calls)
+  --no-streaming            Disable streaming output
+  --help, -h                Show this help
 
 Examples:
+  # Single file input (legacy)
   looplia run writing-kit --file article.md
+
+  # Named inputs (v0.6.3)
+  looplia run video-comparison --input video1=vid1.md --input video2=vid2.md
+
+  # Inline JSON input
+  looplia run config-processor --input config='{"key":"value"}'
+
+  # Input-less workflow (no input required)
+  looplia run hn-reporter
+
+  # Resume existing sandbox
   looplia run writing-kit --sandbox-id text-2025-12-18-abc123
 `);
 }
@@ -288,6 +486,35 @@ function validateEnvironment(mock: boolean): void {
  */
 function buildRunPrompt(workflowId: string, sandboxId: string): string {
   return `/run ${workflowId} --sandbox-id ${sandboxId}`;
+}
+
+/**
+ * Check if a workflow supports input-less execution (v0.6.3)
+ * Parses the workflow definition and checks if it uses input-less capable skills.
+ *
+ * @param workspace - Workspace path (~/.looplia)
+ * @param workflowId - Workflow ID (e.g., "hn-reporter")
+ * @returns true if workflow can run without inputs, false otherwise
+ */
+function checkWorkflowInputless(
+  workspace: string,
+  workflowId: string
+): boolean {
+  const workflowPath = join(workspace, "workflows", `${workflowId}.md`);
+
+  if (!existsSync(workflowPath)) {
+    // Workflow doesn't exist - let it fail later with proper error
+    return false;
+  }
+
+  try {
+    const content = readFileSync(workflowPath, "utf-8");
+    const parsed = parseWorkflow(content);
+    return isInputlessWorkflow(parsed.definition);
+  } catch {
+    // Parse error - let it fail later with proper error
+    return false;
+  }
 }
 
 /**
@@ -384,10 +611,15 @@ async function executeBatch(
 }
 
 /**
- * Resolve or create sandbox ID based on args
+ * Resolve or create sandbox ID based on args (v0.6.3)
+ * Supports: --sandbox-id, --file, --input, or no input (input-less workflow)
  * Returns sandbox ID or exits on error
  */
-function resolveSandboxId(workspace: string, parsed: RunArgs): string {
+function resolveSandboxId(
+  workspace: string,
+  parsed: RunArgs,
+  allowInputless: boolean
+): string {
   if (parsed.sandboxId) {
     // Resume existing sandbox
     const sandboxDir = join(workspace, "sandbox", parsed.sandboxId);
@@ -399,8 +631,19 @@ function resolveSandboxId(workspace: string, parsed: RunArgs): string {
     return parsed.sandboxId;
   }
 
+  if (parsed.inputs && Object.keys(parsed.inputs).length > 0) {
+    // v0.6.3: Create sandbox with named inputs
+    const sandboxId = createSandboxWithInputs(
+      workspace,
+      parsed.workflowId,
+      parsed.inputs
+    );
+    console.error(`Created sandbox: ${sandboxId}`);
+    return sandboxId;
+  }
+
   if (parsed.file) {
-    // Create new sandbox
+    // Legacy: Create new sandbox from single file
     if (!existsSync(parsed.file)) {
       console.error(`Error: File not found: ${parsed.file}`);
       process.exit(1);
@@ -410,7 +653,16 @@ function resolveSandboxId(workspace: string, parsed: RunArgs): string {
     return sandboxId;
   }
 
-  throw new Error("Either --file or --sandbox-id is required");
+  if (allowInputless) {
+    // v0.6.3: Create input-less sandbox
+    const sandboxId = createInputlessSandbox(workspace, parsed.workflowId);
+    console.error(`Created input-less sandbox: ${sandboxId}`);
+    return sandboxId;
+  }
+
+  throw new Error(
+    "Either --file, --input, or --sandbox-id is required for this workflow"
+  );
 }
 
 /**
@@ -452,7 +704,7 @@ function renderResult(result: WorkflowResult): void {
 }
 
 /**
- * Main entry point for run command (v0.6.0 thin wrapper)
+ * Main entry point for run command (v0.6.3 thin wrapper)
  */
 export async function runRunCommand(args: string[]): Promise<void> {
   const parsed = parseArgs(args);
@@ -468,12 +720,6 @@ export async function runRunCommand(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  if (!(parsed.file || parsed.sandboxId)) {
-    console.error("Error: Either --file or --sandbox-id is required");
-    printHelp();
-    process.exit(1);
-  }
-
   try {
     // 1. Validate environment
     validateEnvironment(parsed.mock);
@@ -482,7 +728,9 @@ export async function runRunCommand(args: string[]): Promise<void> {
     const workspace = ensureWorkspace(parsed.mock);
 
     // 3. Resolve or create sandbox
-    const sandboxId = resolveSandboxId(workspace, parsed);
+    // v0.6.3: Check if workflow supports input-less execution
+    const allowInputless = checkWorkflowInputless(workspace, parsed.workflowId);
+    const sandboxId = resolveSandboxId(workspace, parsed, allowInputless);
 
     // 4. Build /run prompt with sandbox ID
     const prompt = buildRunPrompt(parsed.workflowId, sandboxId);
