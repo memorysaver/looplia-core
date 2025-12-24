@@ -5,6 +5,50 @@ All notable changes to Looplia-Core will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3] - 2025-12-25
+
+### Added
+
+- **Input-Less Workflows** - Workflows can now run without `--file` if first step uses input-less capable skill
+  - `isInputlessWorkflow()` function validates workflow supports input-less execution
+  - `search` skill as first input-less capable skill
+  - Automatic detection at runtime before sandbox creation
+- **Web-Capable Skills** - Skills can now perform web searches and fetch URLs
+  - `WebSearch` and `WebFetch` added to `allowedTools` in skill-executor
+  - Enables real-time data fetching from web sources
+- **Search Skill** - New autonomous data fetching skill (`plugins/looplia-core/skills/search/`)
+  - Uses WebSearch for queries and WebFetch for URL content
+  - Haiku model for cost-effective web operations
+  - Input-less capable (no input file required)
+- **Named Inputs (CLI)** - `--input name=value` syntax for multi-input workflows
+  - Support for multiple inputs: `--input video1=v1.md --input video2=v2.md`
+  - Inline JSON support: `--input config='{"key":"value"}'`
+  - Duplicate input name detection with clear error messages
+
+### Changed
+
+- **Workflow Parser** - Added `INPUTLESS_CAPABLE_SKILLS` constant for input-less validation
+  - `validateStep()` now allows missing input for input-less capable skills
+  - `validateInputReferences()` validates `${{ inputs.name }}` references
+- **Run Command** - Refactored for better maintainability
+  - Extracted helper functions to reduce cognitive complexity
+  - Switch statement in argument parsing for clarity
+  - `isJsonValue()` now validates JSON by parsing (prevents `{production}.json` as JSON)
+  - Sandbox ID always uses workflow ID for consistent naming
+
+### Fixed
+
+- **isJsonValue Edge Case** - File paths like `{production}.json` no longer incorrectly detected as JSON
+- **Duplicate Input Names** - Now throws clear error instead of silent overwrite
+- **Sandbox ID Generation** - Always uses workflow ID instead of first input name
+- **CI Test Error Message** - Updated to expect `--input` option in error message
+
+### Documentation
+
+- **DESIGN-0.6.3.md** - Complete specification for Flexible Input System
+- **Updated workflow-executor skill** - Documents input-less step handling
+- **Updated workflow-schema-composer skill** - Documents input-less workflow generation
+
 ## [0.6.2] - 2025-12-22
 
 ### Added
@@ -389,7 +433,8 @@ The following were considered but **intentionally deferred** to v0.6+:
 
 ---
 
-[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/memorysaver/looplia-core/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/memorysaver/looplia-core/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/memorysaver/looplia-core/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/memorysaver/looplia-core/compare/v0.5.2...v0.6.0
