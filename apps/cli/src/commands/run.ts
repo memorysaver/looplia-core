@@ -149,8 +149,9 @@ function createSandbox(
 /**
  * Generate sandbox ID from workflow ID (for input-less workflows)
  * Format: {workflow-slug}-{YYYY-MM-DD}-{random4chars}
+ * @internal Exported for testing
  */
-function generateInputlessSandboxId(workflowId: string): string {
+export function generateInputlessSandboxId(workflowId: string): string {
   const slug = workflowId
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -171,11 +172,8 @@ function createSandboxWithInputs(
   workflowId: string,
   inputs: Record<string, ParsedInput>
 ): string {
-  // Use first input name for slug, or workflow name if no inputs
-  const inputNames = Object.keys(inputs);
-  const slugSource =
-    inputNames.length > 0 ? (inputNames[0] ?? workflowId) : workflowId;
-  const sandboxId = generateInputlessSandboxId(slugSource);
+  // Always use workflow ID for consistent sandbox naming
+  const sandboxId = generateInputlessSandboxId(workflowId);
   const sandboxDir = join(workspace, "sandbox", sandboxId);
 
   try {
@@ -237,8 +235,9 @@ function createInputlessSandbox(workspace: string, workflowId: string): string {
 /**
  * Parsed input value (v0.6.3)
  * Supports both file paths and inline JSON
+ * @internal Exported for testing
  */
-type ParsedInput = {
+export type ParsedInput = {
   type: "json" | "file";
   value: string;
 };
@@ -257,24 +256,29 @@ type RunArgs = {
 };
 
 /**
- * Check if a value looks like inline JSON
+ * Check if a value is valid inline JSON
+ * Validates by parsing - file paths like `{production}.json` won't parse as JSON
+ * @internal Exported for testing
  */
-function isJsonValue(value: string): boolean {
+export function isJsonValue(value: string): boolean {
   const trimmed = value.trim();
-  return trimmed.startsWith("{") || trimmed.startsWith("[");
+  if (!(trimmed.startsWith("{") || trimmed.startsWith("["))) {
+    return false;
+  }
+  try {
+    JSON.parse(trimmed);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
  * Parse an input value into type and content
+ * isJsonValue already validates JSON, so no try/catch needed here
  */
 function parseInputValue(value: string): ParsedInput {
   if (isJsonValue(value)) {
-    // Validate JSON by parsing it
-    try {
-      JSON.parse(value);
-    } catch {
-      throw new Error(`Invalid JSON in input value: ${value}`);
-    }
     return { type: "json", value };
   }
   return { type: "file", value };
@@ -324,6 +328,11 @@ function handleInputArg(result: RunArgs, nextArg: string | undefined): void {
   }
   const { name, parsedValue } = parseInputArg(nextArg);
   result.inputs = result.inputs ?? {};
+  if (result.inputs[name]) {
+    throw new Error(
+      `Duplicate input name: '${name}'. Each input must have a unique name.`
+    );
+  }
   result.inputs[name] = parsedValue;
 }
 
@@ -368,8 +377,9 @@ function processArg(
 
 /**
  * Parse command line arguments
+ * @internal Exported for testing
  */
-function parseArgs(args: string[]): RunArgs {
+export function parseArgs(args: string[]): RunArgs {
   const result: RunArgs = {
     workflowId: "",
     mock: false,
