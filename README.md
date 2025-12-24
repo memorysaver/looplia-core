@@ -8,7 +8,7 @@ Looplia Core is an agentic workflow platform powered by the Claude Agent SDK. It
 
 **Vision:** A universal CLI for AI-powered workflows — one tool, many domains, powered by composable skills.
 
-## v0.6.2 Architecture
+## v0.6.3 Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -135,7 +135,7 @@ looplia config style --tone expert --word-count 1500 --voice first-person
 looplia config show
 ```
 
-## Workflow Schema (v0.6.2)
+## Workflow Schema (v0.6.3)
 
 Workflows are markdown files with YAML frontmatter:
 
@@ -302,7 +302,8 @@ env $(cat .env) looplia run writing-kit --file test.md
 | v0.5.x | Agent system, two-plugin model |
 | v0.6.0 | Steps-based workflows, `run: agents/X` syntax |
 | v0.6.1 | Skills-first, universal skill-executor |
-| **v0.6.2** | **Per-step orchestration** |
+| v0.6.2 | Per-step orchestration |
+| **v0.6.3** | **Input-less workflows, web-capable skills** |
 
 ## License
 

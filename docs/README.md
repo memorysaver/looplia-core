@@ -1,6 +1,6 @@
 # Looplia-Core Documentation
 
-> **Version:** 0.6.2
+> **Version:** 0.6.3
 > **Last Updated:** December 2025
 
 This directory contains the core documentation for Looplia-Core, a Claude Agent SDK-based agentic workflow platform.
@@ -9,11 +9,12 @@ This directory contains the core documentation for Looplia-Core, a Claude Agent 
 
 ## Core Documents (Latest)
 
-These are the current, authoritative documents for the v0.6.2 architecture:
+These are the current, authoritative documents for the v0.6.3 architecture:
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | [AGENTIC_CONCEPT_1.0.md](./AGENTIC_CONCEPT_1.0.md) | **Skills-first architecture overview** - comprehensive guide to v0.6.1/v0.6.2 | All team members |
+| [DESIGN-0.6.3.md](./DESIGN-0.6.3.md) | **Input-less workflows**, web-capable skills, named inputs | Developers, Architects |
 | [DESIGN-0.6.2.md](./DESIGN-0.6.2.md) | **Schema-in-Skill architecture**, plugin-first domain types | Developers, Architects |
 | [DESIGN-0.6.1.md](./DESIGN-0.6.1.md) | **Skills-first architecture**, universal skill-executor, `/build` command | Developers, Architects |
 | [DESIGN-0.6.0.md](./DESIGN-0.6.0.md) | Steps-based workflow schema, deterministic subagent invocation | Developers, Architects |
@@ -33,6 +34,32 @@ These are the current, authoritative documents for the v0.6.2 architecture:
 |----------|---------|
 | [AGENTIC_CONCEPT-0.5.md](./archive/AGENTIC_CONCEPT-0.5.md) | Agent system design: Two-plugin model (historical) |
 | [TEST_PLAN-0.6.md](./archive/TEST_PLAN-0.6.md) | Test architecture with real API testing (historical) |
+
+---
+
+## What's New in v0.6.3
+
+### Web-Capable Skills & Input-Less Workflows
+
+v0.6.3 enables workflows that start without user-provided input files:
+
+| Feature | Description |
+|---------|-------------|
+| **Input-less workflows** | Workflows with `search` skill can start without `--file` |
+| **WebSearch/WebFetch** | Skills can now perform web searches and fetch URLs |
+| **Named inputs** | `--input name=value` syntax for multi-input workflows |
+
+**Example input-less workflow:**
+```yaml
+steps:
+  - id: search
+    skill: search
+    mission: "Find top HN stories about AI"
+    output: ${{ sandbox }}/outputs/search-results.json
+    # No input field - search skill fetches from web
+```
+
+See [DESIGN-0.6.3.md](./DESIGN-0.6.3.md) for full details.
 
 ---
 
@@ -260,7 +287,7 @@ Previous versions are preserved in `/docs/archive/` for reference:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        DOCUMENT RELATIONSHIPS (v0.6.2)                       │
+│                        DOCUMENT RELATIONSHIPS (v0.6.3)                       │
 └─────────────────────────────────────────────────────────────────────────────┘
 
                               ┌──────────────┐
@@ -290,7 +317,7 @@ Previous versions are preserved in `/docs/archive/` for reference:
 ```
 
 **Version Progression:**
-- **v0.6.0** → v0.6.1 → v0.6.2 (each is a BREAKING CHANGE)
+- v0.6.0 → v0.6.1 → v0.6.2 → **v0.6.3** (current)
 
 **Key Documents:**
 - **GLOSSARY.md** defines terms used across all documents
@@ -448,4 +475,4 @@ Steps complete when `validation.json` shows `validated: true`:
 
 ---
 
-*This README provides navigation for Looplia-Core v0.6.2 documentation.*
+*This README provides navigation for Looplia-Core v0.6.3 documentation.*
