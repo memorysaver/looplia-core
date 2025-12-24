@@ -181,8 +181,9 @@ describe("CLI E2E Tests", () => {
       const result = await execCLI(["run", "writing-kit"]);
 
       expect(result.exitCode).toBe(1);
+      // v0.6.3: Updated error message to include --input option
       expect(result.stderr).toContain(
-        "Error: Either --file or --sandbox-id is required"
+        "Either --file, --input, or --sandbox-id is required"
       );
     });
 

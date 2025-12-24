@@ -58,6 +58,7 @@ export {
   generateValidationManifest,
   getExecutionOrder,
   getFinalStep,
+  isInputlessWorkflow,
   parseFrontmatter,
   parseWorkflow,
 } from "./domain/workflow-parser";

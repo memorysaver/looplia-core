@@ -12,8 +12,14 @@ import { join } from "node:path";
 
 import {
   createInitialValidationJson,
+  generateInputlessSandboxId,
+  isJsonValue,
+  parseArgs,
   type ValidationJson,
 } from "../../src/commands/run";
+
+// Top-level regex patterns to avoid performance issues in tests
+const SANDBOX_ID_PATTERN = /^[\w-]+-\d{4}-\d{2}-\d{2}-[a-f0-9]{4}$/;
 
 describe("run command", () => {
   describe("createInitialValidationJson", () => {
@@ -105,6 +111,107 @@ describe("run command", () => {
       expect(() => {
         createInitialValidationJson(nonExistentDir, "sandbox", "workflow");
       }).toThrow();
+    });
+  });
+
+  describe("isJsonValue (Priority 1 Fix)", () => {
+    test("should return true for valid JSON object", () => {
+      expect(isJsonValue('{"key":"value"}')).toBe(true);
+    });
+
+    test("should return true for valid JSON array", () => {
+      expect(isJsonValue("[1,2,3]")).toBe(true);
+    });
+
+    test("should return true for JSON with whitespace", () => {
+      expect(isJsonValue('  {"key":"value"}  ')).toBe(true);
+    });
+
+    test("should return false for file path starting with {", () => {
+      // This is the edge case from PR review - {production}.json should be file, not JSON
+      expect(isJsonValue("{production}.json")).toBe(false);
+    });
+
+    test("should return false for file path starting with [", () => {
+      expect(isJsonValue("[backup]-config.json")).toBe(false);
+    });
+
+    test("should return false for regular file path", () => {
+      expect(isJsonValue("config.json")).toBe(false);
+    });
+
+    test("should return false for path with curly braces in middle", () => {
+      expect(isJsonValue("path/to/{env}/config.json")).toBe(false);
+    });
+  });
+
+  describe("parseArgs duplicate input detection (Priority 1 Fix)", () => {
+    test("should parse single input correctly", () => {
+      const result = parseArgs([
+        "workflow",
+        "--input",
+        "video=path/to/video.md",
+      ]);
+      expect(result.inputs).toBeDefined();
+      expect(result.inputs?.video).toBeDefined();
+      expect(result.inputs?.video.type).toBe("file");
+      expect(result.inputs?.video.value).toBe("path/to/video.md");
+    });
+
+    test("should parse multiple different inputs", () => {
+      const result = parseArgs([
+        "workflow",
+        "--input",
+        "video1=v1.md",
+        "--input",
+        "video2=v2.md",
+      ]);
+      expect(result.inputs).toBeDefined();
+      expect(result.inputs?.video1).toBeDefined();
+      expect(result.inputs?.video2).toBeDefined();
+    });
+
+    test("should throw error for duplicate input names", () => {
+      expect(() => {
+        parseArgs([
+          "workflow",
+          "--input",
+          "video=v1.md",
+          "--input",
+          "video=v2.md",
+        ]);
+      }).toThrow("Duplicate input name: 'video'");
+    });
+
+    test("should parse JSON input correctly", () => {
+      const result = parseArgs([
+        "workflow",
+        "--input",
+        'config={"key":"value"}',
+      ]);
+      expect(result.inputs?.config.type).toBe("json");
+      expect(result.inputs?.config.value).toBe('{"key":"value"}');
+    });
+  });
+
+  describe("generateInputlessSandboxId (Priority 1 Fix)", () => {
+    test("should use workflow ID in sandbox name", () => {
+      const sandboxId = generateInputlessSandboxId("hn-reporter");
+      expect(sandboxId).toMatch(SANDBOX_ID_PATTERN);
+      expect(sandboxId.startsWith("hn-reporter-")).toBe(true);
+    });
+
+    test("should always include workflow slug at start", () => {
+      const sandboxId = generateInputlessSandboxId("video-comparison");
+      expect(sandboxId.startsWith("video-comparison-")).toBe(true);
+      expect(sandboxId).toMatch(SANDBOX_ID_PATTERN);
+    });
+
+    test("should sanitize workflow ID with special chars", () => {
+      const sandboxId = generateInputlessSandboxId("My_Workflow!@#$");
+      // Should convert to lowercase, replace non-alphanumeric with dashes
+      expect(sandboxId).toMatch(SANDBOX_ID_PATTERN);
+      expect(sandboxId.startsWith("my-workflow-")).toBe(true);
     });
   });
 });

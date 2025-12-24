@@ -256,7 +256,7 @@ steps:
     );
   });
 
-  it("should throw error for missing input field", () => {
+  it("should throw error for missing input field (non-input-less skill)", () => {
     const invalid = `---
 name: test
 description: Test
@@ -267,6 +267,122 @@ steps:
 ---`;
 
     expect(() => parseWorkflow(invalid)).toThrow("'input' field");
+  });
+
+  it("should allow missing input field for search skill (v0.6.3 input-less)", () => {
+    const valid = `---
+name: hn-reporter
+description: Input-less workflow using search skill
+steps:
+  - id: find-news
+    skill: search
+    mission: Search Hacker News for top AI stories
+    output: \${{ sandbox }}/outputs/news.json
+---`;
+
+    const result = parseWorkflow(valid);
+    expect(result.definition.steps[0].skill).toBe("search");
+    expect(result.definition.steps[0].input).toBeUndefined();
+  });
+
+  it("should parse workflow inputs declaration (v0.6.3)", () => {
+    const valid = `---
+name: video-comparison
+description: Compare two videos
+inputs:
+  - name: video1
+    required: true
+    description: First video transcript
+  - name: video2
+    required: false
+    type: file
+steps:
+  - id: analyze
+    skill: media-reviewer
+    mission: Analyze the video
+    input: \${{ inputs.video1 }}
+    output: \${{ sandbox }}/outputs/analysis.json
+---`;
+
+    const result = parseWorkflow(valid);
+    expect(result.definition.inputs).toHaveLength(2);
+    expect(result.definition.inputs?.[0]).toEqual({
+      name: "video1",
+      required: true,
+      description: "First video transcript",
+      type: undefined,
+    });
+    expect(result.definition.inputs?.[1]).toEqual({
+      name: "video2",
+      required: false,
+      description: undefined,
+      type: "file",
+    });
+  });
+
+  it("should throw error for unknown input reference (v0.6.3)", () => {
+    const invalid = `---
+name: test
+description: Test
+inputs:
+  - name: video1
+    required: true
+steps:
+  - id: analyze
+    skill: media-reviewer
+    mission: Analyze
+    input: \${{ inputs.nonexistent }}
+    output: output.json
+---`;
+
+    expect(() => parseWorkflow(invalid)).toThrow("Unknown input reference");
+  });
+
+  it("should validate input references in array input (v0.6.3)", () => {
+    const invalid = `---
+name: test
+description: Test
+inputs:
+  - name: video1
+    required: true
+steps:
+  - id: analyze
+    skill: media-reviewer
+    mission: Analyze
+    input: [\${{ inputs.video1 }}, \${{ inputs.video2 }}]
+    output: output.json
+---`;
+
+    expect(() => parseWorkflow(invalid)).toThrow(
+      "Unknown input reference: inputs.video2"
+    );
+  });
+
+  it("should allow valid input references (v0.6.3)", () => {
+    const valid = `---
+name: multi-input-workflow
+description: Uses multiple inputs
+inputs:
+  - name: transcript
+    required: true
+  - name: notes
+    required: false
+steps:
+  - id: analyze
+    skill: media-reviewer
+    mission: Analyze content
+    input: [\${{ inputs.transcript }}, \${{ inputs.notes }}]
+    output: \${{ sandbox }}/outputs/analysis.json
+---`;
+
+    const result = parseWorkflow(valid);
+    expect(result.definition.inputs).toHaveLength(2);
+    expect(result.definition.steps[0].input).toEqual([
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: workflow syntax
+      "${{ inputs.transcript }}",
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: workflow syntax
+      "${{ inputs.notes }}",
+    ]);
   });
 
   it("should throw error for missing output field", () => {

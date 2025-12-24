@@ -1,8 +1,13 @@
 /**
- * Workflow Domain Types (v0.6.1)
+ * Workflow Domain Types (v0.6.3)
  *
  * Defines the structure for workflow definitions using the
  * Workflow-as-Markdown pattern: YAML frontmatter + markdown instructions.
+ *
+ * v0.6.3 Changes:
+ * - `inputs:` declaration for named workflow inputs (0 to N)
+ * - `input` field now optional for input-less capable skills
+ * - `${{ inputs.name }}` variable substitution
  *
  * v0.6.1 Changes:
  * - `skill:` + `mission:` replaces `run: agents/{name}` (skills-first)
@@ -15,7 +20,7 @@
  * - `output:` replaces `artifact:`
  * - `${{ }}` variable substitution syntax
  *
- * @see docs/DESIGN-0.6.1.md
+ * @see docs/DESIGN-0.6.3.md
  */
 
 /**
@@ -40,10 +45,28 @@ export type ValidationCriteria = {
 };
 
 /**
- * A single step in the workflow (v0.6.1)
+ * Declares an expected input for the workflow (v0.6.3)
+ *
+ * Enables workflows to accept 0, 1, or N named inputs.
+ * Referenced in steps using `${{ inputs.name }}` syntax.
+ */
+export type WorkflowInput = {
+  /** Unique identifier (kebab-case, e.g., "video-transcript") */
+  name: string;
+  /** Is this input mandatory? */
+  required: boolean;
+  /** Human-readable description */
+  description?: string;
+  /** Type hint: 'file' for file paths, 'json' for inline JSON */
+  type?: "file" | "json";
+};
+
+/**
+ * A single step in the workflow (v0.6.3)
  *
  * GitHub Actions-inspired format with explicit ordering.
  *
+ * v0.6.3: `input` now optional for input-less capable skills (e.g., search)
  * v0.6.1: Uses `skill` + `mission` (skills-first architecture)
  * v0.6.0: Uses `run: agents/{name}` (legacy, deprecated)
  *
@@ -58,8 +81,12 @@ export type WorkflowStep = {
   mission?: string;
   /** v0.6.0 (deprecated): Action to execute in "agents/{name}" format */
   run?: string;
-  /** Input file path(s) with ${{ }} variable substitution */
-  input: string | string[];
+  /**
+   * Input file path(s) with ${{ }} variable substitution.
+   * v0.6.3: Optional for input-less capable skills (e.g., search).
+   * Can reference named inputs via ${{ inputs.name }}
+   */
+  input?: string | string[];
   /** Output file path with ${{ }} variable substitution */
   output: string;
   /** Dependencies - other step IDs that must complete first */
@@ -71,9 +98,11 @@ export type WorkflowStep = {
 };
 
 /**
- * Workflow Definition - declarative workflow configuration (v0.6.0)
+ * Workflow Definition - declarative workflow configuration (v0.6.3)
  *
  * Parsed from YAML frontmatter in ~/.looplia/workflows/{name}.md
+ *
+ * v0.6.3: Added `inputs` for named workflow inputs (0 to N)
  */
 export type WorkflowDefinition = {
   /** Workflow name (e.g., "writing-kit") */
@@ -82,6 +111,12 @@ export type WorkflowDefinition = {
   version?: string;
   /** Human-readable description */
   description: string;
+  /**
+   * v0.6.3: Named inputs declaration.
+   * Enables workflows to accept 0, 1, or N inputs.
+   * Referenced in steps via ${{ inputs.name }}
+   */
+  inputs?: WorkflowInput[];
   /** Ordered list of steps (v0.6.0 - replaces outputs) */
   steps: WorkflowStep[];
 };

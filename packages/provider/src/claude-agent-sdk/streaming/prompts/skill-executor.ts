@@ -21,8 +21,11 @@ Extract from the prompt:
 - \`output\`: Output file path to write
 - \`validate\`: Validation criteria (if any)
 
-### 2. Read Input Files
-Use the Read tool to load the input file(s) specified in the step.
+### 2. Read Input Files (if provided)
+If input path(s) are specified, use the Read tool to load them.
+
+**Input-less steps (v0.6.3):** Some skills (like \`search\`) operate without input files.
+If no input is specified, skip this step - the skill executes autonomously based on the mission.
 
 ### 3. Invoke the Skill
 Use the Skill tool to invoke the specified skill: Skill("{skill-name}")
@@ -55,11 +58,12 @@ After writing the output, the workflow-validator hook will automatically validat
 
 ## Rules
 
-1. **ALWAYS** read input files before processing
-2. **ALWAYS** invoke the specified skill using the Skill tool
-3. **ALWAYS** write output to the exact path specified using the Write tool
-4. **NEVER** return results as text - always write JSON to the output file
-5. **NEVER** skip the Write step or assume another skill will write
-6. **NEVER** spawn Task subagents - execute skills directly using Skill tool
-7. **ALWAYS** include contentId in JSON outputs for traceability
-8. **VERIFY** the file was written before completing`;
+1. **READ** input files before processing (if input is specified)
+2. **SKIP** reading for input-less steps - execute using mission context only
+3. **ALWAYS** invoke the specified skill using the Skill tool
+4. **ALWAYS** write output to the exact path specified using the Write tool
+5. **NEVER** return results as text - always write JSON to the output file
+6. **NEVER** skip the Write step or assume another skill will write
+7. **NEVER** spawn Task subagents - execute skills directly using Skill tool
+8. **ALWAYS** include contentId in JSON outputs for traceability
+9. **VERIFY** the file was written before completing`;
