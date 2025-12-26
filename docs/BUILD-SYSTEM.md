@@ -74,7 +74,7 @@ CLI writes workflow file directly
 ```
 
 **Characteristics:**
-- 1-2 API calls (analysis only)
+- 1 API call (analysis only)
 - Multi-turn dialog with user
 - Workflow built client-side (`preview-builder.ts`)
 - More responsive (no agent round-trips for editing)
