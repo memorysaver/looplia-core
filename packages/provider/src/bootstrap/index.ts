@@ -44,8 +44,8 @@ function getBundledPluginsPath(): string {
       ? __dirname
       : dirname(fileURLToPath(import.meta.url));
 
-  // Navigate from dist/bootstrap/ to package root, then to plugins/
-  // Structure: dist/bootstrap/index.js -> ../../plugins
+  // Navigate from dist/bootstrap/ to package root, then to plugins/:
+  // dist/bootstrap/ -> dist/ (..) -> package-root/ (..) -> plugins/
   return join(currentFile, "..", "..", "plugins");
 }
 
@@ -217,13 +217,18 @@ export async function downloadRemotePlugins(
       stdio: "pipe",
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     throw new Error(
-      `Failed to extract plugins tarball. Ensure 'tar' is available. Error: ${error}`
+      `Failed to extract plugins tarball. Ensure 'tar' is available. Error: ${errorMessage}`
     );
+  } finally {
+    // Clean up tarball regardless of success or failure
+    try {
+      await rm(tarPath);
+    } catch {
+      // Ignore cleanup errors to avoid masking the original error
+    }
   }
-
-  // Clean up tarball
-  await rm(tarPath);
 
   // Create sandbox directory if not in tarball
   const sandboxDir = join(targetDir, "sandbox");

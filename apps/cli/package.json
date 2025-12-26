@@ -19,7 +19,7 @@
     "test:e2e": "bun run build && bun test e2e/",
     "check-types": "tsc --noEmit",
     "copy-plugins": "rm -rf plugins && cp -r ../../plugins ./plugins",
-    "prepublish": "bun run copy-plugins && bun run build"
+    "prepublishOnly": "bun run copy-plugins && bun run build"
   },
   "dependencies": {
     "@looplia-core/core": "workspace:*",
