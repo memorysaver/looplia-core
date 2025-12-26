@@ -33,6 +33,33 @@ From skill-capability-matcher output:
 - Original user requirements
 - **Explicit name (if `--name` flag was provided)** - use this exact name for the workflow
 
+### Step 1.5: Parse User Preferences from Enriched Prompt (v0.6.4)
+
+**CRITICAL: User preferences from wizard answers MUST be incorporated into step missions.**
+
+When the enriched prompt contains "User clarifications: Q: ... A: ..." sections, extract each preference:
+
+**Example enriched prompt:**
+```
+/build search hackernews for AI news. User clarifications: Q: Which social media platforms? A: twitter, linkedin. Q: How many articles? A: top5. Q: Focus areas? A: llm, adoption. Q: Output format? A: posts
+```
+
+**Extract as structured preferences:**
+
+| Question Pattern | Preference Key | Value | Inject Into |
+|-----------------|----------------|-------|-------------|
+| "platforms" / "social media" | PLATFORMS | twitter, linkedin | Output/social step mission |
+| "how many" / "articles" / "count" | COUNT | 5 | Search/filter step mission |
+| "focus" / "areas" / "topics" | FOCUS | llm, adoption | Search and analysis missions |
+| "format" / "output" / "include" | FORMAT | posts | Final output step mission |
+
+**Preference Injection Rules:**
+
+1. **COUNT preferences** → Add to search/fetch step: "Find **top 5** articles..."
+2. **FOCUS preferences** → Add to search and analysis: "...focusing on **LLM and adoption** trends"
+3. **PLATFORM preferences** → Add to output step: "...optimized for **twitter and linkedin**"
+4. **FORMAT preferences** → Add to output step: "Create **posts** (not reports)..."
+
 ### Step 2: Design Steps
 
 For each recommended skill:
@@ -253,6 +280,7 @@ looplia run video-to-blog --file <transcript.md>
 5. **Mark final step** - Last step gets `final: true`
 6. **Respect --name flag** - If `--name X` is provided, the workflow MUST be named `X` and saved as `X.md`
 7. **Detect input-less workflows** - If first step uses `search` skill, OMIT input field
+8. **Incorporate user preferences (v0.6.4)** - Extract preferences from "User clarifications" and inject into step missions. Each preference MUST appear in at least one mission.
 
 ## Example: Input-Less Workflow (v0.6.3)
 
@@ -298,4 +326,48 @@ looplia run daily-news-digest
 ```
 
 No input required - this workflow fetches data autonomously.
+```
+
+## Example: User Preference Injection (v0.6.4)
+
+Given enriched prompt:
+```
+/build search hackernews for AI news. User clarifications: Q: Which platforms? A: twitter, linkedin. Q: How many? A: top5. Q: Focus areas? A: llm, adoption. Q: Output format? A: posts
+```
+
+**Extracted preferences:**
+- PLATFORMS: twitter, linkedin
+- COUNT: 5
+- FOCUS: llm, adoption
+- FORMAT: posts
+
+**BAD workflow (ignores preferences):**
+```yaml
+- id: fetch-news
+  skill: search
+  mission: |
+    Search HackerNews for AI news articles.
+    Extract titles and summaries.
+
+- id: compile-output
+  skill: content-documenter
+  mission: |
+    Compile the news into a report.
+```
+
+**GOOD workflow (incorporates preferences):**
+```yaml
+- id: fetch-news
+  skill: search
+  mission: |
+    Search HackerNews for the top 5 AI news articles
+    focusing on LLM developments and adoption trends.
+    Extract titles, URLs, and key summaries.
+
+- id: compile-output
+  skill: content-documenter
+  mission: |
+    Create engaging social media posts optimized for
+    twitter and linkedin. Focus on LLM and adoption angles.
+    Output as posts, not a formal report.
 ```

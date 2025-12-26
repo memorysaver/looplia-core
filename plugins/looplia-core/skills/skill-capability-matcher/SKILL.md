@@ -326,3 +326,53 @@ Each recommendation must include a `goalId` that links to a goal option:
 ```
 
 This allows the wizard to filter recommendations based on selected goals in real-time.
+
+## Structured Preferences for Enriched Prompt (v0.6.4)
+
+When wizard answers are included in the enriched prompt (via "User clarifications: Q: ... A: ..."), these become **structured preferences** that MUST be incorporated into the workflow.
+
+### Common Preference Types
+
+| Preference Category | Example Questions | How to Use |
+|---------------------|-------------------|------------|
+| **PLATFORMS** | "Which social media platforms?" | Inject into social/output step missions |
+| **ARTICLE_COUNT** | "How many articles/items?" | Inject into search/filter step missions |
+| **FOCUS_AREAS** | "Which topics/areas to focus on?" | Inject into search and analysis missions |
+| **OUTPUT_FORMAT** | "What format should output be?" | Inject into final output step mission |
+| **DEPTH** | "How deep should analysis be?" | Adjust analysis step detail level |
+
+### Preference Extraction from Enriched Prompt
+
+When receiving an enriched prompt like:
+```
+User clarifications: Q: Which platforms? A: twitter, linkedin. Q: How many articles? A: top5. Q: Focus areas? A: llm, adoption.
+```
+
+Extract as structured data:
+```
+PLATFORMS: twitter, linkedin
+ARTICLE_COUNT: 5
+FOCUS_AREAS: llm, adoption
+```
+
+### Mission Templates with Preferences
+
+**WITHOUT preferences (BAD):**
+```
+Search for AI news articles.
+```
+
+**WITH preferences (GOOD):**
+```
+Search for top 5 AI news articles focusing on LLM developments and adoption trends.
+```
+
+**WITHOUT preferences (BAD):**
+```
+Compile findings into a report.
+```
+
+**WITH preferences (GOOD):**
+```
+Create engaging social media posts optimized for twitter and linkedin, focusing on LLM and adoption angles.
+```
