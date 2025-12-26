@@ -495,7 +495,8 @@ function validateEnvironment(mock: boolean): void {
  * always use sandbox-id format so the logger can extract it
  */
 function buildRunPrompt(workflowId: string, sandboxId: string): string {
-  return `/run ${workflowId} --sandbox-id ${sandboxId}`;
+  // v0.6.5: Use looplia: prefix to avoid conflict with built-in /run command
+  return `/looplia:run ${workflowId} --sandbox-id ${sandboxId}`;
 }
 
 /**

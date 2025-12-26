@@ -223,7 +223,8 @@ export function validateEnvironment(mock: boolean): void {
  * Sanitizes user input to prevent prompt injection.
  */
 export function buildPrompt(args: BuildArgs): string {
-  let prompt = "/build";
+  // v0.6.5: Use looplia: prefix to avoid conflict with built-in commands
+  let prompt = "/looplia:build";
 
   // Include --name flag if provided (must come before description)
   if (args.name) {
@@ -464,7 +465,8 @@ export function buildEnrichedPrompt(
   name?: string,
   sections?: SectionForContext[]
 ): string {
-  let prompt = "/build";
+  // v0.6.5: Use looplia: prefix to avoid conflict with built-in commands
+  let prompt = "/looplia:build";
 
   // Include --name flag if provided
   if (name) {

@@ -73,7 +73,11 @@ describe("build command integration", () => {
           }),
       };
 
-      const result = await executeBatch("/build test", testDir, mockExecutor);
+      const result = await executeBatch(
+        "/looplia:build test",
+        testDir,
+        mockExecutor
+      );
 
       expect(result.status).toBe("success");
       expect(result.workflowName).toBe("test-workflow");
@@ -89,7 +93,11 @@ describe("build command integration", () => {
           }),
       };
 
-      const result = await executeBatch("/build test", testDir, mockExecutor);
+      const result = await executeBatch(
+        "/looplia:build test",
+        testDir,
+        mockExecutor
+      );
 
       expect(result.status).toBe("error");
       expect(result.error).toBe("Mock API error");
@@ -104,7 +112,11 @@ describe("build command integration", () => {
           }),
       };
 
-      const result = await executeBatch("/build test", testDir, mockExecutor);
+      const result = await executeBatch(
+        "/looplia:build test",
+        testDir,
+        mockExecutor
+      );
 
       expect(result.status).toBe("error");
       expect(result.error).toBe("Unknown error");
@@ -123,7 +135,7 @@ describe("build command integration", () => {
         },
       };
 
-      await executeBatch("/build test", testDir, mockExecutor);
+      await executeBatch("/looplia:build test", testDir, mockExecutor);
 
       expect(capturedOptions).toBeDefined();
       expect(capturedOptions?.workspace).toBe(testDir);
@@ -143,9 +155,13 @@ describe("build command integration", () => {
         },
       };
 
-      await executeBatch("/build summarize articles", testDir, mockExecutor);
+      await executeBatch(
+        "/looplia:build summarize articles",
+        testDir,
+        mockExecutor
+      );
 
-      expect(capturedPrompt).toBe("/build summarize articles");
+      expect(capturedPrompt).toBe("/looplia:build summarize articles");
     });
   });
 
@@ -173,7 +189,7 @@ describe("build command integration", () => {
       const builtPrompt = buildPrompt(args);
       const result = await executeBatch(builtPrompt, testDir, mockExecutor);
 
-      expect(capturedPrompt).toBe("/build summarize articles");
+      expect(capturedPrompt).toBe("/looplia:build summarize articles");
       expect(result.workflowName).toBe("article-summary");
     });
 
@@ -204,7 +220,7 @@ describe("build command integration", () => {
       expect(capturedPrompt).not.toContain("\n");
       expect(capturedPrompt).not.toContain("\r");
       expect(capturedPrompt).toBe(
-        "/build test <script>alert('xss')</script> injection"
+        "/looplia:build test <script>alert('xss')</script> injection"
       );
     });
   });
@@ -287,7 +303,9 @@ describe("build command integration", () => {
       const mockExecutor: BuildExecutor = {
         executePrompt: (inputPrompt, options) => {
           // Verify prompt format
-          expect(inputPrompt).toBe("/build analyze videos and extract themes");
+          expect(inputPrompt).toBe(
+            "/looplia:build analyze videos and extract themes"
+          );
           // Verify options
           expect(options.workspace).toBe(testDir);
           expect(options.contentId).toBeDefined();
@@ -326,7 +344,7 @@ describe("build command integration", () => {
       // executeBatch doesn't catch errors internally for batch mode
       // The caller (runBuildCommand) handles exceptions
       await expect(
-        executeBatch("/build test", testDir, mockExecutor)
+        executeBatch("/looplia:build test", testDir, mockExecutor)
       ).rejects.toThrow("Network timeout");
     });
   });
