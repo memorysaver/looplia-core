@@ -6,6 +6,7 @@
  */
 
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import { getPluginPaths } from "../../bootstrap";
 import type { ClaudeAgentConfig, ProviderUsage } from "../config";
 import { resolveConfig } from "../config";
 import { createQueryLogger } from "../logger";
@@ -15,6 +16,7 @@ import {
   extractContentIdFromPrompt,
   getOrInitWorkspace,
 } from "../utils/shared";
+import { loopliaSystemPrompt } from "./prompts/looplia-system";
 import { skillExecutorPrompt } from "./prompts/skill-executor";
 
 // Re-export for backward compatibility - intentional to maintain API surface
@@ -159,15 +161,25 @@ export async function* executeAgenticQueryStreaming<T>(
       resolvedConfig.model
     );
 
+    // v0.6.5: Get plugin paths based on mode (dev vs prod)
+    const pluginPaths = getPluginPaths();
+
     const result = query({
       prompt,
       options: {
         model: resolvedConfig.model,
-        cwd: workspace,
+        // v0.6.5: Run from user's current directory, not workspace
+        cwd: process.cwd(),
         permissionMode: "bypassPermissions",
         allowDangerouslySkipPermissions: true,
-        // v0.6.0: Enable subagent & skill discovery from .claude/ directories
-        settingSources: ["project"],
+        // v0.6.5: Load plugins from local paths instead of project settings
+        plugins: pluginPaths,
+        // v0.6.5: Append looplia system prompt to claude_code preset
+        systemPrompt: {
+          type: "preset",
+          preset: "claude_code",
+          append: loopliaSystemPrompt,
+        },
         // v0.6.0: Enable Task for subagent spawning, Write/Glob for file operations
         // v0.6.3: Added WebSearch/WebFetch for input-less search skill
         allowedTools: [

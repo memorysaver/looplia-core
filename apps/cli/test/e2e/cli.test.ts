@@ -86,7 +86,7 @@ describe("CLI E2E Tests", () => {
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain("looplia init");
       expect(result.stdout).toContain("--yes");
-      expect(result.stdout).toContain("Initialize or refresh workspace");
+      expect(result.stdout).toContain("Initialize looplia plugin");
     });
 
     it("should show init help with -h flag", async () => {
