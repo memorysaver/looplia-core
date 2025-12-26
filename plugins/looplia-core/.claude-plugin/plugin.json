@@ -1,6 +1,6 @@
 {
-  "name": "looplia",
-  "description": "Looplia workflow engine - Execute workflow-as-markdown definitions with validation-driven completion",
+  "name": "looplia-core",
+  "description": "Core workflow engine - Execute workflow-as-markdown definitions with validation-driven completion",
   "version": "0.6.5",
   "author": {
     "name": "Looplia"

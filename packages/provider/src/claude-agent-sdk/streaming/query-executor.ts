@@ -162,7 +162,7 @@ export async function* executeAgenticQueryStreaming<T>(
     );
 
     // v0.6.5: Get plugin paths based on mode (dev vs prod)
-    const pluginPaths = getPluginPaths();
+    const pluginPaths = await getPluginPaths();
     // v0.6.5: Capture user's working directory before SDK starts
     const userCwd = process.cwd();
     const loopliaHome = getLoopliaPluginPath();

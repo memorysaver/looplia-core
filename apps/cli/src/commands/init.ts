@@ -2,7 +2,7 @@ import { dirname, join } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import {
-  copyBundledPlugins,
+  copyPlugins,
   downloadRemotePlugins,
   getLoopliaPluginPath,
   isLoopliaInitialized,
@@ -51,7 +51,7 @@ Description:
 
   Default mode (npm bundle):
     - Copies bundled plugins from npm package to ~/.looplia
-    - Merges looplia-core (infrastructure) + looplia-writer (domain)
+    - Installs looplia-core (workflow engine) + looplia-writer (writing domain)
 
   Remote mode (--remote):
     - Downloads plugins from GitHub release
@@ -59,11 +59,10 @@ Description:
 
   Created structure:
     ~/.looplia/
-    ├── .claude-plugin/plugin.json  Plugin manifest
-    ├── commands/                   /looplia:run, /looplia:build, etc.
-    ├── skills/                     Workflow executor, validators, etc.
-    ├── hooks/                      Event handlers
-    ├── workflows/                  Workflow definitions
+    ├── looplia-core/               Core workflow engine
+    │   └── .claude-plugin/         Plugin manifest
+    ├── looplia-writer/             Writing domain plugin
+    │   └── .claude-plugin/         Plugin manifest
     ├── sandbox/                    Execution isolation
     └── user-profile.json           User preferences
 
@@ -129,11 +128,11 @@ function printInitSuccess(targetDir: string): void {
   console.log("");
   console.log(`Looplia initialized at ${targetDir}`);
   console.log("");
-  console.log("Created:");
-  console.log("  - .claude-plugin/plugin.json (manifest)");
-  console.log("  - commands/ (slash commands)");
-  console.log("  - skills/ (workflow skills)");
-  console.log("  - workflows/ (workflow definitions)");
+  console.log("Installed plugins:");
+  console.log("  - looplia-core/ (workflow engine)");
+  console.log("  - looplia-writer/ (writing domain)");
+  console.log("");
+  console.log("Also created:");
   console.log("  - sandbox/ (execution isolation)");
   console.log("  - user-profile.json (preferences)");
   console.log("");
@@ -176,7 +175,7 @@ export async function runInitCommand(args: string[]): Promise<void> {
     } else {
       console.log("Copying bundled looplia plugins...");
       const bundledPath = getCliBundledPluginsPath();
-      await copyBundledPlugins(targetDir, bundledPath);
+      await copyPlugins(targetDir, bundledPath);
     }
 
     printInitSuccess(targetDir);

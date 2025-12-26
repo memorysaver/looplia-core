@@ -5,12 +5,42 @@
  * - NPM Bundle: Copy from npm package to ~/.looplia
  * - Remote: Download from GitHub release to ~/.looplia
  * - Development: Uses ./plugins directly (no copy needed)
+ *
+ * Uses marketplace.json for dynamic plugin discovery.
  */
 
-import { cp, mkdir, rm, stat, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
+import {
+  cp,
+  mkdir,
+  readdir,
+  readFile,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
+import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+
+/**
+ * Marketplace plugin entry
+ */
+type MarketplacePlugin = {
+  name: string;
+  description: string;
+  source: string; // e.g., "./plugins/looplia-core"
+  category: string;
+  homepage?: string;
+};
+
+/**
+ * Marketplace manifest structure
+ */
+type Marketplace = {
+  name: string;
+  description: string;
+  plugins: MarketplacePlugin[];
+};
 
 /**
  * Check if a path exists
@@ -50,6 +80,46 @@ function getBundledPluginsPath(): string {
 }
 
 /**
+ * Parse marketplace.json to get plugin list
+ */
+async function parseMarketplace(marketplacePath: string): Promise<Marketplace> {
+  const content = await readFile(marketplacePath, "utf-8");
+  return JSON.parse(content) as Marketplace;
+}
+
+/**
+ * Get plugin names from marketplace.json or scan directory
+ */
+async function getPluginNamesFromSource(
+  bundledPath: string
+): Promise<string[]> {
+  // Try to find marketplace.json in parent's .claude-plugin folder
+  const marketplacePath = join(
+    bundledPath,
+    "..",
+    ".claude-plugin",
+    "marketplace.json"
+  );
+
+  if (await pathExists(marketplacePath)) {
+    const marketplace = await parseMarketplace(marketplacePath);
+    return marketplace.plugins
+      .map((p) => {
+        // Extract folder name from source path like "./plugins/looplia-core"
+        const parts = p.source.split("/");
+        return parts.at(-1);
+      })
+      .filter((name): name is string => name !== undefined);
+  }
+
+  // Fallback: scan plugins directory
+  const entries = await readdir(bundledPath, { withFileTypes: true });
+  return entries
+    .filter((e) => e.isDirectory() && !e.name.startsWith("."))
+    .map((e) => e.name);
+}
+
+/**
  * Create default user profile
  */
 function createDefaultProfile(): object {
@@ -65,100 +135,39 @@ function createDefaultProfile(): object {
 }
 
 /**
- * Copy bundled plugins to target directory (merging core + writer)
+ * Copy plugins to target directory (no merge, keeps separate)
  *
  * This is used when users run `looplia init` after installing via npm.
- * It merges looplia-core and looplia-writer into a single plugin at ~/.looplia.
+ * Reads plugin list from marketplace.json for dynamic discovery.
  *
  * @param targetDir - Target directory (e.g., ~/.looplia)
  * @param sourcePath - Optional source path for bundled plugins. If not provided,
  *                     uses getBundledPluginsPath() which works for npm installs.
  */
-export async function copyBundledPlugins(
+export async function copyPlugins(
   targetDir: string,
   sourcePath?: string
 ): Promise<void> {
   const bundledPath = sourcePath ?? getBundledPluginsPath();
-  const corePath = join(bundledPath, "looplia-core");
-  const writerPath = join(bundledPath, "looplia-writer");
 
-  // Verify bundled plugins exist
-  if (!(await pathExists(corePath))) {
-    throw new Error(
-      `Bundled plugins not found at ${corePath}. Ensure you installed looplia correctly.`
-    );
+  // Get plugin list from marketplace.json (dynamic, not hardcoded)
+  const pluginNames = await getPluginNamesFromSource(bundledPath);
+
+  if (pluginNames.length === 0) {
+    throw new Error(`No plugins found at ${bundledPath}`);
   }
 
-  // Clean target directory
+  // Clean and create target directory
   if (await pathExists(targetDir)) {
     await rm(targetDir, { recursive: true, force: true });
   }
   await mkdir(targetDir, { recursive: true });
 
-  // Create merged plugin.json
-  await mkdir(join(targetDir, ".claude-plugin"), { recursive: true });
-  await writeFile(
-    join(targetDir, ".claude-plugin", "plugin.json"),
-    JSON.stringify(
-      {
-        name: "looplia",
-        description:
-          "Looplia workflow engine - Execute workflow-as-markdown definitions with validation-driven completion",
-        version: "0.6.5",
-        author: { name: "Looplia" },
-        keywords: ["workflow", "agentic", "automation", "validation"],
-        homepage: "https://github.com/memorysaver/looplia-core",
-      },
-      null,
-      2
-    ),
-    "utf-8"
-  );
-
-  // Copy from looplia-core (commands, skills, hooks, scripts)
-  const coreCommands = join(corePath, "commands");
-  if (await pathExists(coreCommands)) {
-    await cp(coreCommands, join(targetDir, "commands"), { recursive: true });
-  }
-
-  const coreSkills = join(corePath, "skills");
-  if (await pathExists(coreSkills)) {
-    await cp(coreSkills, join(targetDir, "skills"), { recursive: true });
-  }
-
-  const coreHooks = join(corePath, "hooks");
-  if (await pathExists(coreHooks)) {
-    await cp(coreHooks, join(targetDir, "hooks"), { recursive: true });
-  }
-
-  const coreScripts = join(corePath, "scripts");
-  if (await pathExists(coreScripts)) {
-    await cp(coreScripts, join(targetDir, "scripts"), { recursive: true });
-  }
-
-  const coreAgents = join(corePath, "agents");
-  if (await pathExists(coreAgents)) {
-    await mkdir(join(targetDir, "agents"), { recursive: true });
-    await cp(coreAgents, join(targetDir, "agents"), { recursive: true });
-  }
-
-  // Merge from looplia-writer (skills, workflows)
-  if (await pathExists(writerPath)) {
-    const writerSkills = join(writerPath, "skills");
-    if (await pathExists(writerSkills)) {
-      await cp(writerSkills, join(targetDir, "skills"), { recursive: true });
-    }
-
-    const writerWorkflows = join(writerPath, "workflows");
-    if (await pathExists(writerWorkflows)) {
-      await cp(writerWorkflows, join(targetDir, "workflows"), {
-        recursive: true,
-      });
-    }
-
-    const writerAgents = join(writerPath, "agents");
-    if (await pathExists(writerAgents)) {
-      await cp(writerAgents, join(targetDir, "agents"), { recursive: true });
+  // Copy all plugins from marketplace (no merge, keep separate)
+  for (const pluginName of pluginNames) {
+    const pluginPath = join(bundledPath, pluginName);
+    if (await pathExists(pluginPath)) {
+      await cp(pluginPath, join(targetDir, pluginName), { recursive: true });
     }
   }
 
@@ -190,72 +199,66 @@ export async function downloadRemotePlugins(
 
   console.log(`Downloading looplia plugins from ${releaseUrl}...`);
 
-  // Clean target directory
-  if (await pathExists(targetDir)) {
-    await rm(targetDir, { recursive: true, force: true });
-  }
-  await mkdir(targetDir, { recursive: true });
+  // Download to temp directory first
+  const tempDir = join(tmpdir(), `looplia-download-${Date.now()}`);
+  await mkdir(tempDir, { recursive: true });
 
-  // Download the tarball
-  const response = await fetch(releaseUrl);
-  if (!response.ok) {
-    throw new Error(
-      `Failed to download plugins: ${response.status} ${response.statusText}`
-    );
-  }
-
-  // Save tarball temporarily
-  const tarball = await response.arrayBuffer();
-  const tarPath = join(targetDir, "plugins.tar.gz");
-  await writeFile(tarPath, Buffer.from(tarball));
-
-  // Extract using tar (available on macOS/Linux)
-  const { execSync } = await import("node:child_process");
   try {
-    execSync("tar -xzf plugins.tar.gz -C . --strip-components=1", {
-      cwd: targetDir,
-      stdio: "pipe",
-    });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `Failed to extract plugins tarball. Ensure 'tar' is available. Error: ${errorMessage}`
-    );
-  } finally {
-    // Clean up tarball regardless of success or failure
-    try {
-      await rm(tarPath);
-    } catch {
-      // Ignore cleanup errors to avoid masking the original error
+    // Download the tarball
+    const response = await fetch(releaseUrl);
+    if (!response.ok) {
+      throw new Error(
+        `Failed to download plugins: ${response.status} ${response.statusText}`
+      );
     }
-  }
 
-  // Create sandbox directory if not in tarball
-  const sandboxDir = join(targetDir, "sandbox");
-  if (!(await pathExists(sandboxDir))) {
-    await mkdir(sandboxDir, { recursive: true });
-  }
+    // Save and extract tarball
+    const tarPath = join(tempDir, "plugins.tar.gz");
+    await writeFile(tarPath, Buffer.from(await response.arrayBuffer()));
 
-  // Create default user profile if not in tarball
-  const profilePath = join(targetDir, "user-profile.json");
-  if (!(await pathExists(profilePath))) {
-    await writeFile(
-      profilePath,
-      JSON.stringify(createDefaultProfile(), null, 2),
-      "utf-8"
-    );
-  }
+    // Extract using tar (available on macOS/Linux)
+    const { execSync } = await import("node:child_process");
+    try {
+      execSync("tar -xzf plugins.tar.gz", {
+        cwd: tempDir,
+        stdio: "pipe",
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Failed to extract plugins tarball. Ensure 'tar' is available. Error: ${errorMessage}`
+      );
+    }
 
-  console.log(`Plugins downloaded and extracted to ${targetDir}`);
+    await rm(tarPath);
+
+    // Copy plugins (no merge)
+    await copyPlugins(targetDir, tempDir);
+
+    console.log(`Plugins downloaded and extracted to ${targetDir}`);
+  } finally {
+    // Clean up temp directory
+    await rm(tempDir, { recursive: true, force: true }).catch(() => {
+      // Ignore cleanup errors
+    });
+  }
 }
 
 /**
- * Check if looplia is initialized (plugin exists at ~/.looplia)
+ * Check if looplia is initialized (any plugin exists at ~/.looplia)
  */
 export async function isLoopliaInitialized(): Promise<boolean> {
   const pluginPath = getLoopliaPluginPath();
-  const manifestPath = join(pluginPath, ".claude-plugin", "plugin.json");
-  return await pathExists(manifestPath);
+
+  try {
+    const entries = await readdir(pluginPath, { withFileTypes: true });
+    return entries.some(
+      (e) => e.isDirectory() && !e.name.startsWith(".") && e.name !== "sandbox"
+    );
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -276,10 +279,29 @@ export function getDevPluginPaths(
 /**
  * Get plugin paths for production mode
  *
- * In production mode, we use the merged plugin at ~/.looplia
+ * In production mode, we scan ~/.looplia for installed plugins.
  */
-export function getProdPluginPaths(): Array<{ type: "local"; path: string }> {
-  return [{ type: "local", path: getLoopliaPluginPath() }];
+export async function getProdPluginPaths(): Promise<
+  Array<{ type: "local"; path: string }>
+> {
+  const loopliaPath = getLoopliaPluginPath();
+
+  try {
+    const entries = await readdir(loopliaPath, { withFileTypes: true });
+    const pluginDirs = entries
+      .filter(
+        (e) =>
+          e.isDirectory() && !e.name.startsWith(".") && e.name !== "sandbox"
+      )
+      .map((e) => e.name);
+
+    return pluginDirs.map((name) => ({
+      type: "local" as const,
+      path: join(loopliaPath, name),
+    }));
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -287,14 +309,16 @@ export function getProdPluginPaths(): Array<{ type: "local"; path: string }> {
  *
  * - LOOPLIA_DEV=true: Use source plugins directly (development)
  *   - LOOPLIA_DEV_ROOT specifies repo root (defaults to cwd)
- * - Otherwise: Use ~/.looplia (production)
+ * - Otherwise: Scan ~/.looplia for installed plugins (production)
  */
-export function getPluginPaths(): Array<{ type: "local"; path: string }> {
+export async function getPluginPaths(): Promise<
+  Array<{ type: "local"; path: string }>
+> {
   if (process.env.LOOPLIA_DEV === "true") {
     const devRoot = process.env.LOOPLIA_DEV_ROOT ?? process.cwd();
     return getDevPluginPaths(devRoot);
   }
-  return getProdPluginPaths();
+  return await getProdPluginPaths();
 }
 
 /**
