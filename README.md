@@ -8,7 +8,7 @@ Looplia Core is an agentic workflow platform powered by the Claude Agent SDK. It
 
 **Vision:** A universal CLI for AI-powered workflows — one tool, many domains, powered by composable skills.
 
-## v0.6.4 Architecture
+## v0.6.5 Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -198,12 +198,28 @@ looplia --help
 env $(cat .env) looplia run writing-kit --file test.md
 ```
 
+### Development Mode
+
+For contributors developing looplia from source without running `init`:
+
+```bash
+# Set environment variables
+export LOOPLIA_DEV=true
+export LOOPLIA_DEV_ROOT=~/looplia-core
+
+# Run from any directory - plugins loaded directly from source
+cd ~/my-project
+looplia run writing-kit --file ./article.md
+```
+
 ## Environment Variables
 
 | Variable | Description |
 |----------|-------------|
 | `ANTHROPIC_API_KEY` | Required for Claude API |
 | `CLAUDE_CODE_OAUTH_TOKEN` | Alternative: OAuth token |
+| `LOOPLIA_DEV` | Enable development mode (load from source) |
+| `LOOPLIA_DEV_ROOT` | Path to looplia-core repo (for dev mode) |
 
 ## Documentation
 
@@ -223,7 +239,8 @@ env $(cat .env) looplia run writing-kit --file test.md
 | v0.6.1 | Skills-first, universal skill-executor |
 | v0.6.2 | Per-step orchestration |
 | v0.6.3 | Input-less workflows, web-capable skills |
-| **v0.6.4** | **Interactive Build Wizard, Streaming TUI** |
+| v0.6.4 | Interactive Build Wizard, Streaming TUI |
+| **v0.6.5** | **Agent SDK Local Plugin Loading, Bootstrap Module** |
 
 ## License
 

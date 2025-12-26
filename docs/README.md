@@ -1,6 +1,6 @@
 # Looplia-Core Documentation
 
-> **Version:** 0.6.4
+> **Version:** 0.6.5
 > **Last Updated:** December 2025
 
 This directory contains the core documentation for Looplia-Core, a Claude Agent SDK-based agentic workflow platform.
@@ -14,6 +14,7 @@ These are the current, authoritative documents for the v0.6.3 architecture:
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | [AGENTIC_CONCEPT_1.0.md](./AGENTIC_CONCEPT_1.0.md) | **Skills-first architecture overview** - comprehensive guide to v0.6.1/v0.6.2 | All team members |
+| [DESIGN-0.6.5.md](./DESIGN-0.6.5.md) | **Agent SDK plugin loading**, bootstrap module, dev mode | Developers, Architects |
 | [DESIGN-0.6.3.md](./DESIGN-0.6.3.md) | **Input-less workflows**, web-capable skills, named inputs | Developers, Architects |
 | [DESIGN-0.6.2.md](./DESIGN-0.6.2.md) | **Schema-in-Skill architecture**, plugin-first domain types | Developers, Architects |
 | [DESIGN-0.6.1.md](./DESIGN-0.6.1.md) | **Skills-first architecture**, universal skill-executor, `/build` command | Developers, Architects |
@@ -34,6 +35,42 @@ These are the current, authoritative documents for the v0.6.3 architecture:
 |----------|---------|
 | [AGENTIC_CONCEPT-0.5.md](./archive/AGENTIC_CONCEPT-0.5.md) | Agent system design: Two-plugin model (historical) |
 | [TEST_PLAN-0.6.md](./archive/TEST_PLAN-0.6.md) | Test architecture with real API testing (historical) |
+
+---
+
+## What's New in v0.6.5
+
+### Agent SDK Local Plugin Loading
+
+v0.6.5 changes how plugins are loaded during workflow execution:
+
+| Before (v0.6.4) | After (v0.6.5) |
+|-----------------|----------------|
+| Plugins via `.mcp.json` discovery | Plugins via SDK `plugins` option |
+| Project settings sources | Direct local path loading |
+| Implicit plugin resolution | Explicit path configuration |
+
+**Key Changes:**
+- SDK `cwd` set to `~/.looplia` (sandbox and workflows accessible)
+- User's working directory injected into system prompt for `--file` resolution
+- Bootstrap module for three installation modes (npm bundle, remote, dev)
+
+### Development Mode
+
+New environment variables for development without running `init`:
+
+```bash
+export LOOPLIA_DEV=true
+export LOOPLIA_DEV_ROOT=~/looplia-core
+looplia run writing-kit --file ./test.md  # Works from any directory
+```
+
+In dev mode:
+- Plugins loaded directly from `$LOOPLIA_DEV_ROOT/plugins/`
+- Changes take effect immediately (no re-init needed)
+- Both looplia-core and looplia-writer loaded as separate plugins
+
+See [DESIGN-0.6.5.md](./DESIGN-0.6.5.md) for full specification.
 
 ---
 
@@ -314,7 +351,7 @@ Previous versions are preserved in `/docs/archive/` for reference:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        DOCUMENT RELATIONSHIPS (v0.6.4)                       │
+│                        DOCUMENT RELATIONSHIPS (v0.6.5)                       │
 └─────────────────────────────────────────────────────────────────────────────┘
 
                               ┌──────────────┐
@@ -344,7 +381,7 @@ Previous versions are preserved in `/docs/archive/` for reference:
 ```
 
 **Version Progression:**
-- v0.6.0 → v0.6.1 → v0.6.2 → v0.6.3 → **v0.6.4** (current)
+- v0.6.0 → v0.6.1 → v0.6.2 → v0.6.3 → v0.6.4 → **v0.6.5** (current)
 
 **Key Documents:**
 - **GLOSSARY.md** defines terms used across all documents
@@ -591,4 +628,4 @@ Steps complete when `validation.json` shows `validated: true`:
 
 ---
 
-*This README provides navigation for Looplia-Core v0.6.4 documentation.*
+*This README provides navigation for Looplia-Core v0.6.5 documentation.*
