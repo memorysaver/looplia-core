@@ -347,6 +347,23 @@ export async function executeBatch(
 }
 
 /**
+ * Streaming batch executor for wizard use.
+ * Returns an async generator that yields StreamingEvents.
+ */
+export function executeStreamingBatch(
+  prompt: string,
+  workspace: string
+): AsyncGenerator<StreamingEvent> {
+  const contentId = crypto.randomUUID();
+  const executor = createClaudeAgentExecutor({ workspace });
+
+  return executor.executePromptStreaming(prompt, {
+    workspace,
+    contentId,
+  });
+}
+
+/**
  * Serialize wizard answers to natural language context.
  * Transforms structured answers into readable text for the agent prompt.
  */
@@ -385,8 +402,9 @@ function serializeAnswersToContext(
 /**
  * Build an enriched prompt from wizard answers.
  * Combines description with user answers for the agent's /build command.
+ * Exported for use by wizard's GeneratingPanel.
  */
-function buildEnrichedPrompt(
+export function buildEnrichedPrompt(
   description: string,
   answers: Record<string, Record<string, string | string[]>>,
   name?: string
@@ -431,7 +449,7 @@ function buildEnrichedPrompt(
 /**
  * Execute with interactive wizard (v0.6.4)
  * Uses tab-based UI for multi-turn clarification.
- * After wizard completion, uses the same agent pipeline as slash command.
+ * Generation happens via streaming TUI within the wizard (non-mock mode).
  */
 async function executeWizard(
   workspace: string,
@@ -465,15 +483,18 @@ async function executeWizard(
     };
   }
 
-  // Build enriched prompt from wizard answers
-  // This uses the same /build command path as the slash command
+  // v0.6.4: Non-mock mode returns buildResult from streaming generation
+  if (result.buildResult) {
+    return result.buildResult;
+  }
+
+  // Mock mode fallback: use executeBatch
   const enrichedPrompt = buildEnrichedPrompt(
     result.description,
     result.answers,
     result.workflowName || parsed.name
   );
 
-  // Use same agent pipeline as slash command - single source of truth
   return executeBatch(enrichedPrompt, workspace);
 }
 
