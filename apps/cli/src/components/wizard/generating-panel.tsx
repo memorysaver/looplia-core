@@ -30,6 +30,27 @@ type Props = {
 };
 
 /**
+ * Format the build result for display in the TUI
+ */
+function formatBuildResult(result: BuildResult): string {
+  if (result.status !== "success") {
+    return result.error ?? "Build failed";
+  }
+
+  const lines: string[] = [];
+
+  if (result.workflowPath) {
+    lines.push(`Saved to: ${result.workflowPath}`);
+  }
+
+  if (result.workflowName) {
+    lines.push(`Run with: looplia run ${result.workflowName}`);
+  }
+
+  return lines.join("\n");
+}
+
+/**
  * GeneratingPanel renders the streaming TUI during workflow generation.
  * Uses the same tree-based display as the `run` command.
  */
@@ -55,6 +76,7 @@ export function GeneratingPanel({
 
   return (
     <StreamingQueryUI<BuildResult>
+      formatResult={formatBuildResult}
       onComplete={handleComplete}
       onError={onError}
       streamGenerator={createStreamGenerator}

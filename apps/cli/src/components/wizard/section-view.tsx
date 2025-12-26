@@ -40,15 +40,25 @@ export function SectionView({
   }
 
   const answer = answers[question.id];
+  const currentValue = answer ?? getDefaultValue(question);
+
+  // Save current value (including defaults) before completing section
+  const handleComplete = () => {
+    // Ensure the current value is saved even if user didn't explicitly change it
+    if (answer === undefined && currentValue !== undefined) {
+      onAnswerChange(question.id, currentValue);
+    }
+    onComplete?.();
+  };
 
   return (
     <Box flexDirection="column">
       <QuestionCard
         isActive={isActive}
         onChange={(value) => onAnswerChange(question.id, value)}
-        onSubmit={onComplete}
+        onSubmit={handleComplete}
         question={question}
-        value={answer ?? getDefaultValue(question)}
+        value={currentValue}
       />
       <Box marginTop={1}>
         <Text dimColor>

@@ -364,36 +364,87 @@ export function executeStreamingBatch(
 }
 
 /**
+ * Section type for answer serialization
+ */
+type SectionForContext = {
+  id: string;
+  questions: Array<{ id: string; text: string }>;
+};
+
+/**
+ * Build a map of questionId -> question text from sections
+ */
+function buildQuestionTextMap(
+  sections?: SectionForContext[]
+): Map<string, string> {
+  const map = new Map<string, string>();
+  if (!sections) {
+    return map;
+  }
+
+  for (const section of sections) {
+    for (const question of section.questions) {
+      map.set(question.id, question.text);
+    }
+  }
+  return map;
+}
+
+/**
+ * Format a single answer value to string
+ */
+function formatAnswerValue(value: string | string[]): string {
+  return Array.isArray(value) ? value.join(", ") : String(value);
+}
+
+/**
+ * Format a question-answer pair for the prompt
+ */
+function formatQAPair(
+  questionId: string,
+  value: string | string[],
+  questionTextMap: Map<string, string>
+): string | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  const formattedValue = formatAnswerValue(value);
+  if (!formattedValue) {
+    return null;
+  }
+
+  const questionText = questionTextMap.get(questionId);
+  if (questionText) {
+    return `Q: ${questionText} A: ${formattedValue}`;
+  }
+  const key = questionId.replace(/-/g, " ");
+  return `${key}: ${formattedValue}`;
+}
+
+/**
  * Serialize wizard answers to natural language context.
  * Transforms structured answers into readable text for the agent prompt.
+ * Uses original question text for better context.
  */
 function serializeAnswersToContext(
-  answers: Record<string, Record<string, string | string[]>>
+  answers: Record<string, Record<string, string | string[]>>,
+  sections?: SectionForContext[]
 ): string {
+  const questionTextMap = buildQuestionTextMap(sections);
   const parts: string[] = [];
 
-  // Input section
-  const input = answers.input || {};
-  if (input["content-type"]) {
-    parts.push(`Input type: ${input["content-type"]}`);
-  }
+  for (const [sectionId, sectionAnswers] of Object.entries(answers)) {
+    if (sectionId === "review") {
+      continue;
+    }
 
-  // Goals section
-  const goals = answers.goals || {};
-  if (goals["primary-goal"]) {
-    const goalList = Array.isArray(goals["primary-goal"])
-      ? (goals["primary-goal"] as string[]).join(", ")
-      : goals["primary-goal"];
-    parts.push(`Goals: ${goalList}`);
-  }
-  if (goals.depth) {
-    parts.push(`Analysis depth: ${goals.depth}`);
-  }
-
-  // Output section
-  const output = answers.output || {};
-  if (output.format) {
-    parts.push(`Output format: ${output.format}`);
+    for (const [questionId, value] of Object.entries(sectionAnswers)) {
+      const formatted = formatQAPair(questionId, value, questionTextMap);
+      if (formatted) {
+        parts.push(formatted);
+      }
+    }
   }
 
   return parts.join(". ");
@@ -407,7 +458,8 @@ function serializeAnswersToContext(
 export function buildEnrichedPrompt(
   description: string,
   answers: Record<string, Record<string, string | string[]>>,
-  name?: string
+  name?: string,
+  sections?: SectionForContext[]
 ): string {
   let prompt = "/build";
 
@@ -424,17 +476,17 @@ export function buildEnrichedPrompt(
     }
   }
 
-  // Serialize answers into natural language context
-  const context = serializeAnswersToContext(answers);
+  // Serialize answers into natural language context (with question text)
+  const context = serializeAnswersToContext(answers, sections);
 
   // Combine description with user answers
   const enrichedDescription = context
-    ? `${description}. User preferences: ${context}`
+    ? `${description}. User clarifications: ${context}`
     : description;
 
   const sanitized = enrichedDescription
     .trim()
-    .slice(0, MAX_DESCRIPTION_LENGTH * 2) // Allow more for enriched content
+    .slice(0, MAX_DESCRIPTION_LENGTH * 3) // Allow more for enriched content with questions
     .replace(/[\n\r\t]/g, " ")
     .replace(/\s+/g, " ")
     .trim();

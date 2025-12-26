@@ -154,12 +154,49 @@ export function BuildWizard({
     }
   });
 
+  // Generate session ID once for this wizard instance
+  const [sessionId] = useState(() => crypto.randomUUID().slice(0, 8));
+
   // Phase-specific handlers
   const handleDescriptionSubmit = useCallback(() => {
     if (state.description.trim()) {
+      // DEBUG: Log description at submit time
+      import("node:fs").then((fs) => {
+        import("node:os").then((os) => {
+          import("node:path").then((path) => {
+            const logsDir = path.resolve(
+              os.homedir(),
+              ".looplia/workflows/logs"
+            );
+            if (!fs.existsSync(logsDir)) {
+              fs.mkdirSync(logsDir, { recursive: true });
+            }
+            const logPath = path.resolve(
+              logsDir,
+              `wizard-${sessionId}-description.log`
+            );
+            fs.writeFileSync(
+              logPath,
+              JSON.stringify(
+                {
+                  timestamp: new Date().toISOString(),
+                  sessionId,
+                  phase: "description-submit",
+                  description: {
+                    value: state.description,
+                    length: state.description.length,
+                  },
+                },
+                null,
+                2
+              )
+            );
+          });
+        });
+      });
       setState((s) => ({ ...s, phase: "analyzing" }));
     }
-  }, [state.description]);
+  }, [state.description, sessionId]);
 
   const handleDescriptionChange = useCallback((value: string) => {
     setState((s) => ({ ...s, description: value }));
@@ -345,12 +382,47 @@ export function BuildWizard({
     }));
   }, []);
 
-  // Build enriched prompt for streaming generation
+  // Build enriched prompt for streaming generation (includes question text for context)
   const enrichedPrompt = buildEnrichedPrompt(
     state.description,
     state.answers,
-    workflowName
+    workflowName,
+    state.sections
   );
+
+  // DEBUG: Write to ~/.looplia/workflows/logs/{session-id}.log
+  if (state.phase === "generating") {
+    const debugInfo = {
+      timestamp: new Date().toISOString(),
+      sessionId,
+      phase: state.phase,
+      description: {
+        value: state.description,
+        length: state.description.length,
+      },
+      answers: state.answers,
+      enrichedPrompt: {
+        value: enrichedPrompt,
+        length: enrichedPrompt.length,
+      },
+      workflowName,
+    };
+    import("node:fs").then((fs) => {
+      import("node:os").then((os) => {
+        import("node:path").then((path) => {
+          const logsDir = path.resolve(os.homedir(), ".looplia/workflows/logs");
+          if (!fs.existsSync(logsDir)) {
+            fs.mkdirSync(logsDir, { recursive: true });
+          }
+          const logPath = path.resolve(
+            logsDir,
+            `wizard-${sessionId}-generating.log`
+          );
+          fs.writeFileSync(logPath, JSON.stringify(debugInfo, null, 2));
+        });
+      });
+    });
+  }
 
   // Render streaming GeneratingPanel for non-mock generating phase
   if (state.phase === "generating" && !mock) {

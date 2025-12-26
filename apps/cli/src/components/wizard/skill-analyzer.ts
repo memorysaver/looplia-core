@@ -9,6 +9,7 @@ import { createClaudeAgentExecutor } from "@looplia-core/provider/claude-agent-s
 import type {
   ClarificationResult,
   PreviewWorkflow,
+  Question,
   Recommendation,
   Section,
 } from "./types.js";
@@ -74,9 +75,11 @@ function buildAnalysisPrompt(description: string): string {
    - ALWAYS include "Review" as the LAST section with empty questions array
 
 4. For each question:
+   - ALWAYS use "single-select" or "multi-select" type with 2-4 options
+   - NEVER use "text" type - always provide selectable options
    - Mark options as "inferred: true" if you detected them from the description
    - Include a "reason" field explaining why you inferred something
-   - question.type can be: "single-select", "multi-select", or "text"
+   - Each question MUST have an "options" array with at least 2 choices
 
 5. Use Skill("workflow-schema-composer") to generate a preview workflow:
    - Generate proper missions for each step (detailed task descriptions)
@@ -167,6 +170,51 @@ type ParsedResponse = {
 };
 
 /**
+ * Normalize a question to ensure it has valid options.
+ * Converts text questions to single-select with default options.
+ */
+function normalizeQuestion(question: Record<string, unknown>): Question {
+  const id = String(question.id || "question");
+  const text = String(question.text || "Please select an option");
+  const reason = question.reason ? String(question.reason) : undefined;
+
+  // Check if question has valid options
+  const hasValidOptions =
+    Array.isArray(question.options) && question.options.length >= 2;
+
+  // If text type or missing options, convert to single-select with defaults
+  if (question.type === "text" || !hasValidOptions) {
+    return {
+      id,
+      text,
+      type: "single-select",
+      options: [
+        { id: "default", label: "Use recommended defaults", inferred: true },
+        { id: "custom", label: "Let me specify details" },
+      ],
+      reason: reason || "Select an option to continue",
+    };
+  }
+
+  // Normalize existing options
+  const options = (question.options as Record<string, unknown>[]).map(
+    (opt) => ({
+      id: String(opt.id || "option"),
+      label: String(opt.label || "Option"),
+      inferred: Boolean(opt.inferred),
+    })
+  );
+
+  return {
+    id,
+    text,
+    type: question.type === "multi-select" ? "multi-select" : "single-select",
+    options,
+    reason,
+  };
+}
+
+/**
  * Flatten sections: each question becomes its own section (1 question = 1 tab)
  */
 function flattenSections(rawSections: Record<string, unknown>[]): Section[] {
@@ -189,12 +237,12 @@ function flattenSections(rawSections: Record<string, unknown>[]): Section[] {
       ? rawSection.questions
       : [];
 
-    for (const question of questions) {
-      const qId = String(question.id || sectionId);
-      const shortLabel = getShortLabel(String(question.text || "Question"));
+    for (const rawQuestion of questions) {
+      const question = normalizeQuestion(rawQuestion);
+      const shortLabel = getShortLabel(question.text);
 
       flatSections.push({
-        id: qId,
+        id: question.id,
         title: shortLabel,
         completed: false,
         questions: [question],
