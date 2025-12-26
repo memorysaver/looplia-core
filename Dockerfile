@@ -15,7 +15,8 @@ COPY packages/provider/dist ./packages/provider/dist
 COPY packages/provider/docker.package.json ./packages/provider/package.json
 COPY apps/cli/dist ./apps/cli/dist
 COPY apps/cli/docker.package.json ./apps/cli/package.json
-COPY plugins ./plugins
+# v0.6.5: Copy plugins to where CLI expects them (apps/cli/plugins/)
+COPY plugins ./apps/cli/plugins
 
 # Copy minimal package.json for Docker (no workspace refs)
 COPY docker.package.json ./package.json

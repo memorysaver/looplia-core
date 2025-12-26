@@ -69,9 +69,16 @@ function createDefaultProfile(): object {
  *
  * This is used when users run `looplia init` after installing via npm.
  * It merges looplia-core and looplia-writer into a single plugin at ~/.looplia.
+ *
+ * @param targetDir - Target directory (e.g., ~/.looplia)
+ * @param sourcePath - Optional source path for bundled plugins. If not provided,
+ *                     uses getBundledPluginsPath() which works for npm installs.
  */
-export async function copyBundledPlugins(targetDir: string): Promise<void> {
-  const bundledPath = getBundledPluginsPath();
+export async function copyBundledPlugins(
+  targetDir: string,
+  sourcePath?: string
+): Promise<void> {
+  const bundledPath = sourcePath ?? getBundledPluginsPath();
   const corePath = join(bundledPath, "looplia-core");
   const writerPath = join(bundledPath, "looplia-writer");
 
@@ -273,12 +280,14 @@ export function getProdPluginPaths(): Array<{ type: "local"; path: string }> {
 /**
  * Get plugin paths based on current mode
  *
- * - LOOPLIA_DEV=true: Use ./plugins directly (development)
+ * - LOOPLIA_DEV=true: Use source plugins directly (development)
+ *   - LOOPLIA_DEV_ROOT specifies repo root (defaults to cwd)
  * - Otherwise: Use ~/.looplia (production)
  */
 export function getPluginPaths(): Array<{ type: "local"; path: string }> {
   if (process.env.LOOPLIA_DEV === "true") {
-    return getDevPluginPaths(process.cwd());
+    const devRoot = process.env.LOOPLIA_DEV_ROOT ?? process.cwd();
+    return getDevPluginPaths(devRoot);
   }
   return getProdPluginPaths();
 }

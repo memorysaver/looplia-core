@@ -356,14 +356,39 @@ looplia init --remote v0.6.5  # Downloads specific version
 - `looplia-core` plugin.json name should be "looplia" (not "looplia-core")
 - This ensures commands are `/looplia:run` in both dev and prod
 
+**Environment Variables:**
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `LOOPLIA_DEV` | Enable development mode | `false` |
+| `LOOPLIA_DEV_ROOT` | Path to looplia-core repository | `process.cwd()` |
+
 **User Experience:**
 ```bash
+# Option 1: Run from repo root (simple)
 cd ~/looplia-core
 export LOOPLIA_DEV=true
-bun run dev                  # Start CLI in dev mode
+looplia run writing-kit --file ./test.md
+
+# Option 2: Run from any directory (with LOOPLIA_DEV_ROOT)
+export LOOPLIA_DEV=true
+export LOOPLIA_DEV_ROOT=~/looplia-core
+cd ~/my-project
+looplia run writing-kit --file ./article.md  # Works from any directory
 
 # Edit plugins/looplia-core/skills/workflow-executor/SKILL.md
 # Changes take effect immediately on next run
+```
+
+**Implementation:**
+```typescript
+export function getPluginPaths(): Array<{ type: "local"; path: string }> {
+  if (process.env.LOOPLIA_DEV === "true") {
+    const devRoot = process.env.LOOPLIA_DEV_ROOT ?? process.cwd();
+    return getDevPluginPaths(devRoot);
+  }
+  return getProdPluginPaths();
+}
 ```
 
 ---

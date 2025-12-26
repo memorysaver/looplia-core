@@ -1,10 +1,31 @@
+import { dirname, join } from "node:path";
 import { createInterface } from "node:readline";
+import { fileURLToPath } from "node:url";
 import {
   copyBundledPlugins,
   downloadRemotePlugins,
   getLoopliaPluginPath,
   isLoopliaInitialized,
 } from "@looplia-core/provider/bootstrap";
+
+/**
+ * Get the bundled plugins path for the CLI package
+ *
+ * When installed via npm or bun link, plugins are at:
+ * apps/cli/plugins/ (or node_modules/looplia/plugins/)
+ *
+ * tsup bundles everything into: dist/index.js
+ * So we navigate: dist/ -> ../plugins
+ */
+function getCliBundledPluginsPath(): string {
+  const currentFile =
+    typeof __dirname !== "undefined"
+      ? __dirname
+      : dirname(fileURLToPath(import.meta.url));
+
+  // From dist/ go up to CLI root, then to plugins/
+  return join(currentFile, "..", "plugins");
+}
 
 type InitOptions = {
   skipConfirmation: boolean;
@@ -154,7 +175,8 @@ export async function runInitCommand(args: string[]): Promise<void> {
       await downloadRemotePlugins(options.remoteVersion, targetDir);
     } else {
       console.log("Copying bundled looplia plugins...");
-      await copyBundledPlugins(targetDir);
+      const bundledPath = getCliBundledPluginsPath();
+      await copyBundledPlugins(targetDir, bundledPath);
     }
 
     printInitSuccess(targetDir);
