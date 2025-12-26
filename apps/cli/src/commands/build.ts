@@ -1,25 +1,30 @@
 /**
- * Build Command (v0.6.1) - Thin Wrapper
+ * Build Command (v0.6.4) - Interactive Wizard
  *
- * Build a workflow from natural language by injecting /build command into the agent.
- * All workflow building logic is in the 3 builder skills:
- * - plugin-registry-scanner
- * - skill-capability-matcher
- * - workflow-schema-composer
+ * Build a workflow from natural language with multi-turn clarification.
+ * Uses interactive wizard when run without arguments or with description.
  *
+ * The wizard guides users through:
+ * 1. Description input (if not provided)
+ * 2. AI-generated clarifying questions
+ * 3. Tab-based navigation through sections
+ * 4. Live workflow preview
+ * 5. Final generation and save
+ *
+ * @see docs/DESIGN-0.6.4.md
  * @see docs/DESIGN-0.6.1.md § 5 CLI Command
  * @see plugins/looplia-core/commands/build.md
  */
 
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 
 import type { StreamingEvent } from "@looplia-core/core";
 import { createClaudeAgentExecutor } from "@looplia-core/provider/claude-agent-sdk";
-
-import { renderStreamingQuery } from "../components";
-import { isInteractive } from "../utils/terminal";
+import { renderStreamingQuery } from "../components/index.js";
+import { renderBuildWizard } from "../components/wizard/index.js";
+import { isInteractive } from "../utils/terminal.js";
 
 /** Maximum description length to prevent excessive prompt size */
 const MAX_DESCRIPTION_LENGTH = 500;
@@ -265,10 +270,11 @@ function executeMock(args: BuildArgs): BuildResult {
 }
 
 /**
- * Execute with streaming UI.
+ * Execute with streaming UI (legacy).
  * Wraps streaming execution with error handling and proper session tracking.
+ * @deprecated Use executeWizard for interactive builds (v0.6.4+)
  */
-async function executeStreaming(
+export async function executeStreamingLegacy(
   prompt: string,
   workspace: string
 ): Promise<BuildResult> {
@@ -341,6 +347,103 @@ export async function executeBatch(
 }
 
 /**
+ * Execute with interactive wizard (v0.6.4)
+ * Uses tab-based UI for multi-turn clarification.
+ */
+async function executeWizard(
+  workspace: string,
+  parsed: BuildArgs
+): Promise<BuildResult> {
+  const { result, cancelled, error } = await renderBuildWizard({
+    initialDescription: parsed.description,
+    workflowName: parsed.name,
+    workspace,
+    mock: parsed.mock,
+  });
+
+  if (cancelled) {
+    return {
+      status: "error",
+      error: "Build cancelled by user",
+    };
+  }
+
+  if (error) {
+    return {
+      status: "error",
+      error: error.message,
+    };
+  }
+
+  if (!result) {
+    return {
+      status: "error",
+      error: "No result received from wizard",
+    };
+  }
+
+  // Generate workflow file content
+  const workflowName = result.workflowName || result.workflow.name;
+  const workflowPath = resolve(workspace, "workflows", `${workflowName}.md`);
+
+  // Generate YAML content from wizard result
+  const workflowContent = generateWorkflowContent(result);
+  writeFileSync(workflowPath, workflowContent, "utf-8");
+
+  return {
+    status: "success",
+    workflowPath,
+    workflowName,
+    stepsCount: result.workflow.steps.length,
+  };
+}
+
+/**
+ * Generate workflow markdown content from wizard result
+ */
+function generateWorkflowContent(result: {
+  description: string;
+  workflow: {
+    name: string;
+    steps: Array<{
+      id: string;
+      skill: string;
+      needs: string[];
+      output: string;
+    }>;
+  };
+}): string {
+  const { workflow, description } = result;
+
+  const stepsYaml = workflow.steps
+    .map((step) => {
+      const lines = [`  - id: ${step.id}`, `    skill: ${step.skill}`];
+      if (step.needs.length > 0) {
+        lines.push(`    needs: [${step.needs.join(", ")}]`);
+      }
+      lines.push(`    mission: Process ${step.id}`);
+      lines.push(`    output: ${step.output}`);
+      return lines.join("\n");
+    })
+    .join("\n");
+
+  return `---
+name: ${workflow.name}
+version: "1.0.0"
+description: |
+  ${description}
+
+steps:
+${stepsYaml}
+---
+
+# ${workflow.name}
+
+${description}
+`;
+}
+
+/**
  * Execute build based on mode
  */
 function executeBuild(
@@ -352,8 +455,18 @@ function executeBuild(
     return Promise.resolve(executeMock(parsed));
   }
 
+  // Use interactive wizard in terminal mode (v0.6.4)
   if (isInteractive() && !parsed.noInteractive) {
-    return executeStreaming(prompt, workspace);
+    return executeWizard(workspace, parsed);
+  }
+
+  // Batch mode: require description
+  if (!parsed.description) {
+    return Promise.resolve({
+      status: "error",
+      error:
+        "Description required in non-interactive mode. Use --no-interactive with a description.",
+    });
   }
 
   return executeBatch(prompt, workspace);

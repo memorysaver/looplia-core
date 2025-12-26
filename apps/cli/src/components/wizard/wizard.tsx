@@ -1,0 +1,611 @@
+/**
+ * Build Wizard component
+ *
+ * Main orchestrator for the interactive build wizard.
+ * Manages state machine and coordinates all phases.
+ */
+
+import { Box, Text, useApp, useInput } from "ink";
+import type { ReactNode } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { BoxedArea } from "../boxed-area.js";
+import { TextInput } from "../inputs/index.js";
+import { Spinner } from "../spinner.js";
+import { buildPreview } from "./preview-builder.js";
+import { ReviewPanel } from "./review-panel.js";
+import { SectionView } from "./section-view.js";
+import { analyzeDescription } from "./skill-analyzer.js";
+import { TabBar } from "./tab-bar.js";
+import type {
+  Answers,
+  ClarificationResult,
+  PreviewWorkflow,
+  Section,
+  WizardState,
+} from "./types.js";
+
+/**
+ * Render the appropriate section content based on state
+ */
+function renderSectionContent(
+  isReviewSection: boolean,
+  currentSection: Section | undefined,
+  state: WizardState,
+  handlers: {
+    onAnswerChange: (
+      sectionId: string,
+      questionId: string,
+      value: string | string[]
+    ) => void;
+    onSectionComplete: () => void;
+    onReviewConfirm: () => void;
+    onReviewCancel: () => void;
+  }
+): ReactNode {
+  if (isReviewSection) {
+    return (
+      <ReviewPanel
+        answers={state.answers}
+        description={state.description}
+        isActive={true}
+        onCancel={handlers.onReviewCancel}
+        onConfirm={handlers.onReviewConfirm}
+        recommendations={state.recommendations}
+        sections={state.sections}
+      />
+    );
+  }
+
+  if (currentSection) {
+    return (
+      <SectionView
+        answers={state.answers[currentSection.id] || {}}
+        isActive={true}
+        key={currentSection.id}
+        onAnswerChange={(questionId, value) =>
+          handlers.onAnswerChange(currentSection.id, questionId, value)
+        }
+        onComplete={handlers.onSectionComplete}
+        section={currentSection}
+      />
+    );
+  }
+
+  return <Text>No section selected</Text>;
+}
+
+type Props = {
+  /** Initial description (from CLI args) */
+  initialDescription?: string;
+  /** Workflow name (from --name flag) */
+  workflowName?: string;
+  /** Workspace path */
+  workspace: string;
+  /** Called when wizard completes successfully */
+  onComplete: (result: WizardResult) => void;
+  /** Called when wizard is cancelled */
+  onCancel: () => void;
+  /** Mock mode - use mock data instead of API calls */
+  mock?: boolean;
+};
+
+export type WizardResult = {
+  description: string;
+  answers: Answers;
+  workflow: PreviewWorkflow;
+  workflowName?: string;
+};
+
+const INITIAL_STATE: WizardState = {
+  phase: "description",
+  description: "",
+  sections: [],
+  currentSectionIndex: 0,
+  answers: {},
+  recommendations: [],
+  workflow: null,
+  error: null,
+};
+
+export function BuildWizard({
+  initialDescription = "",
+  workflowName,
+  workspace,
+  onComplete,
+  onCancel,
+  mock = false,
+}: Props) {
+  const { exit } = useApp();
+  const [state, setState] = useState<WizardState>(() => ({
+    ...INITIAL_STATE,
+    description: initialDescription,
+    // If we have initial description, skip to analyzing phase
+    phase: initialDescription ? "analyzing" : "description",
+  }));
+
+  // Handle global keys
+  useInput((input, key) => {
+    if (key.ctrl && input === "c") {
+      onCancel();
+      exit();
+    }
+
+    // Global Tab/Shift+Tab handler for circular navigation during clarifying phase
+    if (state.phase === "clarifying" && key.tab) {
+      if (key.shift) {
+        // Shift+Tab: go back (circular)
+        const prevIndex =
+          (state.currentSectionIndex - 1 + state.sections.length) %
+          state.sections.length;
+        setState((s) => ({ ...s, currentSectionIndex: prevIndex }));
+      } else {
+        // Tab: go forward (circular)
+        const nextIndex =
+          (state.currentSectionIndex + 1) % state.sections.length;
+        setState((s) => ({ ...s, currentSectionIndex: nextIndex }));
+      }
+    }
+  });
+
+  // Phase-specific handlers
+  const handleDescriptionSubmit = useCallback(() => {
+    if (state.description.trim()) {
+      setState((s) => ({ ...s, phase: "analyzing" }));
+    }
+  }, [state.description]);
+
+  const handleDescriptionChange = useCallback((value: string) => {
+    setState((s) => ({ ...s, description: value }));
+  }, []);
+
+  const handleSectionNavigate = useCallback((index: number) => {
+    setState((s) => ({ ...s, currentSectionIndex: index }));
+  }, []);
+
+  const handleAnswerChange = useCallback(
+    (sectionId: string, questionId: string, value: string | string[]) => {
+      setState((s) => ({
+        ...s,
+        answers: {
+          ...s.answers,
+          [sectionId]: {
+            ...(s.answers[sectionId] || {}),
+            [questionId]: value,
+          },
+        },
+      }));
+    },
+    []
+  );
+
+  const handleSectionComplete = useCallback(() => {
+    // Mark current section as completed and advance to next section
+    setState((s) => {
+      const updatedSections = s.sections.map((section, i) =>
+        i === s.currentSectionIndex ? { ...section, completed: true } : section
+      );
+      const nextIndex = (s.currentSectionIndex + 1) % s.sections.length;
+      return {
+        ...s,
+        sections: updatedSections,
+        currentSectionIndex: nextIndex,
+      };
+    });
+  }, []);
+
+  const handleReviewConfirm = useCallback(() => {
+    setState((s) => ({ ...s, phase: "generating" }));
+  }, []);
+
+  // Analyzing phase - generate clarifying questions
+  useEffect(() => {
+    if (state.phase !== "analyzing") {
+      return;
+    }
+
+    const analyze = async () => {
+      try {
+        let result: ClarificationResult;
+
+        if (mock) {
+          // Use mock data for testing without API
+          result = generateMockClarifications(state.description);
+        } else {
+          // Call skill-capability-matcher via executor for dynamic questions
+          result = await analyzeDescription(state.description, workspace);
+        }
+
+        setState((s) => ({
+          ...s,
+          phase: "clarifying",
+          sections: result.clarifications.sections,
+          recommendations: result.recommendations,
+          currentSectionIndex: 0,
+        }));
+      } catch (error) {
+        setState((s) => ({
+          ...s,
+          phase: "error",
+          error: error instanceof Error ? error : new Error(String(error)),
+        }));
+      }
+    };
+
+    analyze();
+  }, [state.phase, state.description, mock, workspace]);
+
+  // Generating phase - create final workflow
+  useEffect(() => {
+    if (state.phase !== "generating") {
+      return;
+    }
+
+    const generate = () => {
+      try {
+        // Build the workflow from answers
+        const workflow = buildPreview(
+          state.answers,
+          state.recommendations,
+          state.description
+        );
+
+        // Apply workflow name override if provided
+        if (workflowName) {
+          workflow.name = workflowName;
+        }
+
+        setState((s) => ({
+          ...s,
+          phase: "complete",
+          workflow,
+        }));
+
+        // Notify completion
+        onComplete({
+          description: state.description,
+          answers: state.answers,
+          workflow,
+          workflowName,
+        });
+      } catch (error) {
+        setState((s) => ({
+          ...s,
+          phase: "error",
+          error: error instanceof Error ? error : new Error(String(error)),
+        }));
+      }
+    };
+
+    generate();
+  }, [
+    state.phase,
+    state.answers,
+    state.recommendations,
+    state.description,
+    workflowName,
+    onComplete,
+  ]);
+
+  // Render based on current phase
+  return (
+    <Box flexDirection="column" padding={1}>
+      <BoxedArea borderColor="cyan" title="Workflow Builder">
+        {renderPhase(state, {
+          onDescriptionChange: handleDescriptionChange,
+          onDescriptionSubmit: handleDescriptionSubmit,
+          onDescriptionCancel: onCancel,
+          onSectionNavigate: handleSectionNavigate,
+          onAnswerChange: handleAnswerChange,
+          onSectionComplete: handleSectionComplete,
+          onReviewConfirm: handleReviewConfirm,
+          onReviewCancel: onCancel,
+        })}
+      </BoxedArea>
+    </Box>
+  );
+}
+
+type PhaseHandlers = {
+  onDescriptionChange: (value: string) => void;
+  onDescriptionSubmit: () => void;
+  onDescriptionCancel: () => void;
+  onSectionNavigate: (index: number) => void;
+  onAnswerChange: (
+    sectionId: string,
+    questionId: string,
+    value: string | string[]
+  ) => void;
+  onSectionComplete: () => void;
+  onReviewConfirm: () => void;
+  onReviewCancel: () => void;
+};
+
+function renderPhase(state: WizardState, handlers: PhaseHandlers) {
+  switch (state.phase) {
+    case "description":
+      return (
+        <Box flexDirection="column">
+          <Text bold>What should this workflow do?</Text>
+          <Box marginTop={1}>
+            <TextInput
+              isActive={true}
+              onCancel={handlers.onDescriptionCancel}
+              onChange={handlers.onDescriptionChange}
+              onSubmit={handlers.onDescriptionSubmit}
+              placeholder="e.g., analyze YouTube videos and create blog outlines"
+              value={state.description}
+            />
+          </Box>
+          <Box marginTop={1}>
+            <Text dimColor>[Enter] Continue [Esc] Cancel</Text>
+          </Box>
+        </Box>
+      );
+
+    case "analyzing":
+      return (
+        <Box flexDirection="column">
+          <Box>
+            <Spinner />
+            <Text> Analyzing your requirements...</Text>
+          </Box>
+          <Box marginTop={1}>
+            <Text dimColor>Generating clarifying questions...</Text>
+          </Box>
+        </Box>
+      );
+
+    case "clarifying": {
+      const currentSection = state.sections[state.currentSectionIndex];
+      const isReviewSection = currentSection?.id === "review";
+
+      return (
+        <Box flexDirection="column">
+          <TabBar
+            currentIndex={state.currentSectionIndex}
+            isActive={false}
+            onNavigate={handlers.onSectionNavigate}
+            sections={state.sections.map((s) => ({
+              id: s.id,
+              title: s.title,
+              completed: s.completed,
+            }))}
+          />
+          <Box flexDirection="column" marginTop={1}>
+            {renderSectionContent(
+              isReviewSection,
+              currentSection,
+              state,
+              handlers
+            )}
+          </Box>
+        </Box>
+      );
+    }
+
+    case "generating":
+      return (
+        <Box flexDirection="column">
+          <Box>
+            <Spinner />
+            <Text> Generating workflow...</Text>
+          </Box>
+        </Box>
+      );
+
+    case "complete":
+      return (
+        <Box flexDirection="column">
+          <Text bold color="green">
+            ✓ Workflow ready!
+          </Text>
+          {state.workflow ? (
+            <Box flexDirection="column" marginTop={1}>
+              <Text>Name: {state.workflow.name}</Text>
+              <Text>Steps: {state.workflow.steps.length}</Text>
+            </Box>
+          ) : null}
+        </Box>
+      );
+
+    case "error":
+      return (
+        <Box flexDirection="column">
+          <Text bold color="red">
+            ✗ Error
+          </Text>
+          <Text color="red">{state.error?.message || "Unknown error"}</Text>
+        </Box>
+      );
+
+    default:
+      return <Text>Unknown phase</Text>;
+  }
+}
+
+/**
+ * Get inferred input type from description
+ */
+function getInferredInputType(lowerDesc: string): string {
+  if (lowerDesc.includes("video") || lowerDesc.includes("youtube")) {
+    return "video";
+  }
+  if (lowerDesc.includes("audio") || lowerDesc.includes("podcast")) {
+    return "audio";
+  }
+  return "text";
+}
+
+/**
+ * Get inference reason based on detected type
+ */
+function getInferenceReason(
+  hasVideo: boolean,
+  hasAudio: boolean,
+  hasWeb: boolean
+): string | undefined {
+  if (hasVideo) {
+    return "Inferred 'video' from your description";
+  }
+  if (hasAudio) {
+    return "Inferred 'audio' from your description";
+  }
+  if (hasWeb) {
+    return "Inferred 'web' from your description";
+  }
+  return;
+}
+
+/**
+ * Generate mock clarification questions based on description
+ * In future, this will call skill-capability-matcher
+ */
+function generateMockClarifications(description: string): ClarificationResult {
+  const lowerDesc = description.toLowerCase();
+
+  // Infer content type
+  const hasVideo = lowerDesc.includes("video") || lowerDesc.includes("youtube");
+  const hasAudio = lowerDesc.includes("audio") || lowerDesc.includes("podcast");
+  const hasWeb = lowerDesc.includes("web") || lowerDesc.includes("search");
+
+  // Infer goals
+  const hasAnalyze =
+    lowerDesc.includes("analyze") || lowerDesc.includes("analysis");
+  const hasSummarize =
+    lowerDesc.includes("summar") || lowerDesc.includes("outline");
+  const hasGenerate =
+    lowerDesc.includes("generat") ||
+    lowerDesc.includes("creat") ||
+    lowerDesc.includes("blog");
+
+  return {
+    requirements: {
+      inputType: getInferredInputType(lowerDesc),
+      goals: [
+        hasAnalyze ? "analyze" : null,
+        hasSummarize ? "summarize" : null,
+        hasGenerate ? "generate" : null,
+      ].filter(Boolean) as string[],
+      outputFormat: "json",
+    },
+    recommendations: [
+      {
+        goalId: "analyze",
+        skill: "media-reviewer",
+        stepId: "analyze-content",
+        matchScore: 0.92,
+      },
+      {
+        goalId: "summarize",
+        skill: "content-documenter",
+        stepId: "generate-summary",
+        matchScore: 0.88,
+      },
+      {
+        goalId: "generate",
+        skill: "idea-generator",
+        stepId: "generate-ideas",
+        matchScore: 0.85,
+      },
+    ],
+    clarificationNeeded: true,
+    clarifications: {
+      sections: [
+        {
+          id: "input",
+          title: "Input",
+          completed: false,
+          questions: [
+            {
+              id: "content-type",
+              text: "What type of content will this workflow process?",
+              type: "single-select",
+              options: [
+                { id: "video", label: "Video transcripts", inferred: hasVideo },
+                { id: "audio", label: "Audio transcripts", inferred: hasAudio },
+                {
+                  id: "text",
+                  label: "Text articles",
+                  inferred: !(hasVideo || hasAudio || hasWeb),
+                },
+                {
+                  id: "web",
+                  label: "Web pages (fetched via search)",
+                  inferred: hasWeb,
+                },
+              ],
+              reason: getInferenceReason(hasVideo, hasAudio, hasWeb),
+            },
+          ],
+        },
+        {
+          id: "goals",
+          title: "Goals",
+          completed: false,
+          questions: [
+            {
+              id: "primary-goal",
+              text: "What are the primary goals for this workflow?",
+              type: "multi-select",
+              options: [
+                {
+                  id: "analyze",
+                  label: "Analyze and extract key insights",
+                  inferred: hasAnalyze,
+                },
+                {
+                  id: "summarize",
+                  label: "Create structured summaries",
+                  inferred: hasSummarize,
+                },
+                {
+                  id: "generate",
+                  label: "Generate creative content ideas",
+                  inferred: hasGenerate,
+                },
+                { id: "document", label: "Build comprehensive reports" },
+              ],
+            },
+            {
+              id: "depth",
+              text: "How deep should the analysis be?",
+              type: "single-select",
+              options: [
+                { id: "quick", label: "Quick overview (1-2 key points)" },
+                {
+                  id: "standard",
+                  label: "Standard analysis (5-7 key points)",
+                  inferred: true,
+                },
+                { id: "deep", label: "Deep analysis (comprehensive)" },
+              ],
+            },
+          ],
+        },
+        {
+          id: "output",
+          title: "Output",
+          completed: false,
+          questions: [
+            {
+              id: "format",
+              text: "What output format do you need?",
+              type: "single-select",
+              options: [
+                { id: "json", label: "Structured JSON", inferred: true },
+                { id: "markdown", label: "Markdown document" },
+                { id: "both", label: "Both JSON and Markdown" },
+              ],
+            },
+          ],
+        },
+        {
+          id: "review",
+          title: "Review",
+          completed: false,
+          questions: [],
+        },
+      ],
+    },
+  };
+}
