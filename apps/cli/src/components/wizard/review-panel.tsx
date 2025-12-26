@@ -88,6 +88,8 @@ type Props = {
   recommendations: Recommendation[];
   /** Original description */
   description: string;
+  /** Agent-generated preview workflow (from workflow-schema-composer) */
+  agentPreview?: PreviewWorkflow;
   /** Called when user confirms (Enter) */
   onConfirm: () => void;
   /** Called when user cancels */
@@ -101,6 +103,7 @@ export function ReviewPanel({
   answers,
   recommendations,
   description,
+  agentPreview,
   onConfirm,
   onCancel,
   isActive = true,
@@ -120,8 +123,13 @@ export function ReviewPanel({
     { isActive }
   );
 
-  // Build preview workflow
-  const preview = buildPreview(answers, recommendations, description);
+  // Build preview workflow (using agent preview if available)
+  const preview = buildPreview(
+    answers,
+    recommendations,
+    description,
+    agentPreview
+  );
 
   return (
     <Box flexDirection="column">

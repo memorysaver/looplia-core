@@ -6,7 +6,12 @@
  */
 
 import { createClaudeAgentExecutor } from "@looplia-core/provider/claude-agent-sdk";
-import type { ClarificationResult, Recommendation, Section } from "./types.js";
+import type {
+  ClarificationResult,
+  PreviewWorkflow,
+  Recommendation,
+  Section,
+} from "./types.js";
 
 /** Regex for splitting words in getShortLabel - defined at module level for performance */
 const WORD_SPLIT_REGEX = /\s+/;
@@ -48,7 +53,10 @@ export async function analyzeDescription(
  * Build the prompt for skill analysis
  */
 function buildAnalysisPrompt(description: string): string {
-  return `You are a workflow builder assistant. Analyze the user's workflow description and generate clarification questions.
+  return `You are a workflow builder assistant. Analyze the user's workflow description and generate:
+1. Clarification questions
+2. Skill recommendations
+3. A preview workflow using workflow-schema-composer
 
 ## User's Description
 "${description}"
@@ -57,50 +65,25 @@ function buildAnalysisPrompt(description: string): string {
 
 1. First, use Skill("plugin-registry-scanner") to discover available skills in the workspace.
 
-2. Analyze the description and generate DYNAMIC sections based on what clarifications are needed:
+2. Use Skill("skill-capability-matcher") to match skills to requirements from the description.
+
+3. Generate DYNAMIC sections for clarification questions:
    - Create 1-4 sections based on what's truly ambiguous or needs clarification
    - Use SHORT 1-2 word titles (max 10 chars): "Source", "Content", "Format", "Output"
-   - NOT long titles like "Data Source & Filtering" or "Content Selection Criteria"
-   - DO NOT use fixed sections like "Input/Goals/Output" unless they make sense for this specific workflow
    - Keep it minimal - only ask what's truly necessary
    - ALWAYS include "Review" as the LAST section with empty questions array
 
-3. For each question:
+4. For each question:
    - Mark options as "inferred: true" if you detected them from the description
    - Include a "reason" field explaining why you inferred something
    - question.type can be: "single-select", "multi-select", or "text"
 
-4. Return ONLY valid JSON (no markdown code blocks):
+5. Use Skill("workflow-schema-composer") to generate a preview workflow:
+   - Generate proper missions for each step (detailed task descriptions)
+   - Include input/output paths using \${{ sandbox }} variable
+   - Follow the workflow schema conventions
 
-## Example for "get today's hackernews":
-{
-  "requirements": { "inputType": "web", "goals": ["fetch"], "outputFormat": "json" },
-  "recommendations": [
-    { "goalId": "fetch", "skill": "web-fetch", "stepId": "fetch-hn", "matchScore": 0.9 }
-  ],
-  "clarificationNeeded": true,
-  "clarifications": {
-    "sections": [
-      {
-        "id": "source",
-        "title": "Source",
-        "completed": false,
-        "questions": [{
-          "id": "source",
-          "text": "Where should we get Hacker News data from?",
-          "type": "single-select",
-          "options": [
-            { "id": "api", "label": "Hacker News API (official)", "inferred": true },
-            { "id": "scrape", "label": "Website scraping" },
-            { "id": "aggregator", "label": "Third-party aggregator" }
-          ],
-          "reason": "User mentioned 'today's hackernews' - official API provides real-time data"
-        }]
-      },
-      { "id": "review", "title": "Review", "completed": false, "questions": [] }
-    ]
-  }
-}
+6. Return ONLY valid JSON (no markdown code blocks):
 
 ## Example for "analyze videos and create blog posts":
 {
@@ -128,22 +111,28 @@ function buildAnalysisPrompt(description: string): string {
           "reason": "Inferred transcripts since 'analyze videos' typically works with text"
         }]
       },
-      {
-        "id": "style",
-        "title": "Style",
-        "completed": false,
-        "questions": [{
-          "id": "blog-style",
-          "text": "What style of blog posts?",
-          "type": "single-select",
-          "options": [
-            { "id": "summary", "label": "Summary/recap style" },
-            { "id": "editorial", "label": "Editorial/opinion piece" },
-            { "id": "tutorial", "label": "Tutorial/how-to" }
-          ]
-        }]
-      },
       { "id": "review", "title": "Review", "completed": false, "questions": [] }
+    ]
+  },
+  "previewWorkflow": {
+    "name": "video-to-blog",
+    "steps": [
+      {
+        "id": "analyze-video",
+        "skill": "media-reviewer",
+        "mission": "Deep analysis of video transcript. Extract key themes, important quotes with timestamps, and narrative structure.",
+        "needs": [],
+        "input": "\${{ sandbox }}/inputs/content.md",
+        "output": "\${{ sandbox }}/outputs/analysis.json"
+      },
+      {
+        "id": "write-blog",
+        "skill": "content-writer",
+        "mission": "Create a compelling blog post from the video analysis. Structure with introduction, key points, and conclusion.",
+        "needs": ["analyze-video"],
+        "input": "\${{ steps.analyze-video.output }}",
+        "output": "\${{ sandbox }}/outputs/blog.json"
+      }
     ]
   }
 }
@@ -153,6 +142,7 @@ Important:
 - Each recommendation's goalId should match a detected goal
 - Set inferred: true on options that match keywords in the description
 - The review section should always be last with empty questions array
+- previewWorkflow must include detailed mission descriptions for each step
 - Return ONLY valid JSON, no markdown code blocks or explanation`;
 }
 
@@ -170,27 +160,21 @@ type ParsedResponse = {
   clarifications?: {
     sections?: Record<string, unknown>[];
   };
+  previewWorkflow?: {
+    name?: string;
+    steps?: Record<string, unknown>[];
+  };
 };
 
 /**
- * Parse and validate the result from the executor
+ * Flatten sections: each question becomes its own section (1 question = 1 tab)
  */
-function parseClarificationResult(data: unknown): ClarificationResult {
-  // Handle various response formats
-  const parsed = extractJsonFromResponse(data) as ParsedResponse;
-
-  // Validate required fields
-  if (!parsed.clarifications?.sections) {
-    throw new Error("Invalid response: missing clarifications.sections");
-  }
-
-  // Flatten: each question becomes its own section (1 question = 1 tab)
+function flattenSections(rawSections: Record<string, unknown>[]): Section[] {
   const flatSections: Section[] = [];
 
-  for (const rawSection of parsed.clarifications.sections) {
+  for (const rawSection of rawSections) {
     const sectionId = String(rawSection.id || "unknown");
 
-    // Keep review section as-is
     if (sectionId === "review") {
       flatSections.push({
         id: "review",
@@ -201,7 +185,6 @@ function parseClarificationResult(data: unknown): ClarificationResult {
       continue;
     }
 
-    // Each question becomes its own section with a short label
     const questions = Array.isArray(rawSection.questions)
       ? rawSection.questions
       : [];
@@ -229,18 +212,60 @@ function parseClarificationResult(data: unknown): ClarificationResult {
     });
   }
 
-  // Parse recommendations
-  const recommendations: Recommendation[] = Array.isArray(
-    parsed.recommendations
-  )
-    ? parsed.recommendations.map((r: Record<string, unknown>) => ({
-        goalId: String(r.goalId || ""),
-        skill: String(r.skill || ""),
-        stepId: String(r.stepId || r.suggestedStepId || ""),
-        matchScore: Number(r.matchScore) || 0.5,
-        rationale: r.rationale ? String(r.rationale) : undefined,
-      }))
-    : [];
+  return flatSections;
+}
+
+/**
+ * Parse recommendations from raw data
+ */
+function parseRecommendations(
+  rawRecommendations: Record<string, unknown>[] | undefined
+): Recommendation[] {
+  if (!Array.isArray(rawRecommendations)) {
+    return [];
+  }
+
+  return rawRecommendations.map((r) => ({
+    goalId: String(r.goalId || ""),
+    skill: String(r.skill || ""),
+    stepId: String(r.stepId || r.suggestedStepId || ""),
+    matchScore: Number(r.matchScore) || 0.5,
+    rationale: r.rationale ? String(r.rationale) : undefined,
+  }));
+}
+
+/**
+ * Parse preview workflow from raw data
+ */
+function parsePreviewWorkflow(
+  rawWorkflow: ParsedResponse["previewWorkflow"]
+): PreviewWorkflow | undefined {
+  if (!rawWorkflow) {
+    return;
+  }
+
+  return {
+    name: String(rawWorkflow.name || "workflow"),
+    steps: (rawWorkflow.steps || []).map((step: Record<string, unknown>) => ({
+      id: String(step.id || ""),
+      skill: String(step.skill || ""),
+      mission: step.mission ? String(step.mission) : undefined,
+      needs: Array.isArray(step.needs) ? step.needs.map(String) : [],
+      input: step.input ? String(step.input) : undefined,
+      output: String(step.output || `sandbox/outputs/${step.id}.json`),
+    })),
+  };
+}
+
+/**
+ * Parse and validate the result from the executor
+ */
+function parseClarificationResult(data: unknown): ClarificationResult {
+  const parsed = extractJsonFromResponse(data) as ParsedResponse;
+
+  if (!parsed.clarifications?.sections) {
+    throw new Error("Invalid response: missing clarifications.sections");
+  }
 
   return {
     requirements: {
@@ -248,9 +273,12 @@ function parseClarificationResult(data: unknown): ClarificationResult {
       goals: parsed.requirements?.goals,
       outputFormat: parsed.requirements?.outputFormat,
     },
-    recommendations,
+    recommendations: parseRecommendations(parsed.recommendations),
     clarificationNeeded: parsed.clarificationNeeded !== false,
-    clarifications: { sections: flatSections },
+    clarifications: {
+      sections: flattenSections(parsed.clarifications.sections),
+    },
+    previewWorkflow: parsePreviewWorkflow(parsed.previewWorkflow),
   };
 }
 

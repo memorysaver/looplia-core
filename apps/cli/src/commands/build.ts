@@ -16,7 +16,7 @@
  * @see plugins/looplia-core/commands/build.md
  */
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 
@@ -347,8 +347,91 @@ export async function executeBatch(
 }
 
 /**
+ * Serialize wizard answers to natural language context.
+ * Transforms structured answers into readable text for the agent prompt.
+ */
+function serializeAnswersToContext(
+  answers: Record<string, Record<string, string | string[]>>
+): string {
+  const parts: string[] = [];
+
+  // Input section
+  const input = answers.input || {};
+  if (input["content-type"]) {
+    parts.push(`Input type: ${input["content-type"]}`);
+  }
+
+  // Goals section
+  const goals = answers.goals || {};
+  if (goals["primary-goal"]) {
+    const goalList = Array.isArray(goals["primary-goal"])
+      ? (goals["primary-goal"] as string[]).join(", ")
+      : goals["primary-goal"];
+    parts.push(`Goals: ${goalList}`);
+  }
+  if (goals.depth) {
+    parts.push(`Analysis depth: ${goals.depth}`);
+  }
+
+  // Output section
+  const output = answers.output || {};
+  if (output.format) {
+    parts.push(`Output format: ${output.format}`);
+  }
+
+  return parts.join(". ");
+}
+
+/**
+ * Build an enriched prompt from wizard answers.
+ * Combines description with user answers for the agent's /build command.
+ */
+function buildEnrichedPrompt(
+  description: string,
+  answers: Record<string, Record<string, string | string[]>>,
+  name?: string
+): string {
+  let prompt = "/build";
+
+  // Include --name flag if provided
+  if (name) {
+    const sanitizedName = name
+      .trim()
+      .replace(/[^a-zA-Z0-9-_]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, MAX_WORKFLOW_NAME_LENGTH);
+    if (sanitizedName) {
+      prompt += ` --name ${sanitizedName}`;
+    }
+  }
+
+  // Serialize answers into natural language context
+  const context = serializeAnswersToContext(answers);
+
+  // Combine description with user answers
+  const enrichedDescription = context
+    ? `${description}. User preferences: ${context}`
+    : description;
+
+  const sanitized = enrichedDescription
+    .trim()
+    .slice(0, MAX_DESCRIPTION_LENGTH * 2) // Allow more for enriched content
+    .replace(/[\n\r\t]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (sanitized) {
+    prompt += ` ${sanitized}`;
+  }
+
+  return prompt;
+}
+
+/**
  * Execute with interactive wizard (v0.6.4)
  * Uses tab-based UI for multi-turn clarification.
+ * After wizard completion, uses the same agent pipeline as slash command.
  */
 async function executeWizard(
   workspace: string,
@@ -382,65 +465,16 @@ async function executeWizard(
     };
   }
 
-  // Generate workflow file content
-  const workflowName = result.workflowName || result.workflow.name;
-  const workflowPath = resolve(workspace, "workflows", `${workflowName}.md`);
+  // Build enriched prompt from wizard answers
+  // This uses the same /build command path as the slash command
+  const enrichedPrompt = buildEnrichedPrompt(
+    result.description,
+    result.answers,
+    result.workflowName || parsed.name
+  );
 
-  // Generate YAML content from wizard result
-  const workflowContent = generateWorkflowContent(result);
-  writeFileSync(workflowPath, workflowContent, "utf-8");
-
-  return {
-    status: "success",
-    workflowPath,
-    workflowName,
-    stepsCount: result.workflow.steps.length,
-  };
-}
-
-/**
- * Generate workflow markdown content from wizard result
- */
-function generateWorkflowContent(result: {
-  description: string;
-  workflow: {
-    name: string;
-    steps: Array<{
-      id: string;
-      skill: string;
-      needs: string[];
-      output: string;
-    }>;
-  };
-}): string {
-  const { workflow, description } = result;
-
-  const stepsYaml = workflow.steps
-    .map((step) => {
-      const lines = [`  - id: ${step.id}`, `    skill: ${step.skill}`];
-      if (step.needs.length > 0) {
-        lines.push(`    needs: [${step.needs.join(", ")}]`);
-      }
-      lines.push(`    mission: Process ${step.id}`);
-      lines.push(`    output: ${step.output}`);
-      return lines.join("\n");
-    })
-    .join("\n");
-
-  return `---
-name: ${workflow.name}
-version: "1.0.0"
-description: |
-  ${description}
-
-steps:
-${stepsYaml}
----
-
-# ${workflow.name}
-
-${description}
-`;
+  // Use same agent pipeline as slash command - single source of truth
+  return executeBatch(enrichedPrompt, workspace);
 }
 
 /**
