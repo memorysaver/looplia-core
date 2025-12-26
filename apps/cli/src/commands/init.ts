@@ -63,6 +63,7 @@ Description:
     │   └── .claude-plugin/         Plugin manifest
     ├── looplia-writer/             Writing domain plugin
     │   └── .claude-plugin/         Plugin manifest
+    ├── workflows/                  Workflow templates
     ├── sandbox/                    Execution isolation
     └── user-profile.json           User preferences
 
@@ -133,6 +134,7 @@ function printInitSuccess(targetDir: string): void {
   console.log("  - looplia-writer/ (writing domain)");
   console.log("");
   console.log("Also created:");
+  console.log("  - workflows/ (workflow templates)");
   console.log("  - sandbox/ (execution isolation)");
   console.log("  - user-profile.json (preferences)");
   console.log("");

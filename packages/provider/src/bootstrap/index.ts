@@ -135,6 +135,42 @@ function createDefaultProfile(): object {
 }
 
 /**
+ * Extract workflows from plugins to root workflows directory
+ *
+ * Workflows are looplia-specific templates, not Claude plugin components.
+ * This extracts them from each plugin to ~/.looplia/workflows/ for
+ * simple CLI lookup and user custom workflows.
+ */
+async function extractWorkflows(
+  targetDir: string,
+  pluginNames: string[]
+): Promise<void> {
+  const workflowsDir = join(targetDir, "workflows");
+  await mkdir(workflowsDir, { recursive: true });
+
+  for (const pluginName of pluginNames) {
+    const pluginWorkflowsPath = join(targetDir, pluginName, "workflows");
+    if (!(await pathExists(pluginWorkflowsPath))) {
+      continue;
+    }
+
+    // Copy workflow .md files to root workflows/
+    const entries = await readdir(pluginWorkflowsPath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isFile() && entry.name.endsWith(".md")) {
+        await cp(
+          join(pluginWorkflowsPath, entry.name),
+          join(workflowsDir, entry.name)
+        );
+      }
+    }
+
+    // Remove workflows from plugin to avoid confusion
+    await rm(pluginWorkflowsPath, { recursive: true, force: true });
+  }
+}
+
+/**
  * Copy plugins to target directory (no merge, keeps separate)
  *
  * This is used when users run `looplia init` after installing via npm.
@@ -170,6 +206,9 @@ export async function copyPlugins(
       await cp(pluginPath, join(targetDir, pluginName), { recursive: true });
     }
   }
+
+  // Extract workflows from plugins to root
+  await extractWorkflows(targetDir, pluginNames);
 
   // Create sandbox directory
   await mkdir(join(targetDir, "sandbox"), { recursive: true });
@@ -254,7 +293,11 @@ export async function isLoopliaInitialized(): Promise<boolean> {
   try {
     const entries = await readdir(pluginPath, { withFileTypes: true });
     return entries.some(
-      (e) => e.isDirectory() && !e.name.startsWith(".") && e.name !== "sandbox"
+      (e) =>
+        e.isDirectory() &&
+        !e.name.startsWith(".") &&
+        e.name !== "sandbox" &&
+        e.name !== "workflows"
     );
   } catch {
     return false;
@@ -291,7 +334,10 @@ export async function getProdPluginPaths(): Promise<
     const pluginDirs = entries
       .filter(
         (e) =>
-          e.isDirectory() && !e.name.startsWith(".") && e.name !== "sandbox"
+          e.isDirectory() &&
+          !e.name.startsWith(".") &&
+          e.name !== "sandbox" &&
+          e.name !== "workflows"
       )
       .map((e) => e.name);
 
