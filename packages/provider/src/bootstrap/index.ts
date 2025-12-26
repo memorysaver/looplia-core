@@ -317,12 +317,13 @@ export async function downloadRemotePlugins(
     }
 
     // Extract using tar (available on macOS/Linux)
-    const { execSync } = await import("node:child_process");
+    // Using async exec to avoid blocking the event loop
+    const { exec } = await import("node:child_process");
+    const { promisify } = await import("node:util");
+    const execAsync = promisify(exec);
+
     try {
-      execSync("tar -xzf plugins.tar.gz", {
-        cwd: tempDir,
-        stdio: "pipe",
-      });
+      await execAsync("tar -xzf plugins.tar.gz", { cwd: tempDir });
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);

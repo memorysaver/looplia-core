@@ -24,6 +24,7 @@ import type { StreamingEvent } from "@looplia-core/core";
 import { createClaudeAgentExecutor } from "@looplia-core/provider/claude-agent-sdk";
 import { renderStreamingQuery } from "../components/index.js";
 import { renderBuildWizard } from "../components/wizard/index.js";
+import { COMMANDS } from "../constants.js";
 import { isInteractive } from "../utils/terminal.js";
 
 /** Maximum description length to prevent excessive prompt size */
@@ -34,6 +35,9 @@ const ENRICHED_DESCRIPTION_MULTIPLIER = 3;
 
 /** Maximum workflow name length for filesystem compatibility */
 const MAX_WORKFLOW_NAME_LENGTH = 50;
+
+/** Build command prefix from constants */
+const BUILD_COMMAND = COMMANDS.BUILD;
 
 /**
  * Build result type
@@ -224,7 +228,7 @@ export function validateEnvironment(mock: boolean): void {
  */
 export function buildPrompt(args: BuildArgs): string {
   // v0.6.5: Use looplia: prefix to avoid conflict with built-in commands
-  let prompt = "/looplia:build";
+  let prompt = BUILD_COMMAND;
 
   // Include --name flag if provided (must come before description)
   if (args.name) {
@@ -466,7 +470,7 @@ export function buildEnrichedPrompt(
   sections?: SectionForContext[]
 ): string {
   // v0.6.5: Use looplia: prefix to avoid conflict with built-in commands
-  let prompt = "/looplia:build";
+  let prompt = BUILD_COMMAND;
 
   // Include --name flag if provided
   if (name) {

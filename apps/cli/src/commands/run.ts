@@ -30,9 +30,12 @@ import {
   createClaudeAgentExecutor,
   type WorkflowResult,
 } from "@looplia-core/provider/claude-agent-sdk";
-
 import { renderStreamingQuery } from "../components";
+import { COMMANDS } from "../constants.js";
 import { isInteractive } from "../utils/terminal";
+
+/** Run command prefix from constants */
+const RUN_COMMAND = COMMANDS.RUN;
 
 /**
  * Generate a random 4-character hex suffix for sandbox IDs
@@ -496,7 +499,7 @@ function validateEnvironment(mock: boolean): void {
  */
 function buildRunPrompt(workflowId: string, sandboxId: string): string {
   // v0.6.5: Use looplia: prefix to avoid conflict with built-in /run command
-  return `/looplia:run ${workflowId} --sandbox-id ${sandboxId}`;
+  return `${RUN_COMMAND} ${workflowId} --sandbox-id ${sandboxId}`;
 }
 
 /**
