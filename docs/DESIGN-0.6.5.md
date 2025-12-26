@@ -189,9 +189,11 @@ looplia-core/
 
   SOURCE (Single Source of Truth)
   ┌─────────────────────────────────────────────────────────────────────────┐
-  │ looplia-core/plugins/                                                    │
-  │ ├── looplia-core/    # Commands, core skills, hooks                     │
-  │ └── looplia-writer/  # Domain skills, workflows                         │
+  │ looplia-core/                                                            │
+  │ ├── .claude-plugin/marketplace.json  # Plugin registry                   │
+  │ └── plugins/                                                             │
+  │     ├── looplia-core/    # Commands, core skills, hooks                  │
+  │     └── looplia-writer/  # Domain skills, workflows                      │
   └─────────────────────────────────────────────────────────────────────────┘
                 │                    │                    │
                 ▼                    ▼                    ▼
@@ -200,7 +202,7 @@ looplia-core/
   │                     │  │                     │  │                     │
   │ npm publish         │  │ Release tarball     │  │ LOOPLIA_DEV=true    │
   │ Bundles plugins/    │  │ plugins.tar.gz      │  │                     │
-  │ in package          │  │ in releases         │  │ Uses ./plugins      │
+  │ in package          │  │ (both plugins)      │  │ Uses ./plugins      │
   │                     │  │                     │  │ directly            │
   └──────────┬──────────┘  └──────────┬──────────┘  └──────────┬──────────┘
              │                        │                        │
@@ -208,24 +210,51 @@ looplia-core/
   ┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐
   │ looplia init        │  │ looplia init        │  │ Query directly      │
   │                     │  │ --remote            │  │                     │
-  │ Copies from npm     │  │ Downloads from      │  │ plugins: [          │
-  │ package to          │  │ GitHub release to   │  │   ./plugins/core,   │
-  │ ~/.looplia          │  │ ~/.looplia          │  │   ./plugins/writer  │
+  │ Copies both plugins │  │ Downloads from      │  │ plugins: [          │
+  │ to ~/.looplia/      │  │ GitHub release to   │  │   ./plugins/core,   │
+  │ Extracts workflows  │  │ ~/.looplia          │  │   ./plugins/writer  │
   └──────────┬──────────┘  └──────────┬──────────┘  │ ]                   │
              │                        │             └─────────────────────┘
              └────────────┬───────────┘
                           ▼
              ┌──────────────────────────┐
              │ ~/.looplia/              │
-             │ (Merged single plugin)   │
-             │ ├── .claude-plugin/      │
-             │ ├── commands/            │
-             │ ├── skills/              │
-             │ ├── hooks/               │
-             │ ├── workflows/           │
-             │ └── ...                  │
+             │ (Two separate plugins)   │
+             │ ├── looplia-core/        │
+             │ │   └── .claude-plugin/  │
+             │ ├── looplia-writer/      │
+             │ │   └── .claude-plugin/  │
+             │ ├── workflows/           │  ← Extracted from plugins
+             │ ├── sandbox/             │
+             │ └── user-profile.json    │
              └──────────────────────────┘
 ```
+
+### 3.4 Marketplace-Driven Plugin Discovery
+
+Plugin discovery uses `.claude-plugin/marketplace.json` instead of hardcoded lists:
+
+```json
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "looplia",
+  "description": "Looplia workflow engine",
+  "plugins": [
+    {
+      "name": "looplia-core",
+      "source": "./plugins/looplia-core",
+      "category": "development"
+    },
+    {
+      "name": "looplia-writer",
+      "source": "./plugins/looplia-writer",
+      "category": "productivity"
+    }
+  ]
+}
+```
+
+Adding a new plugin only requires updating `marketplace.json` - the bootstrap and release workflows read from it dynamically.
 
 ### 3.4 Source as Plugin Architecture
 
@@ -285,14 +314,18 @@ plugin.json: "0.6.5"          bundled as-is         ~/.looplia/
 
 **Flow:**
 1. CLI detects its own package location via `import.meta.url` or `__dirname`
-2. Locates bundled `plugins/` directory within npm package
-3. Merges `looplia-core` + `looplia-writer` into `~/.looplia`
-4. Creates combined `plugin.json` with name "looplia"
+2. Locates bundled `plugins/` directory and `marketplace.json` within npm package
+3. Parses `marketplace.json` to discover plugin list dynamically
+4. Copies each plugin separately to `~/.looplia/` (no merge)
+5. Extracts `workflows/` from plugins to `~/.looplia/workflows/`
+6. Creates sandbox/ and user-profile.json
 
 **Package Structure:**
 ```
 node_modules/looplia/
 ├── dist/                    # Compiled CLI
+├── .claude-plugin/
+│   └── marketplace.json     # Plugin registry
 ├── plugins/                 # Bundled plugins (copied from source)
 │   ├── looplia-core/
 │   └── looplia-writer/
@@ -313,20 +346,24 @@ looplia run writing-kit   # Works from any directory
 **Flow:**
 1. Fetch release tarball from GitHub:
    `https://github.com/memorysaver/looplia-core/releases/download/v{version}/plugins.tar.gz`
-2. Extract to `~/.looplia`
-3. Already merged in tarball, ready to use
+2. Extract to temp directory
+3. Call `copyPlugins()` which parses marketplace.json and copies both plugins
+4. Extracts workflows to `~/.looplia/workflows/`
 
 **Release Tarball Contents:**
 ```
 plugins.tar.gz
-└── looplia/                 # Merged plugin (not separate core/writer)
+├── looplia-core/            # Separate plugin
+│   ├── .claude-plugin/
+│   │   └── plugin.json      # name: "looplia"
+│   ├── commands/
+│   ├── skills/
+│   └── hooks/
+└── looplia-writer/          # Separate plugin
     ├── .claude-plugin/
-    │   └── plugin.json
-    ├── commands/
+    │   └── plugin.json      # name: "looplia-writer"
     ├── skills/
-    ├── hooks/
-    ├── workflows/
-    └── scripts/
+    └── workflows/
 ```
 
 **User Experience:**
@@ -434,44 +471,43 @@ looplia-core/plugins/
         └── writing-kit.md
 ```
 
-### 5.2 Production Structure (Merged at ~/.looplia)
+### 5.2 Production Structure (Two Plugins at ~/.looplia)
 
 ```
-~/.looplia/                          # Single merged plugin
-├── .claude-plugin/
-│   └── plugin.json                  # name: "looplia", combined metadata
+~/.looplia/                          # Two separate plugins
+├── looplia-core/                    # Core plugin (name: "looplia")
+│   ├── .claude-plugin/
+│   │   └── plugin.json              # name: "looplia" for /looplia: commands
+│   ├── commands/
+│   │   ├── run.md
+│   │   ├── build.md
+│   │   ├── list-workflows.md
+│   │   └── build-workflow.md
+│   ├── skills/
+│   │   ├── workflow-executor/
+│   │   ├── workflow-validator/
+│   │   ├── plugin-registry-scanner/
+│   │   ├── skill-capability-matcher/
+│   │   ├── workflow-schema-composer/
+│   │   └── search/
+│   ├── hooks/
+│   │   └── hooks.json
+│   └── scripts/
+│       └── hooks/
 │
-├── commands/                        # From looplia-core
-│   ├── run.md
-│   ├── build.md
-│   ├── list-workflows.md
-│   └── build-workflow.md
+├── looplia-writer/                  # Domain plugin (name: "looplia-writer")
+│   ├── .claude-plugin/
+│   │   └── plugin.json              # name: "looplia-writer"
+│   └── skills/
+│       ├── media-reviewer/
+│       ├── content-documenter/
+│       ├── idea-synthesis/
+│       ├── writing-enhancer/
+│       ├── user-profile-reader/
+│       ├── writing-kit-assembler/
+│       └── id-generator/
 │
-├── skills/                          # Merged from both plugins
-│   ├── workflow-executor/           # From looplia-core
-│   ├── workflow-validator/
-│   ├── plugin-registry-scanner/
-│   ├── skill-capability-matcher/
-│   ├── workflow-schema-composer/
-│   ├── search/
-│   ├── media-reviewer/              # From looplia-writer
-│   ├── content-documenter/
-│   ├── idea-synthesis/
-│   ├── writing-enhancer/
-│   ├── user-profile-reader/
-│   ├── writing-kit-assembler/
-│   └── id-generator/
-│
-├── hooks/
-│   └── hooks.json
-│
-├── scripts/
-│   └── hooks/
-│       ├── post-write-validate.sh
-│       ├── stop-guard.sh
-│       └── compact-inject-state.sh
-│
-├── workflows/                       # From looplia-writer
+├── workflows/                       # Extracted from plugins during init
 │   └── writing-kit.md
 │
 ├── sandbox/                         # Runtime (created on use)
@@ -479,6 +515,11 @@ looplia-core/plugins/
 │
 └── user-profile.json               # Created on init
 ```
+
+**Key Design Decision:** Workflows are extracted from plugins to `~/.looplia/workflows/` because they are looplia-specific templates, not Claude plugin components. This provides:
+- Simple CLI lookup (single location)
+- User custom workflows in same place
+- Clean separation between plugins and orchestration templates
 
 ### 5.3 Plugin Manifest (looplia-core)
 
@@ -778,111 +819,125 @@ async function init(options: InitOptions): Promise<void> {
 **File:** `packages/provider/src/bootstrap/index.ts`
 
 ```typescript
-import { cp, mkdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-/**
- * Get the bundled plugins directory from the npm package
- */
-function getBundledPluginsPath(): string {
-  // Works for both ESM and CJS
-  const currentFile = typeof __dirname !== "undefined"
-    ? __dirname
-    : dirname(fileURLToPath(import.meta.url));
+type MarketplacePlugin = {
+  name: string;
+  source: string;  // e.g., "./plugins/looplia-core"
+};
 
-  // Navigate from dist/ to package root, then to plugins/
-  return join(currentFile, "..", "..", "plugins");
-}
+type Marketplace = {
+  name: string;
+  plugins: MarketplacePlugin[];
+};
 
 /**
- * Copy bundled plugins to target directory (merging core + writer)
+ * Parse marketplace.json to get plugin list dynamically
  */
-export async function copyBundledPlugins(targetDir: string): Promise<void> {
-  const bundledPath = getBundledPluginsPath();
-  const corePath = join(bundledPath, "looplia-core");
-  const writerPath = join(bundledPath, "looplia-writer");
+async function getPluginNamesFromSource(bundledPath: string): Promise<string[]> {
+  const marketplacePath = join(bundledPath, "..", ".claude-plugin", "marketplace.json");
 
-  // Clean target
-  await rm(targetDir, { recursive: true, force: true });
-  await mkdir(targetDir, { recursive: true });
-
-  // Create merged plugin.json
-  await mkdir(join(targetDir, ".claude-plugin"), { recursive: true });
-  await writeFile(
-    join(targetDir, ".claude-plugin", "plugin.json"),
-    JSON.stringify({
-      name: "looplia",
-      description: "Looplia workflow engine",
-      version: "0.6.5",
-      author: { name: "Looplia" },
-      homepage: "https://github.com/memorysaver/looplia-core"
-    }, null, 2)
-  );
-
-  // Copy from looplia-core
-  await cp(join(corePath, "commands"), join(targetDir, "commands"), { recursive: true });
-  await cp(join(corePath, "skills"), join(targetDir, "skills"), { recursive: true });
-  await cp(join(corePath, "hooks"), join(targetDir, "hooks"), { recursive: true });
-  await cp(join(corePath, "scripts"), join(targetDir, "scripts"), { recursive: true });
-
-  // Merge from looplia-writer
-  await cp(join(writerPath, "skills"), join(targetDir, "skills"), { recursive: true });
-  await cp(join(writerPath, "workflows"), join(targetDir, "workflows"), { recursive: true });
-
-  // Create sandbox and user profile
-  await mkdir(join(targetDir, "sandbox"), { recursive: true });
-  await writeFile(
-    join(targetDir, "user-profile.json"),
-    JSON.stringify({
-      userId: "default",
-      topics: [],
-      style: { tone: "intermediate", targetWordCount: 1000, voice: "first-person" }
-    }, null, 2)
-  );
-}
-
-/**
- * Download plugins from GitHub release
- */
-export async function downloadRemotePlugins(
-  version: string,
-  targetDir: string
-): Promise<void> {
-  const releaseUrl = version === "latest"
-    ? "https://github.com/memorysaver/looplia-core/releases/latest/download/plugins.tar.gz"
-    : `https://github.com/memorysaver/looplia-core/releases/download/${version}/plugins.tar.gz`;
-
-  console.log(`Downloading from ${releaseUrl}...`);
-
-  // Clean target
-  await rm(targetDir, { recursive: true, force: true });
-  await mkdir(targetDir, { recursive: true });
-
-  // Download and extract
-  const response = await fetch(releaseUrl);
-  if (!response.ok) {
-    throw new Error(`Failed to download: ${response.status}`);
+  if (await pathExists(marketplacePath)) {
+    const content = await readFile(marketplacePath, "utf-8");
+    const marketplace: Marketplace = JSON.parse(content);
+    return marketplace.plugins
+      .map((p) => p.source.split("/").at(-1))
+      .filter((name): name is string => name !== undefined);
   }
 
-  // Use tar to extract (assuming tar is available)
-  const { execSync } = await import("node:child_process");
-  const tarball = await response.arrayBuffer();
-  const tarPath = join(targetDir, "plugins.tar.gz");
-  await writeFile(tarPath, Buffer.from(tarball));
-  execSync(`tar -xzf plugins.tar.gz -C . --strip-components=1`, { cwd: targetDir });
-  await rm(tarPath);
+  // Fallback: scan plugins directory
+  const entries = await readdir(bundledPath, { withFileTypes: true });
+  return entries
+    .filter((e) => e.isDirectory() && !e.name.startsWith("."))
+    .map((e) => e.name);
+}
+
+/**
+ * Extract workflows from plugins to root workflows directory
+ */
+async function extractWorkflows(targetDir: string, pluginNames: string[]): Promise<void> {
+  const workflowsDir = join(targetDir, "workflows");
+  await mkdir(workflowsDir, { recursive: true });
+
+  for (const pluginName of pluginNames) {
+    const pluginWorkflowsPath = join(targetDir, pluginName, "workflows");
+    if (!(await pathExists(pluginWorkflowsPath))) continue;
+
+    const entries = await readdir(pluginWorkflowsPath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isFile() && entry.name.endsWith(".md")) {
+        await cp(
+          join(pluginWorkflowsPath, entry.name),
+          join(workflowsDir, entry.name)
+        );
+      }
+    }
+    // Remove workflows from plugin to avoid confusion
+    await rm(pluginWorkflowsPath, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Copy plugins to target directory (no merge, keeps separate)
+ * Reads plugin list from marketplace.json for dynamic discovery.
+ */
+export async function copyPlugins(targetDir: string, sourcePath?: string): Promise<void> {
+  const bundledPath = sourcePath ?? getBundledPluginsPath();
+  const pluginNames = await getPluginNamesFromSource(bundledPath);
+
+  if (pluginNames.length === 0) {
+    throw new Error(`No plugins found at ${bundledPath}`);
+  }
+
+  // Clean and create target
+  if (await pathExists(targetDir)) {
+    await rm(targetDir, { recursive: true, force: true });
+  }
+  await mkdir(targetDir, { recursive: true });
+
+  // Copy all plugins from marketplace (no merge, keep separate)
+  for (const pluginName of pluginNames) {
+    const pluginPath = join(bundledPath, pluginName);
+    if (await pathExists(pluginPath)) {
+      await cp(pluginPath, join(targetDir, pluginName), { recursive: true });
+    }
+  }
+
+  // Extract workflows from plugins to root
+  await extractWorkflows(targetDir, pluginNames);
 
   // Create sandbox and user profile
   await mkdir(join(targetDir, "sandbox"), { recursive: true });
   await writeFile(
     join(targetDir, "user-profile.json"),
-    JSON.stringify({
-      userId: "default",
-      topics: [],
-      style: { tone: "intermediate", targetWordCount: 1000, voice: "first-person" }
-    }, null, 2)
+    JSON.stringify(createDefaultProfile(), null, 2),
+    "utf-8"
   );
+}
+
+/**
+ * Get plugin paths for production mode (scans ~/.looplia)
+ */
+export async function getProdPluginPaths(): Promise<Array<{ type: "local"; path: string }>> {
+  const loopliaPath = getLoopliaPluginPath();
+  const entries = await readdir(loopliaPath, { withFileTypes: true });
+  return entries
+    .filter((e) => e.isDirectory() && !e.name.startsWith(".") &&
+                   e.name !== "sandbox" && e.name !== "workflows")
+    .map((name) => ({ type: "local" as const, path: join(loopliaPath, name) }));
+}
+
+/**
+ * Get plugin paths based on current mode
+ */
+export async function getPluginPaths(): Promise<Array<{ type: "local"; path: string }>> {
+  if (process.env.LOOPLIA_DEV === "true") {
+    const devRoot = process.env.LOOPLIA_DEV_ROOT ?? process.cwd();
+    return getDevPluginPaths(devRoot);
+  }
+  return await getProdPluginPaths();
 }
 ```
 
@@ -985,6 +1040,8 @@ Add a build step to copy plugins into the npm package:
 
 **File:** `.github/workflows/release.yml`
 
+The release workflow reads plugin list from `marketplace.json` dynamically using `jq`:
+
 ```yaml
 name: Release
 
@@ -993,6 +1050,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -1000,58 +1060,33 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
-      - name: Build CLI
+      - name: Build
         run: bun run build
-        working-directory: apps/cli
 
-      - name: Create merged plugin tarball
+      - name: Create plugins tarball
         run: |
-          mkdir -p release/looplia/.claude-plugin
-
-          # Create merged plugin.json with version from tag
-          VERSION="${{ github.ref_name }}"
-          cat > release/looplia/.claude-plugin/plugin.json << EOF
-          {
-            "name": "looplia",
-            "description": "Looplia workflow engine",
-            "version": "${VERSION#v}",
-            "author": { "name": "Looplia" },
-            "homepage": "https://github.com/memorysaver/looplia-core"
-          }
-          EOF
-
-          # Copy from looplia-core (commands, skills, hooks, scripts)
-          cp -r plugins/looplia-core/commands release/looplia/
-          cp -r plugins/looplia-core/skills release/looplia/
-          cp -r plugins/looplia-core/hooks release/looplia/
-          cp -r plugins/looplia-core/scripts release/looplia/
-
-          # Merge from looplia-writer (skills, workflows)
-          cp -r plugins/looplia-writer/skills/* release/looplia/skills/
-          cp -r plugins/looplia-writer/workflows release/looplia/
-
-          # Create tarball
-          cd release && tar -czf plugins.tar.gz looplia
+          # Extract plugin folder names from marketplace.json dynamically
+          PLUGINS=$(jq -r '.plugins[].source | split("/") | .[-1]' .claude-plugin/marketplace.json | tr '\n' ' ')
+          echo "Packing plugins: $PLUGINS"
+          cd plugins
+          tar -czvf ../plugins.tar.gz $PLUGINS
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          files: |
-            release/plugins.tar.gz
-            apps/cli/dist/cli.js
+          files: plugins.tar.gz
           generate_release_notes: true
-
-      - name: Publish to NPM
-        run: npm publish
-        working-directory: apps/cli
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 ```
+
+**Key Points:**
+- Uses `jq` to read plugin names from `marketplace.json`
+- Packs plugins separately (no merge) as `looplia-core/` and `looplia-writer/`
+- Single source of truth: adding plugins to `marketplace.json` automatically includes them in releases
 
 ### 11.4 Version Synchronization
 
