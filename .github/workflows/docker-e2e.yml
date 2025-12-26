@@ -381,9 +381,9 @@ jobs:
           # Get list of referenced skills
           SKILLS=$(yq -r '.steps[].skill' frontmatter.yaml | sort -u)
 
-          # Check each skill exists in skills directory (v0.6.5: merged at ~/.looplia/skills/)
+          # Check each skill exists in plugin skill directories (v0.6.5: two-plugin mode)
           for skill in $SKILLS; do
-            SKILL_PATH=$(find build-test-workspace/skills -name "$skill" -type d 2>/dev/null | head -1)
+            SKILL_PATH=$(find build-test-workspace -path "*/skills/$skill" -type d 2>/dev/null | head -1)
             if [ -n "$SKILL_PATH" ]; then
               echo "✓ Skill '$skill' found at: $SKILL_PATH"
             else
