@@ -459,15 +459,21 @@ apps/cli/src/components/
 │   ├── multi-select-input.tsx       # Multi-select (checkbox)
 │   └── index.ts                     # Exports
 │
-└── build/                           # Build wizard components
+└── wizard/                          # Build wizard components
     ├── wizard.tsx                   # Main orchestrator (state machine)
     ├── tab-bar.tsx                  # Section navigation tabs
     ├── question-card.tsx            # Renders individual question
     ├── section-view.tsx             # Renders all questions in a section
     ├── review-panel.tsx             # Summary + live preview
     ├── preview-builder.ts           # Client-side preview generation
-    └── index.tsx                    # Exports + renderBuildWizard()
+    ├── skill-analyzer.ts            # AI analysis integration
+    ├── render.tsx                   # renderBuildWizard() entry point
+    ├── types.ts                     # Type definitions
+    └── index.ts                     # Pure re-exports (barrel file)
 ```
+
+> **Note:** The folder was renamed from `build/` to `wizard/` to avoid conflicts
+> with `.gitignore` patterns that exclude build directories.
 
 ### 6.2 Input Components
 
@@ -936,13 +942,14 @@ async function executeStreaming(
 | `apps/cli/src/components/inputs/select-input.tsx` | Single-select input | 50 |
 | `apps/cli/src/components/inputs/multi-select-input.tsx` | Multi-select input | 55 |
 | `apps/cli/src/components/inputs/index.ts` | Exports | 5 |
-| `apps/cli/src/components/build/tab-bar.tsx` | Section navigation | 45 |
-| `apps/cli/src/components/build/question-card.tsx` | Question renderer | 60 |
-| `apps/cli/src/components/build/section-view.tsx` | Section with questions | 80 |
-| `apps/cli/src/components/build/review-panel.tsx` | Summary + live preview | 100 |
-| `apps/cli/src/components/build/preview-builder.ts` | Client-side preview | 50 |
-| `apps/cli/src/components/build/wizard.tsx` | Main orchestrator | 200 |
-| `apps/cli/src/components/build/index.tsx` | Exports + renderBuildWizard | 40 |
+| `apps/cli/src/components/wizard/tab-bar.tsx` | Section navigation | 45 |
+| `apps/cli/src/components/wizard/question-card.tsx` | Question renderer | 60 |
+| `apps/cli/src/components/wizard/section-view.tsx` | Section with questions | 80 |
+| `apps/cli/src/components/wizard/review-panel.tsx` | Summary + live preview | 100 |
+| `apps/cli/src/components/wizard/preview-builder.ts` | Client-side preview | 50 |
+| `apps/cli/src/components/wizard/wizard.tsx` | Main orchestrator | 200 |
+| `apps/cli/src/components/wizard/render.tsx` | renderBuildWizard entry | 40 |
+| `apps/cli/src/components/wizard/index.ts` | Pure re-exports | 30 |
 | **Total** | | **~725** |
 
 ### 12.2 Files to Modify

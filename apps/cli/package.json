@@ -1,6 +1,6 @@
 {
   "name": "@looplia-core/cli",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "type": "module",
   "bin": {
     "looplia": "./dist/index.js"
