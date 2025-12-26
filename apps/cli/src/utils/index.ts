@@ -1,3 +1,13 @@
+export {
+  AgentLogger,
+  createBuildLogger,
+  createLoggingStreamWrapper,
+  createQueryLogger,
+  createRunLogger,
+  generateSessionId,
+  isDebugEnabled,
+  type LogContext,
+} from "./agent-logger";
 export { getArg, hasFlag, parseArgs, parseFlags } from "./args";
 export { createContentItemFromFile, readContentFile } from "./file";
 export {

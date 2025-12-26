@@ -1,12 +1,17 @@
 /**
- * Build Command (v0.6.1) - Thin Wrapper
+ * Build Command (v0.6.4) - Interactive Wizard
  *
- * Build a workflow from natural language by injecting /build command into the agent.
- * All workflow building logic is in the 3 builder skills:
- * - plugin-registry-scanner
- * - skill-capability-matcher
- * - workflow-schema-composer
+ * Build a workflow from natural language with multi-turn clarification.
+ * Uses interactive wizard when run without arguments or with description.
  *
+ * The wizard guides users through:
+ * 1. Description input (if not provided)
+ * 2. AI-generated clarifying questions
+ * 3. Tab-based navigation through sections
+ * 4. Live workflow preview
+ * 5. Final generation and save
+ *
+ * @see docs/DESIGN-0.6.4.md
  * @see docs/DESIGN-0.6.1.md § 5 CLI Command
  * @see plugins/looplia-core/commands/build.md
  */
@@ -17,12 +22,15 @@ import { resolve } from "node:path";
 
 import type { StreamingEvent } from "@looplia-core/core";
 import { createClaudeAgentExecutor } from "@looplia-core/provider/claude-agent-sdk";
-
-import { renderStreamingQuery } from "../components";
-import { isInteractive } from "../utils/terminal";
+import { renderStreamingQuery } from "../components/index.js";
+import { renderBuildWizard } from "../components/wizard/index.js";
+import { isInteractive } from "../utils/terminal.js";
 
 /** Maximum description length to prevent excessive prompt size */
 const MAX_DESCRIPTION_LENGTH = 500;
+
+/** Multiplier for enriched descriptions that include user clarifications */
+const ENRICHED_DESCRIPTION_MULTIPLIER = 3;
 
 /** Maximum workflow name length for filesystem compatibility */
 const MAX_WORKFLOW_NAME_LENGTH = 50;
@@ -265,10 +273,11 @@ function executeMock(args: BuildArgs): BuildResult {
 }
 
 /**
- * Execute with streaming UI.
+ * Execute with streaming UI (legacy).
  * Wraps streaming execution with error handling and proper session tracking.
+ * @deprecated Use executeWizard for interactive builds (v0.6.4+)
  */
-async function executeStreaming(
+export async function executeStreamingLegacy(
   prompt: string,
   workspace: string
 ): Promise<BuildResult> {
@@ -341,6 +350,210 @@ export async function executeBatch(
 }
 
 /**
+ * Streaming batch executor for wizard use.
+ * Returns an async generator that yields StreamingEvents.
+ */
+export function executeStreamingBatch(
+  prompt: string,
+  workspace: string
+): AsyncGenerator<StreamingEvent> {
+  const contentId = crypto.randomUUID();
+  const executor = createClaudeAgentExecutor({ workspace });
+
+  return executor.executePromptStreaming(prompt, {
+    workspace,
+    contentId,
+  });
+}
+
+/**
+ * Section type for answer serialization
+ */
+type SectionForContext = {
+  id: string;
+  questions: Array<{ id: string; text: string }>;
+};
+
+/**
+ * Build a map of questionId -> question text from sections
+ */
+function buildQuestionTextMap(
+  sections?: SectionForContext[]
+): Map<string, string> {
+  const map = new Map<string, string>();
+  if (!sections) {
+    return map;
+  }
+
+  for (const section of sections) {
+    for (const question of section.questions) {
+      map.set(question.id, question.text);
+    }
+  }
+  return map;
+}
+
+/**
+ * Format a single answer value to string
+ */
+function formatAnswerValue(value: string | string[]): string {
+  return Array.isArray(value) ? value.join(", ") : String(value);
+}
+
+/**
+ * Format a question-answer pair for the prompt
+ */
+function formatQAPair(
+  questionId: string,
+  value: string | string[],
+  questionTextMap: Map<string, string>
+): string | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  const formattedValue = formatAnswerValue(value);
+  if (!formattedValue) {
+    return null;
+  }
+
+  const questionText = questionTextMap.get(questionId);
+  if (questionText) {
+    return `Q: ${questionText} A: ${formattedValue}`;
+  }
+  const key = questionId.replace(/-/g, " ");
+  return `${key}: ${formattedValue}`;
+}
+
+/**
+ * Serialize wizard answers to natural language context.
+ * Transforms structured answers into readable text for the agent prompt.
+ * Uses original question text for better context.
+ */
+function serializeAnswersToContext(
+  answers: Record<string, Record<string, string | string[]>>,
+  sections?: SectionForContext[]
+): string {
+  const questionTextMap = buildQuestionTextMap(sections);
+  const parts: string[] = [];
+
+  for (const [sectionId, sectionAnswers] of Object.entries(answers)) {
+    if (sectionId === "review") {
+      continue;
+    }
+
+    for (const [questionId, value] of Object.entries(sectionAnswers)) {
+      const formatted = formatQAPair(questionId, value, questionTextMap);
+      if (formatted) {
+        parts.push(formatted);
+      }
+    }
+  }
+
+  return parts.join(". ");
+}
+
+/**
+ * Build an enriched prompt from wizard answers.
+ * Combines description with user answers for the agent's /build command.
+ * Exported for use by wizard's GeneratingPanel.
+ */
+export function buildEnrichedPrompt(
+  description: string,
+  answers: Record<string, Record<string, string | string[]>>,
+  name?: string,
+  sections?: SectionForContext[]
+): string {
+  let prompt = "/build";
+
+  // Include --name flag if provided
+  if (name) {
+    const sanitizedName = name
+      .trim()
+      .replace(/[^a-zA-Z0-9-_]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, MAX_WORKFLOW_NAME_LENGTH);
+    if (sanitizedName) {
+      prompt += ` --name ${sanitizedName}`;
+    }
+  }
+
+  // Serialize answers into natural language context (with question text)
+  const context = serializeAnswersToContext(answers, sections);
+
+  // Combine description with user answers
+  const enrichedDescription = context
+    ? `${description}. User clarifications: ${context}`
+    : description;
+
+  const sanitized = enrichedDescription
+    .trim()
+    .slice(0, MAX_DESCRIPTION_LENGTH * ENRICHED_DESCRIPTION_MULTIPLIER)
+    .replace(/[\n\r\t]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (sanitized) {
+    prompt += ` ${sanitized}`;
+  }
+
+  return prompt;
+}
+
+/**
+ * Execute with interactive wizard (v0.6.4)
+ * Uses tab-based UI for multi-turn clarification.
+ * Generation happens via streaming TUI within the wizard (non-mock mode).
+ */
+async function executeWizard(
+  workspace: string,
+  parsed: BuildArgs
+): Promise<BuildResult> {
+  const { result, cancelled, error } = await renderBuildWizard({
+    initialDescription: parsed.description,
+    workflowName: parsed.name,
+    workspace,
+    mock: parsed.mock,
+  });
+
+  if (cancelled) {
+    return {
+      status: "error",
+      error: "Build cancelled by user",
+    };
+  }
+
+  if (error) {
+    return {
+      status: "error",
+      error: error.message,
+    };
+  }
+
+  if (!result) {
+    return {
+      status: "error",
+      error: "No result received from wizard",
+    };
+  }
+
+  // v0.6.4: Non-mock mode returns buildResult from streaming generation
+  if (result.buildResult) {
+    return result.buildResult;
+  }
+
+  // Mock mode fallback: use executeBatch
+  const enrichedPrompt = buildEnrichedPrompt(
+    result.description,
+    result.answers,
+    result.workflowName || parsed.name
+  );
+
+  return executeBatch(enrichedPrompt, workspace);
+}
+
+/**
  * Execute build based on mode
  */
 function executeBuild(
@@ -352,8 +565,18 @@ function executeBuild(
     return Promise.resolve(executeMock(parsed));
   }
 
+  // Use interactive wizard in terminal mode (v0.6.4)
   if (isInteractive() && !parsed.noInteractive) {
-    return executeStreaming(prompt, workspace);
+    return executeWizard(workspace, parsed);
+  }
+
+  // Batch mode: require description
+  if (!parsed.description) {
+    return Promise.resolve({
+      status: "error",
+      error:
+        "Description required in non-interactive mode. Use --no-interactive with a description.",
+    });
   }
 
   return executeBatch(prompt, workspace);

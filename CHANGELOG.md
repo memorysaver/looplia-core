@@ -5,6 +5,64 @@ All notable changes to Looplia-Core will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4] - 2025-12-26
+
+### Added
+
+- **Interactive Build Wizard** - Multi-turn TUI for workflow creation
+  - Tab-based navigation through clarification sections (one question per tab)
+  - AI-generated questions via enhanced skill-capability-matcher
+  - Client-side workflow preview (no API calls during editing)
+  - "Something else in mind" option for custom input on all questions
+  - Dynamic sections generated based on description ambiguity
+- **Reusable Input Components** - New input primitives in `components/inputs/`
+  - `TextInput` - Text input with cursor navigation and arrow key support
+  - `SelectInput` - Single-select with arrow keys and "Other" option
+  - `MultiSelectInput` - Multi-select with space toggle
+- **Wizard Component Suite** - Build wizard components in `components/wizard/`
+  - `TabBar` - Section navigation with completion indicators
+  - `QuestionCard` - Question renderer with inference markers
+  - `SectionView` - Section content with question display
+  - `ReviewPanel` - Summary view with live workflow preview
+  - `preview-builder.ts` - Client-side workflow generation from answers
+  - `skill-analyzer.ts` - AI analysis integration
+- **Unified Agent Logger** - Debug logging utility in `utils/agent-logger.ts`
+  - `LOOPLIA_DEBUG=1` environment variable to enable logging
+  - JSONL log format at `~/.looplia/logs/{context}/`
+  - Streaming event logging wrapper for build wizard
+- **Unit Tests for Wizard** - 49 tests for wizard components
+  - `preview-builder.test.ts` - 23 tests for workflow preview generation
+  - `skill-analyzer.test.ts` - 26 tests for question parsing/normalization
+
+### Changed
+
+- **skill-capability-matcher** - Extended to return clarifications schema
+  - New `clarificationNeeded` and `clarifications` fields in output
+  - Question types: `single-select`, `multi-select`, `text`
+  - `goalId` linking recommendations to user-selected goals
+  - `inferred: true` marker for AI-detected options with `reason` explanation
+- **Build Command** - Uses wizard in interactive mode
+  - `looplia build` opens interactive wizard
+  - `looplia build "desc"` opens wizard with pre-filled description
+  - `--no-interactive` flag for batch mode (unchanged behavior)
+  - `--mock` flag for testing without API calls
+- **Component Architecture** - Wizard components in dedicated folder
+  - Moved from `build/` to `wizard/` folder (avoids .gitignore conflicts)
+  - Separated `render.tsx` from barrel file for proper exports
+
+### Documentation
+
+- **BUILD-SYSTEM.md** - New document explaining slash command vs wizard modes
+- **DESIGN-0.6.4.md** - Complete specification for Interactive Build Wizard
+
+### Fixed
+
+- Template variable backslash typo in `preview-builder.ts`
+- Generator error handling in `generating-panel.tsx` - added try-catch wrapper
+- Tab key conflict between wizard and TabBar components
+- Answer validation before section completion in wizard
+- Memoized `buildPreview` in `review-panel.tsx` to prevent unnecessary recalculation
+
 ## [0.6.3] - 2025-12-25
 
 ### Added
@@ -433,7 +491,8 @@ The following were considered but **intentionally deferred** to v0.6+:
 
 ---
 
-[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.6.3...HEAD
+[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.6.4...HEAD
+[0.6.4]: https://github.com/memorysaver/looplia-core/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/memorysaver/looplia-core/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/memorysaver/looplia-core/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/memorysaver/looplia-core/compare/v0.6.0...v0.6.1

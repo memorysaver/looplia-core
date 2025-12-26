@@ -111,6 +111,7 @@ Provide:
     {
       "skill": "media-reviewer",
       "suggestedStepId": "analyze-content",
+      "goalId": "analyze",
       "matchScore": 0.92,
       "capabilities": ["content analysis", "theme extraction"],
       "mission": "Deep analysis of video transcript. Extract key themes, quotes, and narrative structure.",
@@ -119,6 +120,7 @@ Provide:
     {
       "skill": "idea-synthesis",
       "suggestedStepId": "generate-ideas",
+      "goalId": "generate",
       "matchScore": 0.85,
       "capabilities": ["idea generation", "hooks and angles"],
       "mission": "Generate hooks, angles, and questions from the analysis. Read user profile for personalization.",
@@ -141,7 +143,82 @@ Provide:
     }
   },
   "gaps": [],
-  "customSkillNeeded": false
+  "customSkillNeeded": false,
+  "clarificationNeeded": true,
+  "clarifications": {
+    "sections": [
+      {
+        "id": "input",
+        "title": "Input",
+        "completed": false,
+        "questions": [
+          {
+            "id": "content-type",
+            "text": "What type of content will this workflow process?",
+            "type": "single-select",
+            "options": [
+              { "id": "video", "label": "Video transcripts", "inferred": true },
+              { "id": "audio", "label": "Audio transcripts" },
+              { "id": "text", "label": "Text articles" },
+              { "id": "web", "label": "Web pages (fetched via search)" }
+            ],
+            "reason": "Inferred 'video' from description, confirm or change"
+          }
+        ]
+      },
+      {
+        "id": "goals",
+        "title": "Goals",
+        "completed": false,
+        "questions": [
+          {
+            "id": "primary-goal",
+            "text": "What are the primary goals for this workflow?",
+            "type": "multi-select",
+            "options": [
+              { "id": "analyze", "label": "Analyze and extract key insights" },
+              { "id": "summarize", "label": "Create structured summaries" },
+              { "id": "generate", "label": "Generate creative content ideas" },
+              { "id": "document", "label": "Build comprehensive reports" }
+            ]
+          },
+          {
+            "id": "depth",
+            "text": "How deep should the analysis be?",
+            "type": "single-select",
+            "options": [
+              { "id": "quick", "label": "Quick overview (1-2 key points)" },
+              { "id": "standard", "label": "Standard analysis (5-7 key points)" },
+              { "id": "deep", "label": "Deep analysis (comprehensive)" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "output",
+        "title": "Output",
+        "completed": false,
+        "questions": [
+          {
+            "id": "format",
+            "text": "What output format do you need?",
+            "type": "single-select",
+            "options": [
+              { "id": "json", "label": "Structured JSON" },
+              { "id": "markdown", "label": "Markdown document" },
+              { "id": "both", "label": "Both JSON and Markdown" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "review",
+        "title": "Review",
+        "completed": false,
+        "questions": []
+      }
+    ]
+  }
 }
 ```
 
@@ -181,3 +258,121 @@ Analyze the content.
 3. **Score realistically** - Don't inflate match scores
 4. **Complete data flow** - Ensure all dependencies are resolvable
 5. **Flag gaps honestly** - Report capabilities that can't be matched
+6. **Include goalId** - Each recommendation must have a `goalId` linking it to a clarification goal
+
+## Clarifications Schema (v0.6.4)
+
+When user requirements are ambiguous, include clarifying questions in the response. The wizard UI uses these to gather additional context before generating the final workflow.
+
+### Clarification Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `clarificationNeeded` | boolean | Whether clarifying questions should be shown |
+| `clarifications.sections` | Section[] | Tab-based sections for wizard navigation |
+
+### Section Schema
+
+```json
+{
+  "id": "goals",
+  "title": "Goals",
+  "completed": false,
+  "questions": [...]
+}
+```
+
+### Question Schema
+
+```json
+{
+  "id": "primary-goal",
+  "text": "What are the primary goals for this workflow?",
+  "type": "single-select | multi-select | text",
+  "options": [
+    { "id": "analyze", "label": "Analyze and extract key insights", "inferred": true }
+  ],
+  "reason": "Optional explanation for why this was inferred"
+}
+```
+
+### Question Types
+
+| Type | Description | Use Case |
+|------|-------------|----------|
+| `single-select` | One option only (●/○) | Content type, depth level |
+| `multi-select` | Multiple options (✓/☐) | Goals, features to include |
+| `text` | Free-form input | Custom names, descriptions |
+
+### Inferred Values
+
+Set `inferred: true` on options that match keywords in the user's description:
+- "video" or "youtube" → infer video content type
+- "analyze" → infer analyze goal
+- "summar" → infer summarize goal
+- "generat" or "creat" → infer generate goal
+
+### Recommendation goalId
+
+Each recommendation must include a `goalId` that links to a goal option:
+
+```json
+{
+  "skill": "media-reviewer",
+  "suggestedStepId": "analyze-content",
+  "goalId": "analyze",
+  "matchScore": 0.92
+}
+```
+
+This allows the wizard to filter recommendations based on selected goals in real-time.
+
+## Structured Preferences for Enriched Prompt (v0.6.4)
+
+When wizard answers are included in the enriched prompt (via "User clarifications: Q: ... A: ..."), these become **structured preferences** that MUST be incorporated into the workflow.
+
+### Common Preference Types
+
+| Preference Category | Example Questions | How to Use |
+|---------------------|-------------------|------------|
+| **PLATFORMS** | "Which social media platforms?" | Inject into social/output step missions |
+| **ARTICLE_COUNT** | "How many articles/items?" | Inject into search/filter step missions |
+| **FOCUS_AREAS** | "Which topics/areas to focus on?" | Inject into search and analysis missions |
+| **OUTPUT_FORMAT** | "What format should output be?" | Inject into final output step mission |
+| **DEPTH** | "How deep should analysis be?" | Adjust analysis step detail level |
+
+### Preference Extraction from Enriched Prompt
+
+When receiving an enriched prompt like:
+```
+User clarifications: Q: Which platforms? A: twitter, linkedin. Q: How many articles? A: top5. Q: Focus areas? A: llm, adoption.
+```
+
+Extract as structured data:
+```
+PLATFORMS: twitter, linkedin
+ARTICLE_COUNT: 5
+FOCUS_AREAS: llm, adoption
+```
+
+### Mission Templates with Preferences
+
+**WITHOUT preferences (BAD):**
+```
+Search for AI news articles.
+```
+
+**WITH preferences (GOOD):**
+```
+Search for top 5 AI news articles focusing on LLM developments and adoption trends.
+```
+
+**WITHOUT preferences (BAD):**
+```
+Compile findings into a report.
+```
+
+**WITH preferences (GOOD):**
+```
+Create engaging social media posts optimized for twitter and linkedin, focusing on LLM and adoption angles.
+```

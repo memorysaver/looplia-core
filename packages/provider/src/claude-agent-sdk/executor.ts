@@ -43,6 +43,18 @@ const WORKFLOW_RESULT_SCHEMA = {
       type: "string",
       description: "Workflow that was executed",
     },
+    workflowName: {
+      type: "string",
+      description: "Name of the workflow (for run commands)",
+    },
+    workflowPath: {
+      type: "string",
+      description: "Full path to the saved workflow file",
+    },
+    stepsCount: {
+      type: "number",
+      description: "Number of steps in the workflow",
+    },
     artifact: {
       type: "object",
       additionalProperties: true,

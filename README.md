@@ -8,7 +8,7 @@ Looplia Core is an agentic workflow platform powered by the Claude Agent SDK. It
 
 **Vision:** A universal CLI for AI-powered workflows — one tool, many domains, powered by composable skills.
 
-## v0.6.3 Architecture
+## v0.6.4 Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -135,66 +135,9 @@ looplia config style --tone expert --word-count 1500 --voice first-person
 looplia config show
 ```
 
-## Workflow Schema (v0.6.3)
+## Workflow Schema
 
-Workflows are markdown files with YAML frontmatter:
-
-```yaml
----
-name: writing-kit
-version: 1.1.0
-description: Transform content into structured writing kit
-
-steps:
-  - id: summary
-    skill: media-reviewer
-    mission: |
-      Deep analysis of content to extract key themes, concepts.
-      Extract minimum 3 verbatim quotes, at least 5 key points.
-    input: ${{ sandbox }}/inputs/content.md
-    output: ${{ sandbox }}/outputs/summary.json
-    validate:
-      required_fields: [contentId, headline, keyThemes]
-      min_quotes: 3
-
-  - id: ideas
-    skill: idea-synthesis
-    mission: |
-      Generate creative writing ideas, hooks, and angles.
-    needs: [summary]
-    input: ${{ steps.summary.output }}
-    output: ${{ sandbox }}/outputs/ideas.json
-
-  - id: writing-kit
-    skill: writing-kit-assembler
-    mission: |
-      Assemble final writing kit combining summary and ideas.
-    needs: [summary, ideas]
-    input:
-      - ${{ steps.summary.output }}
-      - ${{ steps.ideas.output }}
-    output: ${{ sandbox }}/outputs/writing-kit.json
-    final: true
----
-
-# Writing Kit Workflow
-
-Documentation and usage instructions...
-```
-
-### Schema Fields
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `id` | string | **Yes** | Unique step identifier |
-| `skill` | string | **Yes** | Skill to execute |
-| `mission` | string | **Yes** | Natural language task description |
-| `input` | string/array | Yes | Input file path(s) |
-| `output` | string | Yes | Output file path |
-| `needs` | array | No | Step dependencies |
-| `model` | string | No | Model override (haiku/sonnet/opus) |
-| `validate` | object | No | Validation criteria |
-| `final` | boolean | No | Mark as final output |
+Workflows are markdown files with YAML frontmatter. Each step declares a `skill:` and `mission:` for Claude to execute. See [Workflow Schema](./docs/README.md#workflow-schema) for the complete schema reference and examples.
 
 ## Sandbox Architecture
 
@@ -234,30 +177,6 @@ Each `--file` creates an isolated sandbox:
 | **idea-synthesis** | Generate hooks, angles, and questions |
 | **writing-kit-assembler** | Assemble final writing kit with outline |
 | **user-profile-reader** | Read user preferences for personalization |
-
-## Project Structure
-
-```
-looplia-core/
-├── apps/
-│   ├── cli/              # CLI application
-│   └── docs/             # Documentation (Astro Starlight)
-├── packages/
-│   ├── core/             # Domain models, command framework
-│   └── provider/         # Claude Agent SDK integration
-├── plugins/
-│   ├── looplia-core/     # Infrastructure plugin
-│   │   ├── CLAUDE.md
-│   │   ├── commands/
-│   │   ├── skills/
-│   │   └── hooks/
-│   └── looplia-writer/   # Domain plugin
-│       ├── workflows/
-│       ├── skills/
-│       └── user-profile.json
-├── examples/             # Sample content files
-└── docs/                 # Architecture documentation
-```
 
 ## Development
 
@@ -303,7 +222,8 @@ env $(cat .env) looplia run writing-kit --file test.md
 | v0.6.0 | Steps-based workflows, `run: agents/X` syntax |
 | v0.6.1 | Skills-first, universal skill-executor |
 | v0.6.2 | Per-step orchestration |
-| **v0.6.3** | **Input-less workflows, web-capable skills** |
+| v0.6.3 | Input-less workflows, web-capable skills |
+| **v0.6.4** | **Interactive Build Wizard, Streaming TUI** |
 
 ## License
 
