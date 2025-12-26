@@ -9,11 +9,13 @@
  * Uses marketplace.json for dynamic plugin discovery.
  */
 
+import { createHash } from "node:crypto";
 import {
   cp,
   mkdir,
   readdir,
   readFile,
+  realpath,
   rm,
   stat,
   writeFile,
@@ -51,6 +53,39 @@ async function pathExists(path: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Compute SHA256 hash of a file
+ */
+async function computeSha256(filePath: string): Promise<string> {
+  const content = await readFile(filePath);
+  return createHash("sha256").update(content).digest("hex");
+}
+
+/**
+ * Validate that all extracted paths stay within the base directory
+ * (Protection against path traversal attacks in tarballs)
+ */
+async function validateExtractedPaths(baseDir: string): Promise<void> {
+  const realBase = await realpath(baseDir);
+  const entries = await readdir(baseDir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = join(baseDir, entry.name);
+    const entryRealPath = await realpath(fullPath);
+
+    if (!entryRealPath.startsWith(realBase)) {
+      throw new Error(
+        `Security: Path traversal detected in extracted file: ${entry.name}`
+      );
+    }
+
+    // Recursively check subdirectories
+    if (entry.isDirectory()) {
+      await validateExtractedPaths(fullPath);
+    }
   }
 }
 
@@ -251,9 +286,35 @@ export async function downloadRemotePlugins(
       );
     }
 
-    // Save and extract tarball
+    // Save tarball
     const tarPath = join(tempDir, "plugins.tar.gz");
     await writeFile(tarPath, Buffer.from(await response.arrayBuffer()));
+
+    // Security: Verify checksum if available
+    const checksumUrl = `${releaseUrl}.sha256`;
+    const checksumResponse = await fetch(checksumUrl);
+    if (checksumResponse.ok) {
+      const checksumText = await checksumResponse.text();
+      const checksumParts = checksumText.split(" ");
+      const expectedChecksum = checksumParts[0]?.trim();
+
+      if (!expectedChecksum) {
+        throw new Error("Invalid checksum file format");
+      }
+
+      const actualChecksum = await computeSha256(tarPath);
+
+      if (actualChecksum !== expectedChecksum) {
+        throw new Error(
+          `Checksum verification failed. Expected: ${expectedChecksum}, Got: ${actualChecksum}`
+        );
+      }
+      console.log("✓ Checksum verified");
+    } else {
+      console.log(
+        "⚠ Checksum file not available (older release), skipping verification"
+      );
+    }
 
     // Extract using tar (available on macOS/Linux)
     const { execSync } = await import("node:child_process");
@@ -271,6 +332,9 @@ export async function downloadRemotePlugins(
     }
 
     await rm(tarPath);
+
+    // Security: Validate extracted paths (prevent path traversal attacks)
+    await validateExtractedPaths(tempDir);
 
     // Copy plugins (no merge)
     await copyPlugins(targetDir, tempDir);

@@ -34,9 +34,15 @@ jobs:
           echo "Packing plugins: $PLUGINS"
           cd plugins
           tar -czvf ../plugins.tar.gz $PLUGINS
+          # Generate SHA256 checksum for security verification
+          cd ..
+          sha256sum plugins.tar.gz > plugins.tar.gz.sha256
+          echo "Checksum: $(cat plugins.tar.gz.sha256)"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: plugins.tar.gz
+          files: |
+            plugins.tar.gz
+            plugins.tar.gz.sha256
           generate_release_notes: true
