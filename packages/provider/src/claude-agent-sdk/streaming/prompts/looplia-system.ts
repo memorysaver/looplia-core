@@ -87,6 +87,20 @@ Save generated workflow to \`workflows/{name}.md\`.
 
 ---
 
+## Path Resolution
+
+All relative paths resolve from \`~/.looplia\` (the SDK working directory):
+
+| Path Type | Example | Resolves To |
+|-----------|---------|-------------|
+| Workflows | \`workflows/writing-kit.md\` | \`~/.looplia/workflows/writing-kit.md\` |
+| Sandbox | \`sandbox/{id}/validation.json\` | \`~/.looplia/sandbox/{id}/validation.json\` |
+| Outputs | \`sandbox/{id}/outputs/\` | \`~/.looplia/sandbox/{id}/outputs/\` |
+
+**User files** (from \`--file\` argument): Resolve against the **User Working Directory** provided in the User Context section below.
+
+---
+
 ## Error Handling
 
 | Error | Action |

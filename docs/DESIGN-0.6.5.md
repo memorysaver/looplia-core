@@ -64,9 +64,13 @@ BEFORE (v0.6.4):
 
 AFTER (v0.6.5):
   # Run from anywhere, plugin loaded from absolute path
-  cwd: process.cwd()           # User's current directory
+  userCwd = process.cwd()      # Capture user's directory
+  cwd: "~/.looplia"            # SDK works relative to looplia home
   plugins: [{ type: "local", path: "~/.looplia" }]
-  systemPrompt: { preset: "claude_code", append: loopliaSystemPrompt }
+  systemPrompt: {
+    preset: "claude_code",
+    append: loopliaSystemPrompt + "User Working Directory: " + userCwd
+  }
 
   # OR in development mode (LOOPLIA_DEV=true):
   plugins: [
@@ -607,22 +611,25 @@ function getPluginPaths(): Array<{ type: "local"; path: string }> {
 }
 
 // In executeAgenticQueryStreaming():
+const userCwd = process.cwd();               // Capture user's working directory
+const loopliaHome = getLoopliaPluginPath();  // ~/.looplia
+
 const result = query({
   prompt,
   options: {
     model: resolvedConfig.model,
-    cwd: process.cwd(),                  // User's current directory
+    cwd: loopliaHome,                    // SDK works relative to ~/.looplia
     permissionMode: "bypassPermissions",
     allowDangerouslySkipPermissions: true,
 
     // Load plugins based on mode
     plugins: getPluginPaths(),
 
-    // Use claude_code preset with looplia behavior appended
+    // Use claude_code preset with looplia behavior + user context appended
     systemPrompt: {
       type: "preset",
       preset: "claude_code",
-      append: loopliaSystemPrompt,
+      append: `${loopliaSystemPrompt}\n\n## User Context\nUser Working Directory: ${userCwd}\n`,
     },
 
     // REMOVED: settingSources: ["project"]
@@ -643,14 +650,64 @@ const result = query({
 });
 ```
 
-### 7.2 Key Differences from v0.6.4
+### 7.2 Path Resolution Strategy
+
+**Problem:** If `cwd` is set to `process.cwd()` (user's project folder), relative paths like `sandbox/{id}/` would resolve to the user's project instead of `~/.looplia`.
+
+**Solution:** Capture `userCwd` before SDK starts, set SDK `cwd` to `~/.looplia`, inject `userCwd` into system prompt.
+
+```typescript
+// Capture user's working directory BEFORE SDK starts
+const userCwd = process.cwd();
+const loopliaHome = getLoopliaPluginPath();  // ~/.looplia
+
+const result = query({
+  prompt,
+  options: {
+    // SDK works relative to ~/.looplia (sandbox, workflows, etc.)
+    cwd: loopliaHome,
+    plugins: getPluginPaths(),
+    // Append looplia system prompt + user context
+    systemPrompt: {
+      type: "preset",
+      preset: "claude_code",
+      append: `${loopliaSystemPrompt}\n\n## User Context\nUser Working Directory: ${userCwd}\n...`,
+    },
+    // ...
+  },
+});
+```
+
+**Path Resolution Table:**
+
+| Path Type | Example | Resolves To |
+|-----------|---------|-------------|
+| Workflows | `workflows/writing-kit.md` | `~/.looplia/workflows/writing-kit.md` |
+| Sandbox | `sandbox/{id}/validation.json` | `~/.looplia/sandbox/{id}/validation.json` |
+| Outputs | `sandbox/{id}/outputs/` | `~/.looplia/sandbox/{id}/outputs/` |
+| User files | `--file ./content.md` | `{userCwd}/content.md` (resolved by agent) |
+
+**System Prompt Context:**
+
+The User Working Directory is injected into the system prompt so agents can resolve user file paths:
+
+```
+## User Context
+
+User Working Directory: /Users/user/my-project/
+
+When processing --file arguments or user file paths, resolve them against the User Working Directory above.
+```
+
+### 7.3 Key Differences from v0.6.4
 
 | Aspect | v0.6.4 | v0.6.5 |
 |--------|--------|--------|
-| `cwd` | `workspace` (~/.looplia) | `process.cwd()` |
+| `cwd` | `workspace` (~/.looplia) | `loopliaHome` (~/.looplia) |
+| User file resolution | N/A | Via `userCwd` in system prompt |
 | `settingSources` | `["project"]` | Removed |
 | `plugins` | Not used | Mode-dependent array |
-| `systemPrompt` | Not used | `{ preset, append }` |
+| `systemPrompt` | Not used | `{ preset, append }` with userCwd |
 | Dev mode | Not supported | `LOOPLIA_DEV=true` |
 
 ---
