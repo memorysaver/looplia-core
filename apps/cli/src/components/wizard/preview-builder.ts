@@ -28,7 +28,9 @@ export function buildPreview(
 ): PreviewWorkflow {
   // Get selected goals from answers
   const goalsAnswers = answers.goals || {};
-  const selectedGoals = (goalsAnswers["primary-goal"] || []) as string[];
+  const selectedGoals = Array.isArray(goalsAnswers["primary-goal"])
+    ? (goalsAnswers["primary-goal"] as string[])
+    : [];
 
   // If we have agent preview, filter steps based on selected goals
   if (agentPreview) {
@@ -137,7 +139,9 @@ export function calculateComplexity(
   answers: Answers
 ): "simple" | "standard" | "complex" {
   const goalsAnswers = answers.goals || {};
-  const selectedGoals = (goalsAnswers["primary-goal"] || []) as string[];
+  const selectedGoals = Array.isArray(goalsAnswers["primary-goal"])
+    ? (goalsAnswers["primary-goal"] as string[])
+    : [];
   const depth = goalsAnswers.depth as string;
 
   const goalCount = selectedGoals.length;

@@ -6,7 +6,7 @@
 
 import type { Key } from "ink";
 import { Box, Text, useInput } from "ink";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Props = {
   /** Current input value */
@@ -101,9 +101,11 @@ export function TextInput({
   );
 
   // Sync cursor position when value changes externally
-  if (cursorPosition > value.length) {
-    setCursorPosition(value.length);
-  }
+  useEffect(() => {
+    if (cursorPosition > value.length) {
+      setCursorPosition(value.length);
+    }
+  }, [value.length, cursorPosition]);
 
   const displayValue = value || placeholder;
   const showPlaceholder = !value && Boolean(placeholder);

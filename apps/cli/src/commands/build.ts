@@ -29,6 +29,9 @@ import { isInteractive } from "../utils/terminal.js";
 /** Maximum description length to prevent excessive prompt size */
 const MAX_DESCRIPTION_LENGTH = 500;
 
+/** Multiplier for enriched descriptions that include user clarifications */
+const ENRICHED_DESCRIPTION_MULTIPLIER = 3;
+
 /** Maximum workflow name length for filesystem compatibility */
 const MAX_WORKFLOW_NAME_LENGTH = 50;
 
@@ -486,7 +489,7 @@ export function buildEnrichedPrompt(
 
   const sanitized = enrichedDescription
     .trim()
-    .slice(0, MAX_DESCRIPTION_LENGTH * 3) // Allow more for enriched content with questions
+    .slice(0, MAX_DESCRIPTION_LENGTH * ENRICHED_DESCRIPTION_MULTIPLIER)
     .replace(/[\n\r\t]/g, " ")
     .replace(/\s+/g, " ")
     .trim();

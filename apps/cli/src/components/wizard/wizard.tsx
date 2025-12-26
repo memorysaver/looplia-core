@@ -7,9 +7,10 @@
 
 import { Box, Text, useApp, useInput } from "ink";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { BuildResult } from "../../commands/build.js";
 import { buildEnrichedPrompt } from "../../commands/build.js";
+import { createBuildLogger } from "../../utils/agent-logger.js";
 import { BoxedArea } from "../boxed-area.js";
 import { TextInput } from "../inputs/index.js";
 import { Spinner } from "../spinner.js";
@@ -130,6 +131,9 @@ export function BuildWizard({
     phase: initialDescription ? "analyzing" : "description",
   }));
 
+  // Create logger for this wizard session (persists across renders)
+  const logger = useMemo(() => createBuildLogger(), []);
+
   // Handle global keys
   useInput((input, key) => {
     if (key.ctrl && input === "c") {
@@ -154,49 +158,13 @@ export function BuildWizard({
     }
   });
 
-  // Generate session ID once for this wizard instance
-  const [sessionId] = useState(() => crypto.randomUUID().slice(0, 8));
-
   // Phase-specific handlers
   const handleDescriptionSubmit = useCallback(() => {
     if (state.description.trim()) {
-      // DEBUG: Log description at submit time
-      import("node:fs").then((fs) => {
-        import("node:os").then((os) => {
-          import("node:path").then((path) => {
-            const logsDir = path.resolve(
-              os.homedir(),
-              ".looplia/workflows/logs"
-            );
-            if (!fs.existsSync(logsDir)) {
-              fs.mkdirSync(logsDir, { recursive: true });
-            }
-            const logPath = path.resolve(
-              logsDir,
-              `wizard-${sessionId}-description.log`
-            );
-            fs.writeFileSync(
-              logPath,
-              JSON.stringify(
-                {
-                  timestamp: new Date().toISOString(),
-                  sessionId,
-                  phase: "description-submit",
-                  description: {
-                    value: state.description,
-                    length: state.description.length,
-                  },
-                },
-                null,
-                2
-              )
-            );
-          });
-        });
-      });
+      logger.logDescriptionSubmit(state.description);
       setState((s) => ({ ...s, phase: "analyzing" }));
     }
-  }, [state.description, sessionId]);
+  }, [state.description, logger]);
 
   const handleDescriptionChange = useCallback((value: string) => {
     setState((s) => ({ ...s, description: value }));
@@ -248,6 +216,8 @@ export function BuildWizard({
     }
 
     const analyze = async () => {
+      logger.logAnalysisStart(state.description);
+
       try {
         let result: ClarificationResult;
 
@@ -259,6 +229,11 @@ export function BuildWizard({
           result = await analyzeDescription(state.description, workspace);
         }
 
+        logger.logAnalysisResult({
+          sections: result.clarifications.sections,
+          recommendations: result.recommendations,
+        });
+
         setState((s) => ({
           ...s,
           phase: "clarifying",
@@ -268,6 +243,10 @@ export function BuildWizard({
           currentSectionIndex: 0,
         }));
       } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        logger.logAnalysisResult({ error: errorMessage });
+
         setState((s) => ({
           ...s,
           phase: "error",
@@ -277,7 +256,7 @@ export function BuildWizard({
     };
 
     analyze();
-  }, [state.phase, state.description, mock, workspace]);
+  }, [state.phase, state.description, mock, workspace, logger]);
 
   // Generating phase - mock mode only (non-mock uses streaming panel)
   useEffect(() => {
@@ -390,45 +369,20 @@ export function BuildWizard({
     state.sections
   );
 
-  // DEBUG: Write to ~/.looplia/workflows/logs/{session-id}.log
-  if (state.phase === "generating") {
-    const debugInfo = {
-      timestamp: new Date().toISOString(),
-      sessionId,
-      phase: state.phase,
-      description: {
-        value: state.description,
-        length: state.description.length,
-      },
-      answers: state.answers,
-      enrichedPrompt: {
-        value: enrichedPrompt,
-        length: enrichedPrompt.length,
-      },
-      workflowName,
-    };
-    import("node:fs").then((fs) => {
-      import("node:os").then((os) => {
-        import("node:path").then((path) => {
-          const logsDir = path.resolve(os.homedir(), ".looplia/workflows/logs");
-          if (!fs.existsSync(logsDir)) {
-            fs.mkdirSync(logsDir, { recursive: true });
-          }
-          const logPath = path.resolve(
-            logsDir,
-            `wizard-${sessionId}-generating.log`
-          );
-          fs.writeFileSync(logPath, JSON.stringify(debugInfo, null, 2));
-        });
-      });
-    });
-  }
-
   // Render streaming GeneratingPanel for non-mock generating phase
   if (state.phase === "generating" && !mock) {
+    // Log generation start with full context
+    logger.logWizardAnswers(state.answers);
+    logger.logGenerationStart({
+      workflowName: workflowName || state.workflow?.name || "workflow",
+      enrichedPrompt,
+      description: state.description,
+    });
+
     return (
       <GeneratingPanel
         enrichedPrompt={enrichedPrompt}
+        logger={logger}
         onComplete={handleGenerationComplete}
         onError={handleGenerationError}
         workflowName={workflowName || state.workflow?.name || "workflow"}

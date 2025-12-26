@@ -24,6 +24,9 @@ const QUESTION_PREFIX_REGEX =
 /** Regex for removing trailing question mark */
 const QUESTION_MARK_REGEX = /\?$/;
 
+/** Maximum length for tab labels in wizard UI */
+const MAX_TAB_LABEL_LENGTH = 12;
+
 /**
  * Analyze a workflow description and generate clarification questions.
  * Calls plugin-registry-scanner and skill-capability-matcher skills.
@@ -346,13 +349,13 @@ function getShortLabel(text: string): string {
     return capitalize(words.join(" "));
   }
 
-  // Take first 2 words, max 12 chars total
+  // Take first 2 words, max MAX_TAB_LABEL_LENGTH chars total
   let label = words[0] ?? "";
   if (label.length < 8 && words[1] && words[1].length < 6) {
     label = `${label} ${words[1]}`;
   }
 
-  return capitalize(label.slice(0, 12));
+  return capitalize(label.slice(0, MAX_TAB_LABEL_LENGTH));
 }
 
 function capitalize(str: string): string {
