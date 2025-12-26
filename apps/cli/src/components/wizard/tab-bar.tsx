@@ -22,6 +22,8 @@ type Props = {
   onNavigate: (index: number) => void;
   /** Whether navigation is active */
   isActive?: boolean;
+  /** Disable keyboard navigation (when parent handles it) */
+  disableKeyboardNav?: boolean;
 };
 
 function getStatusIcon(completed: boolean, isCurrent: boolean): string {
@@ -49,10 +51,13 @@ export function TabBar({
   currentIndex,
   onNavigate,
   isActive = true,
+  disableKeyboardNav = false,
 }: Props) {
+  const keyboardActive = isActive && !disableKeyboardNav;
+
   useInput(
     (_input, key) => {
-      if (!isActive) {
+      if (!keyboardActive) {
         return;
       }
 
@@ -66,7 +71,7 @@ export function TabBar({
         onNavigate(nextIndex);
       }
     },
-    { isActive }
+    { isActive: keyboardActive }
   );
 
   return (

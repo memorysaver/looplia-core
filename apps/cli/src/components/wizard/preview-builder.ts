@@ -67,7 +67,7 @@ export function buildPreview(
       id: r.stepId,
       skill: r.skill,
       needs: prevStep ? [prevStep.stepId] : [],
-      output: `$\{{ sandbox }}/outputs/${r.stepId}.json`,
+      output: `\${{ sandbox }}/outputs/${r.stepId}.json`,
     };
   });
 

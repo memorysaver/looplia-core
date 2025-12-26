@@ -115,6 +115,40 @@ const INITIAL_STATE: WizardState = {
   error: null,
 };
 
+/**
+ * Validate that all questions in a section have answers
+ */
+function validateSectionAnswers(
+  section: Section,
+  sectionAnswers: Record<string, string | string[]> | undefined
+): boolean {
+  // Review section has no questions - always valid
+  if (section.id === "review" || section.questions.length === 0) {
+    return true;
+  }
+
+  // Check each question has an answer
+  for (const question of section.questions) {
+    const answer = sectionAnswers?.[question.id];
+
+    if (answer === undefined || answer === null) {
+      return false;
+    }
+
+    // For multi-select, ensure at least one option selected
+    if (Array.isArray(answer) && answer.length === 0) {
+      return false;
+    }
+
+    // For single-select/text, ensure non-empty string
+    if (typeof answer === "string" && answer.trim() === "") {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export function BuildWizard({
   initialDescription = "",
   workflowName,
@@ -191,8 +225,23 @@ export function BuildWizard({
   );
 
   const handleSectionComplete = useCallback(() => {
-    // Mark current section as completed and advance to next section
+    // Validate answers before marking section as complete
     setState((s) => {
+      const currentSection = s.sections[s.currentSectionIndex];
+
+      // Skip validation for review section or if no current section
+      if (!currentSection) {
+        return s;
+      }
+
+      // Validate that all questions have answers
+      const sectionAnswers = s.answers[currentSection.id];
+      if (!validateSectionAnswers(currentSection, sectionAnswers)) {
+        // Don't advance if validation fails (section stays incomplete)
+        return s;
+      }
+
+      // Mark current section as completed and advance to next section
       const updatedSections = s.sections.map((section, i) =>
         i === s.currentSectionIndex ? { ...section, completed: true } : section
       );
@@ -472,6 +521,7 @@ function renderPhase(
         <Box flexDirection="column">
           <TabBar
             currentIndex={state.currentSectionIndex}
+            disableKeyboardNav={true}
             isActive={false}
             onNavigate={handlers.onSectionNavigate}
             sections={state.sections.map((s) => ({

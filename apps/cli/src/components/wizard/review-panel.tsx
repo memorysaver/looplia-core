@@ -5,6 +5,7 @@
  */
 
 import { Box, Text, useInput } from "ink";
+import React from "react";
 import { buildPreview } from "./preview-builder.js";
 import type {
   Answers,
@@ -123,12 +124,10 @@ export function ReviewPanel({
     { isActive }
   );
 
-  // Build preview workflow (using agent preview if available)
-  const preview = buildPreview(
-    answers,
-    recommendations,
-    description,
-    agentPreview
+  // Memoize preview workflow to avoid recalculating on every render
+  const preview = React.useMemo(
+    () => buildPreview(answers, recommendations, description, agentPreview),
+    [answers, recommendations, description, agentPreview]
   );
 
   return (

@@ -69,7 +69,17 @@ function createLoggingWrapper(
     let result: StreamingResult;
 
     while (true) {
-      const iterResult = await generator.next();
+      let iterResult: IteratorResult<StreamingEvent, StreamingResult>;
+
+      try {
+        iterResult = await generator.next();
+      } catch (error) {
+        // Log the error and rethrow
+        logger.logError(
+          error instanceof Error ? error : new Error(String(error))
+        );
+        throw error;
+      }
 
       if (iterResult.done) {
         result = iterResult.value;
