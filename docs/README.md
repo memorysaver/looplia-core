@@ -1,6 +1,6 @@
 # Looplia-Core Documentation
 
-> **Version:** 0.6.3
+> **Version:** 0.6.4
 > **Last Updated:** December 2025
 
 This directory contains the core documentation for Looplia-Core, a Claude Agent SDK-based agentic workflow platform.
@@ -34,6 +34,33 @@ These are the current, authoritative documents for the v0.6.3 architecture:
 |----------|---------|
 | [AGENTIC_CONCEPT-0.5.md](./archive/AGENTIC_CONCEPT-0.5.md) | Agent system design: Two-plugin model (historical) |
 | [TEST_PLAN-0.6.md](./archive/TEST_PLAN-0.6.md) | Test architecture with real API testing (historical) |
+
+---
+
+## What's New in v0.6.4
+
+### Interactive Build Wizard
+
+v0.6.4 introduces an **Interactive Build Wizard** for creating workflows through a multi-turn TUI:
+
+| Feature | Description |
+|---------|-------------|
+| **Tab-based navigation** | One question per tab with completion indicators |
+| **AI-generated questions** | Dynamic clarification based on description ambiguity |
+| **Client-side preview** | Workflow preview updates instantly without API calls |
+| **Streaming TUI** | Tree-based display during workflow generation |
+
+**New Components:**
+- `TextInput`, `SelectInput`, `MultiSelectInput` - Reusable input primitives
+- `TabBar`, `SectionView`, `ReviewPanel` - Wizard navigation components
+- `preview-builder.ts` - Client-side workflow generation from answers
+- `skill-analyzer.ts` - AI analysis integration
+
+**Debug Logging:**
+- `LOOPLIA_DEBUG=1` enables unified agent logging
+- JSONL logs at `~/.looplia/logs/{context}/`
+
+See [DESIGN-0.6.4.md](./DESIGN-0.6.4.md) for full specification.
 
 ---
 
@@ -287,7 +314,7 @@ Previous versions are preserved in `/docs/archive/` for reference:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        DOCUMENT RELATIONSHIPS (v0.6.3)                       │
+│                        DOCUMENT RELATIONSHIPS (v0.6.4)                       │
 └─────────────────────────────────────────────────────────────────────────────┘
 
                               ┌──────────────┐
@@ -317,7 +344,7 @@ Previous versions are preserved in `/docs/archive/` for reference:
 ```
 
 **Version Progression:**
-- v0.6.0 → v0.6.1 → v0.6.2 → **v0.6.3** (current)
+- v0.6.0 → v0.6.1 → v0.6.2 → v0.6.3 → **v0.6.4** (current)
 
 **Key Documents:**
 - **GLOSSARY.md** defines terms used across all documents
@@ -328,6 +355,95 @@ Previous versions are preserved in `/docs/archive/` for reference:
 - **HOOK_VALIDATOR.md** documents hook-based validation system
 - **CLAUDE_PLUGINS.md** provides Claude Code plugin reference
 - **SUBAGENTS.md** / **AGENT-SKILLS.md** / **AGENT-SDK.md** provide Anthropic SDK reference
+
+---
+
+## Workflow Schema
+
+Workflows are markdown files with YAML frontmatter defining multi-step skill orchestration:
+
+```yaml
+---
+name: writing-kit
+version: 1.1.0
+description: Transform content into structured writing kit
+
+steps:
+  - id: summary
+    skill: media-reviewer
+    mission: |
+      Deep analysis of content to extract key themes, concepts.
+      Extract minimum 3 verbatim quotes, at least 5 key points.
+    input: ${{ sandbox }}/inputs/content.md
+    output: ${{ sandbox }}/outputs/summary.json
+    validate:
+      required_fields: [contentId, headline, keyThemes]
+      min_quotes: 3
+
+  - id: ideas
+    skill: idea-synthesis
+    mission: |
+      Generate creative writing ideas, hooks, and angles.
+    needs: [summary]
+    input: ${{ steps.summary.output }}
+    output: ${{ sandbox }}/outputs/ideas.json
+
+  - id: writing-kit
+    skill: writing-kit-assembler
+    mission: |
+      Assemble final writing kit combining summary and ideas.
+    needs: [summary, ideas]
+    input:
+      - ${{ steps.summary.output }}
+      - ${{ steps.ideas.output }}
+    output: ${{ sandbox }}/outputs/writing-kit.json
+    final: true
+---
+
+# Writing Kit Workflow
+
+Documentation and usage instructions...
+```
+
+### Schema Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | **Yes** | Unique step identifier |
+| `skill` | string | **Yes** | Skill to execute |
+| `mission` | string | **Yes** | Natural language task description |
+| `input` | string/array | Yes | Input file path(s) |
+| `output` | string | Yes | Output file path |
+| `needs` | array | No | Step dependencies |
+| `model` | string | No | Model override (haiku/sonnet/opus) |
+| `validate` | object | No | Validation criteria |
+| `final` | boolean | No | Mark as final output |
+
+---
+
+## Project Structure
+
+```
+looplia-core/
+├── apps/
+│   ├── cli/              # CLI application
+│   └── docs/             # Documentation (Astro Starlight)
+├── packages/
+│   ├── core/             # Domain models, command framework
+│   └── provider/         # Claude Agent SDK integration
+├── plugins/
+│   ├── looplia-core/     # Infrastructure plugin
+│   │   ├── CLAUDE.md
+│   │   ├── commands/
+│   │   ├── skills/
+│   │   └── hooks/
+│   └── looplia-writer/   # Domain plugin
+│       ├── workflows/
+│       ├── skills/
+│       └── user-profile.json
+├── examples/             # Sample content files
+└── docs/                 # Architecture documentation
+```
 
 ---
 
@@ -475,4 +591,4 @@ Steps complete when `validation.json` shows `validated: true`:
 
 ---
 
-*This README provides navigation for Looplia-Core v0.6.3 documentation.*
+*This README provides navigation for Looplia-Core v0.6.4 documentation.*

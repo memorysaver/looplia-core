@@ -26,6 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `ReviewPanel` - Summary view with live workflow preview
   - `preview-builder.ts` - Client-side workflow generation from answers
   - `skill-analyzer.ts` - AI analysis integration
+- **Unified Agent Logger** - Debug logging utility in `utils/agent-logger.ts`
+  - `LOOPLIA_DEBUG=1` environment variable to enable logging
+  - JSONL log format at `~/.looplia/logs/{context}/`
+  - Streaming event logging wrapper for build wizard
+- **Unit Tests for Wizard** - 49 tests for wizard components
+  - `preview-builder.test.ts` - 23 tests for workflow preview generation
+  - `skill-analyzer.test.ts` - 26 tests for question parsing/normalization
 
 ### Changed
 
@@ -47,6 +54,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **BUILD-SYSTEM.md** - New document explaining slash command vs wizard modes
 - **DESIGN-0.6.4.md** - Complete specification for Interactive Build Wizard
+
+### Fixed
+
+- Template variable backslash typo in `preview-builder.ts`
+- Generator error handling in `generating-panel.tsx` - added try-catch wrapper
+- Tab key conflict between wizard and TabBar components
+- Answer validation before section completion in wizard
+- Memoized `buildPreview` in `review-panel.tsx` to prevent unnecessary recalculation
 
 ## [0.6.3] - 2025-12-25
 
