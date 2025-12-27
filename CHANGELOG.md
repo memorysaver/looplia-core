@@ -5,6 +5,48 @@ All notable changes to Looplia-Core will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.5] - 2025-12-27
+
+### Added
+
+- **Agent SDK Local Plugin Loading** - Load looplia plugins directly via SDK `plugins` option
+  - Plugins loaded from local paths instead of `.mcp.json` discovery
+  - SDK `cwd` set to `~/.looplia` for sandbox/workflow access
+  - User working directory injected into system prompt for file path resolution
+- **Bootstrap Module** - New `@looplia-core/provider/bootstrap` export
+  - `copyBundledPlugins()` - Copy from npm package to `~/.looplia`
+  - `downloadRemotePlugins()` - Download from GitHub releases
+  - `getPluginPaths()` - Get plugin paths based on mode
+  - `isDevMode()` - Check if running in development mode
+- **Development Mode** - Run from any directory with environment variables
+  - `LOOPLIA_DEV=true` - Enable development mode
+  - `LOOPLIA_DEV_ROOT` - Path to looplia-core repository
+  - Plugins loaded directly from source without init
+
+### Changed
+
+- **Init Command** - Refactored to use bootstrap module
+  - Merges looplia-core and looplia-writer into single `~/.looplia` plugin
+  - Creates `.claude-plugin/plugin.json` manifest
+- **Slash Commands** - Use plugin prefix to avoid SDK conflicts
+  - `/run` → `/looplia:run`
+  - `/build` → `/looplia:build`
+- **Docker Configuration** - Updated for v0.6.5 bootstrap
+  - Entrypoint checks `.claude-plugin/plugin.json` instead of removed `CLAUDE.md`
+  - Plugins copied to `apps/cli/plugins/` for correct path resolution
+  - docker.package.json files updated to v0.6.5
+
+### Fixed
+
+- **Sandbox Path Resolution** - User working directory now correctly resolved
+  - System prompt includes user's cwd for `--file` path resolution
+- **Docker E2E Workflow** - Updated skill search path from `plugins` to `skills`
+
+### Documentation
+
+- **DESIGN-0.6.5.md** - Complete specification for Agent SDK plugin loading
+- **.env.example** - Template with LOOPLIA_DEV environment variables
+
 ## [0.6.4] - 2025-12-26
 
 ### Added
@@ -491,7 +533,8 @@ The following were considered but **intentionally deferred** to v0.6+:
 
 ---
 
-[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.6.4...HEAD
+[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.6.5...HEAD
+[0.6.5]: https://github.com/memorysaver/looplia-core/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/memorysaver/looplia-core/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/memorysaver/looplia-core/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/memorysaver/looplia-core/compare/v0.6.1...v0.6.2

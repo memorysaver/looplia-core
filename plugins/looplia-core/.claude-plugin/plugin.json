@@ -1,10 +1,10 @@
 {
-  "name": "looplia-core",
-  "description": "Looplia workflow engine - Execute workflow-as-markdown definitions with validation-driven completion",
-  "version": "0.5.2",
+  "name": "looplia",
+  "description": "Core workflow engine - Execute workflow-as-markdown definitions with validation-driven completion",
+  "version": "0.6.5",
   "author": {
     "name": "Looplia"
   },
   "keywords": ["workflow", "agentic", "automation", "validation"],
-  "homepage": "https://github.com/looplia/looplia-core"
+  "homepage": "https://github.com/memorysaver/looplia-core"
 }

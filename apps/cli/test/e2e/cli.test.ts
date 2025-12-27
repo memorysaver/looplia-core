@@ -61,14 +61,14 @@ describe("CLI E2E Tests", () => {
       const result = await execCLI(["--version"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia 0.6.4");
+      expect(result.stdout).toContain("looplia 0.6.5");
     });
 
     it("should show version with -v flag", async () => {
       const result = await execCLI(["-v"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia 0.6.4");
+      expect(result.stdout).toContain("looplia 0.6.5");
     });
 
     it("should error on unknown command", async () => {
@@ -86,7 +86,7 @@ describe("CLI E2E Tests", () => {
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain("looplia init");
       expect(result.stdout).toContain("--yes");
-      expect(result.stdout).toContain("Initialize or refresh workspace");
+      expect(result.stdout).toContain("Initialize looplia plugin");
     });
 
     it("should show init help with -h flag", async () => {

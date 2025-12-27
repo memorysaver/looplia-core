@@ -1,0 +1,3 @@
+# Local development symlink to source plugins
+# For npm publishing, plugins are copied via prepublish script
+plugins

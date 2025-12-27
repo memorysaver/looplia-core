@@ -1,0 +1,24 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "looplia",
+  "description": "Looplia workflow engine - AI-powered workflow automation with validation-driven completion",
+  "owner": {
+    "name": "Looplia"
+  },
+  "plugins": [
+    {
+      "name": "looplia-core",
+      "description": "Core workflow engine - Execute workflow-as-markdown definitions",
+      "source": "./plugins/looplia-core",
+      "category": "development",
+      "homepage": "https://github.com/memorysaver/looplia-core"
+    },
+    {
+      "name": "looplia-writer",
+      "description": "Writing domain plugin - Content analysis, idea generation, and writing workflows",
+      "source": "./plugins/looplia-writer",
+      "category": "productivity",
+      "homepage": "https://github.com/memorysaver/looplia-core"
+    }
+  ]
+}

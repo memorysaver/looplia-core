@@ -1,9 +1,20 @@
+/**
+ * @deprecated This module is deprecated as of v0.6.5.
+ *
+ * Use the new bootstrap module instead:
+ * - import { getLoopliaPluginPath, copyBundledPlugins } from "@looplia-core/provider/bootstrap"
+ *
+ * The workspace module is kept for backward compatibility with logging.
+ * It will be removed in a future version.
+ */
+
 import { cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isAbsolute, join, normalize, resolve } from "node:path";
 
 /**
  * Options for workspace initialization
+ * @deprecated Use bootstrap module instead
  */
 export type WorkspaceOptions = {
   /** Base directory for workspace (default: ~/.looplia) */

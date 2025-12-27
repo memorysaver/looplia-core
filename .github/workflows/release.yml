@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build packages
+        run: bun run build
+
+      - name: Create plugins tarball
+        run: |
+          # Extract plugin folder names from marketplace.json
+          PLUGINS=$(jq -r '.plugins[].source | split("/") | .[-1]' .claude-plugin/marketplace.json | tr '\n' ' ')
+          echo "Packing plugins: $PLUGINS"
+          cd plugins
+          tar -czvf ../plugins.tar.gz $PLUGINS
+          # Generate SHA256 checksum for security verification
+          cd ..
+          sha256sum plugins.tar.gz > plugins.tar.gz.sha256
+          echo "Checksum: $(cat plugins.tar.gz.sha256)"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            plugins.tar.gz
+            plugins.tar.gz.sha256
+          generate_release_notes: true

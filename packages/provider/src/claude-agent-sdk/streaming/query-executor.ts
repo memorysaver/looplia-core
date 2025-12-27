@@ -6,6 +6,7 @@
  */
 
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import { getLoopliaPluginPath, getPluginPaths } from "../../bootstrap";
 import type { ClaudeAgentConfig, ProviderUsage } from "../config";
 import { resolveConfig } from "../config";
 import { createQueryLogger } from "../logger";
@@ -15,6 +16,7 @@ import {
   extractContentIdFromPrompt,
   getOrInitWorkspace,
 } from "../utils/shared";
+import { loopliaSystemPrompt } from "./prompts/looplia-system";
 import { skillExecutorPrompt } from "./prompts/skill-executor";
 
 // Re-export for backward compatibility - intentional to maintain API surface
@@ -159,15 +161,28 @@ export async function* executeAgenticQueryStreaming<T>(
       resolvedConfig.model
     );
 
+    // v0.6.5: Get plugin paths based on mode (dev vs prod)
+    const pluginPaths = await getPluginPaths();
+    // v0.6.5: Capture user's working directory before SDK starts
+    const userCwd = process.cwd();
+    const loopliaHome = getLoopliaPluginPath();
+
     const result = query({
       prompt,
       options: {
         model: resolvedConfig.model,
-        cwd: workspace,
+        // v0.6.5: SDK works relative to ~/.looplia (sandbox, workflows, etc.)
+        cwd: loopliaHome,
         permissionMode: "bypassPermissions",
         allowDangerouslySkipPermissions: true,
-        // v0.6.0: Enable subagent & skill discovery from .claude/ directories
-        settingSources: ["project"],
+        // v0.6.5: Load plugins from local paths instead of project settings
+        plugins: pluginPaths,
+        // v0.6.5: Append looplia system prompt + user context to claude_code preset
+        systemPrompt: {
+          type: "preset",
+          preset: "claude_code",
+          append: `${loopliaSystemPrompt}\n\n## User Context\n\nUser Working Directory: ${userCwd}\n\nWhen processing --file arguments or user file paths, resolve them against the User Working Directory above.`,
+        },
         // v0.6.0: Enable Task for subagent spawning, Write/Glob for file operations
         // v0.6.3: Added WebSearch/WebFetch for input-less search skill
         allowedTools: [

@@ -1,10 +1,14 @@
 {
   "name": "@looplia-core/cli",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "type": "module",
   "bin": {
     "looplia": "./dist/index.js"
   },
+  "files": [
+    "dist",
+    "plugins"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -13,7 +17,9 @@
     "test:watch": "bun test --watch",
     "test:unit": "bun test commands/",
     "test:e2e": "bun run build && bun test e2e/",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "copy-plugins": "rm -rf plugins && cp -r ../../plugins ./plugins",
+    "prepublishOnly": "bun run copy-plugins && bun run build"
   },
   "dependencies": {
     "@looplia-core/core": "workspace:*",

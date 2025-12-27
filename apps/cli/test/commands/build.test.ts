@@ -141,7 +141,7 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      expect(result).toBe("/build summarize articles");
+      expect(result).toBe("/looplia:build summarize articles");
     });
 
     it("should return just /build when no description", () => {
@@ -152,7 +152,7 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      expect(result).toBe("/build");
+      expect(result).toBe("/looplia:build");
     });
 
     it("should sanitize newlines from description", () => {
@@ -163,7 +163,7 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      expect(result).toBe("/build analyze videos and create");
+      expect(result).toBe("/looplia:build analyze videos and create");
       expect(result).not.toContain("\n");
       expect(result).not.toContain("\r");
     });
@@ -176,7 +176,7 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      expect(result).toBe("/build line1 line2");
+      expect(result).toBe("/looplia:build line1 line2");
     });
 
     it("should limit description to 500 chars", () => {
@@ -188,9 +188,9 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      // /build + space + 500 chars = 507 chars
-      expect(result.length).toBe(507);
-      expect(result).toBe(`/build ${"a".repeat(500)}`);
+      // /looplia:build + space + 500 chars = 515 chars
+      expect(result.length).toBe(515);
+      expect(result).toBe(`/looplia:build ${"a".repeat(500)}`);
     });
 
     it("should trim whitespace from description", () => {
@@ -201,7 +201,7 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      expect(result).toBe("/build summarize articles");
+      expect(result).toBe("/looplia:build summarize articles");
     });
 
     it("should handle description with only whitespace", () => {
@@ -214,7 +214,7 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      expect(result).toBe("/build");
+      expect(result).toBe("/looplia:build");
     });
 
     it("should include --name flag in prompt when provided", () => {
@@ -226,7 +226,9 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      expect(result).toBe("/build --name article-summary summarize articles");
+      expect(result).toBe(
+        "/looplia:build --name article-summary summarize articles"
+      );
     });
 
     it("should include --name flag even with empty description", () => {
@@ -238,7 +240,7 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      expect(result).toBe("/build --name my-workflow");
+      expect(result).toBe("/looplia:build --name my-workflow");
     });
 
     it("should sanitize --name to safe filename characters", () => {
@@ -251,7 +253,7 @@ describe("build command", () => {
       };
       const result = buildPrompt(args);
       // Special characters replaced with hyphens, consecutive hyphens collapsed
-      expect(result).toBe("/build --name my-workflow test");
+      expect(result).toBe("/looplia:build --name my-workflow test");
     });
 
     it("should collapse consecutive hyphens in --name", () => {
@@ -263,7 +265,7 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      expect(result).toBe("/build --name my-workflow-name test");
+      expect(result).toBe("/looplia:build --name my-workflow-name test");
     });
 
     it("should omit --name when it becomes empty after sanitization", () => {
@@ -276,7 +278,7 @@ describe("build command", () => {
       };
       const result = buildPrompt(args);
       // --name should not be included since sanitized name is empty
-      expect(result).toBe("/build test");
+      expect(result).toBe("/looplia:build test");
     });
 
     it("should limit --name to 50 characters", () => {
@@ -289,7 +291,7 @@ describe("build command", () => {
       };
       const result = buildPrompt(args);
       // Name should be truncated to 50 chars
-      expect(result).toBe(`/build --name ${"a".repeat(50)} test`);
+      expect(result).toBe(`/looplia:build --name ${"a".repeat(50)} test`);
     });
 
     it("should trim whitespace from --name", () => {
@@ -301,7 +303,7 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      expect(result).toBe("/build --name my-workflow test");
+      expect(result).toBe("/looplia:build --name my-workflow test");
     });
   });
 

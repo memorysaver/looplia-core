@@ -1,6 +1,6 @@
 # Looplia-Core Documentation
 
-> **Version:** 0.6.4
+> **Version:** 0.6.5
 > **Last Updated:** December 2025
 
 This directory contains the core documentation for Looplia-Core, a Claude Agent SDK-based agentic workflow platform.
@@ -14,6 +14,7 @@ These are the current, authoritative documents for the v0.6.3 architecture:
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | [AGENTIC_CONCEPT_1.0.md](./AGENTIC_CONCEPT_1.0.md) | **Skills-first architecture overview** - comprehensive guide to v0.6.1/v0.6.2 | All team members |
+| [DESIGN-0.6.5.md](./DESIGN-0.6.5.md) | **Agent SDK plugin loading**, bootstrap module, dev mode | Developers, Architects |
 | [DESIGN-0.6.3.md](./DESIGN-0.6.3.md) | **Input-less workflows**, web-capable skills, named inputs | Developers, Architects |
 | [DESIGN-0.6.2.md](./DESIGN-0.6.2.md) | **Schema-in-Skill architecture**, plugin-first domain types | Developers, Architects |
 | [DESIGN-0.6.1.md](./DESIGN-0.6.1.md) | **Skills-first architecture**, universal skill-executor, `/build` command | Developers, Architects |
@@ -34,6 +35,67 @@ These are the current, authoritative documents for the v0.6.3 architecture:
 |----------|---------|
 | [AGENTIC_CONCEPT-0.5.md](./archive/AGENTIC_CONCEPT-0.5.md) | Agent system design: Two-plugin model (historical) |
 | [TEST_PLAN-0.6.md](./archive/TEST_PLAN-0.6.md) | Test architecture with real API testing (historical) |
+
+---
+
+## What's New in v0.6.5
+
+### Agent SDK Local Plugin Loading
+
+v0.6.5 changes how plugins are loaded during workflow execution:
+
+| Before (v0.6.4) | After (v0.6.5) |
+|-----------------|----------------|
+| Plugins via `.mcp.json` discovery | Plugins via SDK `plugins` option |
+| Project settings sources | Direct local path loading |
+| Implicit plugin resolution | Explicit path configuration |
+| Hardcoded plugin list | Marketplace-driven discovery |
+
+**Key Changes:**
+- SDK `cwd` set to `~/.looplia` (sandbox and workflows accessible)
+- User's working directory injected into system prompt for `--file` resolution
+- Bootstrap module for three installation modes (npm bundle, remote, dev)
+- Marketplace-driven plugin discovery via `.claude-plugin/marketplace.json`
+- Workflows extracted to `~/.looplia/workflows/` during init (separate from plugin components)
+
+### Runtime Structure
+
+After `looplia init`, the following structure is created:
+
+```
+~/.looplia/
+├── looplia-core/           # Plugin (name: "looplia" for /looplia: prefix)
+│   ├── .claude-plugin/plugin.json
+│   ├── commands/           # /looplia:run, /looplia:build, etc.
+│   ├── skills/             # workflow-executor, validator, builder skills
+│   └── hooks/              # Session logging, validation hooks
+├── looplia-writer/         # Plugin (name: "looplia-writer")
+│   ├── .claude-plugin/plugin.json
+│   └── skills/             # media-reviewer, idea-synthesis, etc.
+├── workflows/              # Extracted from plugins during init
+│   └── writing-kit.md      # Workflow definitions
+├── sandbox/                # Workflow execution sandboxes
+└── user-profile.json       # User configuration
+```
+
+**Note:** Plugins remain separate (not merged). The core plugin is named "looplia" for cleaner `/looplia:` command prefix.
+
+### Development Mode
+
+New environment variables for development without running `init`:
+
+```bash
+export LOOPLIA_DEV=true
+export LOOPLIA_DEV_ROOT=~/looplia-core
+looplia run writing-kit --file ./test.md  # Works from any directory
+```
+
+In dev mode:
+- Plugins loaded directly from `$LOOPLIA_DEV_ROOT/plugins/`
+- Changes take effect immediately (no re-init needed)
+- Both looplia-core and looplia-writer loaded as separate plugins
+
+See [DESIGN-0.6.5.md](./DESIGN-0.6.5.md) for full specification.
 
 ---
 
@@ -167,10 +229,12 @@ v0.6.0 introduces a GitHub Actions-inspired workflow schema for **deterministic 
 
 v0.5.2+ separates the single plugin into **two plugins**:
 
-| Plugin | Purpose | Contents |
-|--------|---------|----------|
-| **looplia-core** | Infrastructure | Workflow engine, validation, `/run` command |
-| **looplia-writer** | Domain | Writing-kit workflow, content analysis agents |
+| Folder | Plugin Name | Purpose | Contents |
+|--------|-------------|---------|----------|
+| **looplia-core/** | `looplia` | Infrastructure | Workflow engine, validation, `/looplia:run` command |
+| **looplia-writer/** | `looplia-writer` | Domain | Content analysis skills (media-reviewer, idea-synthesis) |
+
+**Note:** The core plugin is named "looplia" (not "looplia-core") for cleaner `/looplia:` command prefix. Workflows are extracted to `~/.looplia/workflows/` during init.
 
 ### Sandbox Folder Architecture
 
@@ -193,14 +257,14 @@ Each workflow execution creates an isolated sandbox:
 
 ### Slash Commands
 
-New commands exposed via Claude Code plugin system:
+Commands exposed via Claude Code plugin system (prefixed with `/looplia:`):
 
 | Command | Description |
 |---------|-------------|
-| `/run <workflow-id> --file <path>` | Execute a workflow on content (creates sandbox) |
-| `/run <workflow-id> --sandbox-id <id>` | Resume existing sandbox |
-| `/build-workflow <name>` | Scaffold a new workflow definition |
-| `/list-workflows` | List available workflows |
+| `/looplia:run <workflow-id> --file <path>` | Execute a workflow on content (creates sandbox) |
+| `/looplia:run <workflow-id> --sandbox-id <id>` | Resume existing sandbox |
+| `/looplia:build <name>` | AI-assisted workflow creation |
+| `/looplia:list-workflows` | List available workflows |
 
 ### Claude Code Plugin Alignment
 
@@ -314,7 +378,7 @@ Previous versions are preserved in `/docs/archive/` for reference:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        DOCUMENT RELATIONSHIPS (v0.6.4)                       │
+│                        DOCUMENT RELATIONSHIPS (v0.6.5)                       │
 └─────────────────────────────────────────────────────────────────────────────┘
 
                               ┌──────────────┐
@@ -344,7 +408,7 @@ Previous versions are preserved in `/docs/archive/` for reference:
 ```
 
 **Version Progression:**
-- v0.6.0 → v0.6.1 → v0.6.2 → v0.6.3 → **v0.6.4** (current)
+- v0.6.0 → v0.6.1 → v0.6.2 → v0.6.3 → v0.6.4 → **v0.6.5** (current)
 
 **Key Documents:**
 - **GLOSSARY.md** defines terms used across all documents
@@ -423,27 +487,36 @@ Documentation and usage instructions...
 
 ## Project Structure
 
+### Repository Layout (Development)
+
 ```
 looplia-core/
+├── .claude-plugin/
+│   └── marketplace.json  # Plugin registry for dynamic discovery
 ├── apps/
 │   ├── cli/              # CLI application
 │   └── docs/             # Documentation (Astro Starlight)
 ├── packages/
 │   ├── core/             # Domain models, command framework
-│   └── provider/         # Claude Agent SDK integration
+│   └── provider/         # Claude Agent SDK integration, bootstrap module
 ├── plugins/
-│   ├── looplia-core/     # Infrastructure plugin
+│   ├── looplia-core/     # Infrastructure plugin (name: "looplia")
+│   │   ├── .claude-plugin/plugin.json
 │   │   ├── CLAUDE.md
-│   │   ├── commands/
-│   │   ├── skills/
+│   │   ├── commands/     # /looplia:run, /looplia:build
+│   │   ├── skills/       # workflow-executor, validator, builder skills
 │   │   └── hooks/
-│   └── looplia-writer/   # Domain plugin
-│       ├── workflows/
-│       ├── skills/
-│       └── user-profile.json
+│   └── looplia-writer/   # Domain plugin (name: "looplia-writer")
+│       ├── .claude-plugin/plugin.json
+│       ├── workflows/    # Extracted to root during init
+│       └── skills/       # media-reviewer, idea-synthesis, etc.
 ├── examples/             # Sample content files
 └── docs/                 # Architecture documentation
 ```
+
+### Runtime Layout (~/.looplia)
+
+After `looplia init`, see [Runtime Structure](#runtime-structure) above for the installed layout.
 
 ---
 
@@ -482,29 +555,30 @@ skill: writing-kit-assembler   →   subagent_type: "skill-executor"
 ONLY ONE subagent for ALL steps: skill-executor
 ```
 
-### Two-Plugin Model (v0.6.1 - Skills-First)
+### Two-Plugin Model (v0.6.5 - Skills-First)
 
 ```
 ┌─────────────────────────────────┐    ┌─────────────────────────────────────┐
-│        LOOPLIA-CORE              │    │         LOOPLIA-WRITER               │
-│     (Infrastructure Plugin)      │    │        (Domain Plugin)               │
+│     looplia-core/ folder         │    │       looplia-writer/ folder         │
+│     (name: "looplia")            │    │       (name: "looplia-writer")       │
+│     Infrastructure Plugin        │    │       Domain Plugin                  │
 ├─────────────────────────────────┤    ├─────────────────────────────────────┤
 │ commands/                        │    │ skills/                              │
-│   ├── run.md                     │    │   ├── media-reviewer/                │
-│   └── build.md                   │    │   ├── idea-synthesis/                │
+│   ├── run.md → /looplia:run      │    │   ├── media-reviewer/                │
+│   └── build.md → /looplia:build  │    │   ├── idea-synthesis/                │
 ├─────────────────────────────────┤    │   └── writing-kit-assembler/         │
-│ skills/                          │    ├─────────────────────────────────────┤
-│   ├── workflow-executor/         │    │ workflows/                           │
-│   ├── workflow-validator/        │    │   └── writing-kit.md                 │
-│   ├── plugin-registry-scanner/   │    └─────────────────────────────────────┘
-│   ├── skill-capability-matcher/  │
-│   └── workflow-schema-composer/  │
-├─────────────────────────────────┤
-│ CLAUDE.md                        │
+│ skills/                          │    └─────────────────────────────────────┘
+│   ├── workflow-executor/         │
+│   ├── workflow-validator/        │    ┌─────────────────────────────────────┐
+│   ├── plugin-registry-scanner/   │    │   ~/.looplia/workflows/              │
+│   ├── skill-capability-matcher/  │    │   (Extracted during init)            │
+│   └── workflow-schema-composer/  │    ├─────────────────────────────────────┤
+├─────────────────────────────────┤    │   └── writing-kit.md                 │
+│ CLAUDE.md                        │    └─────────────────────────────────────┘
 │   (Generic interpreter)          │
 └─────────────────────────────────┘
 
-Note: agents/ directory removed in v0.6.1 - skills are first-class citizens
+Note: Workflows extracted to ~/.looplia/workflows/ during init (not plugin components)
 ```
 
 ### Sandbox Architecture
@@ -567,9 +641,9 @@ steps:
 Execute workflows via Claude Code commands:
 
 ```
-/run writing-kit --file article.md           # Create new sandbox
-/run writing-kit --sandbox-id text-2025-12-18-abc1  # Resume existing
-/build my-workflow "Description of workflow"  # v0.6.1: AI-assisted workflow creation
+/looplia:run writing-kit --file article.md           # Create new sandbox
+/looplia:run writing-kit --sandbox-id text-2025-12-18-abc1  # Resume existing
+/looplia:build my-workflow "Description of workflow"  # v0.6.1: AI-assisted workflow creation
 ```
 
 ### Validation-Driven Completion
@@ -591,4 +665,4 @@ Steps complete when `validation.json` shows `validated: true`:
 
 ---
 
-*This README provides navigation for Looplia-Core v0.6.4 documentation.*
+*This README provides navigation for Looplia-Core v0.6.5 documentation.*
