@@ -8,7 +8,14 @@
  * @see https://github.com/memorysaver/looplia-core/docs/DESIGN-0.6.6.md
  */
 
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  mkdir,
+  readFile,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -242,11 +249,22 @@ export function getConfigPath(): string {
  * Returns null if file doesn't exist
  */
 export async function readLoopliaSettings(): Promise<LoopliaSettings | null> {
+  const configPath = getConfigPath();
   try {
-    const content = await readFile(getConfigPath(), "utf-8");
+    const content = await readFile(configPath, "utf-8");
     return JSON.parse(content) as LoopliaSettings;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return null;
+    }
+    // Handle corrupted JSON - backup and return null
+    if (error instanceof SyntaxError) {
+      const backupPath = `${configPath}.corrupted`;
+      await rm(backupPath, { force: true });
+      await rename(configPath, backupPath);
+      console.warn(
+        `Config file corrupted, backed up to ${backupPath}. Using defaults.`
+      );
       return null;
     }
     throw error;
@@ -262,6 +280,8 @@ export async function writeLoopliaSettings(
   const configPath = getConfigPath();
   await mkdir(getLoopliaHome(), { recursive: true });
   await writeFile(configPath, JSON.stringify(settings, null, 2), "utf-8");
+  // Enforce restrictive permissions (owner read/write only)
+  await chmod(configPath, 0o600);
 }
 
 /**

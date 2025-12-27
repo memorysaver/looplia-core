@@ -299,6 +299,16 @@ async function setProviderValue(key: string, value: string): Promise<void> {
   // Mask auth token in output
   const displayValue = key === "auth-token" ? maskAuthToken(value) : value;
   console.log(`Set ${key} = ${displayValue}`);
+
+  // Security warning for auth-token storage
+  if (key === "auth-token") {
+    console.log(
+      "\n⚠️  Warning: API key stored in plain text at ~/.looplia/looplia.setting.json"
+    );
+    console.log(
+      "   Prefer using ZENMUX_API_KEY or ANTHROPIC_API_KEY environment variables."
+    );
+  }
 }
 
 async function resetProviderConfig(): Promise<void> {
