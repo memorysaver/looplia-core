@@ -266,17 +266,17 @@ export function injectLoopliaSettingsEnv(settings: LoopliaSettings): void {
       process.env.ANTHROPIC_BASE_URL = settings.apiProvider.baseUrl;
     }
 
-    // Set API key (from ZENMUX_API_KEY env var or config file authToken)
-    // ZenMux uses api_key parameter, same as Anthropic SDK
-    if (!process.env.ANTHROPIC_API_KEY) {
-      if (
-        settings.apiProvider.type === "zenmux" &&
-        process.env.ZENMUX_API_KEY
-      ) {
-        process.env.ANTHROPIC_API_KEY = process.env.ZENMUX_API_KEY;
-      } else if (settings.apiProvider.authToken) {
-        process.env.ANTHROPIC_API_KEY = settings.apiProvider.authToken;
-      }
+    // Set API key for proxy providers
+    // For ZenMux: ALWAYS use ZENMUX_API_KEY when available (user explicitly selected ZenMux preset)
+    // This overrides any existing ANTHROPIC_API_KEY since we're targeting ZenMux endpoint
+    if (settings.apiProvider.type === "zenmux" && process.env.ZENMUX_API_KEY) {
+      process.env.ANTHROPIC_API_KEY = process.env.ZENMUX_API_KEY;
+    } else if (
+      !process.env.ANTHROPIC_API_KEY &&
+      settings.apiProvider.authToken
+    ) {
+      // Fallback to authToken from config if no API key is set
+      process.env.ANTHROPIC_API_KEY = settings.apiProvider.authToken;
     }
   }
 
