@@ -1,0 +1,147 @@
+{
+  "contentId": "test-ai-healthcare",
+  "hooks": [
+    {
+      "type": "emotional",
+      "text": "Imagine a world where cancer is detected before you feel a single symptom—where AI catches what human eyes might miss, giving you months or years to act.",
+      "appeal": "Personal relevance and hope",
+      "strength": "high"
+    },
+    {
+      "type": "curiosity",
+      "text": "Most doctors spend their careers perfecting one specialty. So why are hospitals now letting machines make the critical decisions?",
+      "appeal": "Challenges assumptions",
+      "strength": "high"
+    },
+    {
+      "type": "controversy",
+      "text": "While AI outperforms radiologists at detecting disease, one critical question haunts the industry: who's liable when the algorithm gets it wrong?",
+      "appeal": "Addresses real concerns",
+      "strength": "medium-high"
+    },
+    {
+      "type": "statistic",
+      "text": "In just three years, healthcare organizations implementing AI jumped from 30% to 60%—a shift so rapid that many hospitals are scrambling to keep up.",
+      "appeal": "Establishes urgency and scale",
+      "strength": "high"
+    },
+    {
+      "type": "story",
+      "text": "Sarah thought she was healthy. But an AI system analyzing her genetic data predicted a 78% risk of early-onset disease—before any symptoms appeared. Here's how precision medicine is rewriting patient outcomes.",
+      "appeal": "Concrete, relatable narrative",
+      "strength": "high"
+    }
+  ],
+  "angles": [
+    {
+      "perspective": "The Skeptic's Challenge",
+      "approach": "While AI boasts 95%+ accuracy rates, explore the real-world complications: bias in training data, integration challenges with legacy systems, and the privacy trade-offs that come with genetic analysis. What's the human cost of algorithmic efficiency?",
+      "target": "Critical thinkers, healthcare professionals, ethicists",
+      "relevance_score": 0.92,
+      "themes": ["Challenge Acknowledgment", "Efficiency vs. Humanity"]
+    },
+    {
+      "perspective": "The Economic Disruptor",
+      "approach": "Drug development that used to take 15 years and billions of dollars now happens in months. Unpack how AI is reshaping the pharmaceutical industry, reducing costs, accelerating time-to-market, and creating new winners and losers in the competitive landscape.",
+      "target": "Business leaders, investors, pharmaceutical industry professionals",
+      "relevance_score": 0.88,
+      "themes": ["Drug Development Efficiency", "Transformation at Scale"]
+    },
+    {
+      "perspective": "The Human Partnership Story",
+      "approach": "Rather than 'AI vs. Doctors,' tell the story of collaboration. How radiologists freed from routine image analysis are now focusing on complex cases. How doctors are becoming data interpreters and care strategists. Show the reimagining of professional identity.",
+      "target": "Healthcare professionals, students, general audience",
+      "relevance_score": 0.95,
+      "themes": ["Collaboration Over Replacement", "Efficiency vs. Humanity"]
+    },
+    {
+      "perspective": "The Preventive Revolution",
+      "approach": "Shift from reactive treatment to predictive prevention. Explore how AI analyzing genetic data, medical history, and lifestyle factors transforms medicine from 'treat the disease' to 'prevent the disease.' What does healthcare look like when we're 10 steps ahead of illness?",
+      "target": "Wellness-focused readers, healthcare innovators, preventive medicine advocates",
+      "relevance_score": 0.89,
+      "themes": ["From Reactive to Proactive", "Personalized Treatment"]
+    },
+    {
+      "perspective": "The Access & Equity Lens",
+      "approach": "AI democratizes specialist expertise—a rural clinic gets the same diagnostic power as a major medical center. But who has access to these systems? Explore how AI can either widen or narrow the healthcare gap depending on implementation choices.",
+      "target": "Policy makers, global health advocates, healthcare equity focused readers",
+      "relevance_score": 0.86,
+      "themes": ["Democratization of Expertise", "Transformation at Scale"]
+    }
+  ],
+  "questions": {
+    "analytical": [
+      {
+        "text": "How does the 95% accuracy rate of AI diagnostic systems compare to the cumulative accuracy when AI and human radiologists work together? Is the partnership better than either alone?",
+        "depth": "medium"
+      },
+      {
+        "text": "What are the measurable differences in outcomes (cost, time, detection rates) between healthcare systems aggressively adopting AI versus those moving cautiously?",
+        "depth": "medium"
+      },
+      {
+        "text": "If AI reduces drug development time from 15 years to a fraction of that, how does this accelerated timeline affect our understanding of long-term drug safety and side effects?",
+        "depth": "deep"
+      }
+    ],
+    "practical": [
+      {
+        "text": "If your hospital could implement one AI capability today—diagnostics, drug discovery, or personalized medicine—which would deliver the most immediate benefit to patients and why?",
+        "depth": "medium"
+      },
+      {
+        "text": "What specific barriers (technical, financial, cultural, regulatory) would your healthcare organization face in implementing the AI collaboration model described?",
+        "depth": "medium"
+      },
+      {
+        "text": "How would you explain the concept of AI-assisted diagnosis to a patient to build trust while maintaining realistic expectations about limitations?",
+        "depth": "deep"
+      }
+    ],
+    "philosophical": [
+      {
+        "text": "Does removing routine diagnostic tasks from physicians represent progress toward more meaningful work, or does it risk deskilling the profession in areas where human judgment remains essential?",
+        "depth": "deep"
+      },
+      {
+        "text": "When we shift from treating disease to predicting disease through genetic and lifestyle analysis, what are the ethical implications for genetic privacy, insurance discrimination, and personal autonomy?",
+        "depth": "deep"
+      },
+      {
+        "text": "If AI can predict disease earlier than humans, do we have a moral obligation to use it, even if the predictions carry uncertainty and potential for false positives?",
+        "depth": "deep"
+      }
+    ],
+    "comparative": [
+      {
+        "text": "How does the AI adoption trajectory in healthcare (30% to 60% in three years) compare to other major technological disruptions in medicine, and what does that tell us about how quickly this field will transform?",
+        "depth": "medium"
+      },
+      {
+        "text": "Compare the collaboration model between AI and healthcare professionals to similar partnerships in other fields (law, finance, creative industries). What can healthcare learn from their experiences?",
+        "depth": "medium"
+      },
+      {
+        "text": "How does the promise of personalized medicine through AI compare to previous technological breakthroughs in medicine, and are we overstating or understating its potential impact?",
+        "depth": "deep"
+      }
+    ]
+  },
+  "synthesis": {
+    "core_tension": "The tension between AI's undeniable capabilities (95%+ accuracy, speed, cost reduction) and the human elements that define healthcare (trust, judgment, patient autonomy, ethical responsibility).",
+    "narrative_arc": "From AI as tool → AI as decision-maker → AI as partner → emergence of new professional identities",
+    "writing_opportunities": [
+      "Profile piece on a radiologist or physician who has redesigned their role around AI",
+      "Investigation into healthcare systems that are leading or lagging in AI adoption and why",
+      "Deep dive into the bias problem in medical AI and how it's being addressed",
+      "Future-focused piece imagining healthcare in 2035 with mature AI integration",
+      "Personal narrative from a patient who benefited from AI-enabled early detection",
+      "Comparative analysis of AI adoption across different healthcare sectors (oncology vs. cardiology vs. rare disease)"
+    ]
+  },
+  "metadata": {
+    "generated_at": "2025-12-28T00:00:00Z",
+    "skill": "idea-synthesis",
+    "version": "1.0"
+  }
+}

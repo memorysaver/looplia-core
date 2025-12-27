@@ -9,10 +9,11 @@
 
 ## Executive Summary
 
-This report compares ten ZenMux models for the writing-kit workflow:
+This report compares **Anthropic Claude Haiku 4.5** (official baseline) and ten ZenMux models for the writing-kit workflow:
 
 | Model | Provider | Compliance | Recommendation |
 |-------|----------|------------|----------------|
+| **Claude Haiku 4.5** (`claude-haiku-4-5-20251001`) | Anthropic Direct | 100% | **Official Baseline** |
 | **GLM-4.7** (`z-ai/glm-4.7`) | ZenMux | 100% | **Production Ready** |
 | **Gemini 3 Flash** (`google/gemini-3-flash-preview`) | ZenMux | 100% | **Production Ready** |
 | **Grok 4.1 Fast** (`x-ai/grok-4.1-fast`) | ZenMux | 100% | **Production Ready** |
@@ -25,6 +26,7 @@ This report compares ten ZenMux models for the writing-kit workflow:
 | DeepSeek v3.2 (`deepseek/deepseek-v3.2`) | ZenMux | 0% | **Not Recommended** |
 
 **Key Findings:**
+- **Claude Haiku 4.5** (Anthropic Direct) achieves 100% compliance as the official baseline
 - **GLM-4.7**, **Gemini 3 Flash**, and **Grok 4.1 Fast** tied at 100% compliance - all production-ready
 - **DeepSeek Reasoner** achieves ~95% with only `context` field missing in summary
 - **MiMo v2 Flash** excels at summary generation (100%) but creative hook types diverge from spec (43%)
@@ -38,6 +40,10 @@ This report compares ten ZenMux models for the writing-kit workflow:
 ## Test Configuration
 
 ```bash
+# Anthropic Claude Haiku 4.5 Test (Official Baseline)
+looplia config provider reset  # Use default Anthropic Direct
+looplia run writing-kit --file examples/ai-healthcare.md
+
 # GLM-4.7 Test
 looplia config provider preset ZENMUX_ZAI_GLM47
 looplia run writing-kit --file examples/ai-healthcare.md
@@ -76,7 +82,8 @@ looplia run writing-kit --file examples/ai-healthcare.md
 ```
 
 **Environment:**
-- API Provider: ZenMux (`https://zenmux.ai/api/anthropic`)
+- Anthropic Direct: Official API with subagent execution strategy
+- ZenMux Proxy: `https://zenmux.ai/api/anthropic` with inline execution strategy
 - Both main and executor agents used the same model
 - Same input content for fair comparison
 
@@ -86,16 +93,27 @@ looplia run writing-kit --file examples/ai-healthcare.md
 
 ### Content Volume
 
-| Metric | GLM-4.7 | Gemini 3 | Grok 4.1 | Reasoner | MiMo v2 | GPT-5.1 | Doubao | M2.1 | GLM-4.6v | DeepSeek v3 |
-|--------|---------|----------|----------|----------|---------|---------|--------|------|----------|-------------|
-| Total Output Size | 27 KB | ~13 KB | ~15 KB | ~14 KB | ~25 KB | ~5 KB | ~5 KB | ~3 KB | ~5 KB | 0 KB |
-| Output Files | 3 | 3 | 3 | 3 | 3 | 2 | 1 | 1 | 1 | 0 |
-| Quotes Extracted | 7 | 3 | 4 | 4 | 7 | 3 | 4 | 3 | - | - |
-| Hooks Generated | 5 | 5 | 5 | 5 | 5 | 5 | - | 3 | 5 | - |
-| Angles Created | 4+ | 3 | 5 | 5 | 5 | 4 | - | 5 | 5 | - |
-| Related Concepts | 15 | 5 | 5 | 5 | 10 | 4 | 5 | 0 | - | - |
+| Metric | Haiku 4.5 | GLM-4.7 | Gemini 3 | Grok 4.1 | Reasoner | MiMo v2 | GPT-5.1 | Doubao | M2.1 | GLM-4.6v | DeepSeek v3 |
+|--------|-----------|---------|----------|----------|----------|---------|---------|--------|------|----------|-------------|
+| Total Output Size | ~35 KB | 27 KB | ~13 KB | ~15 KB | ~14 KB | ~25 KB | ~5 KB | ~5 KB | ~3 KB | ~5 KB | 0 KB |
+| Output Files | 3 | 3 | 3 | 3 | 3 | 3 | 2 | 1 | 1 | 1 | 0 |
+| Quotes Extracted | 4 | 7 | 3 | 4 | 4 | 7 | 3 | 4 | 3 | - | - |
+| Hooks Generated | 5 | 5 | 5 | 5 | 5 | 5 | 5 | - | 3 | 5 | - |
+| Angles Created | 5 | 4+ | 3 | 5 | 5 | 5 | 4 | - | 5 | 5 | - |
+| Related Concepts | 5 | 15 | 5 | 5 | 5 | 10 | 4 | 5 | 0 | - | - |
 
 ### Content Richness
+
+**Claude Haiku 4.5 Provided (Official Baseline):**
+- All 15 summary fields with comprehensive detail
+- `detailedAnalysis` with multi-paragraph breakdown
+- `narrativeFlow` describing content progression
+- `coreIdeas` with concept, explanation, and examples
+- `context` explaining assumed reader knowledge
+- All 5 hook types (emotional, curiosity, controversy, statistic, story) with strength ratings
+- Relevance scores (0.86-0.95) on angles
+- Questions organized by 4 categories (analytical, practical, philosophical, comparative)
+- `synthesis` section with core_tension, narrative_arc, and writing_opportunities
 
 **GLM-4.7 Provided:**
 - Multi-paragraph `detailedAnalysis` with narrative breakdown
@@ -198,58 +216,67 @@ The writing-kit workflow specifies explicit requirements in `writing-kit.md`:
 
 **Required Fields:** `contentId, headline, tldr, bullets, tags, sentiment, category, overview, keyThemes, detailedAnalysis, narrativeFlow, coreIdeas, importantQuotes, context, relatedConcepts`
 
-| Field | GLM-4.7 | Gemini 3 | Grok 4.1 | Reasoner | MiMo v2 | GPT-5.1 | Doubao | M2.1 | GLM-4.6v | DeepSeek v3 |
-|-------|---------|----------|----------|----------|---------|---------|--------|------|----------|-------------|
-| contentId | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| headline | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| tldr | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| bullets | ✅ 7 | ✅ 6 | ✅ 6 | ✅ 7 | ✅ 7 | ✅ 5 | ✅ 6 | ❌ | ❌ | ❌ |
-| tags | ✅ 9 | ✅ 6 | ✅ 6 | ✅ 7 | ✅ 7 | ✅ 5 | ✅ 5 | ❌ | ❌ | ❌ |
-| sentiment | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| category | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| overview | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| keyThemes | ✅ 5 | ✅ 4 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ | ❌ | ❌ |
-| detailedAnalysis | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| narrativeFlow | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| coreIdeas | ✅ 4 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 5 | ❌ | ❌ | ❌ |
-| importantQuotes | ✅ 7 | ✅ 3 | ✅ 4 | ✅ 4 | ✅ 7 | ✅ 3 | ✅ 4 | ✅ 3 | ❌ | ❌ |
-| context | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| relatedConcepts | ✅ 15 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 10 | ✅ 4 | ✅ 5 | ❌ | ❌ | ❌ |
+| Field | Haiku 4.5 | GLM-4.7 | Gemini 3 | Grok 4.1 | Reasoner | MiMo v2 | GPT-5.1 | Doubao | M2.1 | GLM-4.6v | DeepSeek v3 |
+|-------|-----------|---------|----------|----------|----------|---------|---------|--------|------|----------|-------------|
+| contentId | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| headline | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| tldr | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| bullets | ✅ 7 | ✅ 7 | ✅ 6 | ✅ 6 | ✅ 7 | ✅ 7 | ✅ 5 | ✅ 6 | ❌ | ❌ | ❌ |
+| tags | ✅ 5 | ✅ 9 | ✅ 6 | ✅ 6 | ✅ 7 | ✅ 7 | ✅ 5 | ✅ 5 | ❌ | ❌ | ❌ |
+| sentiment | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| category | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| overview | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| keyThemes | ✅ 5 | ✅ 5 | ✅ 4 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ | ❌ | ❌ |
+| detailedAnalysis | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| narrativeFlow | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| coreIdeas | ✅ 5 | ✅ 4 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 5 | ❌ | ❌ | ❌ |
+| importantQuotes | ✅ 4 | ✅ 7 | ✅ 3 | ✅ 4 | ✅ 4 | ✅ 7 | ✅ 3 | ✅ 4 | ✅ 3 | ❌ | ❌ |
+| context | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| relatedConcepts | ✅ 5 | ✅ 15 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 10 | ✅ 4 | ✅ 5 | ❌ | ❌ | ❌ |
 
-**Score:** GLM-4.7: 15/15 (100%) | Gemini 3: 15/15 (100%) | Grok 4.1: 15/15 (100%) | Reasoner: 14/15 (93%) | MiMo v2: 15/15 (100%) | GPT-5.1: 15/15 (100%) | Doubao: 15/15 (100%) | M2.1: 5/15 (33%) | GLM-4.6v: 0/15 (0%) | DeepSeek v3: 0/15 (0%)
+**Score:** Haiku 4.5: 15/15 (100%) | GLM-4.7: 15/15 (100%) | Gemini 3: 15/15 (100%) | Grok 4.1: 15/15 (100%) | Reasoner: 14/15 (93%) | MiMo v2: 15/15 (100%) | GPT-5.1: 15/15 (100%) | Doubao: 15/15 (100%) | M2.1: 5/15 (33%) | GLM-4.6v: 0/15 (0%) | DeepSeek v3: 0/15 (0%)
 
 ### Step 2: Ideas (idea-synthesis)
 
 **Required:** 5 hook types, angles with relevance scores, questions by depth
 
-| Requirement | GLM-4.7 | Gemini 3 | Grok 4.1 | Reasoner | MiMo v2 | GPT-5.1 | Doubao | M2.1 | GLM-4.6v | DeepSeek v3 |
-|-------------|---------|----------|----------|----------|---------|---------|--------|------|----------|-------------|
-| Hook: emotional | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Hook: curiosity | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| Hook: controversy | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Hook: statistic | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
-| Hook: story | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
-| Relevance scores | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
-| Question categories | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
+| Requirement | Haiku 4.5 | GLM-4.7 | Gemini 3 | Grok 4.1 | Reasoner | MiMo v2 | GPT-5.1 | Doubao | M2.1 | GLM-4.6v | DeepSeek v3 |
+|-------------|-----------|---------|----------|----------|----------|---------|---------|--------|------|----------|-------------|
+| Hook: emotional | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Hook: curiosity | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Hook: controversy | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Hook: statistic | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
+| Hook: story | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
+| Relevance scores | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Question categories | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
 
-**Score:** GLM-4.7: 7/7 (100%) | Gemini 3: 7/7 (100%) | Grok 4.1: 7/7 (100%) | Reasoner: 7/7 (100%) | MiMo v2: 3/7 (43%) | GPT-5.1: 3/7 (43%) | Doubao: 0/7 (0%) | M2.1: 4/7 (57%) | GLM-4.6v: 4/7 (57%) | DeepSeek v3: 0/7 (0%)
+**Score:** Haiku 4.5: 7/7 (100%) | GLM-4.7: 7/7 (100%) | Gemini 3: 7/7 (100%) | Grok 4.1: 7/7 (100%) | Reasoner: 7/7 (100%) | MiMo v2: 3/7 (43%) | GPT-5.1: 3/7 (43%) | Doubao: 0/7 (0%) | M2.1: 4/7 (57%) | GLM-4.6v: 4/7 (57%) | DeepSeek v3: 0/7 (0%)
 
 ### Step 3: Writing-Kit (assembler)
 
 **Required:** Combined output with outline and meta
 
-| Requirement | GLM-4.7 | Gemini 3 | Grok 4.1 | Reasoner | MiMo v2 | GPT-5.1 | Doubao | M2.1 | GLM-4.6v | DeepSeek v3 |
-|-------------|---------|----------|----------|----------|---------|---------|--------|------|----------|-------------|
-| Combined output | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| Suggested outline | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| Word estimates | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| Meta information | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Requirement | Haiku 4.5 | GLM-4.7 | Gemini 3 | Grok 4.1 | Reasoner | MiMo v2 | GPT-5.1 | Doubao | M2.1 | GLM-4.6v | DeepSeek v3 |
+|-------------|-----------|---------|----------|----------|----------|---------|---------|--------|------|----------|-------------|
+| Combined output | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Suggested outline | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Word estimates | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Meta information | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
 
 **Score:** All passing models performed adequately on assembly. GPT-5.1 hallucinated completion (claimed success without writing file).
 
 ---
 
 ## Detailed Analysis
+
+### Claude Haiku 4.5 Strengths (Official Baseline)
+
+1. **Complete Compliance:** 100% instruction following as official baseline
+2. **Subagent Execution:** Uses proper SDK subagent strategy (3 Task invocations)
+3. **All Hook Types:** All 5 required types with strength ratings (high/medium-high)
+4. **Rich Relevance Scores:** 0.86-0.95 range for angle prioritization
+5. **Synthesis Section:** Unique `synthesis` object with core_tension, narrative_arc, and writing_opportunities
+6. **Question Depth:** All 4 categories (analytical, practical, philosophical, comparative)
 
 ### GLM-4.7 Strengths
 
@@ -394,9 +421,21 @@ machine learning..."
 
 ## Recommendation
 
+### Official Baseline (100% Compliance)
+
+**Claude Haiku 4.5** - Default when using Anthropic Direct
+```bash
+looplia config provider reset  # Use default
+```
+
+- Official baseline model with subagent execution strategy
+- Complete instruction following with all required outputs
+- Synthesis section provides additional writing guidance
+- Use for maximum compatibility and reliability
+
 ### Tier 1: Production Ready (95-100% Compliance)
 
-**Use any of these models:**
+**Use any of these ZenMux models:**
 - **GLM-4.7** (`ZENMUX_ZAI_GLM47` preset) - 100%
 - **Gemini 3 Flash** (`ZENMUX_GOOGLE_GEMINI3FLASH` preset) - 100%
 - **Grok 4.1 Fast** (`ZENMUX_XAI_GROK41FAST` preset) - 100%
@@ -444,6 +483,9 @@ machine learning..."
 ## Configuration Commands
 
 ```bash
+# Use Claude Haiku 4.5 (Official Baseline - 100%)
+looplia config provider reset
+
 # Set GLM-4.7 (Production Ready - 100%)
 looplia config provider preset ZENMUX_ZAI_GLM47
 
@@ -470,30 +512,30 @@ looplia config provider show
 
 ## Appendix: Complete Compliance Matrix
 
-| Workflow Requirement | GLM-4.7 | Gemini 3 | Grok 4.1 | Reasoner | MiMo v2 | GPT-5.1 | Doubao | M2.1 | GLM-4.6v | DeepSeek v3 |
-|---------------------|---------|----------|----------|----------|---------|---------|--------|------|----------|-------------|
-| contentId | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| headline | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| tldr | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| bullets (5+) | ✅ 7 | ✅ 6 | ✅ 6 | ✅ 7 | ✅ 7 | ✅ 5 | ✅ 6 | ❌ | ❌ | ❌ |
-| tags | ✅ 9 | ✅ 6 | ✅ 6 | ✅ 7 | ✅ 7 | ✅ 5 | ✅ 5 | ❌ | ❌ | ❌ |
-| sentiment | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| category | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| overview | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| keyThemes | ✅ 5 | ✅ 4 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ | ❌ | ❌ |
-| detailedAnalysis | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| narrativeFlow | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| coreIdeas | ✅ 4 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 5 | ❌ | ❌ | ❌ |
-| importantQuotes (3+) | ✅ 7 | ✅ 3 | ✅ 4 | ✅ 4 | ✅ 7 | ✅ 3 | ✅ 4 | ✅ 3 | ❌ | ❌ |
-| context | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| relatedConcepts | ✅ 15 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 10 | ✅ 4 | ✅ 5 | ❌ | ❌ | ❌ |
-| hooks (5 types) | ✅ 5/5 | ✅ 5/5 | ✅ 5/5 | ✅ 5/5 | ❌ 2/5* | ❌ 2/5* | ❌ 0/5 | ❌ 3/5 | ❌ 2/5* | ❌ 0/5 |
-| angles with scores | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
-| questions by type | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
-| suggestedOutline | ✅ | ✅ | ✅ | ✅ | ✅ | ❌** | ❌ | ✅ | ❌ | ❌ |
-| **Summary Score** | **100%** | **100%** | **100%** | **93%** | **100%** | **100%** | **100%** | **33%** | **0%** | **0%** |
-| **Ideas Score** | **100%** | **100%** | **100%** | **100%** | **43%** | **43%** | **0%** | **57%** | **57%** | **0%** |
-| **Overall Score** | **100%** | **100%** | **100%** | **~95%** | **~82%** | **~65%** | **~50%** | **~35%** | **~25%** | **0%** |
+| Workflow Requirement | Haiku 4.5 | GLM-4.7 | Gemini 3 | Grok 4.1 | Reasoner | MiMo v2 | GPT-5.1 | Doubao | M2.1 | GLM-4.6v | DeepSeek v3 |
+|---------------------|-----------|---------|----------|----------|----------|---------|---------|--------|------|----------|-------------|
+| contentId | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| headline | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| tldr | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| bullets (5+) | ✅ 7 | ✅ 7 | ✅ 6 | ✅ 6 | ✅ 7 | ✅ 7 | ✅ 5 | ✅ 6 | ❌ | ❌ | ❌ |
+| tags | ✅ 5 | ✅ 9 | ✅ 6 | ✅ 6 | ✅ 7 | ✅ 7 | ✅ 5 | ✅ 5 | ❌ | ❌ | ❌ |
+| sentiment | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| category | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| overview | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| keyThemes | ✅ 5 | ✅ 5 | ✅ 4 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ | ❌ | ❌ |
+| detailedAnalysis | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| narrativeFlow | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| coreIdeas | ✅ 5 | ✅ 4 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 5 | ❌ | ❌ | ❌ |
+| importantQuotes (3+) | ✅ 4 | ✅ 7 | ✅ 3 | ✅ 4 | ✅ 4 | ✅ 7 | ✅ 3 | ✅ 4 | ✅ 3 | ❌ | ❌ |
+| context | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| relatedConcepts | ✅ 5 | ✅ 15 | ✅ 5 | ✅ 5 | ✅ 5 | ✅ 10 | ✅ 4 | ✅ 5 | ❌ | ❌ | ❌ |
+| hooks (5 types) | ✅ 5/5 | ✅ 5/5 | ✅ 5/5 | ✅ 5/5 | ✅ 5/5 | ❌ 2/5* | ❌ 2/5* | ❌ 0/5 | ❌ 3/5 | ❌ 2/5* | ❌ 0/5 |
+| angles with scores | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| questions by type | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
+| suggestedOutline | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌** | ❌ | ✅ | ❌ | ❌ |
+| **Summary Score** | **100%** | **100%** | **100%** | **100%** | **93%** | **100%** | **100%** | **100%** | **33%** | **0%** | **0%** |
+| **Ideas Score** | **100%** | **100%** | **100%** | **100%** | **100%** | **43%** | **43%** | **0%** | **57%** | **57%** | **0%** |
+| **Overall Score** | **100%** | **100%** | **100%** | **100%** | **~95%** | **~82%** | **~65%** | **~50%** | **~35%** | **~25%** | **0%** |
 
 *MiMo v2 Flash, GPT-5.1 Codex Mini, and GLM-4.6v have 5 hooks but use creative types (question, contrast, bold statement) instead of spec types (emotional, curiosity, controversy)
 **GPT-5.1 Codex Mini hallucinated Step 3 completion - invoked assembler skill but never wrote writing-kit.json file
