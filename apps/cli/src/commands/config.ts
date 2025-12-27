@@ -68,6 +68,7 @@ Usage:
 Available presets:
   ANTHROPIC_CLAUDE_HAIKU           Anthropic Claude Haiku (default)
   ANTHROPIC_CLAUDE_SONNET          Anthropic Claude Sonnet
+  ZENMUX_ANTHROPIC_HAIKU45         ZenMux Claude Haiku 4.5
   ZENMUX_ZAI_GLM47                 ZenMux GLM-4.7
   ZENMUX_ZAI_GLM46VFLASH           ZenMux GLM-4.6v-Flash
   ZENMUX_MINIMAX_M21               ZenMux MiniMax-M2.1

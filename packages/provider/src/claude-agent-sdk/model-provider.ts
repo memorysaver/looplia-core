@@ -121,6 +121,13 @@ export const PRESETS: Record<string, PresetDefinition> = {
   },
 
   // ZenMux Presets
+  ZENMUX_ANTHROPIC_HAIKU45: {
+    name: "ZenMux Claude Haiku 4.5",
+    apiProvider: "zenmux",
+    baseUrl: "https://zenmux.ai/api/anthropic",
+    mainModel: "anthropic/claude-haiku-4.5",
+    executorModel: "anthropic/claude-haiku-4.5",
+  },
   ZENMUX_ZAI_GLM47: {
     name: "ZenMux GLM-4.7",
     apiProvider: "zenmux",

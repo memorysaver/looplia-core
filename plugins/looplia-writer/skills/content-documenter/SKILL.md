@@ -4,7 +4,6 @@ description: |
   Generate structured ContentSummary JSON from analyzed content.
   Use after media-reviewer to produce final output with all 16 fields.
 tools: Read, Write
-model: claude-haiku-4-5-20251001
 ---
 
 # Content Documenter Skill

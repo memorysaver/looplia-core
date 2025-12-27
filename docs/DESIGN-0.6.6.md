@@ -19,8 +19,9 @@
 7. [CLI Commands](#7-cli-commands)
 8. [Environment Injection](#8-environment-injection)
 9. [Query Executor Integration](#9-query-executor-integration)
-10. [Implementation Guide](#10-implementation-guide)
-11. [File Changes Summary](#11-file-changes-summary)
+10. [Dual-Strategy Execution Pattern](#10-dual-strategy-execution-pattern)
+11. [Implementation Guide](#11-implementation-guide)
+12. [File Changes Summary](#12-file-changes-summary)
 
 ---
 
@@ -31,17 +32,18 @@
 | Version | Focus | Key Achievement |
 |---------|-------|-----------------|
 | v0.6.5 | Plugin Loading Strategy | Run looplia from any directory via Agent SDK plugins |
-| **v0.6.6** | **Model Provider Configuration** | **Switch to cheaper models/providers via CLI config** |
+| **v0.6.6** | **Model Provider Configuration** | **Switch to cheaper models/providers via CLI config + ZenMux compatibility** |
 
 ### What Changes in v0.6.6
 
-v0.6.6 introduces an agent-based model provider configuration system:
+v0.6.6 introduces an agent-based model provider configuration system with ZenMux compatibility:
 
 1. **AGENT-BASED MODELS:** Configure models for main agent and skill executor separately
 2. **STRUCTURED PRESETS:** `{API_PROVIDER}_{MODEL_VENDOR}_{MODEL_NAME}` format
 3. **NEW CONFIG FILE:** Store settings in `~/.looplia/looplia.setting.json`
 4. **ZENMUX SUPPORT:** GLM-4.7, MiniMax-M2.1, Gemini-3-Flash presets
 5. **CLI COMMANDS:** Configure via `looplia config provider` commands
+6. **DUAL-STRATEGY EXECUTION:** Proxy providers use inline execution; Anthropic Direct uses Task subagents
 
 ### Design Principle
 
@@ -1068,9 +1070,123 @@ export async function* executeAgenticQueryStreaming<T>(
 
 ---
 
-## 10. Implementation Guide
+## 10. Dual-Strategy Execution Pattern
 
-### 10.1 Implementation Order
+### 10.1 Why Dual-Strategy?
+
+Proxy providers (like ZenMux) don't support the Claude Agent SDK's Task subagent system because:
+1. Task subagents use Anthropic-specific model names internally
+2. The SDK spawns separate API calls for subagents with hardcoded model IDs
+3. Proxy providers can't translate these model names
+
+### 10.2 Strategy Selection
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         DUAL-STRATEGY EXECUTION                               │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+                          Provider Detection
+                          ┌─────────────────────────────────────────────────────┐
+                          │ isProxyProvider = settings?.apiProvider.type !== "anthropic"
+                          └──────────────────────┬──────────────────────────────┘
+                                                 │
+                    ┌────────────────────────────┴────────────────────────────┐
+                    │                                                         │
+                    ▼                                                         ▼
+      ┌─────────────────────────────────┐           ┌─────────────────────────────────┐
+      │ ANTHROPIC DIRECT                │           │ PROXY PROVIDER (ZenMux)         │
+      │ isProxyProvider = false         │           │ isProxyProvider = true          │
+      ├─────────────────────────────────┤           ├─────────────────────────────────┤
+      │ Skill: workflow-executor        │           │ Skill: workflow-executor-inline │
+      │ Execution: Task subagents       │           │ Execution: Inline (no subagents)│
+      │ Agent: skill-executor registered│           │ Agent: NOT registered           │
+      └─────────────────────────────────┘           └─────────────────────────────────┘
+```
+
+### 10.3 Execution Behavior Comparison
+
+| Aspect | Anthropic Direct | Proxy Provider (ZenMux) |
+|--------|------------------|-------------------------|
+| **Skill Used** | `workflow-executor` | `workflow-executor-inline` |
+| **Task Subagents** | Yes (`skill-executor`) | No |
+| **Skill Execution** | Via Task tool spawning subagent | Skill content injected inline |
+| **Model for Skills** | Subagent model (executor) | Inherits conversation model |
+| **API Calls** | Multiple (main + subagents) | Single conversation stream |
+
+### 10.4 Provider Detection Code
+
+```typescript
+// query-executor.ts
+const settings = await readLoopliaSettings();
+const isProxyProvider = settings?.apiProvider.type !== "anthropic";
+
+// Build agents object conditionally
+const agents: Record<string, AgentConfig> = {};
+
+if (!isProxyProvider) {
+  // Anthropic Direct: Register skill-executor for Task subagents
+  agents["skill-executor"] = {
+    description: "Execute a skill step in the writing workflow",
+    prompt: skillExecutorPrompt,
+    tools: ["Read", "Glob", "Write", "Skill"],
+    model: executorModel,
+  };
+}
+
+// Select appropriate workflow skill in system prompt
+const workflowSkill = isProxyProvider
+  ? "looplia:workflow-executor-inline"
+  : "looplia:workflow-executor";
+```
+
+### 10.5 Skill Model Inheritance
+
+Skills **without** a `model:` field in frontmatter inherit the conversation's model:
+
+```yaml
+# looplia-writer skills (no model field)
+---
+name: media-reviewer
+description: Deep content analysis...
+tools: Read, Glob
+# No model: field - inherits conversation model
+---
+```
+
+| Provider | Conversation Model | Skills Inherit |
+|----------|-------------------|----------------|
+| Anthropic | `claude-haiku-4-5-20251001` | `claude-haiku-4-5-20251001` |
+| ZenMux | `z-ai/glm-4.7` | `z-ai/glm-4.7` |
+
+### 10.6 Workflow Skills
+
+| Skill | Location | Purpose | When Used |
+|-------|----------|---------|-----------|
+| `workflow-executor` | `plugins/looplia-core/skills/` | Subagent-based execution via Task tool | Anthropic Direct |
+| `workflow-executor-inline` | `plugins/looplia-core/skills/` | Inline execution (no Task subagents) | Proxy providers |
+
+### 10.7 Test Verification
+
+Both strategies produce identical outputs:
+
+```bash
+# ZenMux (proxy)
+looplia config provider preset ZENMUX_ZAI_GLM47
+looplia run writing-kit --file examples/ai-healthcare.md
+# ✅ Uses workflow-executor-inline, no Task subagents
+
+# Anthropic Direct
+looplia config provider preset ANTHROPIC_CLAUDE_HAIKU
+looplia run writing-kit --file examples/ai-healthcare.md
+# ✅ Uses workflow-executor with skill-executor subagent
+```
+
+---
+
+## 11. Implementation Guide
+
+### 11.1 Implementation Order
 
 | Step | Task | Dependencies |
 |------|------|--------------|
@@ -1081,11 +1197,11 @@ export async function* executeAgenticQueryStreaming<T>(
 | 5 | Update `.env.example` with documentation | None |
 | 6 | Run build and fix any errors | All steps |
 
-### 10.2 Migration Notes
+### 11.2 Migration Notes
 
 **Clean Break:** v0.6.6 uses a new config file (`looplia.setting.json`). The old `model-provider.json` file is no longer used and can be safely deleted.
 
-### 10.3 Key Implementation Notes
+### 11.3 Key Implementation Notes
 
 1. **File I/O**: Use async fs operations consistently
 2. **Error Handling**: Gracefully handle missing config file (return null, not error)
@@ -1094,19 +1210,36 @@ export async function* executeAgenticQueryStreaming<T>(
 
 ---
 
-## 11. File Changes Summary
+## 12. File Changes Summary
 
-### 11.1 Files to Modify
+### 12.1 Files to Modify
 
 | File | Changes |
 |------|---------|
 | `packages/provider/src/claude-agent-sdk/model-provider.ts` | Refactor to new `LoopliaSettings` schema, add presets |
 | `packages/provider/src/claude-agent-sdk/index.ts` | Export new types and functions |
-| `packages/provider/src/claude-agent-sdk/streaming/query-executor.ts` | Read agent models from env vars |
+| `packages/provider/src/claude-agent-sdk/streaming/query-executor.ts` | Provider detection, conditional agent registration |
 | `apps/cli/src/commands/config.ts` | Update provider subcommand with new keys |
 | `.env.example` | Document new environment variables |
 
-### 11.2 New Environment Variables
+### 12.2 New Files Created
+
+| File | Purpose |
+|------|---------|
+| `plugins/looplia-core/skills/workflow-executor-inline/SKILL.md` | Inline workflow execution for proxy providers |
+| `plugins/looplia-core/skills/workflow-executor/SKILL.md` | Subagent-based workflow execution for Anthropic |
+
+### 12.3 Modified Plugin Skills (Removed `model:` field)
+
+| File | Change |
+|------|--------|
+| `plugins/looplia-writer/skills/content-documenter/SKILL.md` | Removed hardcoded model |
+| `plugins/looplia-writer/skills/idea-synthesis/SKILL.md` | Removed hardcoded model |
+| `plugins/looplia-writer/skills/media-reviewer/SKILL.md` | Removed hardcoded model |
+| `plugins/looplia-writer/skills/user-profile-reader/SKILL.md` | Removed hardcoded model |
+| `plugins/looplia-writer/skills/writing-kit-assembler/SKILL.md` | Removed hardcoded model |
+
+### 12.4 New Environment Variables
 
 ```bash
 # API Keys (looplia auto-maps based on provider)
@@ -1125,7 +1258,9 @@ LOOPLIA_AGENT_MODEL_EXECUTOR=z-ai/glm-4.7
 
 - **Local Plugin Loading (v0.6.5):** See [DESIGN-0.6.5.md](./DESIGN-0.6.5.md)
 - **Agent SDK Documentation:** See [AGENT-SDK.md](./AGENT-SDK.md)
+- **Subagents Documentation:** See [SUBAGENTS.md](./SUBAGENTS.md)
 - **ZenMux Integration:** https://zenmux.ai
+- **Dual-Strategy Pattern:** See [Section 10](#10-dual-strategy-execution-pattern)
 
 ---
 
