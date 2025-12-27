@@ -1,8 +1,8 @@
 /**
- * Model Provider Configuration
+ * Looplia Settings Configuration
  *
- * Enables ZenMux-style model provider switching via CLI configuration.
- * Stores settings in ~/.looplia/model-provider.json and injects as
+ * Enables model provider switching via CLI configuration.
+ * Stores settings in ~/.looplia/looplia.setting.json and injects as
  * environment variables before SDK calls.
  *
  * @see https://github.com/memorysaver/looplia-core/docs/DESIGN-0.6.6.md
@@ -13,78 +13,180 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 /**
- * Model tier names following Claude's naming convention
+ * API provider types
  */
-export type ModelTier = "haiku" | "sonnet" | "opus";
+export type ApiProviderType = "anthropic" | "zenmux" | "custom";
 
 /**
- * Model provider configuration
- * Stored at ~/.looplia/model-provider.json
+ * Looplia settings configuration
+ * Stored at ~/.looplia/looplia.setting.json
  */
-export type ModelProviderConfig = {
+export type LoopliaSettings = {
   /**
-   * Whether to apply this configuration
-   * When false, looplia uses default Anthropic settings
+   * Schema version for future migrations
    */
-  enabled: boolean;
+  version: "1.0";
 
   /**
-   * API base URL (injected as ANTHROPIC_BASE_URL)
-   * @example "https://zenmux.ai/api/anthropic"
+   * Active preset name (optional)
+   * When set, indicates which preset was used to configure
    */
-  baseUrl?: string;
+  preset?: string;
 
   /**
-   * Authentication token for proxy services (injected as ANTHROPIC_AUTH_TOKEN)
-   * Note: Stored in plain text. Users responsible for file permissions.
-   * @example "sk-ai-v1-xxx"
+   * API provider configuration
    */
-  authToken?: string;
+  apiProvider: {
+    /**
+     * Provider type
+     */
+    type: ApiProviderType;
+
+    /**
+     * API base URL (injected as ANTHROPIC_BASE_URL)
+     * Required for zenmux/custom providers
+     * @example "https://zenmux.ai/api/anthropic"
+     */
+    baseUrl?: string;
+
+    /**
+     * API key for proxy providers (injected as ANTHROPIC_API_KEY)
+     * Note: Stored in plain text. Users responsible for file permissions.
+     * @example "sk-ai-v1-xxx"
+     */
+    authToken?: string;
+  };
 
   /**
-   * Model ID mappings for each tier
+   * Agent model configurations
    */
-  models?: {
-    /** Model ID for haiku tier (injected as ANTHROPIC_DEFAULT_HAIKU_MODEL) */
-    haiku?: string;
-    /** Model ID for sonnet tier (injected as ANTHROPIC_DEFAULT_SONNET_MODEL) */
-    sonnet?: string;
-    /** Model ID for opus tier (injected as ANTHROPIC_DEFAULT_OPUS_MODEL) */
-    opus?: string;
+  agents: {
+    /**
+     * Model for main orchestrator agent
+     * (injected as LOOPLIA_AGENT_MODEL_MAIN)
+     * @example "z-ai/glm-4.7" or "claude-haiku-4-5-20251001"
+     */
+    main: string;
+
+    /**
+     * Model for skill executor agent
+     * (injected as LOOPLIA_AGENT_MODEL_EXECUTOR)
+     * @example "z-ai/glm-4.7" or "haiku"
+     */
+    executor: string;
   };
 };
 
 /**
- * Default model IDs for each tier
+ * Preset definition type
  */
-export const DEFAULT_MODELS: Record<ModelTier, string> = {
-  haiku: "claude-haiku-4-5-20251001",
-  sonnet: "claude-sonnet-4-5-20250514",
-  opus: "claude-opus-4-5-20251101",
-} as const;
-
-/**
- * Provider presets for one-command setup
- */
-export type ProviderPreset = {
+export type PresetDefinition = {
   name: string;
-  baseUrl: string;
-  models: Record<ModelTier, string>;
+  apiProvider: ApiProviderType;
+  baseUrl?: string;
+  mainModel: string;
+  executorModel: string;
 };
 
-export const PROVIDER_PRESETS: Record<string, ProviderPreset> = {
-  zenmux: {
-    name: "ZenMux",
-    baseUrl: "https://zenmux.ai/api/anthropic",
-    models: {
-      haiku: "anthropic/claude-haiku-4.5",
-      sonnet: "anthropic/claude-sonnet-4.5",
-      opus: "anthropic/claude-opus-4.5",
-    },
+/**
+ * Default settings
+ */
+export const DEFAULT_SETTINGS: LoopliaSettings = {
+  version: "1.0",
+  apiProvider: {
+    type: "anthropic",
   },
-} as const;
+  agents: {
+    main: "claude-haiku-4-5-20251001",
+    executor: "haiku",
+  },
+};
 
-const CONFIG_FILE = "model-provider.json";
+/**
+ * Available presets
+ */
+export const PRESETS: Record<string, PresetDefinition> = {
+  // Anthropic Direct
+  ANTHROPIC_CLAUDE_HAIKU: {
+    name: "Anthropic Claude Haiku",
+    apiProvider: "anthropic",
+    mainModel: "claude-haiku-4-5-20251001",
+    executorModel: "haiku",
+  },
+  ANTHROPIC_CLAUDE_SONNET: {
+    name: "Anthropic Claude Sonnet",
+    apiProvider: "anthropic",
+    mainModel: "claude-sonnet-4-5-20250514",
+    executorModel: "haiku",
+  },
+
+  // ZenMux Presets
+  ZENMUX_ZAI_GLM47: {
+    name: "ZenMux GLM-4.7",
+    apiProvider: "zenmux",
+    baseUrl: "https://zenmux.ai/api/anthropic",
+    mainModel: "z-ai/glm-4.7",
+    executorModel: "z-ai/glm-4.7",
+  },
+  ZENMUX_MINIMAX_M21: {
+    name: "ZenMux MiniMax-M2.1",
+    apiProvider: "zenmux",
+    baseUrl: "https://zenmux.ai/api/anthropic",
+    mainModel: "minimax/minimax-m2.1",
+    executorModel: "minimax/minimax-m2.1",
+  },
+  ZENMUX_GOOGLE_GEMINI3FLASH: {
+    name: "ZenMux Gemini-3-Flash",
+    apiProvider: "zenmux",
+    baseUrl: "https://zenmux.ai/api/anthropic",
+    mainModel: "google/gemini-3-flash-preview",
+    executorModel: "google/gemini-3-flash-preview",
+  },
+  ZENMUX_GOOGLE_GEMINI3FLASH_FREE: {
+    name: "ZenMux Gemini-3-Flash (Free)",
+    apiProvider: "zenmux",
+    baseUrl: "https://zenmux.ai/api/anthropic",
+    mainModel: "google/gemini-3-flash-preview-free",
+    executorModel: "google/gemini-3-flash-preview-free",
+  },
+  ZENMUX_XIAOMI_MIMOV2FLASH: {
+    name: "ZenMux MiMo-v2-Flash",
+    apiProvider: "zenmux",
+    baseUrl: "https://zenmux.ai/api/anthropic",
+    mainModel: "xiaomi/mimo-v2-flash",
+    executorModel: "xiaomi/mimo-v2-flash",
+  },
+  ZENMUX_XAI_GROK41FAST: {
+    name: "ZenMux Grok-4.1-Fast",
+    apiProvider: "zenmux",
+    baseUrl: "https://zenmux.ai/api/anthropic",
+    mainModel: "x-ai/grok-4.1-fast",
+    executorModel: "x-ai/grok-4.1-fast",
+  },
+  ZENMUX_DEEPSEEK_V32: {
+    name: "ZenMux DeepSeek-v3.2",
+    apiProvider: "zenmux",
+    baseUrl: "https://zenmux.ai/api/anthropic",
+    mainModel: "deepseek/deepseek-v3.2",
+    executorModel: "deepseek/deepseek-v3.2",
+  },
+  ZENMUX_MISTRAL_LARGE2512: {
+    name: "ZenMux Mistral-Large-2512",
+    apiProvider: "zenmux",
+    baseUrl: "https://zenmux.ai/api/anthropic",
+    mainModel: "mistralai/mistral-large-2512",
+    executorModel: "mistralai/mistral-large-2512",
+  },
+  ZENMUX_ZAI_GLM46VFLASH: {
+    name: "ZenMux GLM-4.6v-Flash",
+    apiProvider: "zenmux",
+    baseUrl: "https://zenmux.ai/api/anthropic",
+    mainModel: "z-ai/glm-4.6v-flash",
+    executorModel: "z-ai/glm-4.6v-flash",
+  },
+};
+
+const CONFIG_FILE = "looplia.setting.json";
 
 /**
  * Get the path to the looplia home directory
@@ -94,20 +196,20 @@ export function getLoopliaHome(): string {
 }
 
 /**
- * Get the path to the model provider config file
+ * Get the path to the settings config file
  */
 export function getConfigPath(): string {
   return join(getLoopliaHome(), CONFIG_FILE);
 }
 
 /**
- * Read model provider configuration from disk
+ * Read looplia settings from disk
  * Returns null if file doesn't exist
  */
-export async function readModelProviderConfig(): Promise<ModelProviderConfig | null> {
+export async function readLoopliaSettings(): Promise<LoopliaSettings | null> {
   try {
     const content = await readFile(getConfigPath(), "utf-8");
-    return JSON.parse(content) as ModelProviderConfig;
+    return JSON.parse(content) as LoopliaSettings;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       return null;
@@ -117,125 +219,114 @@ export async function readModelProviderConfig(): Promise<ModelProviderConfig | n
 }
 
 /**
- * Write model provider configuration to disk
+ * Write looplia settings to disk
  */
-export async function writeModelProviderConfig(
-  config: ModelProviderConfig
+export async function writeLoopliaSettings(
+  settings: LoopliaSettings
 ): Promise<void> {
   const configPath = getConfigPath();
   await mkdir(getLoopliaHome(), { recursive: true });
-  await writeFile(configPath, JSON.stringify(config, null, 2), "utf-8");
+  await writeFile(configPath, JSON.stringify(settings, null, 2), "utf-8");
 }
 
 /**
- * Remove model provider configuration file
+ * Remove looplia settings file
  */
-export async function removeModelProviderConfig(): Promise<void> {
+export async function removeLoopliaSettings(): Promise<void> {
   await rm(getConfigPath(), { force: true });
 }
 
 /**
- * Inject model provider config as environment variables
+ * Inject looplia settings as environment variables
  * Called before SDK query() invocation
  *
  * IMPORTANT: Only sets env vars if not already set (env vars take precedence)
+ *
+ * ZenMux API Pattern (per official sample):
+ * ```python
+ * client = anthropic.Anthropic(
+ *     api_key="<ZENMUX_API_KEY>",
+ *     base_url="https://zenmux.ai/api/anthropic"
+ * )
+ * ```
+ * So we set ANTHROPIC_API_KEY (not AUTH_TOKEN) for ZenMux/custom providers.
  */
-export function injectModelProviderEnv(config: ModelProviderConfig): void {
-  if (!config.enabled) {
-    return;
+export function injectLoopliaSettingsEnv(settings: LoopliaSettings): void {
+  // For non-anthropic providers (ZenMux, custom)
+  if (settings.apiProvider.type !== "anthropic") {
+    // Set API endpoint
+    if (settings.apiProvider.baseUrl && !process.env.ANTHROPIC_BASE_URL) {
+      process.env.ANTHROPIC_BASE_URL = settings.apiProvider.baseUrl;
+    }
+
+    // Set API key (from ZENMUX_API_KEY env var or config file authToken)
+    // ZenMux uses api_key parameter, same as Anthropic SDK
+    if (!process.env.ANTHROPIC_API_KEY) {
+      if (
+        settings.apiProvider.type === "zenmux" &&
+        process.env.ZENMUX_API_KEY
+      ) {
+        process.env.ANTHROPIC_API_KEY = process.env.ZENMUX_API_KEY;
+      } else if (settings.apiProvider.authToken) {
+        process.env.ANTHROPIC_API_KEY = settings.apiProvider.authToken;
+      }
+    }
   }
 
-  // Only inject if env var not already set (precedence: env > config)
-  if (config.baseUrl && !process.env.ANTHROPIC_BASE_URL) {
-    process.env.ANTHROPIC_BASE_URL = config.baseUrl;
+  // Agent models (looplia-specific)
+  if (!process.env.LOOPLIA_AGENT_MODEL_MAIN) {
+    process.env.LOOPLIA_AGENT_MODEL_MAIN = settings.agents.main;
   }
 
-  if (config.authToken && !process.env.ANTHROPIC_AUTH_TOKEN) {
-    process.env.ANTHROPIC_AUTH_TOKEN = config.authToken;
+  if (!process.env.LOOPLIA_AGENT_MODEL_EXECUTOR) {
+    process.env.LOOPLIA_AGENT_MODEL_EXECUTOR = settings.agents.executor;
   }
-
-  if (config.models?.haiku && !process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL) {
-    process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = config.models.haiku;
-  }
-
-  if (config.models?.sonnet && !process.env.ANTHROPIC_DEFAULT_SONNET_MODEL) {
-    process.env.ANTHROPIC_DEFAULT_SONNET_MODEL = config.models.sonnet;
-  }
-
-  if (config.models?.opus && !process.env.ANTHROPIC_DEFAULT_OPUS_MODEL) {
-    process.env.ANTHROPIC_DEFAULT_OPUS_MODEL = config.models.opus;
-  }
-}
-
-/**
- * Resolve model tier to actual model ID
- * Checks env vars first, then config, then defaults
- */
-export function resolveModelFromTier(
-  tier: ModelTier,
-  config?: ModelProviderConfig | null
-): string {
-  const envVarMap: Record<ModelTier, string> = {
-    haiku: "ANTHROPIC_DEFAULT_HAIKU_MODEL",
-    sonnet: "ANTHROPIC_DEFAULT_SONNET_MODEL",
-    opus: "ANTHROPIC_DEFAULT_OPUS_MODEL",
-  };
-
-  // 1. Check environment variable (highest priority)
-  const envValue = process.env[envVarMap[tier]];
-  if (envValue) {
-    return envValue;
-  }
-
-  // 2. Check config file
-  if (config?.enabled && config.models?.[tier]) {
-    return config.models[tier];
-  }
-
-  // 3. Return default
-  return DEFAULT_MODELS[tier];
 }
 
 /**
  * Display info type for status/show commands
  */
-export type ProviderDisplayInfo = {
-  status: "enabled" | "disabled" | "not-configured";
+export type SettingsDisplayInfo = {
+  status: "configured" | "not-configured";
+  preset?: string;
   provider: string;
   authToken?: string;
-  models: Record<ModelTier, string>;
+  agents: {
+    main: string;
+    executor: string;
+  };
 };
 
 /**
- * Get display-friendly provider info for status/show commands
+ * Get display-friendly settings info for status/show commands
  */
-export function getProviderDisplayInfo(
-  config: ModelProviderConfig | null
-): ProviderDisplayInfo {
-  if (!config) {
+export function getSettingsDisplayInfo(
+  settings: LoopliaSettings | null
+): SettingsDisplayInfo {
+  if (!settings) {
     return {
       status: "not-configured",
       provider: "Anthropic (default)",
-      models: { ...DEFAULT_MODELS },
+      agents: {
+        main: DEFAULT_SETTINGS.agents.main,
+        executor: DEFAULT_SETTINGS.agents.executor,
+      },
     };
   }
 
-  if (!config.enabled) {
-    return {
-      status: "disabled",
-      provider: "Anthropic (default)",
-      models: { ...DEFAULT_MODELS },
-    };
-  }
+  const provider =
+    settings.apiProvider.type === "anthropic"
+      ? "Anthropic (direct)"
+      : (settings.apiProvider.baseUrl ?? settings.apiProvider.type);
 
   return {
-    status: "enabled",
-    provider: config.baseUrl ?? "Anthropic (default)",
-    authToken: config.authToken,
-    models: {
-      haiku: config.models?.haiku ?? DEFAULT_MODELS.haiku,
-      sonnet: config.models?.sonnet ?? DEFAULT_MODELS.sonnet,
-      opus: config.models?.opus ?? DEFAULT_MODELS.opus,
+    status: "configured",
+    preset: settings.preset,
+    provider,
+    authToken: settings.apiProvider.authToken,
+    agents: {
+      main: settings.agents.main,
+      executor: settings.agents.executor,
     },
   };
 }
@@ -248,4 +339,32 @@ export function maskAuthToken(token: string): string {
     return "****";
   }
   return `****${token.slice(-4)}`;
+}
+
+/**
+ * Apply a preset to create settings
+ * Preserves existing authToken if available
+ */
+export function applyPreset(
+  presetName: string,
+  existingSettings?: LoopliaSettings | null
+): LoopliaSettings {
+  const preset = PRESETS[presetName];
+  if (!preset) {
+    throw new Error(`Unknown preset: ${presetName}`);
+  }
+
+  return {
+    version: "1.0",
+    preset: presetName,
+    apiProvider: {
+      type: preset.apiProvider,
+      baseUrl: preset.baseUrl,
+      authToken: existingSettings?.apiProvider.authToken,
+    },
+    agents: {
+      main: preset.mainModel,
+      executor: preset.executorModel,
+    },
+  };
 }

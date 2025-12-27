@@ -5,16 +5,19 @@ import {
   type WritingStyle,
 } from "@looplia-core/core";
 import {
+  type ApiProviderType,
+  applyPreset,
+  DEFAULT_SETTINGS,
   ensureWorkspace,
   getConfigPath,
-  getProviderDisplayInfo,
-  type ModelProviderConfig,
+  getSettingsDisplayInfo,
+  type LoopliaSettings,
   maskAuthToken,
-  PROVIDER_PRESETS,
-  readModelProviderConfig,
+  PRESETS,
+  readLoopliaSettings,
   readUserProfile,
-  removeModelProviderConfig,
-  writeModelProviderConfig,
+  removeLoopliaSettings,
+  writeLoopliaSettings,
   writeUserProfile,
 } from "@looplia-core/provider/claude-agent-sdk";
 import { parseFlags } from "../utils/args";
@@ -45,7 +48,8 @@ Examples:
   looplia config style --tone expert --word-count 1500
   looplia config style --voice first-person
   looplia config provider show
-  looplia config provider set base-url https://zenmux.ai/api/anthropic
+  looplia config provider preset ZENMUX_ZAI_GLM47
+  looplia config provider set auth-token sk-ai-v1-xxx
   looplia config show
 `);
 }
@@ -57,26 +61,36 @@ looplia config provider - Configure model provider
 Usage:
   looplia config provider              Interactive setup wizard
   looplia config provider show         Display current configuration
+  looplia config provider preset <n>   Apply a provider preset
   looplia config provider set <k> <v>  Set a configuration value
-  looplia config provider enable       Enable provider configuration
-  looplia config provider disable      Disable (use Anthropic defaults)
   looplia config provider reset        Remove all provider configuration
-  looplia config provider preset <name>  Apply a provider preset
 
 Available presets:
-  zenmux    ZenMux API gateway (https://zenmux.ai)
+  ANTHROPIC_CLAUDE_HAIKU           Anthropic Claude Haiku (default)
+  ANTHROPIC_CLAUDE_SONNET          Anthropic Claude Sonnet
+  ZENMUX_ZAI_GLM47                 ZenMux GLM-4.7
+  ZENMUX_ZAI_GLM46VFLASH           ZenMux GLM-4.6v-Flash
+  ZENMUX_MINIMAX_M21               ZenMux MiniMax-M2.1
+  ZENMUX_GOOGLE_GEMINI3FLASH       ZenMux Gemini-3-Flash
+  ZENMUX_GOOGLE_GEMINI3FLASH_FREE  ZenMux Gemini-3-Flash (Free)
+  ZENMUX_XIAOMI_MIMOV2FLASH        ZenMux MiMo-v2-Flash
+  ZENMUX_XAI_GROK41FAST            ZenMux Grok-4.1-Fast
+  ZENMUX_DEEPSEEK_V32              ZenMux DeepSeek-v3.2
+  ZENMUX_MISTRAL_LARGE2512         ZenMux Mistral-Large-2512
 
 Configuration keys for 'set':
-  base-url      API base URL (e.g., https://zenmux.ai/api/anthropic)
-  auth-token    Authentication token for the provider
-  model-haiku   Model ID for haiku tier
-  model-sonnet  Model ID for sonnet tier
-  model-opus    Model ID for opus tier
+  api-provider     Provider type: anthropic, zenmux, custom
+  base-url         API base URL (for zenmux/custom)
+  auth-token       Authentication token (fallback if env var not set)
+  main-model       Model for main agent
+  executor-model   Model for skill executor
+
+API keys (set in .env - looplia auto-maps based on provider):
+  ANTHROPIC_API_KEY   For Anthropic (direct)
+  ZENMUX_API_KEY      For ZenMux (auto-mapped to ANTHROPIC_API_KEY)
 
 Examples:
-  looplia config provider preset zenmux
-  looplia config provider set auth-token sk-ai-v1-xxx
-  looplia config provider enable
+  looplia config provider preset ZENMUX_ZAI_GLM47
   looplia config provider show
 `);
 }
@@ -126,7 +140,7 @@ async function setTopics(args: string[]): Promise<void> {
   }
 
   await writeUserProfile(workspace, profile);
-  console.log(`✓ Topics set: ${topics.join(", ")}`);
+  console.log(`Topics set: ${topics.join(", ")}`);
 }
 
 async function setStyle(args: string[]): Promise<void> {
@@ -169,7 +183,7 @@ async function setStyle(args: string[]): Promise<void> {
   }
 
   await writeUserProfile(workspace, profile);
-  console.log("✓ Style preferences updated");
+  console.log("Style preferences updated");
 }
 
 async function showProfile(): Promise<void> {
@@ -220,21 +234,23 @@ async function showProfile(): Promise<void> {
 // ============================================================================
 
 async function showProviderConfig(): Promise<void> {
-  const config = await readModelProviderConfig();
-  const info = getProviderDisplayInfo(config);
+  const settings = await readLoopliaSettings();
+  const info = getSettingsDisplayInfo(settings);
 
   console.log("\nModel Provider Configuration:");
   console.log(`  Status: ${info.status}`);
+  if (info.preset) {
+    console.log(`  Preset: ${info.preset}`);
+  }
   console.log(`  Provider: ${info.provider}`);
 
   if (info.authToken) {
     console.log(`  Auth Token: ${maskAuthToken(info.authToken)}`);
   }
 
-  console.log("\n  Model Mappings:");
-  console.log(`    haiku:  ${info.models.haiku}`);
-  console.log(`    sonnet: ${info.models.sonnet}`);
-  console.log(`    opus:   ${info.models.opus}`);
+  console.log("\n  Agent Models:");
+  console.log(`    Main: ${info.agents.main}`);
+  console.log(`    Executor: ${info.agents.executor}`);
 
   console.log(`\n  Config file: ${getConfigPath()}`);
   console.log("");
@@ -244,96 +260,71 @@ async function setProviderValue(key: string, value: string): Promise<void> {
   if (!(key && value)) {
     console.error("Usage: looplia config provider set <key> <value>");
     console.error(
-      "Valid keys: base-url, auth-token, model-haiku, model-sonnet, model-opus"
+      "Valid keys: api-provider, base-url, auth-token, main-model, executor-model"
     );
     process.exit(1);
   }
 
-  const config: ModelProviderConfig = (await readModelProviderConfig()) ?? {
-    enabled: false,
+  const settings: LoopliaSettings = (await readLoopliaSettings()) ?? {
+    ...DEFAULT_SETTINGS,
   };
 
   switch (key) {
+    case "api-provider":
+      settings.apiProvider.type = value as ApiProviderType;
+      break;
     case "base-url":
-      config.baseUrl = value;
+      settings.apiProvider.baseUrl = value;
       break;
     case "auth-token":
-      config.authToken = value;
+      settings.apiProvider.authToken = value;
       break;
-    case "model-haiku":
-      config.models = { ...config.models, haiku: value };
+    case "main-model":
+      settings.agents.main = value;
       break;
-    case "model-sonnet":
-      config.models = { ...config.models, sonnet: value };
-      break;
-    case "model-opus":
-      config.models = { ...config.models, opus: value };
+    case "executor-model":
+      settings.agents.executor = value;
       break;
     default:
       console.error(`Unknown key: ${key}`);
       console.error(
-        "Valid keys: base-url, auth-token, model-haiku, model-sonnet, model-opus"
+        "Valid keys: api-provider, base-url, auth-token, main-model, executor-model"
       );
       process.exit(1);
   }
 
-  await writeModelProviderConfig(config);
+  await writeLoopliaSettings(settings);
 
   // Mask auth token in output
   const displayValue = key === "auth-token" ? maskAuthToken(value) : value;
-  console.log(`✓ Set ${key} = ${displayValue}`);
-}
-
-async function setProviderEnabled(enabled: boolean): Promise<void> {
-  const config: ModelProviderConfig = (await readModelProviderConfig()) ?? {
-    enabled: false,
-  };
-
-  config.enabled = enabled;
-  await writeModelProviderConfig(config);
-
-  if (enabled) {
-    console.log("✓ Provider configuration enabled");
-  } else {
-    console.log("✓ Provider configuration disabled (using Anthropic defaults)");
-  }
+  console.log(`Set ${key} = ${displayValue}`);
 }
 
 async function resetProviderConfig(): Promise<void> {
-  await removeModelProviderConfig();
-  console.log("✓ Provider configuration removed");
+  await removeLoopliaSettings();
+  console.log("Provider configuration removed");
 }
 
 async function applyProviderPreset(presetName: string): Promise<void> {
-  const preset = PROVIDER_PRESETS[presetName];
+  const preset = PRESETS[presetName];
 
   if (!preset) {
     console.error(`Unknown preset: ${presetName}`);
-    console.error(
-      `Available presets: ${Object.keys(PROVIDER_PRESETS).join(", ")}`
-    );
+    console.error(`Available presets: ${Object.keys(PRESETS).join(", ")}`);
     process.exit(1);
   }
 
-  const existingConfig = await readModelProviderConfig();
+  const existingSettings = await readLoopliaSettings();
+  const settings = applyPreset(presetName, existingSettings);
 
-  const config: ModelProviderConfig = {
-    enabled: true,
-    baseUrl: preset.baseUrl,
-    authToken: existingConfig?.authToken, // Preserve existing auth token
-    models: { ...preset.models },
-  };
+  await writeLoopliaSettings(settings);
 
-  await writeModelProviderConfig(config);
+  console.log(`Applied ${preset.name} preset`);
+  console.log(`  Provider: ${preset.baseUrl ?? "Anthropic (direct)"}`);
+  console.log(`  Main Model: ${preset.mainModel}`);
+  console.log(`  Executor Model: ${preset.executorModel}`);
 
-  console.log(`✓ Applied ${preset.name} preset`);
-  console.log(`  Base URL: ${preset.baseUrl}`);
-  console.log("  Models:");
-  console.log(`    haiku:  ${preset.models.haiku}`);
-  console.log(`    sonnet: ${preset.models.sonnet}`);
-  console.log(`    opus:   ${preset.models.opus}`);
-
-  if (!config.authToken) {
+  if (!settings.apiProvider.authToken) {
     console.log(
       "\nNote: Set your API key with: looplia config provider set auth-token <your-key>"
     );
@@ -347,13 +338,17 @@ function runProviderWizard(): void {
   console.log("====================\n");
   console.log("Available options:\n");
   console.log("1. Apply a preset:");
-  console.log("   looplia config provider preset zenmux");
+  console.log("   looplia config provider preset ZENMUX_ZAI_GLM47");
+  console.log("   looplia config provider preset ANTHROPIC_CLAUDE_HAIKU");
   console.log("");
   console.log("2. Configure manually:");
-  console.log("   looplia config provider set base-url <url>");
+  console.log("   looplia config provider set api-provider zenmux");
+  console.log(
+    "   looplia config provider set base-url https://zenmux.ai/api/anthropic"
+  );
   console.log("   looplia config provider set auth-token <token>");
-  console.log("   looplia config provider set model-haiku <model-id>");
-  console.log("   looplia config provider enable");
+  console.log("   looplia config provider set main-model z-ai/glm-4.7");
+  console.log("   looplia config provider set executor-model z-ai/glm-4.7");
   console.log("");
   console.log("3. View current configuration:");
   console.log("   looplia config provider show");
@@ -386,14 +381,6 @@ async function runProviderCommand(args: string[]): Promise<void> {
       await setProviderValue(args[1], args[2]);
       break;
 
-    case "enable":
-      await setProviderEnabled(true);
-      break;
-
-    case "disable":
-      await setProviderEnabled(false);
-      break;
-
     case "reset":
       await resetProviderConfig();
       break;
@@ -401,9 +388,7 @@ async function runProviderCommand(args: string[]): Promise<void> {
     case "preset":
       if (!args[1]) {
         console.error("Usage: looplia config provider preset <preset-name>");
-        console.error(
-          `Available presets: ${Object.keys(PROVIDER_PRESETS).join(", ")}`
-        );
+        console.error(`Available presets: ${Object.keys(PRESETS).join(", ")}`);
         process.exit(1);
       }
       await applyProviderPreset(args[1]);

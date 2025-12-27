@@ -16,23 +16,23 @@ export type { QueryLogger } from "./logger";
 export { createQueryLogger } from "./logger";
 // Re-export model provider utilities (v0.6.6)
 export type {
-  ModelProviderConfig,
-  ModelTier,
-  ProviderDisplayInfo,
-  ProviderPreset,
+  ApiProviderType,
+  LoopliaSettings,
+  PresetDefinition,
+  SettingsDisplayInfo,
 } from "./model-provider";
 export {
-  DEFAULT_MODELS,
+  applyPreset,
+  DEFAULT_SETTINGS,
   getConfigPath,
   getLoopliaHome,
-  getProviderDisplayInfo,
-  injectModelProviderEnv,
+  getSettingsDisplayInfo,
+  injectLoopliaSettingsEnv,
   maskAuthToken,
-  PROVIDER_PRESETS,
-  readModelProviderConfig,
-  removeModelProviderConfig,
-  resolveModelFromTier,
-  writeModelProviderConfig,
+  PRESETS,
+  readLoopliaSettings,
+  removeLoopliaSettings,
+  writeLoopliaSettings,
 } from "./model-provider";
 // Re-export prompt builders for customization
 export {

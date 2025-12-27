@@ -11,8 +11,9 @@ import type { ClaudeAgentConfig, ProviderUsage } from "../config";
 import { resolveConfig } from "../config";
 import { createQueryLogger } from "../logger";
 import {
-  injectModelProviderEnv,
-  readModelProviderConfig,
+  DEFAULT_SETTINGS,
+  injectLoopliaSettingsEnv,
+  readLoopliaSettings,
 } from "../model-provider";
 import { mapException } from "../utils/error-mapper";
 import type { AgenticQueryResult } from "../utils/shared";
@@ -73,6 +74,7 @@ function buildFinalResult<T>(
 
 /**
  * Get API key from config or environment
+ * ZenMux and other providers use ANTHROPIC_API_KEY (same as Anthropic SDK)
  */
 function getApiKey(config?: ClaudeAgentConfig): string | undefined {
   return (
@@ -80,6 +82,42 @@ function getApiKey(config?: ClaudeAgentConfig): string | undefined {
     process.env.ANTHROPIC_API_KEY ??
     process.env.CLAUDE_CODE_OAUTH_TOKEN
   );
+}
+
+/**
+ * Initialize settings and validate API key
+ * Returns the API key if valid, throws if missing
+ */
+async function initializeAndValidateApiKey(
+  config?: ClaudeAgentConfig
+): Promise<string> {
+  // v0.6.6: Load and inject looplia settings BEFORE API key check
+  const settings = await readLoopliaSettings();
+  if (settings) {
+    injectLoopliaSettingsEnv(settings);
+  }
+
+  // Check API key AFTER settings injection
+  const apiKey = getApiKey(config);
+  if (!apiKey) {
+    throw new Error(
+      "API key is required. Set ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN environment variable"
+    );
+  }
+  return apiKey;
+}
+
+/**
+ * Get configured agent models from environment
+ */
+function getAgentModels(): { mainModel: string; executorModel: string } {
+  return {
+    mainModel:
+      process.env.LOOPLIA_AGENT_MODEL_MAIN ?? DEFAULT_SETTINGS.agents.main,
+    executorModel:
+      process.env.LOOPLIA_AGENT_MODEL_EXECUTOR ??
+      DEFAULT_SETTINGS.agents.executor,
+  };
 }
 
 /**
@@ -122,19 +160,12 @@ export async function* executeAgenticQueryStreaming<T>(
   config?: ClaudeAgentConfig
 ): AsyncGenerator<StreamingEvent, AgenticQueryResult<T>> {
   const resolvedConfig = resolveConfig(config);
-  const apiKey = getApiKey(config);
 
-  if (!apiKey) {
-    throw new Error(
-      "API key is required. Set ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN environment variable"
-    );
-  }
+  // v0.6.6: Initialize settings and validate API key
+  await initializeAndValidateApiKey(config);
 
-  // v0.6.6: Load and inject model provider configuration before SDK call
-  const providerConfig = await readModelProviderConfig();
-  if (providerConfig?.enabled) {
-    injectModelProviderEnv(providerConfig);
-  }
+  // v0.6.6: Get configured agent models
+  const { mainModel, executorModel } = getAgentModels();
 
   try {
     const workspace =
@@ -180,7 +211,8 @@ export async function* executeAgenticQueryStreaming<T>(
     const result = query({
       prompt,
       options: {
-        model: resolvedConfig.model,
+        // v0.6.6: Use configured main model
+        model: mainModel,
         // v0.6.5: SDK works relative to ~/.looplia (sandbox, workflows, etc.)
         cwd: loopliaHome,
         permissionMode: "bypassPermissions",
@@ -205,8 +237,7 @@ export async function* executeAgenticQueryStreaming<T>(
           "WebFetch",
         ],
         outputFormat: { type: "json_schema", schema: jsonSchema },
-        // v0.6.2: Programmatic agent definition ensures skill-executor uses haiku
-        // Prompt loaded from external file for maintainability
+        // v0.6.6: Skill executor uses configured executor model
         agents: {
           "skill-executor": {
             description:
@@ -221,7 +252,8 @@ export async function* executeAgenticQueryStreaming<T>(
               "WebSearch",
               "WebFetch",
             ],
-            model: "haiku",
+            // v0.6.6: Cast to allow arbitrary model strings (ZenMux models like z-ai/glm-4.7)
+            model: executorModel as "haiku" | "sonnet" | "opus",
           },
         },
       },
