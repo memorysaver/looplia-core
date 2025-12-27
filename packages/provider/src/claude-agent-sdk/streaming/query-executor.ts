@@ -112,9 +112,10 @@ async function initializeAndValidateApiKey(
     );
   }
 
-  // v0.6.6: Detect if using proxy provider (ZenMux, custom)
-  // Proxy providers don't support SDK subagents due to model name incompatibility
-  const isProxyProvider = settings?.apiProvider.type !== "anthropic";
+  // v0.6.6: Only use proxy mode when settings EXPLICITLY specify non-anthropic provider
+  // When settings is null (no config), default to Anthropic Direct (subagent mode)
+  const isProxyProvider =
+    settings !== null && settings.apiProvider.type !== "anthropic";
 
   return { apiKey, isProxyProvider };
 }
