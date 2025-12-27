@@ -1,0 +1,86 @@
+{
+  "contentId": "test-ai-healthcare",
+  "hooks": [
+    {
+      "text": "What if your next cancer diagnosis comes from an AI that sees what human doctors miss?",
+      "type": "question"
+    },
+    {
+      "text": "95% accuracy. 15 minutes reduced to seconds. 60% of hospitals are already doing this. The AI healthcare revolution isn't coming—it's already here.",
+      "type": "statistic"
+    },
+    {
+      "text": "The average drug takes 10-15 years and billions to develop. AI just cut that timeline in half, and it's just getting started.",
+      "type": "contrast"
+    },
+    {
+      "text": "Your doctor might not be replaced by AI, but the AI that helps your doctor might be the reason you survive.",
+      "type": "story"
+    },
+    {
+      "text": "Medicine is about to get personal—genetically, historically, and individually personal.",
+      "type": "bold statement"
+    }
+  ],
+  "angles": [
+    {
+      "perspective": "The Skeptic's Deep Dive",
+      "approach": "Challenge the hype with real limitations: data bias, HIPAA compliance nightmares, and why 95% accuracy in controlled studies doesn't equal 95% in the real world. Interview radiologists who've seen AI fail.",
+      "target": "Healthcare professionals and policy makers who need balanced analysis"
+    },
+    {
+      "perspective": "The Patient's Journey",
+      "approach": "Tell the story from the patient's view: faster diagnosis means less anxiety, personalized treatment means fewer side effects, but also raises questions about data privacy and algorithmic bias affecting care quality.",
+      "target": "General readers, patients, and healthcare advocates"
+    },
+    {
+      "perspective": "The Doctor's Dilemma",
+      "approach": "Explore how AI changes the physician's role from diagnostician to interpreter and counselor. Focus on the human-AI collaboration challenges and training implications.",
+      "target": "Medical professionals and medical educators"
+    },
+    {
+      "perspective": "The Startup Gold Rush",
+      "approach": "Analyze the business side: investment trends, which companies are leading, regulatory moats, and whether this is sustainable innovation or another AI bubble.",
+      "target": "Investors, entrepreneurs, and tech analysts"
+    },
+    {
+      "perspective": "The Global Health Perspective",
+      "approach": "Examine how AI could democratize healthcare quality across regions with fewer specialists, but also risks widening the gap between well-funded and under-resourced systems.",
+      "target": "Global health professionals and policy makers"
+    }
+  ],
+  "questions": [
+    {
+      "text": "If AI can diagnose cancer with 95% accuracy, what's the ethical threshold for when human oversight is required versus when it's just bureaucratic overhead?",
+      "depth": "deep"
+    },
+    {
+      "text": "How do we prevent AI healthcare systems from perpetuating existing biases in medical data, especially when those biases affect marginalized communities?",
+      "depth": "deep"
+    },
+    {
+      "text": "What happens to medical education when diagnostic skills become less valuable than AI interpretation and patient communication skills?",
+      "depth": "medium"
+    },
+    {
+      "text": "Should patients have the right to opt out of AI-assisted diagnosis, and what are the liability implications for doctors who use (or don't use) AI tools?",
+      "depth": "medium"
+    },
+    {
+      "text": "Can we trust AI drug discovery when the models are trained on historical data that may have excluded promising compounds due to past biases?",
+      "depth": "medium"
+    },
+    {
+      "text": "How much of your genetic and health data are you willing to share if it means truly personalized medicine but also creates permanent privacy risks?",
+      "depth": "surface"
+    },
+    {
+      "text": "Will AI in healthcare create a two-tier system where the wealthy get AI-enhanced care while others get traditional (and now inferior) human-only care?",
+      "depth": "deep"
+    }
+  ],
+  "personalization": {
+    "matchedTopics": [],
+    "adjustedFor": "intermediate expertise"
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "contentId": "test-ai-healthcare",
+  "headline": "The Future of AI in Healthcare",
+  "tldr": "AI is transforming healthcare through superior diagnostics, faster drug discovery, and personalized medicine, despite challenges like data privacy and bias, heading toward human-AI collaboration.",
+  "bullets": [
+    "AI imaging detects cancers >95% accuracy, faster than humans.",
+    "AI accelerates drug discovery by screening compounds, predicting structures.",
+    "Personalized medicine uses genetics for risk prediction, treatment selection.",
+    "Challenges: HIPAA privacy, training data bias, regulatory hurdles.",
+    "AI handles routine tasks, augments doctors on complex cases.",
+    "60% healthcare systems adopting AI (up from 30%).",
+    "Speed advantage: seconds vs 15 minutes for image analysis."
+  ],
+  "tags": [
+    "AI",
+    "healthcare",
+    "diagnostics",
+    "drug discovery",
+    "personalized medicine",
+    "machine learning",
+    "medical imaging"
+  ],
+  "sentiment": "optimistic",
+  "category": "Technology / Healthcare Innovation",
+  "overview": "The article explores AI's transformative role in healthcare across diagnostics, drug development, and personalized treatments, addresses key challenges, and envisions collaborative future.",
+  "keyThemes": [
+    "Diagnostic Revolution",
+    "Drug Discovery Acceleration",
+    "Personalized Medicine",
+    "Challenges and Concerns",
+    "The Path Forward"
+  ],
+  "detailedAnalysis": "The piece is structured as a standard future-tech article, building excitement through concrete examples before acknowledging risks, ending positively. Strong evidence-based claims (95% accuracy, time/cost stats). Implicit call for investment.",
+  "narrativeFlow": "Linear progression: Broad introduction → Specific applications (diagnostics, drugs, personalized) → Balanced challenges → Optimistic conclusion with adoption stats.",
+  "coreIdeas": [
+    "AI excels in pattern recognition for medical imaging.",
+    "ML reduces drug development timelines and costs.",
+    "Genomics + AI enables precision medicine.",
+    "Ethical/tech challenges must be addressed.",
+    "Hybrid human-AI model is optimal."
+  ],
+  "importantQuotes": [
+    {
+      "quote": "Machine learning models trained on millions of medical images have achieved accuracy rates exceeding 95% in detecting breast cancer, lung cancer, and other conditions.",
+      "context": "Diagnostic Revolution - highlighting AI's superior accuracy."
+    },
+    {
+      "quote": "What might take a radiologist 15 minutes to analyze, an AI system can process in seconds",
+      "context": "Diagnostic Revolution - emphasizing speed advantage."
+    },
+    {
+      "quote": "Traditionally, developing a new drug takes 10-15 years and costs billions.",
+      "context": "Drug Discovery Acceleration - contrasting traditional vs AI methods."
+    },
+    {
+      "quote": "Rather than replacing doctors, AI will augment medical professionals by handling routine diagnostic tasks, flagging unusual cases for specialist review",
+      "context": "The Path Forward - describing collaborative role."
+    }
+  ],
+  "context": "2024 article on emerging AI-healthcare trends.",
+  "relatedConcepts": [
+    "Predictive analytics in medicine",
+    "AlphaFold protein folding",
+    "federated learning for privacy",
+    "FDA AI/ML guidelines",
+    "telemedicine integration"
+  ]
+}

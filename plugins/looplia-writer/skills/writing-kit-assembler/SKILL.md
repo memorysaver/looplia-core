@@ -5,7 +5,6 @@ description: |
   Combines content analysis and ideas into structured output with suggested outlines.
   Creates comprehensive WritingKit JSON with all components.
 tools: Read, Write
-model: claude-haiku-4-5-20251001
 ---
 
 # Writing Kit Assembler Skill

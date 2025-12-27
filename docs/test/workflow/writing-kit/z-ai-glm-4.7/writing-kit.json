@@ -1,0 +1,259 @@
+{
+  "contentId": "test-ai-healthcare",
+  "source": {
+    "type": "article",
+    "title": "The Future of AI in Healthcare",
+    "url": "https://example.com/ai-healthcare",
+    "publishedAt": "2024-12-08T00:00:00Z"
+  },
+  "summary": {
+    "headline": "AI is transforming healthcare through faster diagnostics, accelerated drug discovery, and personalized medicine",
+    "tldr": "Artificial intelligence is fundamentally transforming healthcare across three major domains: diagnostic imaging (achieving 95%+ accuracy in cancer detection), drug discovery (dramatically reducing traditional 10-15 year timelines), and personalized medicine (analyzing genetic and lifestyle data to predict disease risk). Rather than replacing medical professionals, AI will augment them by handling routine tasks while humans focus on complex cases and treatment planning.",
+    "bullets": [
+      "AI-powered imaging can detect certain cancers earlier than human radiologists with 95%+ accuracy",
+      "AI processes medical images in seconds versus 15 minutes for human radiologists",
+      "Drug development time of 10-15 years is being significantly reduced through AI screening of molecular compounds",
+      "Personalized medicine analyzes genetic data, medical history, and lifestyle to predict disease risk and select effective treatments",
+      "60% of healthcare systems are now exploring or implementing AI solutions, up from 30% three years ago",
+      "Key challenges include data privacy, training data bias, regulatory uncertainty, and system integration",
+      "AI will augment rather than replace medical professionals by handling routine tasks and flagging unusual cases"
+    ],
+    "keyThemes": [
+      "Diagnostic Transformation",
+      "Drug Discovery Acceleration",
+      "Personalized Medicine",
+      "Human-AI Collaboration",
+      "Implementation Challenges"
+    ],
+    "importantQuotes": [
+      {
+        "text": "Artificial intelligence is fundamentally transforming the healthcare industry. From diagnostic imaging to personalized medicine, AI systems are becoming integral to modern medical practice.",
+        "context": "Opening statement establishing the scope and significance of AI's impact on healthcare",
+        "significance": "Sets the tone - positions this as fundamental transformation, not incremental change"
+      },
+      {
+        "text": "Machine learning models trained on millions of medical images have achieved accuracy rates exceeding 95% in detecting breast cancer, lung cancer, and other conditions.",
+        "context": "Specific evidence supporting AI diagnostic capabilities",
+        "significance": "Concrete data point demonstrating AI's superiority in specific diagnostic tasks"
+      },
+      {
+        "text": "What might take a radiologist 15 minutes to analyze, an AI system can process in seconds, allowing radiologists to focus on complex cases and treatment planning rather than routine image analysis.",
+        "context": "Explaining the practical advantage of AI speed in diagnostic workflows",
+        "significance": "Highlights how AI changes the radiologist's role to higher-value work"
+      },
+      {
+        "text": "Traditionally, developing a new drug takes 10-15 years and costs billions. AI is accelerating this process significantly.",
+        "context": "Establishing the scale of improvement in drug discovery",
+        "significance": "Frames the traditional drug development timeline as the problem AI solves"
+      },
+      {
+        "text": "AI enables truly personalized medicine by analyzing a patient's genetic data, medical history, lifestyle factors, and molecular markers.",
+        "context": "Defining personalized medicine in the AI context",
+        "significance": "Shows how AI makes theoretical personalization practically possible at scale"
+      },
+      {
+        "text": "Rather than replacing doctors, AI will augment medical professionals by handling routine diagnostic tasks, flagging unusual cases for specialist review, suggesting treatment options based on latest research, and monitoring patient outcomes to improve care.",
+        "context": "The article's conclusion about the future relationship between AI and doctors",
+        "significance": "Key takeaway - positions AI as augmentation tool rather than replacement"
+      },
+      {
+        "text": "According to recent surveys, 60% of healthcare systems are exploring or implementing AI solutions, up from 30% just three years ago.",
+        "context": "Evidence of accelerating adoption in healthcare",
+        "significance": "Demonstrates this is not speculative - real adoption is happening rapidly"
+      }
+    ]
+  },
+  "ideas": {
+    "hooks": [
+      {
+        "text": "What if the future of medicine isn't about better doctors, but about better algorithms working alongside them?",
+        "type": "question"
+      },
+      {
+        "text": "In the time it takes a radiologist to drink a cup of coffee, an AI can analyze hundreds of medical images with 95% accuracy.",
+        "type": "story"
+      },
+      {
+        "text": "60% of healthcare systems are now racing to implement AI—but 90% of patients have no idea it's already happening.",
+        "type": "statistic"
+      },
+      {
+        "text": "Everyone's worried about AI replacing doctors. The real story is more surprising: AI might actually save the profession.",
+        "type": "curiosity"
+      },
+      {
+        "text": "For decades, we've accepted that drug development takes 15 years. What if that timeline isn't a law of nature, but just an engineering problem?",
+        "type": "bold-statement"
+      }
+    ],
+    "angles": [
+      {
+        "perspective": "The Skeptic's Audit",
+        "approach": "Examine each AI healthcare claim through a critical lens—what's real, what's hype, and what are the hidden dangers of algorithmic bias in medicine?",
+        "target": "Readers who question tech optimism and want balanced analysis"
+      },
+      {
+        "perspective": "Patient's Eye View",
+        "approach": "Walk through what AI in healthcare actually looks like from the patient perspective—getting a diagnosis, choosing treatment, navigating privacy concerns.",
+        "target": "General readers wondering how this affects their own healthcare experience"
+      },
+      {
+        "perspective": "Doctor in the Machine",
+        "approach": "Profile the changing role of physicians—from diagnosticians to AI supervisors, interpreters, and patient advocates. How medical training must evolve.",
+        "target": "Healthcare professionals, medical students, and those interested in career futures"
+      },
+      {
+        "perspective": "The Race to the Cure",
+        "approach": "Deep dive into drug discovery acceleration—specific case studies of AI-identified compounds, timeline comparisons, and what this means for diseases with no current treatment.",
+        "target": "Patients, researchers, and anyone following specific disease research"
+      },
+      {
+        "perspective": "Implementation Reality Check",
+        "approach": "Beyond the hype—what's actually happening on the ground? Hospital IT integration challenges, regulatory hurdles, and why adoption is harder than it looks.",
+        "target": "Healthcare administrators, policymakers, and implementation specialists"
+      }
+    ],
+    "questions": [
+      {
+        "text": "How would you feel about an AI diagnosing your condition? Would you trust it more or less than a human doctor?",
+        "type": "personal",
+        "depth": "medium"
+      },
+      {
+        "text": "If AI can detect cancer earlier than human radiologists, is it ethical for healthcare systems NOT to use it?",
+        "type": "ethical",
+        "depth": "deep"
+      },
+      {
+        "text": "What happens to the doctor-patient relationship when diagnosis becomes automated? Is something valuable lost?",
+        "type": "philosophical",
+        "depth": "deep"
+      },
+      {
+        "text": "If personalized medicine based on your genome becomes standard, who owns that genetic data?",
+        "type": "practical",
+        "depth": "medium"
+      },
+      {
+        "text": "Should AI medical systems be required to explain their reasoning, or is accuracy alone sufficient?",
+        "type": "analytical",
+        "depth": "deep"
+      },
+      {
+        "text": "How do we ensure AI doesn't inherit and amplify existing healthcare disparities in training data?",
+        "type": "comparative",
+        "depth": "deep"
+      }
+    ]
+  },
+  "suggestedOutline": {
+    "title": "The Algorithm and the Stethoscope: How AI is Rewriting Medicine's Future",
+    "estimatedWordCount": 1000,
+    "sections": [
+      {
+        "heading": "Introduction: A New Kind of Doctor",
+        "type": "intro",
+        "estimatedWords": 150,
+        "points": [
+          "Hook: What if the future of medicine isn't about better doctors, but about better algorithms working alongside them?",
+          "Establish the current moment: 60% of healthcare systems are implementing AI, up from 30% three years ago",
+          "Preview the three transformation areas: diagnostics, drug discovery, and personalized medicine",
+          "Thesis: AI won't replace doctors—it will fundamentally transform how they practice medicine"
+        ],
+        "suggestedHook": "What if the future of medicine isn't about better doctors, but about better algorithms working alongside them?"
+      },
+      {
+        "heading": "The Diagnostic Revolution: From Minutes to Milliseconds",
+        "type": "body",
+        "estimatedWords": 200,
+        "points": [
+          "AI imaging analysis achieving 95%+ accuracy in breast and lung cancer detection",
+          "Speed transformation: 15 minutes of human analysis reduced to seconds",
+          "How this changes radiology: AI handles routine cases, humans focus on complex diagnostics",
+          "Real-world implication: Earlier detection means better outcomes"
+        ],
+        "supportingQuote": {
+          "text": "Machine learning models trained on millions of medical images have achieved accuracy rates exceeding 95% in detecting breast cancer, lung cancer, and other conditions."
+        },
+        "theme": "Diagnostic Transformation",
+        "angle": "Patient's Eye View"
+      },
+      {
+        "heading": "Accelerating the Cure: AI in Drug Discovery",
+        "type": "body",
+        "estimatedWords": 180,
+        "points": [
+          "Traditional drug development: 10-15 years and billions of dollars",
+          "AI's contribution: screening millions of molecular compounds, predicting protein structures",
+          "Optimizing clinical trials through better candidate selection",
+          "What this means for patients with untreated diseases: shorter timelines to viable treatments"
+        ],
+        "supportingQuote": {
+          "text": "Traditionally, developing a new drug takes 10-15 years and costs billions. AI is accelerating this process significantly."
+        },
+        "theme": "Drug Discovery Acceleration",
+        "angle": "The Race to the Cure"
+      },
+      {
+        "heading": "Medicine That Knows You: The Promise of Personalization",
+        "type": "body",
+        "estimatedWords": 180,
+        "points": [
+          "Beyond one-size-fits-all: analyzing genetic data, medical history, lifestyle factors",
+          "Predictive capabilities: disease risk before symptoms appear",
+          "Treatment selection: matching drugs to individual genetic profiles",
+          "Safety: avoiding adverse reactions through genetic screening"
+        ],
+        "supportingQuote": {
+          "text": "AI enables truly personalized medicine by analyzing a patient's genetic data, medical history, lifestyle factors, and molecular markers."
+        },
+        "theme": "Personalized Medicine",
+        "angle": "Patient's Eye View"
+      },
+      {
+        "heading": "The Hidden Costs: Privacy, Bias, and Integration",
+        "type": "body",
+        "estimatedWords": 150,
+        "points": [
+          "Data privacy concerns: HIPAA compliance in an AI world",
+          "Algorithmic bias: ensuring AI serves all populations equally",
+          "Regulatory uncertainty: how do we approve and monitor AI medical systems?",
+          "Integration challenges: connecting AI to legacy hospital systems"
+        ],
+        "theme": "Implementation Challenges",
+        "angle": "The Skeptic's Audit"
+      },
+      {
+        "heading": "Conclusion: Augmentation, Not Replacement",
+        "type": "conclusion",
+        "estimatedWords": 140,
+        "points": [
+          "Summarize: AI handles routine tasks, enabling doctors to focus on complex cases and patient care",
+          "The future is collaborative: AI suggests, humans decide",
+          "Call to action: Patients should demand transparency about AI use in their care",
+          "Final thought: The best healthcare combines algorithmic efficiency with human wisdom"
+        ],
+        "suggestedAngle": "Doctor in the Machine",
+        "supportingQuote": {
+          "text": "Rather than replacing doctors, AI will augment medical professionals by handling routine diagnostic tasks, flagging unusual cases for specialist review, suggesting treatment options based on latest research, and monitoring patient outcomes to improve care."
+        }
+      }
+    ]
+  },
+  "meta": {
+    "generatedAt": "2025-12-28T00:00:02.000Z",
+    "workflowVersion": "1.1.0",
+    "stepsCompleted": ["summary", "ideas", "writing-kit"],
+    "difficulty": "intermediate",
+    "timeToWrite": "60-90 minutes",
+    "targetAudience": "General readers interested in technology and healthcare",
+    "writingStyle": {
+      "tone": "informative",
+      "voice": "first-person",
+      "perspective": "balanced optimism"
+    },
+    "relevanceToUser": 0.5,
+    "sectionCount": 6,
+    "totalEstimatedWords": 1000
+  }
+}

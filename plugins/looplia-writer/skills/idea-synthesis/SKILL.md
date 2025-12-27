@@ -5,7 +5,6 @@ description: |
   Reads user profile for context. Generates hooks, angles, and thought-provoking questions.
   Use after media-reviewer to transform analysis into creative content ideas.
 tools: Read, Skill
-model: claude-haiku-4-5-20251001
 ---
 
 # Idea Synthesis Skill

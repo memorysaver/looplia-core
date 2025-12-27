@@ -5,6 +5,52 @@ All notable changes to Looplia-Core will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.6] - 2025-12-28
+
+### Added
+
+- **Model Provider Configuration** - Agent-based model switching with CLI commands
+  - New `looplia config provider` command family for provider management
+  - `show` - Display current provider configuration
+  - `preset <name>` - Apply a preset (16 available presets)
+  - `set <key> <value>` - Set individual configuration values
+  - `reset` - Remove provider configuration
+- **Provider Presets** - 16 pre-configured model presets
+  - Anthropic Direct: `ANTHROPIC_CLAUDE_HAIKU`, `ANTHROPIC_CLAUDE_SONNET`
+  - ZenMux Models: `ZENMUX_ZAI_GLM47`, `ZENMUX_MINIMAX_M21`, `ZENMUX_GOOGLE_GEMINI3FLASH`, and 11 more
+- **ZenMux Integration** - Full support for ZenMux proxy provider
+  - Automatic `ZENMUX_API_KEY` → `ANTHROPIC_API_KEY` mapping
+  - Base URL auto-configuration for ZenMux endpoints
+- **Dual-Strategy Execution** - Provider-aware execution patterns
+  - Anthropic Direct: Uses Task subagents with `skill-executor`
+  - Proxy Providers (ZenMux): Uses inline execution without subagents
+  - New `workflow-executor-inline` skill for proxy provider compatibility
+- **Configuration File** - Persistent settings at `~/.looplia/looplia.setting.json`
+  - Agent-centric model configuration (main agent + skill executor)
+  - Provider type, base URL, and auth token storage
+
+### Changed
+
+- **Query Executor** - Provider detection and conditional agent registration
+  - Detects provider type from settings at runtime
+  - Registers `skill-executor` subagent only for Anthropic Direct
+  - Injects appropriate workflow execution hint based on provider
+- **Skill Model Fields** - Removed hardcoded `model:` from looplia-writer skills
+  - media-reviewer, content-documenter, idea-synthesis, writing-kit-assembler, user-profile-reader
+  - Models now controlled by provider configuration
+
+### Documentation
+
+- **DESIGN-0.6.6.md** - Complete specification for Model Provider Configuration
+- **README.md** - Updated architecture diagram, CLI commands, environment variables
+- **docs/README.md** - Added "What's New in v0.6.6" section
+
+### Fixed
+
+- **Docker Plugin Path** - Fixed plugin copy destination in Dockerfile
+  - Changed from `packages/provider/plugins` to `apps/cli/plugins`
+  - Ensures CLI init finds bundled plugins correctly
+
 ## [0.6.5] - 2025-12-27
 
 ### Added
@@ -533,7 +579,8 @@ The following were considered but **intentionally deferred** to v0.6+:
 
 ---
 
-[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.6.5...HEAD
+[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.6.6...HEAD
+[0.6.6]: https://github.com/memorysaver/looplia-core/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/memorysaver/looplia-core/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/memorysaver/looplia-core/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/memorysaver/looplia-core/compare/v0.6.2...v0.6.3

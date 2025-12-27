@@ -28,6 +28,8 @@ import {
 } from "@looplia-core/core";
 import {
   createClaudeAgentExecutor,
+  injectLoopliaSettingsEnv,
+  readLoopliaSettings,
   type WorkflowResult,
 } from "@looplia-core/provider/claude-agent-sdk";
 import { renderStreamingQuery } from "../components";
@@ -476,6 +478,7 @@ function ensureWorkspace(mock: boolean): string {
 
 /**
  * Validate environment (API key)
+ * ZenMux uses ANTHROPIC_API_KEY same as Anthropic SDK
  */
 function validateEnvironment(mock: boolean): void {
   if (mock) {
@@ -743,7 +746,14 @@ export async function runRunCommand(args: string[]): Promise<void> {
     const allowInputless = checkWorkflowInputless(workspace, parsed.workflowId);
     const sandboxId = resolveSandboxId(workspace, parsed, allowInputless);
 
-    // 3. Validate environment (after input validation for better error messages)
+    // 3. Load and inject provider settings (v0.6.6)
+    // Must happen BEFORE env validation so ZenMux API key is available
+    const settings = await readLoopliaSettings();
+    if (settings) {
+      injectLoopliaSettingsEnv(settings);
+    }
+
+    // 4. Validate environment (after settings injection for ZenMux support)
     validateEnvironment(parsed.mock);
 
     // 4. Build /run prompt with sandbox ID

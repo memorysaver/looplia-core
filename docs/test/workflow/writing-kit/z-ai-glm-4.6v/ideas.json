@@ -1,0 +1,99 @@
+{
+  "contentId": "test-ai-healthcare",
+  "hooks": [
+    {
+      "text": "What if your doctor's most powerful diagnostic tool isn't a stethoscope, but an algorithm that can spot cancer with 95% accuracy in seconds?",
+      "type": "question"
+    },
+    {
+      "text": "According to recent surveys, 60% of healthcare systems are now implementing AI solutions, up from just 30% three years ago - but what does this mean for your next doctor's visit?",
+      "type": "statistic"
+    },
+    {
+      "text": "Most experts say AI will replace doctors, but the data tells a different story: AI is actually making human physicians more effective than ever before.",
+      "type": "contrast"
+    },
+    {
+      "text": "When I first saw an AI system analyze medical images faster than any human radiologist, I was skeptical - until I witnessed it save a patient's life by detecting cancer that three doctors had missed.",
+      "type": "story"
+    },
+    {
+      "text": "The age of personalized medicine is here: AI can now predict your disease risk, optimize your treatment, and even prevent adverse drug reactions based on your unique genetic makeup.",
+      "type": "bold_statement"
+    }
+  ],
+  "angles": [
+    {
+      "perspective": "The Human-AI Partnership Revolution",
+      "approach": "Explore how AI is augmenting rather than replacing medical professionals, focusing on the collaborative future where doctors use AI as a super-powered assistant",
+      "target": "Healthcare professionals and technology enthusiasts",
+      "relevance": 9
+    },
+    {
+      "perspective": "From 15 Years to 15 Months: How AI is Accelerating Drug Discovery",
+      "approach": "Deep dive into the pharmaceutical industry transformation, showcasing specific case studies of AI-driven breakthroughs and their impact on patient access to life-saving treatments",
+      "target": "Biotech investors, pharmaceutical researchers, and patients",
+      "relevance": 8
+    },
+    {
+      "perspective": "The Ethical Minefield of AI Healthcare",
+      "approach": "Examine the critical challenges of data privacy, algorithmic bias, and regulatory uncertainty that could either make or break the AI healthcare revolution",
+      "target": "Policy makers, ethicists, and concerned citizens",
+      "relevance": 7
+    },
+    {
+      "perspective": "AI Diagnostics: The New Standard of Care",
+      "approach": "Compare traditional diagnostic methods with AI-powered analysis, highlighting real-world examples where AI has proven superior and the implications for medical training",
+      "target": "Medical students, radiologists, and patients",
+      "relevance": 8
+    },
+    {
+      "perspective": "Personalized Medicine: The End of One-Size-Fits-All Healthcare",
+      "approach": "Tell the story of how genetic data and AI are creating truly individualized treatment plans, potentially ending the era of trial-and-error medicine",
+      "target": "Patients, genetic counselors, and healthcare innovators",
+      "relevance": 9
+    }
+  ],
+  "questions": [
+    {
+      "text": "How will AI-driven diagnostics change the role of radiologists and other medical specialists in the next decade?",
+      "depth": "medium",
+      "type": "analytical"
+    },
+    {
+      "text": "What practical steps should healthcare systems take to ensure AI algorithms don't perpetuate existing biases in medical treatment?",
+      "depth": "medium",
+      "type": "practical"
+    },
+    {
+      "text": "If AI can predict diseases before symptoms appear, does this fundamentally change our understanding of healthcare from reactive to proactive?",
+      "depth": "deep",
+      "type": "philosophical"
+    },
+    {
+      "text": "How does the AI healthcare revolution compare to previous technological transformations in medicine, such as the introduction of antibiotics or MRI technology?",
+      "depth": "deep",
+      "type": "comparative"
+    },
+    {
+      "text": "What are the most significant barriers preventing widespread adoption of AI in smaller healthcare practices and rural areas?",
+      "depth": "medium",
+      "type": "practical"
+    },
+    {
+      "text": "How should medical education adapt to prepare the next generation of doctors for working alongside AI systems?",
+      "depth": "medium",
+      "type": "practical"
+    },
+    {
+      "text": "If AI can develop drugs in years instead of decades, what ethical considerations arise regarding access and pricing of these life-saving treatments?",
+      "depth": "deep",
+      "type": "philosophical"
+    }
+  ],
+  "personalization": {
+    "matchedTopics": ["ai", "healthcare", "technology", "medicine"],
+    "adjustedFor": "intermediate expertise",
+    "writingStyle": "informative with narrative elements"
+  }
+}

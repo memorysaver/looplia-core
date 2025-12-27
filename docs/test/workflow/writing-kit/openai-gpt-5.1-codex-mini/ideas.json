@@ -1,0 +1,73 @@
+{
+  "contentId": "test-ai-healthcare",
+  "hooks": [
+    {
+      "text": "What if AI could diagnose cancer in seconds instead of minutes?",
+      "type": "question"
+    },
+    {
+      "text": "Studies show AI imaging accuracy exceeds 95% for breast and lung cancer detection.",
+      "type": "statistic"
+    },
+    {
+      "text": "When I first saw an AI system detect a tumor I couldn’t see, I was stunned.",
+      "type": "story"
+    },
+    {
+      "text": "Most experts trust their experience, but AI sees patterns humans miss.",
+      "type": "contrast"
+    },
+    {
+      "text": "AI-powered diagnostics will redefine what it means to get a second opinion.",
+      "type": "bold_statement"
+    }
+  ],
+  "angles": [
+    {
+      "perspective": "Clinician's view",
+      "approach": "Examine how AI tools integrate into radiology workflows",
+      "target": "Medical professionals and healthcare administrators"
+    },
+    {
+      "perspective": "Patient empowerment",
+      "approach": "Describe how faster diagnostics affect patient outcomes",
+      "target": "Patients and patient advocacy groups"
+    },
+    {
+      "perspective": "Research innovation",
+      "approach": "Explore AI's role in accelerating drug discovery pipelines",
+      "target": "Pharma researchers and biotech investors"
+    },
+    {
+      "perspective": "Ethical lens",
+      "approach": "Discuss privacy and bias challenges in AI healthcare applications",
+      "target": "Ethicists and policy makers"
+    }
+  ],
+  "questions": [
+    {
+      "text": "How would your diagnosis process change if AI could flag anomalies instantaneously?",
+      "depth": "medium"
+    },
+    {
+      "text": "What safeguards are necessary to ensure AI-driven diagnostics remain unbiased?",
+      "depth": "deep"
+    },
+    {
+      "text": "In what ways can AI empower patients to take control of their health data?",
+      "depth": "surface"
+    },
+    {
+      "text": "How might AI reshape the drug development timeline for novel therapies?",
+      "depth": "medium"
+    },
+    {
+      "text": "What ethical considerations arise when using genetic data to personalize medicine?",
+      "depth": "deep"
+    }
+  ],
+  "personalization": {
+    "matchedTopics": ["AI", "healthcare"],
+    "adjustedFor": "intermediate expertise"
+  }
+}
