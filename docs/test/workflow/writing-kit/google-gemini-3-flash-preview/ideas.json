@@ -1,0 +1,67 @@
+{
+  "contentId": "test-ai-healthcare",
+  "hooks": [
+    {
+      "text": "Imagine a world where 'I'm sorry, we caught it too late' is a phrase of the past.",
+      "type": "emotional"
+    },
+    {
+      "text": "What happens when your doctor's most important diagnostic tool isn't a stethoscope, but a neural network?",
+      "type": "curiosity"
+    },
+    {
+      "text": "Is the human element of medicine becoming a bottleneck for accuracy?",
+      "type": "controversy"
+    },
+    {
+      "text": "60% of healthcare systems are already betting their future on AI. Are you ready for the shift?",
+      "type": "statistic"
+    },
+    {
+      "text": "A radiologist used to spend 15 minutes on a single scan. Now, an AI does it in seconds, leaving them to focus on what matters most: the patient.",
+      "type": "story"
+    }
+  ],
+  "angles": [
+    {
+      "perspective": "The Patient's Advocate",
+      "approach": "Focus on how AI enables earlier detection and more personalized, effective treatments.",
+      "target": "General patients and health enthusiasts",
+      "relevanceScore": 0.95
+    },
+    {
+      "perspective": "The Future Practitioner",
+      "approach": "Discuss the transition from diagnostic technician to specialized consultant, focusing on complex cases and empathy.",
+      "target": "Medical professionals and students",
+      "relevanceScore": 0.88
+    },
+    {
+      "perspective": "The Tech Ethics Watchdog",
+      "approach": "Critically examine the risks of bias and privacy in AI healthcare systems.",
+      "target": "Policy makers and tech enthusiasts",
+      "relevanceScore": 0.82
+    }
+  ],
+  "questions": [
+    {
+      "text": "How does the integration of AI change the cost-benefit analysis of traditional drug discovery?",
+      "type": "analytical"
+    },
+    {
+      "text": "What specific steps can healthcare organizations take to ensure HIPAA compliance while training machine learning models?",
+      "type": "practical"
+    },
+    {
+      "text": "If an AI can diagnose better than a human, where does the 'art' of medicine reside?",
+      "type": "philosophical"
+    },
+    {
+      "text": "How does the current adoption rate of AI in healthcare compare to previous technological shifts like the introduction of electronic health records?",
+      "type": "comparative"
+    }
+  ],
+  "personalization": {
+    "matchedTopics": [],
+    "adjustedFor": "intermediate expertise"
+  }
+}

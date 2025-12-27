@@ -1,0 +1,127 @@
+{
+  "contentId": "test-ai-healthcare",
+  "source": {
+    "id": "test-ai-healthcare",
+    "title": "The Future of AI in Healthcare",
+    "type": "text",
+    "url": "https://example.com/ai-healthcare",
+    "publishedAt": "2024-12-08T00:00:00Z"
+  },
+  "summary": {
+    "headline": "The Future of AI in Healthcare",
+    "tldr": "AI is transforming healthcare through superior diagnostics, faster drug discovery, and personalized medicine, despite challenges like data privacy and bias, heading toward human-AI collaboration.",
+    "keyThemes": [
+      "Diagnostic Revolution",
+      "Drug Discovery Acceleration",
+      "Personalized Medicine",
+      "Challenges and Concerns",
+      "The Path Forward"
+    ],
+    "importantQuotes": [
+      {
+        "quote": "Machine learning models trained on millions of medical images have achieved accuracy rates exceeding 95% in detecting breast cancer, lung cancer, and other conditions.",
+        "context": "Diagnostic Revolution - highlighting AI's superior accuracy."
+      },
+      {
+        "quote": "What might take a radiologist 15 minutes to analyze, an AI system can process in seconds",
+        "context": "Diagnostic Revolution - emphasizing speed advantage."
+      },
+      {
+        "quote": "Traditionally, developing a new drug takes 10-15 years and costs billions.",
+        "context": "Drug Discovery Acceleration - contrasting traditional vs AI methods."
+      },
+      {
+        "quote": "Rather than replacing doctors, AI will augment medical professionals by handling routine diagnostic tasks, flagging unusual cases for specialist review",
+        "context": "The Path Forward - describing collaborative role."
+      }
+    ]
+  },
+  "ideas": {
+    "hooks": {
+      "emotional": "Imagine a world where your doctor knows your disease risk years before symptoms appear – that's the promise of AI in healthcare.",
+      "curiosity": "What if AI could predict your perfect medication before you ever get sick?",
+      "controversy": "Will AI doctors replace human physicians, or is that just fearmongering?",
+      "statistic": "AI detects cancer with 95% accuracy – better than most radiologists. Ready for the revolution?",
+      "story": "When Sarah's routine scan revealed early cancer thanks to AI, it saved her life – here's how."
+    },
+    "angles": [
+      {
+        "angle": "Tech optimist: Breakthroughs in diagnostics and drug discovery",
+        "relevance": 9
+      },
+      {
+        "angle": "Ethical concerns: Addressing bias and privacy in AI health data",
+        "relevance": 8
+      },
+      {
+        "angle": "Business case: Investment opportunities and ROI in healthcare AI",
+        "relevance": 7
+      },
+      {
+        "angle": "Patient stories: Real-world impact on lives saved",
+        "relevance": 9
+      },
+      {
+        "angle": "Regulatory path: Navigating FDA approvals for AI tools",
+        "relevance": 6
+      }
+    ],
+    "questions": {
+      "analytical": [
+        "How does AI accuracy compare across different cancer types and imaging modalities?",
+        "What types of biases are present in AI training datasets for healthcare?"
+      ],
+      "practical": [
+        "How can small clinics affordably implement AI diagnostic tools?",
+        "What is the expected ROI timeline for hospital AI adoption?"
+      ],
+      "philosophical": [
+        "Does greater AI reliance in medicine reduce human empathy in patient care?",
+        "What does 'cure' mean in an era of predictive AI diagnostics?"
+      ],
+      "comparative": [
+        "How does US AI healthcare regulation compare to EU GDPR standards?",
+        "What are the cost and speed differences between AI vs traditional diagnostics?"
+      ]
+    }
+  },
+  "suggestedOutline": [
+    {
+      "section": "Introduction",
+      "wordCount": 150,
+      "hooks": ["emotional", "statistic"]
+    },
+    {
+      "section": "Diagnostic Revolution",
+      "wordCount": 250,
+      "hooks": ["story"],
+      "content": "AI imaging accuracy and speed"
+    },
+    {
+      "section": "Drug Discovery and Personalized Medicine",
+      "wordCount": 300,
+      "hooks": ["curiosity"]
+    },
+    {
+      "section": "Challenges and Ethical Considerations",
+      "wordCount": 200,
+      "hooks": ["controversy"],
+      "angle": "Ethical concerns"
+    },
+    {
+      "section": "The Path Forward",
+      "wordCount": 100,
+      "angle": "Tech optimist"
+    }
+  ],
+  "meta": {
+    "difficulty": "medium",
+    "estimatedTime": "2-3 hours",
+    "targetAudience": "Tech enthusiasts, healthcare professionals, investors",
+    "targetWordCount": 1000,
+    "tone": "intermediate",
+    "voice": "first-person",
+    "relevanceScore": 8.5,
+    "outlineSections": 5
+  }
+}

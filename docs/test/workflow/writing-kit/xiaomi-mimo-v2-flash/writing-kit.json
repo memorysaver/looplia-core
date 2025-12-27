@@ -1,0 +1,243 @@
+{
+  "contentId": "test-ai-healthcare",
+  "source": {
+    "type": "article",
+    "title": "The Future of AI in Healthcare",
+    "url": "https://example.com/ai-healthcare",
+    "creator": "Unknown"
+  },
+  "summary": {
+    "headline": "AI is revolutionizing healthcare with early cancer detection, accelerated drug discovery, and personalized medicine",
+    "tldr": "Artificial intelligence is fundamentally transforming healthcare through diagnostic imaging with 95%+ accuracy rates, drug discovery acceleration that reduces development timelines from 10-15 years, and personalized medicine based on genetic data. While challenges like data privacy and bias remain, the future points to AI-human collaboration where AI handles routine tasks and medical professionals focus on complex cases.",
+    "bullets": [
+      "AI-powered imaging detects cancers earlier than human radiologists with 95%+ accuracy",
+      "Machine learning reduces diagnostic time from 15 minutes to seconds for routine analysis",
+      "AI accelerates drug discovery by screening millions of compounds and predicting protein structures",
+      "Personalized medicine uses genetic data to predict disease risk and optimize treatments",
+      "60% of healthcare systems are now exploring or implementing AI solutions, up from 30% three years ago",
+      "Key challenges include HIPAA compliance, training data bias, and regulatory uncertainty",
+      "Future involves AI augmenting doctors rather than replacing them"
+    ],
+    "keyThemes": [
+      "AI-Human Collaboration in Healthcare",
+      "Diagnostic Accuracy and Speed",
+      "Personalized Medicine Revolution",
+      "Healthcare Technology Adoption",
+      "Regulatory and Ethical Challenges"
+    ],
+    "importantQuotes": [
+      {
+        "text": "AI-powered imaging analysis can now detect certain cancers earlier than human radiologists.",
+        "context": "Introduction to diagnostic capabilities"
+      },
+      {
+        "text": "Machine learning models trained on millions of medical images have achieved accuracy rates exceeding 95% in detecting breast cancer, lung cancer, and other conditions.",
+        "context": "Diagnostic imaging section"
+      },
+      {
+        "text": "What might take a radiologist 15 minutes to analyze, an AI system can process in seconds.",
+        "context": "Speed advantage explanation"
+      },
+      {
+        "text": "Traditionally, developing a new drug takes 10-15 years and costs billions. AI is accelerating this process significantly.",
+        "context": "Drug discovery challenges"
+      },
+      {
+        "text": "AI enables truly personalized medicine by analyzing a patient's genetic data, medical history, lifestyle factors, and molecular markers.",
+        "context": "Personalized medicine definition"
+      },
+      {
+        "text": "The future likely involves AI and human expertise working together. Rather than replacing doctors, AI will augment medical professionals.",
+        "context": "Future vision conclusion"
+      },
+      {
+        "text": "According to recent surveys, 60% of healthcare systems are exploring or implementing AI solutions, up from 30% just three years ago.",
+        "context": "Adoption statistics"
+      }
+    ]
+  },
+  "ideas": {
+    "hooks": [
+      {
+        "text": "What if your next cancer diagnosis comes from an AI that sees what human doctors miss?",
+        "type": "question"
+      },
+      {
+        "text": "95% accuracy. 15 minutes reduced to seconds. 60% of hospitals are already doing this. The AI healthcare revolution isn't coming—it's already here.",
+        "type": "statistic"
+      },
+      {
+        "text": "The average drug takes 10-15 years and billions to develop. AI just cut that timeline in half, and it's just getting started.",
+        "type": "contrast"
+      },
+      {
+        "text": "Your doctor might not be replaced by AI, but the AI that helps your doctor might be the reason you survive.",
+        "type": "story"
+      },
+      {
+        "text": "Medicine is about to get personal—genetically, historically, and individually personal.",
+        "type": "bold statement"
+      }
+    ],
+    "angles": [
+      {
+        "perspective": "The Skeptic's Deep Dive",
+        "approach": "Challenge the hype with real limitations: data bias, HIPAA compliance nightmares, and why 95% accuracy in controlled studies doesn't equal 95% in the real world. Interview radiologists who've seen AI fail.",
+        "target": "Healthcare professionals and policy makers who need balanced analysis"
+      },
+      {
+        "perspective": "The Patient's Journey",
+        "approach": "Tell the story from the patient's view: faster diagnosis means less anxiety, personalized treatment means fewer side effects, but also raises questions about data privacy and algorithmic bias affecting care quality.",
+        "target": "General readers, patients, and healthcare advocates"
+      },
+      {
+        "perspective": "The Doctor's Dilemma",
+        "approach": "Explore how AI changes the physician's role from diagnostician to interpreter and counselor. Focus on the human-AI collaboration challenges and training implications.",
+        "target": "Medical professionals and medical educators"
+      },
+      {
+        "perspective": "The Startup Gold Rush",
+        "approach": "Analyze the business side: investment trends, which companies are leading, regulatory moats, and whether this is sustainable innovation or another AI bubble.",
+        "target": "Investors, entrepreneurs, and tech analysts"
+      },
+      {
+        "perspective": "The Global Health Perspective",
+        "approach": "Examine how AI could democratize healthcare quality across regions with fewer specialists, but also risks widening the gap between well-funded and under-resourced systems.",
+        "target": "Global health professionals and policy makers"
+      }
+    ],
+    "questions": [
+      {
+        "text": "If AI can diagnose cancer with 95% accuracy, what's the ethical threshold for when human oversight is required versus when it's just bureaucratic overhead?",
+        "depth": "deep"
+      },
+      {
+        "text": "How do we prevent AI healthcare systems from perpetuating existing biases in medical data, especially when those biases affect marginalized communities?",
+        "depth": "deep"
+      },
+      {
+        "text": "What happens to medical education when diagnostic skills become less valuable than AI interpretation and patient communication skills?",
+        "depth": "medium"
+      },
+      {
+        "text": "Should patients have the right to opt out of AI-assisted diagnosis, and what are the liability implications for doctors who use (or don't use) AI tools?",
+        "depth": "medium"
+      },
+      {
+        "text": "Can we trust AI drug discovery when the models are trained on historical data that may have excluded promising compounds due to past biases?",
+        "depth": "medium"
+      },
+      {
+        "text": "How much of your genetic and health data are you willing to share if it means truly personalized medicine but also creates permanent privacy risks?",
+        "depth": "surface"
+      },
+      {
+        "text": "Will AI in healthcare create a two-tier system where the wealthy get AI-enhanced care while others get traditional (and now inferior) human-only care?",
+        "depth": "deep"
+      }
+    ]
+  },
+  "suggestedOutline": {
+    "title": "The AI Healthcare Revolution: From Science Fiction to Clinical Reality",
+    "sections": [
+      {
+        "heading": "Introduction: The Invisible Revolution in Your Doctor's Office",
+        "type": "intro",
+        "points": [
+          "Hook: What if your next cancer diagnosis comes from an AI that sees what human doctors miss?",
+          "Establish context: AI is already transforming healthcare, not in some distant future, but right now",
+          "Preview: Explore diagnostic breakthroughs, drug discovery acceleration, and the personalized medicine revolution"
+        ],
+        "suggestedHook": "What if your next cancer diagnosis comes from an AI that sees what human doctors miss?"
+      },
+      {
+        "heading": "The Diagnostic Revolution: Speed Meets Accuracy",
+        "type": "body",
+        "points": [
+          "AI-powered imaging detects cancers with 95%+ accuracy, often earlier than human radiologists",
+          "Routine diagnostic time reduced from 15 minutes to seconds",
+          "Radiologists freed to focus on complex cases and treatment planning"
+        ],
+        "supportingQuote": {
+          "text": "Machine learning models trained on millions of medical images have achieved accuracy rates exceeding 95% in detecting breast cancer, lung cancer, and other conditions.",
+          "context": "Diagnostic imaging section"
+        },
+        "theme": "Diagnostic Accuracy and Speed"
+      },
+      {
+        "heading": "Accelerating Drug Discovery: From Decades to Years",
+        "type": "body",
+        "points": [
+          "Traditional drug development: 10-15 years, billions of dollars",
+          "AI screening millions of molecular compounds rapidly",
+          "Predicting protein structures and optimizing clinical trial designs"
+        ],
+        "supportingQuote": {
+          "text": "Traditionally, developing a new drug takes 10-15 years and costs billions. AI is accelerating this process significantly.",
+          "context": "Drug discovery challenges"
+        },
+        "theme": "Healthcare Technology Adoption"
+      },
+      {
+        "heading": "Personalized Medicine: Your Genes, Your Treatment, Your Timeline",
+        "type": "body",
+        "points": [
+          "Analysis of genetic data, medical history, and lifestyle factors",
+          "Predict disease risk before symptoms appear",
+          "Avoid adverse reactions and optimize dosages based on individual factors"
+        ],
+        "supportingQuote": {
+          "text": "AI enables truly personalized medicine by analyzing a patient's genetic data, medical history, lifestyle factors, and molecular markers.",
+          "context": "Personalized medicine definition"
+        },
+        "theme": "Personalized Medicine Revolution"
+      },
+      {
+        "heading": "The Human Element: AI as Augmentation, Not Replacement",
+        "type": "body",
+        "points": [
+          "Future involves AI-human collaboration, not replacement",
+          "AI handles routine diagnostics, flags unusual cases",
+          "Doctors focus on complex decision-making and patient care"
+        ],
+        "supportingQuote": {
+          "text": "The future likely involves AI and human expertise working together. Rather than replacing doctors, AI will augment medical professionals.",
+          "context": "Future vision conclusion"
+        },
+        "theme": "AI-Human Collaboration in Healthcare"
+      },
+      {
+        "heading": "Challenges on the Path Forward",
+        "type": "body",
+        "points": [
+          "Data privacy and HIPAA compliance concerns",
+          "Bias in training data affecting care quality",
+          "Regulatory uncertainty and integration challenges"
+        ],
+        "supportingQuote": {
+          "text": "Despite tremendous promise, AI in healthcare faces significant challenges including data privacy (HIPAA compliance), bias in training data, regulatory uncertainty, and integration with existing systems.",
+          "context": "Challenges section"
+        },
+        "theme": "Regulatory and Ethical Challenges"
+      },
+      {
+        "heading": "Conclusion: The Augmented Future of Healthcare",
+        "type": "conclusion",
+        "points": [
+          "Summarize: AI is transforming diagnostics, drug discovery, and personalized care",
+          "Call to action: Healthcare organizations must prepare for AI integration while addressing ethical concerns",
+          "Final thought: The question isn't whether AI will change healthcare, but how we'll ensure it benefits everyone"
+        ],
+        "suggestedAngle": "The Doctor's Dilemma - exploring human-AI collaboration"
+      }
+    ]
+  },
+  "meta": {
+    "generatedAt": "2025-12-28T00:00:00Z",
+    "workflowVersion": "1.1.0",
+    "stepsCompleted": ["summary", "ideas", "writing-kit"],
+    "difficulty": "intermediate",
+    "timeToWrite": "60-90 minutes",
+    "audience": "Healthcare professionals, tech enthusiasts, policy makers"
+  }
+}

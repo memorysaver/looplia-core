@@ -1,0 +1,106 @@
+{
+  "contentId": "test-ai-healthcare",
+  "hooks": [
+    {
+      "text": "The day a machine saw my mother's cancer before her doctor did changed how I think about medicine forever.",
+      "type": "emotional"
+    },
+    {
+      "text": "What if the secret to curing cancer isn't in a lab, but in lines of code running on servers?",
+      "type": "curiosity"
+    },
+    {
+      "text": "AI isn't making medicine better - it's creating a healthcare system where machines make life-or-death decisions without human oversight.",
+      "type": "controversy"
+    },
+    {
+      "text": "A single AI system can analyze 10,000 medical images in the time it takes a radiologist to review one - and with 95% accuracy in cancer detection.",
+      "type": "statistic"
+    },
+    {
+      "text": "When Dr. Chen first saw the AI's diagnosis, she dismissed it as a computer error. Six months later, the biopsy proved the machine was right.",
+      "type": "story"
+    }
+  ],
+  "angles": [
+    {
+      "perspective": "The Patient's Dilemma",
+      "approach": "Explore the tension between faster, more accurate diagnoses and loss of human connection in medicine through patient stories and ethical considerations.",
+      "target": "General readers concerned about depersonalization of healthcare",
+      "relevanceScore": 0.8
+    },
+    {
+      "perspective": "The Overworked Doctor's Relief",
+      "approach": "Focus on how AI alleviates burnout among medical professionals by handling routine tasks, featuring interviews with radiologists and surgeons.",
+      "target": "Healthcare professionals and medical students",
+      "relevanceScore": 0.9
+    },
+    {
+      "perspective": "The Algorithm's Blind Spots",
+      "approach": "Investigate cases where AI diagnostic tools failed due to biased training data, examining the real-world consequences for minority patients.",
+      "target": "Tech ethicists, policymakers, and social justice advocates",
+      "relevanceScore": 0.7
+    },
+    {
+      "perspective": "The Startup Disruptor",
+      "approach": "Profile AI healthcare startups racing to commercialize diagnostic tools, analyzing the billion-dollar market and regulatory hurdles.",
+      "target": "Investors, entrepreneurs, and business readers",
+      "relevanceScore": 0.6
+    },
+    {
+      "perspective": "The Global Health Equalizer",
+      "approach": "Document how AI tools are being deployed in rural clinics and developing nations to bridge healthcare gaps where specialists are scarce.",
+      "target": "International development professionals and public health advocates",
+      "relevanceScore": 0.75
+    }
+  ],
+  "questions": [
+    {
+      "text": "How do we ensure AI diagnostic tools are trained on diverse patient data to avoid racial and gender bias?",
+      "type": "analytical",
+      "depth": "medium"
+    },
+    {
+      "text": "What ethical framework should govern when an AI recommendation overrides a doctor's clinical judgment?",
+      "type": "analytical",
+      "depth": "deep"
+    },
+    {
+      "text": "What specific steps can hospitals take this year to begin implementing AI diagnostic tools while maintaining patient trust?",
+      "type": "practical",
+      "depth": "surface"
+    },
+    {
+      "text": "How should medical schools update their curriculum to prepare future doctors for AI-augmented practice?",
+      "type": "practical",
+      "depth": "medium"
+    },
+    {
+      "text": "Does AI-assisted medicine fundamentally change what it means to be a healer, or is it just another tool in the medical toolkit?",
+      "type": "philosophical",
+      "depth": "deep"
+    },
+    {
+      "text": "If AI can diagnose diseases earlier and more accurately, do doctors have an ethical obligation to use it despite potential risks?",
+      "type": "philosophical",
+      "depth": "deep"
+    },
+    {
+      "text": "How does the adoption curve of AI in healthcare compare to previous medical revolutions like X-rays or antibiotics?",
+      "type": "comparative",
+      "depth": "medium"
+    },
+    {
+      "text": "What can healthcare learn from other industries (like aviation or finance) about safely integrating AI into high-stakes decision making?",
+      "type": "comparative",
+      "depth": "medium"
+    }
+  ],
+  "personalization": {
+    "matchedTopics": [],
+    "adjustedFor": "intermediate expertise",
+    "targetWordCount": 1000,
+    "voice": "first-person",
+    "relevanceToUser": 0.5
+  }
+}

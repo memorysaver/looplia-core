@@ -1,0 +1,118 @@
+{
+  "contentId": "test-ai-healthcare",
+  "hooks": [
+    {
+      "text": "What if the future of medicine isn't about better doctors, but about better algorithms working alongside them?",
+      "type": "question"
+    },
+    {
+      "text": "In the time it takes a radiologist to drink a cup of coffee, an AI can analyze hundreds of medical images with 95% accuracy.",
+      "type": "story"
+    },
+    {
+      "text": "60% of healthcare systems are now racing to implement AI—but 90% of patients have no idea it's already happening.",
+      "type": "statistic"
+    },
+    {
+      "text": "Everyone's worried about AI replacing doctors. The real story is more surprising: AI might actually save the profession.",
+      "type": "curiosity"
+    },
+    {
+      "text": "For decades, we've accepted that drug development takes 15 years. What if that timeline isn't a law of nature, but just an engineering problem?",
+      "type": "bold-statement"
+    }
+  ],
+  "angles": [
+    {
+      "perspective": "The Skeptic's Audit",
+      "approach": "Examine each AI healthcare claim through a critical lens—what's real, what's hype, and what are the hidden dangers of algorithmic bias in medicine?",
+      "target": "Readers who question tech optimism and want balanced analysis",
+      "relevanceScore": 0.8
+    },
+    {
+      "perspective": "Patient's Eye View",
+      "approach": "Walk through what AI in healthcare actually looks like from the patient perspective—getting a diagnosis, choosing treatment, navigating privacy concerns.",
+      "target": "General readers wondering how this affects their own healthcare experience",
+      "relevanceScore": 0.9
+    },
+    {
+      "perspective": "Doctor in the Machine",
+      "approach": "Profile the changing role of physicians—from diagnosticians to AI supervisors, interpreters, and patient advocates. How medical training must evolve.",
+      "target": "Healthcare professionals, medical students, and those interested in career futures",
+      "relevanceScore": 0.85
+    },
+    {
+      "perspective": "The Race to the Cure",
+      "approach": "Deep dive into drug discovery acceleration—specific case studies of AI-identified compounds, timeline comparisons, and what this means for diseases with no current treatment.",
+      "target": "Patients, researchers, and anyone following specific disease research",
+      "relevanceScore": 0.75
+    },
+    {
+      "perspective": "Implementation Reality Check",
+      "approach": "Beyond the hype—what's actually happening on the ground? Hospital IT integration challenges, regulatory hurdles, and why adoption is harder than it looks.",
+      "target": "Healthcare administrators, policymakers, and implementation specialists",
+      "relevanceScore": 0.7
+    }
+  ],
+  "questions": [
+    {
+      "text": "How would you feel about an AI diagnosing your condition? Would you trust it more or less than a human doctor?",
+      "type": "personal",
+      "depth": "medium"
+    },
+    {
+      "text": "If AI can detect cancer earlier than human radiologists, is it ethical for healthcare systems NOT to use it?",
+      "type": "ethical",
+      "depth": "deep"
+    },
+    {
+      "text": "What happens to the doctor-patient relationship when diagnosis becomes automated? Is something valuable lost?",
+      "type": "philosophical",
+      "depth": "deep"
+    },
+    {
+      "text": "If personalized medicine based on your genome becomes standard, who owns that genetic data? Your insurance company? Your employer?",
+      "type": "practical",
+      "depth": "medium"
+    },
+    {
+      "text": "Should AI medical systems be required to explain their reasoning, or is accuracy alone sufficient?",
+      "type": "analytical",
+      "depth": "deep"
+    },
+    {
+      "text": "How do we ensure AI doesn't inherit and amplify existing healthcare disparities in training data?",
+      "type": "comparative",
+      "depth": "deep"
+    },
+    {
+      "text": "If AI reduces drug development from 15 years to 5, should those savings be passed to patients or captured by pharmaceutical companies?",
+      "type": "practical",
+      "depth": "medium"
+    }
+  ],
+  "personalization": {
+    "matchedTopics": [],
+    "adjustedFor": "intermediate expertise",
+    "tone": "first-person",
+    "targetWordCount": 1000,
+    "relevanceScore": 0.5
+  },
+  "expandedAngles": [
+    {
+      "angle": "The Hidden Cost Question",
+      "development": "AI diagnostics might be cheaper and faster—but what about the upfront costs? The infrastructure, training, and implementation budgets that smaller hospitals can't afford. Does this create a two-tier healthcare system where only wealthy institutions get AI capabilities?",
+      "opening": "The revolution is here, but can everyone afford to join it?"
+    },
+    {
+      "angle": " Liability Loophole",
+      "development": "When an AI misses a diagnosis, who's responsible? The doctor who trusted the system? The hospital that bought it? The company that built it? We're building a legal gray area into the foundation of future medicine.",
+      "opening": "We know who's to blame when a doctor makes a mistake. But what happens when the doctor is an algorithm?"
+    },
+    {
+      "angle": "The Data Feedback Loop",
+      "development": "AI systems need data to improve. But they need diverse, high-quality data. What happens when most early data comes from wealthy, urban, predominantly white patient populations? The AI gets better at serving some patients while remaining inadequate for others.",
+      "opening": "The better AI gets at medicine, the worse it might get at equity."
+    }
+  ]
+}

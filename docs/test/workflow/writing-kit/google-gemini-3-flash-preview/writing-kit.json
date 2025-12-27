@@ -1,0 +1,173 @@
+{
+  "contentId": "test-ai-healthcare",
+  "source": {
+    "type": "article",
+    "title": "The Future of AI in Healthcare",
+    "url": "https://example.com/ai-healthcare",
+    "creator": "Unknown"
+  },
+  "summary": {
+    "headline": "The Future of AI in Healthcare",
+    "tldr": "AI is revolutionizing healthcare by speeding up diagnostics and drug discovery, enabling personalized medicine, and shifting the medical model toward human-AI augmentation despite privacy and bias challenges.",
+    "bullets": [
+      "AI imaging detects cancers with >95% accuracy, often earlier than humans.",
+      "Processing speed for medical images is reduced from minutes to seconds.",
+      "AI accelerates drug development, which traditionally takes 10-15 years and billions of dollars.",
+      "Personalized treatments are derived from genetic, lifestyle, and history analysis.",
+      "Human-AI collaboration, not replacement, is the projected future of medical practice.",
+      "60% of healthcare systems are already exploring or implementing AI solutions."
+    ],
+    "keyThemes": [
+      "Augmentation",
+      "Efficiency",
+      "Precision",
+      "Technical and Ethical Challenges"
+    ],
+    "importantQuotes": [
+      {
+        "text": "AI-powered imaging analysis can now detect certain cancers earlier than human radiologists.",
+        "context": "Discussing the revolution in medical diagnostics."
+      },
+      {
+        "text": "What might take a radiologist 15 minutes to analyze, an AI system can process in seconds...",
+        "context": "Highlighting the efficiency gains in clinical workflows."
+      },
+      {
+        "text": "Rather than replacing doctors, AI will augment medical professionals by handling routine diagnostic tasks...",
+        "context": "Defining the long-term relationship between technology and practitioners."
+      }
+    ]
+  },
+  "ideas": {
+    "hooks": [
+      {
+        "text": "Imagine a world where 'I'm sorry, we caught it too late' is a phrase of the past.",
+        "type": "emotional"
+      },
+      {
+        "text": "What happens when your doctor's most important diagnostic tool isn't a stethoscope, but a neural network?",
+        "type": "curiosity"
+      },
+      {
+        "text": "Is the human element of medicine becoming a bottleneck for accuracy?",
+        "type": "controversy"
+      },
+      {
+        "text": "60% of healthcare systems are already betting their future on AI. Are you ready for the shift?",
+        "type": "statistic"
+      },
+      {
+        "text": "A radiologist used to spend 15 minutes on a single scan. Now, an AI does it in seconds, leaving them to focus on what matters most: the patient.",
+        "type": "story"
+      }
+    ],
+    "angles": [
+      {
+        "perspective": "The Patient's Advocate",
+        "approach": "Focus on how AI enables earlier detection and more personalized, effective treatments.",
+        "relevanceScore": 0.95
+      },
+      {
+        "perspective": "The Future Practitioner",
+        "approach": "Discuss the transition from diagnostic technician to specialized consultant, focusing on complex cases and empathy.",
+        "relevanceScore": 0.88
+      },
+      {
+        "perspective": "The Tech Ethics Watchdog",
+        "approach": "Critically examine the risks of bias and privacy in AI healthcare systems.",
+        "relevanceScore": 0.82
+      }
+    ],
+    "questions": [
+      {
+        "text": "How does the integration of AI change the cost-benefit analysis of traditional drug discovery?",
+        "depth": "medium"
+      },
+      {
+        "text": "What specific steps can healthcare organizations take to ensure HIPAA compliance while training machine learning models?",
+        "depth": "medium"
+      },
+      {
+        "text": "If an AI can diagnose better than a human, where does the 'art' of medicine reside?",
+        "depth": "deep"
+      },
+      {
+        "text": "How does the current adoption rate of AI in healthcare compare to previous technological shifts like the introduction of electronic health records?",
+        "depth": "medium"
+      }
+    ]
+  },
+  "suggestedOutline": {
+    "title": "Augmented Medicine: How AI is Redefining the Patient Experience",
+    "sections": [
+      {
+        "heading": "Introduction: The Silicon Stethoscope",
+        "type": "intro",
+        "points": [
+          "Hook: What happens when your doctor's most important diagnostic tool isn't a stethoscope, but a neural network?",
+          "Context: The rapid shift from 30% to 60% adoption of AI in healthcare systems within three years.",
+          "Thesis: AI isn't replacing the doctor; it's perfecting the diagnosis and accelerating the cure."
+        ],
+        "suggestedHook": "What happens when your doctor's most important diagnostic tool isn't a stethoscope, but a neural network?"
+      },
+      {
+        "heading": "The Diagnostic Revolution: Speed Meets Precision",
+        "type": "body",
+        "points": [
+          "Impact of machine learning on imaging (breast and lung cancer detection).",
+          "The 95% accuracy benchmark.",
+          "Efficiency gains: Reducing 15 minutes of analysis to seconds."
+        ],
+        "supportingQuote": {
+          "text": "AI-powered imaging analysis can now detect certain cancers earlier than human radiologists."
+        },
+        "theme": "Precision"
+      },
+      {
+        "heading": "Breaking the 10-Year Barrier: Accelerating Drug Discovery",
+        "type": "body",
+        "points": [
+          "The traditional cost and time bottleneck of drug development (10-15 years, billions of dollars).",
+          "Screening molecular compounds and predicting protein structures with machine learning.",
+          "Optimizing clinical trial designs."
+        ],
+        "theme": "Efficiency"
+      },
+      {
+        "heading": "Personalized Care: Medicine for an Audience of One",
+        "type": "body",
+        "points": [
+          "Moving from 'one size fits all' to genetic-based treatment.",
+          "Analyzing medical history, lifestyle, and molecular markers to predict risk.",
+          "Selecting treatments based on individual efficacy and adverse reaction risk."
+        ],
+        "theme": "Augmentation"
+      },
+      {
+        "heading": "Navigating the Friction: Ethics, Bias, and Privacy",
+        "type": "body",
+        "points": [
+          "The critical challenge of data privacy and HIPAA compliance.",
+          "Addressing bias in training data to ensure equitable outcomes.",
+          "The regulatory uncertainty facing rapid AI implementation."
+        ],
+        "theme": "Technical and Ethical Challenges"
+      },
+      {
+        "heading": "Conclusion: The Human-AI Partnership",
+        "type": "conclusion",
+        "points": [
+          "Synthesis: AI handles the routine; humans handle the complex.",
+          "Vision: Medical professionals augmented by AI suggestions and research monitoring.",
+          "Closing Thought: Imagine a world where 'I'm sorry, we caught it too late' is a phrase of the past."
+        ],
+        "suggestedAngle": "The Patient's Advocate"
+      }
+    ]
+  },
+  "meta": {
+    "generatedAt": "2025-12-28T10:30:00Z",
+    "workflowVersion": "1.1.0",
+    "stepsCompleted": ["summary", "ideas", "writing-kit"]
+  }
+}

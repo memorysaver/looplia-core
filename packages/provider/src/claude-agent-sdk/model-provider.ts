@@ -177,6 +177,20 @@ export const PRESETS: Record<string, PresetDefinition> = {
     mainModel: "deepseek/deepseek-v3.2",
     executorModel: "deepseek/deepseek-v3.2",
   },
+  ZENMUX_DEEPSEEK_REASONER: {
+    name: "ZenMux DeepSeek-Reasoner",
+    apiProvider: "zenmux",
+    baseUrl: "https://zenmux.ai/api/anthropic",
+    mainModel: "deepseek/deepseek-reasoner",
+    executorModel: "deepseek/deepseek-reasoner",
+  },
+  ZENMUX_VOLCENGINE_DOUBAO_SEED: {
+    name: "ZenMux Doubao-Seed-1.8",
+    apiProvider: "zenmux",
+    baseUrl: "https://zenmux.ai/api/anthropic",
+    mainModel: "volcengine/doubao-seed-1.8",
+    executorModel: "volcengine/doubao-seed-1.8",
+  },
   ZENMUX_MISTRAL_LARGE2512: {
     name: "ZenMux Mistral-Large-2512",
     apiProvider: "zenmux",
@@ -190,6 +204,20 @@ export const PRESETS: Record<string, PresetDefinition> = {
     baseUrl: "https://zenmux.ai/api/anthropic",
     mainModel: "z-ai/glm-4.6v-flash",
     executorModel: "z-ai/glm-4.6v-flash",
+  },
+  ZENMUX_ZAI_GLM46V: {
+    name: "ZenMux GLM-4.6v",
+    apiProvider: "zenmux",
+    baseUrl: "https://zenmux.ai/api/anthropic",
+    mainModel: "z-ai/glm-4.6v",
+    executorModel: "z-ai/glm-4.6v",
+  },
+  ZENMUX_OPENAI_GPT51CODEXMINI: {
+    name: "ZenMux GPT-5.1 Codex Mini",
+    apiProvider: "zenmux",
+    baseUrl: "https://zenmux.ai/api/anthropic",
+    mainModel: "openai/gpt-5.1-codex-mini",
+    executorModel: "openai/gpt-5.1-codex-mini",
   },
 };
 

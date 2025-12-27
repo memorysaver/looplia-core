@@ -1,0 +1,50 @@
+{
+  "contentId": "test-ai-healthcare",
+  "hooks": {
+    "emotional": "Imagine a world where your doctor knows your disease risk years before symptoms appear – that's the promise of AI in healthcare.",
+    "curiosity": "What if AI could predict your perfect medication before you ever get sick?",
+    "controversy": "Will AI doctors replace human physicians, or is that just fearmongering?",
+    "statistic": "AI detects cancer with 95% accuracy – better than most radiologists. Ready for the revolution?",
+    "story": "When Sarah's routine scan revealed early cancer thanks to AI, it saved her life – here's how."
+  },
+  "angles": [
+    {
+      "angle": "Tech optimist: Breakthroughs in diagnostics and drug discovery",
+      "relevance": 9
+    },
+    {
+      "angle": "Ethical concerns: Addressing bias and privacy in AI health data",
+      "relevance": 8
+    },
+    {
+      "angle": "Business case: Investment opportunities and ROI in healthcare AI",
+      "relevance": 7
+    },
+    {
+      "angle": "Patient stories: Real-world impact on lives saved",
+      "relevance": 9
+    },
+    {
+      "angle": "Regulatory path: Navigating FDA approvals for AI tools",
+      "relevance": 6
+    }
+  ],
+  "questions": {
+    "analytical": [
+      "How does AI accuracy compare across different cancer types and imaging modalities?",
+      "What types of biases are present in AI training datasets for healthcare?"
+    ],
+    "practical": [
+      "How can small clinics affordably implement AI diagnostic tools?",
+      "What is the expected ROI timeline for hospital AI adoption?"
+    ],
+    "philosophical": [
+      "Does greater AI reliance in medicine reduce human empathy in patient care?",
+      "What does 'cure' mean in an era of predictive AI diagnostics?"
+    ],
+    "comparative": [
+      "How does US AI healthcare regulation compare to EU GDPR standards?",
+      "What are the cost and speed differences between AI vs traditional diagnostics?"
+    ]
+  }
+}
