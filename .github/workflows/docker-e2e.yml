@@ -256,6 +256,163 @@ jobs:
           path: test-workspace/
           retention-days: 7
 
+  # Test: ZenMux GLM-4.7 with inline execution strategy (no Task subagents)
+  test-zenmux-glm:
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker image
+        run: gunzip -c looplia-image.tar.gz | docker load
+
+      - name: Create test workspace
+        run: mkdir -p zenmux-test-workspace
+
+      - name: Run writing-kit workflow (ZenMux GLM-4.7)
+        env:
+          ZENMUX_API_KEY: ${{ secrets.ZENMUX_API_KEY }}
+        run: |
+          # Override entrypoint to run: init → config preset → run workflow
+          CONTAINER_ID=$(docker create \
+            --entrypoint /bin/sh \
+            -e ZENMUX_API_KEY="$ZENMUX_API_KEY" \
+            -v "$(pwd)/examples:/examples:ro" \
+            $IMAGE_NAME \
+            -c "bun run /app/apps/cli/dist/index.js init --yes && \
+                bun run /app/apps/cli/dist/index.js config provider preset ZENMUX_ZAI_GLM47 && \
+                bun run /app/apps/cli/dist/index.js run writing-kit --file /examples/ai-healthcare.md \
+                --topics 'ai,healthcare,technology' --tone 'expert'")
+
+          # Run container and capture exit code
+          docker start -a "$CONTAINER_ID" || EXIT_CODE=$?
+
+          # Always copy files for debugging (even on failure)
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." zenmux-test-workspace/ || true
+          docker rm "$CONTAINER_ID"
+
+          # Exit with original code
+          exit ${EXIT_CODE:-0}
+
+      - name: Debug - List workspace contents
+        if: always()
+        run: |
+          echo "=== ZenMux Test Workspace Structure ==="
+          find zenmux-test-workspace -type f 2>/dev/null | head -50 || echo "No files found"
+          echo ""
+          echo "=== Provider config ==="
+          cat zenmux-test-workspace/looplia.setting.json 2>/dev/null || echo "No looplia.setting.json"
+          echo ""
+          echo "=== Sandbox folder contents ==="
+          SANDBOX_DIR=$(find zenmux-test-workspace/sandbox -maxdepth 1 -type d ! -name sandbox 2>/dev/null | head -1)
+          if [ -n "$SANDBOX_DIR" ]; then
+            echo "Sandbox: $SANDBOX_DIR"
+            ls -la "$SANDBOX_DIR" || true
+            echo ""
+            echo "=== validation.json ==="
+            cat "$SANDBOX_DIR/validation.json" 2>/dev/null || echo "No validation.json"
+            echo ""
+            echo "=== outputs/summary.json (if exists) ==="
+            cat "$SANDBOX_DIR/outputs/summary.json" 2>/dev/null | head -50 || echo "No summary.json"
+            echo ""
+            echo "=== Query logs (last 200 lines) ==="
+            LOG_FILE=$(ls "$SANDBOX_DIR/logs/"*.log 2>/dev/null | head -1)
+            if [ -n "$LOG_FILE" ]; then
+              tail -200 "$LOG_FILE"
+            else
+              echo "No query log found"
+            fi
+          else
+            echo "No sandbox directory found"
+            echo "Contents of zenmux-test-workspace:"
+            ls -laR zenmux-test-workspace/ 2>/dev/null || echo "Empty"
+          fi
+
+      - name: Validate sandbox created
+        run: |
+          echo "Checking sandbox was created..."
+          SANDBOX_DIR=$(find zenmux-test-workspace/sandbox -maxdepth 1 -type d ! -name sandbox | head -1)
+          [ -n "$SANDBOX_DIR" ] || (echo "ERROR: No sandbox directory found" && exit 1)
+          echo "Sandbox folder: $SANDBOX_DIR"
+
+          # Check inputs/content.md exists
+          [ -f "$SANDBOX_DIR/inputs/content.md" ] || (echo "ERROR: inputs/content.md not found" && exit 1)
+          echo "✓ inputs/content.md exists"
+
+      - name: Validate pipeline artifacts
+        run: |
+          SANDBOX_DIR=$(find zenmux-test-workspace/sandbox -maxdepth 1 -type d ! -name sandbox | head -1)
+
+          # Check all 3 stage artifacts exist in outputs/
+          [ -f "$SANDBOX_DIR/outputs/summary.json" ] || (echo "ERROR: outputs/summary.json not found (Stage 1)" && exit 1)
+          echo "✓ outputs/summary.json exists (Stage 1)"
+
+          [ -f "$SANDBOX_DIR/outputs/ideas.json" ] || (echo "ERROR: outputs/ideas.json not found (Stage 2)" && exit 1)
+          echo "✓ outputs/ideas.json exists (Stage 2)"
+
+          [ -f "$SANDBOX_DIR/outputs/writing-kit.json" ] || (echo "ERROR: outputs/writing-kit.json not found (Stage 3)" && exit 1)
+          echo "✓ outputs/writing-kit.json exists (Stage 3)"
+
+      - name: Verify inline execution (ZenMux strategy)
+        run: |
+          SANDBOX_DIR=$(find zenmux-test-workspace/sandbox -maxdepth 1 -type d ! -name sandbox | head -1)
+          LOG_FILE=$(ls "$SANDBOX_DIR/logs/"*.log 2>/dev/null | head -1)
+
+          if [ -z "$LOG_FILE" ]; then
+            echo "⚠ No log file found, skipping inline verification"
+            exit 0
+          fi
+
+          echo "=== Inline Strategy Verification (ZenMux) ==="
+
+          # CRITICAL: Must NOT see Task/subagent usage (inline mode)
+          echo "Subagent spawning (should be 0):"
+          SUBAGENT_COUNT=$(grep -c '"subagent_type"' "$LOG_FILE" 2>/dev/null || echo "0")
+          if [ "$SUBAGENT_COUNT" -eq 0 ]; then
+            echo "✓ No subagent_type found (inline mode confirmed)"
+          else
+            echo "✗ FAIL: Found $SUBAGENT_COUNT subagent_type entries (expected 0 for inline)"
+            exit 1
+          fi
+
+          echo "Task tool usage (should be 0):"
+          TASK_COUNT=$(grep -c '"name".*"Task"' "$LOG_FILE" 2>/dev/null || echo "0")
+          if [ "$TASK_COUNT" -eq 0 ]; then
+            echo "✓ No Task tool invocations (inline mode confirmed)"
+          else
+            echo "✗ FAIL: Found $TASK_COUNT Task invocations (expected 0 for inline)"
+            exit 1
+          fi
+
+          # Must see Skill tool invocations (inline execution)
+          echo "Skill invocations (should be >= 3):"
+          SKILL_COUNT=$(grep -c '"name".*"Skill"' "$LOG_FILE" 2>/dev/null || echo "0")
+          if [ "$SKILL_COUNT" -ge 3 ]; then
+            echo "✓ Found $SKILL_COUNT Skill invocations (expected >= 3)"
+          else
+            echo "✗ FAIL: Found $SKILL_COUNT Skill invocations (expected >= 3)"
+            exit 1
+          fi
+
+          echo ""
+          echo "=== ZenMux Inline Execution Verified ==="
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-zenmux-glm
+          path: zenmux-test-workspace/
+          retention-days: 7
+
   # Test: Build command - generate workflow from natural language
   test-build:
     runs-on: ubuntu-latest
