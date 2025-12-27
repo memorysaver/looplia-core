@@ -14,6 +14,26 @@ export { createClaudeAgentExecutor } from "./executor";
 // Re-export logger
 export type { QueryLogger } from "./logger";
 export { createQueryLogger } from "./logger";
+// Re-export model provider utilities (v0.6.6)
+export type {
+  ModelProviderConfig,
+  ModelTier,
+  ProviderDisplayInfo,
+  ProviderPreset,
+} from "./model-provider";
+export {
+  DEFAULT_MODELS,
+  getConfigPath,
+  getLoopliaHome,
+  getProviderDisplayInfo,
+  injectModelProviderEnv,
+  maskAuthToken,
+  PROVIDER_PRESETS,
+  readModelProviderConfig,
+  removeModelProviderConfig,
+  resolveModelFromTier,
+  writeModelProviderConfig,
+} from "./model-provider";
 // Re-export prompt builders for customization
 export {
   buildSummarizePrompt,

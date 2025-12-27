@@ -10,6 +10,10 @@ import { getLoopliaPluginPath, getPluginPaths } from "../../bootstrap";
 import type { ClaudeAgentConfig, ProviderUsage } from "../config";
 import { resolveConfig } from "../config";
 import { createQueryLogger } from "../logger";
+import {
+  injectModelProviderEnv,
+  readModelProviderConfig,
+} from "../model-provider";
 import { mapException } from "../utils/error-mapper";
 import type { AgenticQueryResult } from "../utils/shared";
 import {
@@ -124,6 +128,12 @@ export async function* executeAgenticQueryStreaming<T>(
     throw new Error(
       "API key is required. Set ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN environment variable"
     );
+  }
+
+  // v0.6.6: Load and inject model provider configuration before SDK call
+  const providerConfig = await readModelProviderConfig();
+  if (providerConfig?.enabled) {
+    injectModelProviderEnv(providerConfig);
   }
 
   try {
