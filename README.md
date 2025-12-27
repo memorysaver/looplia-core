@@ -8,7 +8,7 @@ Looplia Core is an agentic workflow platform powered by the Claude Agent SDK. It
 
 **Vision:** A universal CLI for AI-powered workflows — one tool, many domains, powered by composable skills.
 
-## v0.6.5 Architecture
+## v0.6.6 Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -81,6 +81,7 @@ bun run apps/cli/dist/index.js run writing-kit --file ./examples/ai-healthcare.m
 | `looplia run <workflow-id>` | Execute workflow on content |
 | `looplia build [description]` | Build workflow from natural language |
 | `looplia config` | Manage user profile settings |
+| `looplia config provider` | Configure model provider and presets |
 
 ### Run Command
 
@@ -133,6 +134,12 @@ looplia config style --tone expert --word-count 1500 --voice first-person
 
 # Show current profile
 looplia config show
+
+# Configure model provider (v0.6.6)
+looplia config provider show                       # Display current config
+looplia config provider preset ZENMUX_ZAI_GLM47    # Apply preset
+looplia config provider set auth-token sk-ai-xxx   # Set API key
+looplia config provider reset                      # Clear config
 ```
 
 ## Workflow Schema
@@ -218,6 +225,9 @@ looplia run writing-kit --file ./article.md
 |----------|-------------|
 | `ANTHROPIC_API_KEY` | Required for Claude API |
 | `CLAUDE_CODE_OAUTH_TOKEN` | Alternative: OAuth token |
+| `ZENMUX_API_KEY` | ZenMux proxy API key (auto-mapped to ANTHROPIC_API_KEY) |
+| `LOOPLIA_AGENT_MODEL_MAIN` | Override main agent model |
+| `LOOPLIA_AGENT_MODEL_EXECUTOR` | Override executor model |
 | `LOOPLIA_DEV` | Enable development mode (load from source) |
 | `LOOPLIA_DEV_ROOT` | Path to looplia-core repo (for dev mode) |
 
@@ -240,7 +250,8 @@ looplia run writing-kit --file ./article.md
 | v0.6.2 | Per-step orchestration |
 | v0.6.3 | Input-less workflows, web-capable skills |
 | v0.6.4 | Interactive Build Wizard, Streaming TUI |
-| **v0.6.5** | **Agent SDK Local Plugin Loading, Bootstrap Module** |
+| v0.6.5 | Agent SDK Local Plugin Loading, Bootstrap Module |
+| **v0.6.6** | **Model Provider Configuration, ZenMux Integration** |
 
 ## License
 

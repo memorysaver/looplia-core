@@ -1,6 +1,6 @@
 # Looplia-Core Documentation
 
-> **Version:** 0.6.5
+> **Version:** 0.6.6
 > **Last Updated:** December 2025
 
 This directory contains the core documentation for Looplia-Core, a Claude Agent SDK-based agentic workflow platform.
@@ -14,6 +14,7 @@ These are the current, authoritative documents for the v0.6.3 architecture:
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | [AGENTIC_CONCEPT_1.0.md](./AGENTIC_CONCEPT_1.0.md) | **Skills-first architecture overview** - comprehensive guide to v0.6.1/v0.6.2 | All team members |
+| [DESIGN-0.6.6.md](./DESIGN-0.6.6.md) | **Model Provider Configuration**, ZenMux support, dual-strategy execution | Developers, Architects |
 | [DESIGN-0.6.5.md](./DESIGN-0.6.5.md) | **Agent SDK plugin loading**, bootstrap module, dev mode | Developers, Architects |
 | [DESIGN-0.6.3.md](./DESIGN-0.6.3.md) | **Input-less workflows**, web-capable skills, named inputs | Developers, Architects |
 | [DESIGN-0.6.2.md](./DESIGN-0.6.2.md) | **Schema-in-Skill architecture**, plugin-first domain types | Developers, Architects |
@@ -35,6 +36,45 @@ These are the current, authoritative documents for the v0.6.3 architecture:
 |----------|---------|
 | [AGENTIC_CONCEPT-0.5.md](./archive/AGENTIC_CONCEPT-0.5.md) | Agent system design: Two-plugin model (historical) |
 | [TEST_PLAN-0.6.md](./archive/TEST_PLAN-0.6.md) | Test architecture with real API testing (historical) |
+
+---
+
+## What's New in v0.6.6
+
+### Model Provider Configuration (ZenMux-style Model Switching)
+
+v0.6.6 introduces model provider configuration for cost optimization and multi-provider support:
+
+| Feature | Description |
+|---------|-------------|
+| **Provider Presets** | 16 presets (2 Anthropic Direct, 14 ZenMux models) |
+| **CLI Commands** | `looplia config provider preset/show/set/reset` |
+| **Dual-Strategy** | Anthropic uses subagents; ZenMux uses inline execution |
+| **Auto API Mapping** | `ZENMUX_API_KEY` automatically mapped based on provider |
+
+**New CLI Commands:**
+
+```bash
+looplia config provider show                    # Display current config
+looplia config provider preset ZENMUX_ZAI_GLM47 # Apply preset
+looplia config provider set auth-token sk-xxx   # Set API key
+looplia config provider reset                   # Clear settings
+```
+
+**Configuration File:** `~/.looplia/looplia.setting.json`
+
+**Available Presets:**
+- Anthropic: `ANTHROPIC_CLAUDE_HAIKU`, `ANTHROPIC_CLAUDE_SONNET`
+- ZenMux: `ZENMUX_ZAI_GLM47`, `ZENMUX_MINIMAX_M21`, `ZENMUX_GOOGLE_GEMINI3FLASH`, and 11 more
+
+**Dual-Strategy Execution:**
+
+| Provider | Execution Strategy | Agent Registration |
+|----------|-------------------|-------------------|
+| Anthropic Direct | Task subagents | skill-executor registered |
+| ZenMux (Proxy) | Inline execution | No subagents |
+
+See [DESIGN-0.6.6.md](./DESIGN-0.6.6.md) for full specification.
 
 ---
 
@@ -378,7 +418,7 @@ Previous versions are preserved in `/docs/archive/` for reference:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        DOCUMENT RELATIONSHIPS (v0.6.5)                       │
+│                        DOCUMENT RELATIONSHIPS (v0.6.6)                       │
 └─────────────────────────────────────────────────────────────────────────────┘
 
                               ┌──────────────┐
@@ -408,7 +448,7 @@ Previous versions are preserved in `/docs/archive/` for reference:
 ```
 
 **Version Progression:**
-- v0.6.0 → v0.6.1 → v0.6.2 → v0.6.3 → v0.6.4 → **v0.6.5** (current)
+- v0.6.0 → v0.6.1 → v0.6.2 → v0.6.3 → v0.6.4 → v0.6.5 → **v0.6.6** (current)
 
 **Key Documents:**
 - **GLOSSARY.md** defines terms used across all documents
@@ -555,7 +595,7 @@ skill: writing-kit-assembler   →   subagent_type: "skill-executor"
 ONLY ONE subagent for ALL steps: skill-executor
 ```
 
-### Two-Plugin Model (v0.6.5 - Skills-First)
+### Two-Plugin Model (v0.6.6 - Skills-First)
 
 ```
 ┌─────────────────────────────────┐    ┌─────────────────────────────────────┐
@@ -665,4 +705,4 @@ Steps complete when `validation.json` shows `validated: true`:
 
 ---
 
-*This README provides navigation for Looplia-Core v0.6.5 documentation.*
+*This README provides navigation for Looplia-Core v0.6.6 documentation.*
