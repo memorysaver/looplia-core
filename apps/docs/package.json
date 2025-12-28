@@ -7,11 +7,16 @@
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "deploy": "bun run ./alchemy.run.ts",
+    "destroy": "bun run ./alchemy.run.ts --destroy"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.37.0",
     "astro": "^5.6.1",
     "sharp": "^0.34.2"
+  },
+  "devDependencies": {
+    "alchemy": "^0.82.1"
   }
 }
