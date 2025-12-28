@@ -29,8 +29,8 @@ import HeroAnimation from '../../components/HeroAnimation.astro';
     --looplia-bg: #faf9f5;
     --looplia-surface: #ffffff;
     --looplia-border: #e8e6dc;
-    --looplia-text: #141413;
-    --looplia-text-muted: #6b6a66;
+    --looplia-text: #2d2d2d;
+    --looplia-text-muted: #4a4a4a;
   }
 
   /* Hero Section with Animation */
@@ -45,6 +45,19 @@ import HeroAnimation from '../../components/HeroAnimation.astro';
     overflow: hidden;
   }
 
+  /* Radial gradient backdrop for hero text readability */
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center,
+      rgba(250, 249, 245, 0.85) 0%,
+      rgba(250, 249, 245, 0.4) 50%,
+      rgba(250, 249, 245, 0) 80%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
   .hero > * {
     position: relative;
     z-index: 1;
@@ -54,24 +67,27 @@ import HeroAnimation from '../../components/HeroAnimation.astro';
   }
 
   .hero h1 {
-    font-family: 'Poppins', sans-serif;
+    font-family: 'Syne', sans-serif;
     font-size: 3.5rem;
-    font-weight: 700;
+    font-weight: 800;
     letter-spacing: -0.03em;
     background: linear-gradient(135deg, var(--looplia-text) 0%, var(--looplia-coral-dark) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     margin-bottom: 0.5rem;
+    text-shadow: 0 2px 20px rgba(250, 249, 245, 0.8);
   }
 
   .hero .tagline {
-    font-family: 'Lora', Georgia, serif;
+    font-family: 'Outfit', sans-serif;
     font-size: 1.25rem;
+    font-weight: 400;
     max-width: 48ch;
     margin: 0 auto 2rem;
     color: var(--looplia-text-muted);
     line-height: 1.6;
+    text-shadow: 0 1px 8px rgba(250, 249, 245, 0.9);
   }
 
   .hero .actions {
@@ -99,7 +115,7 @@ import HeroAnimation from '../../components/HeroAnimation.astro';
   }
 
   .section-header h2 {
-    font-family: 'Poppins', sans-serif;
+    font-family: 'Syne', sans-serif;
     font-size: 2rem;
     font-weight: 600;
     color: var(--looplia-text);
@@ -108,7 +124,7 @@ import HeroAnimation from '../../components/HeroAnimation.astro';
   }
 
   .section-header p {
-    font-family: 'Lora', Georgia, serif;
+    font-family: 'Outfit', sans-serif;
     color: var(--looplia-text-muted);
     font-size: 1.125rem;
     max-width: 50ch;
@@ -152,7 +168,7 @@ import HeroAnimation from '../../components/HeroAnimation.astro';
   .command-title {
     flex: 1;
     text-align: center;
-    font-family: 'Fira Code', monospace;
+    font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
     color: var(--looplia-text-muted);
     margin-right: 52px;
@@ -160,7 +176,7 @@ import HeroAnimation from '../../components/HeroAnimation.astro';
 
   .command-content {
     padding: 24px 28px;
-    font-family: 'Fira Code', monospace;
+    font-family: 'JetBrains Mono', monospace;
     font-size: 14px;
     line-height: 1.8;
     background: rgba(255, 255, 255, 0.98);
@@ -196,7 +212,7 @@ import HeroAnimation from '../../components/HeroAnimation.astro';
     padding: 2.5rem;
     margin: 2rem 0;
     text-align: center;
-    font-family: 'Fira Code', monospace;
+    font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
     overflow-x: auto;
     box-shadow: 0 2px 12px -4px rgba(20, 20, 19, 0.06);
@@ -227,7 +243,7 @@ import HeroAnimation from '../../components/HeroAnimation.astro';
     align-items: center;
     background: linear-gradient(135deg, var(--looplia-coral) 0%, var(--looplia-coral-dark) 100%);
     color: white;
-    font-family: 'Fira Code', monospace;
+    font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
     font-weight: 500;
     padding: 4px 12px;
@@ -245,7 +261,7 @@ import HeroAnimation from '../../components/HeroAnimation.astro';
   }
 
   .landing-footer p {
-    font-family: 'Lora', Georgia, serif;
+    font-family: 'Outfit', sans-serif;
     font-size: 0.95rem;
     color: var(--looplia-text-muted);
   }
@@ -283,7 +299,7 @@ import HeroAnimation from '../../components/HeroAnimation.astro';
   }
 
   [data-theme="dark"] .command-content .cmd {
-    color: #e4e4e7;
+    color: #f0f0f0;
   }
 
   [data-theme="dark"] .workflow-diagram {
@@ -292,11 +308,22 @@ import HeroAnimation from '../../components/HeroAnimation.astro';
   }
 
   [data-theme="dark"] .workflow-diagram pre {
-    color: #e4e4e7;
+    color: #f0f0f0;
   }
 
   [data-theme="dark"] .section-header h2 {
-    color: #e4e4e7;
+    color: #f0f0f0;
+  }
+
+  [data-theme="dark"] .section-header p {
+    color: #c4c4c4;
+  }
+
+  [data-theme="dark"] .hero::before {
+    background: radial-gradient(ellipse at center,
+      rgba(15, 15, 16, 0.85) 0%,
+      rgba(15, 15, 16, 0.4) 50%,
+      rgba(15, 15, 16, 0) 80%);
   }
 
   [data-theme="dark"] .hero h1 {

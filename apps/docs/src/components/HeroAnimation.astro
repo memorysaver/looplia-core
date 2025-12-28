@@ -164,8 +164,9 @@
       const width = this.canvas.width / (window.devicePixelRatio || 1);
       const height = this.canvas.height / (window.devicePixelRatio || 1);
 
-      // Subtle fade for trails
-      this.ctx.fillStyle = 'rgba(250, 249, 245, 0.08)';
+      // Subtle fade for trails - check for dark mode
+      const isDark = document.documentElement.dataset.theme === 'dark';
+      this.ctx.fillStyle = isDark ? 'rgba(15, 15, 16, 0.08)' : 'rgba(250, 249, 245, 0.08)';
       this.ctx.fillRect(0, 0, width, height);
 
       this.updateFlowField();
