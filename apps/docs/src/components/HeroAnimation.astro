@@ -1,0 +1,277 @@
+---
+/**
+ * HeroAnimation - Flow Field Animation for Looplia Landing Page
+ *
+ * Algorithmic Philosophy: "Perpetual Flow"
+ * - Loops: Particles cycling through curved paths
+ * - Iteration: Continuous movement, never static
+ * - AI Agents: Multiple particle streams working in harmony
+ * - Workflows: Visible flow lines connecting inputs to outputs
+ */
+---
+
+<div class="hero-animation-container" id="hero-animation">
+  <canvas id="flowfield-canvas"></canvas>
+</div>
+
+<style>
+  .hero-animation-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  #flowfield-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-animation-container {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  // Looplia Flow Field Animation
+  // Represents: loops, iteration, AI agents, and workflows
+
+  class FlowField {
+    private canvas: HTMLCanvasElement;
+    private ctx: CanvasRenderingContext2D;
+    private particles: Particle[] = [];
+    private flowField: number[] = [];
+    private cols = 0;
+    private rows = 0;
+    private scale = 20;
+    private zoff = 0;
+    private animationId: number | null = null;
+    private isVisible = true;
+
+    // Looplia brand colors
+    private colors = [
+      { r: 217, g: 119, b: 87 },   // coral #d97757
+      { r: 245, g: 184, b: 166 },  // coral-light #f5b8a6
+      { r: 184, g: 90, b: 61 },    // coral-dark #b85a3d
+      { r: 106, g: 155, b: 204 },  // blue #6a9bcc
+    ];
+
+    constructor(canvasId: string) {
+      const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+      if (!canvas) throw new Error('Canvas not found');
+
+      this.canvas = canvas;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Could not get 2d context');
+      this.ctx = ctx;
+
+      this.resize();
+      this.init();
+      this.setupListeners();
+      this.animate();
+    }
+
+    private resize() {
+      const container = this.canvas.parentElement;
+      if (!container) return;
+
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = container.getBoundingClientRect();
+
+      this.canvas.width = rect.width * dpr;
+      this.canvas.height = rect.height * dpr;
+      this.canvas.style.width = `${rect.width}px`;
+      this.canvas.style.height = `${rect.height}px`;
+
+      this.ctx.scale(dpr, dpr);
+
+      this.cols = Math.ceil(rect.width / this.scale);
+      this.rows = Math.ceil(rect.height / this.scale);
+      this.flowField = new Array(this.cols * this.rows);
+    }
+
+    private init() {
+      this.particles = [];
+      const particleCount = Math.min(
+        Math.floor((this.canvas.width * this.canvas.height) / 8000),
+        800
+      );
+
+      for (let i = 0; i < particleCount; i++) {
+        this.particles.push(new Particle(
+          this.canvas.width / (window.devicePixelRatio || 1),
+          this.canvas.height / (window.devicePixelRatio || 1),
+          this.colors[Math.floor(Math.random() * this.colors.length)]
+        ));
+      }
+    }
+
+    private setupListeners() {
+      let resizeTimeout: number;
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = window.setTimeout(() => {
+          this.resize();
+          this.init();
+        }, 200);
+      });
+
+      // Pause when not visible
+      const observer = new IntersectionObserver((entries) => {
+        this.isVisible = entries[0].isIntersecting;
+      }, { threshold: 0.1 });
+
+      if (this.canvas.parentElement) {
+        observer.observe(this.canvas.parentElement);
+      }
+    }
+
+    private noise2D(x: number, y: number, z: number): number {
+      // Simple coherent noise approximation
+      const sin1 = Math.sin(x * 0.5 + z) * 0.5;
+      const sin2 = Math.sin(y * 0.3 + z * 0.7) * 0.5;
+      const sin3 = Math.sin((x + y) * 0.4 + z * 1.3) * 0.3;
+      return (sin1 + sin2 + sin3) * Math.PI * 2;
+    }
+
+    private updateFlowField() {
+      const width = this.canvas.width / (window.devicePixelRatio || 1);
+      const height = this.canvas.height / (window.devicePixelRatio || 1);
+
+      for (let y = 0; y < this.rows; y++) {
+        for (let x = 0; x < this.cols; x++) {
+          const index = x + y * this.cols;
+          const angle = this.noise2D(x * 0.08, y * 0.08, this.zoff);
+          this.flowField[index] = angle;
+        }
+      }
+      this.zoff += 0.002; // Slow evolution
+    }
+
+    private animate = () => {
+      if (!this.isVisible) {
+        this.animationId = requestAnimationFrame(this.animate);
+        return;
+      }
+
+      const width = this.canvas.width / (window.devicePixelRatio || 1);
+      const height = this.canvas.height / (window.devicePixelRatio || 1);
+
+      // Subtle fade for trails
+      this.ctx.fillStyle = 'rgba(250, 249, 245, 0.08)';
+      this.ctx.fillRect(0, 0, width, height);
+
+      this.updateFlowField();
+
+      for (const particle of this.particles) {
+        // Get flow field angle at particle position
+        const x = Math.floor(particle.x / this.scale);
+        const y = Math.floor(particle.y / this.scale);
+        const index = x + y * this.cols;
+
+        if (index >= 0 && index < this.flowField.length) {
+          const angle = this.flowField[index];
+          particle.applyForce(angle);
+        }
+
+        particle.update();
+        particle.draw(this.ctx);
+        particle.edges(width, height);
+      }
+
+      this.animationId = requestAnimationFrame(this.animate);
+    }
+
+    destroy() {
+      if (this.animationId) {
+        cancelAnimationFrame(this.animationId);
+      }
+    }
+  }
+
+  class Particle {
+    x: number;
+    y: number;
+    vx = 0;
+    vy = 0;
+    private maxSpeed = 1.5;
+    private width: number;
+    private height: number;
+    private color: { r: number; g: number; b: number };
+    private alpha: number;
+
+    constructor(width: number, height: number, color: { r: number; g: number; b: number }) {
+      this.width = width;
+      this.height = height;
+      this.x = Math.random() * width;
+      this.y = Math.random() * height;
+      this.color = color;
+      this.alpha = 0.15 + Math.random() * 0.2; // Subtle opacity
+    }
+
+    applyForce(angle: number) {
+      const force = 0.3;
+      this.vx += Math.cos(angle) * force;
+      this.vy += Math.sin(angle) * force;
+    }
+
+    update() {
+      // Limit speed
+      const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+      if (speed > this.maxSpeed) {
+        this.vx = (this.vx / speed) * this.maxSpeed;
+        this.vy = (this.vy / speed) * this.maxSpeed;
+      }
+
+      this.x += this.vx;
+      this.y += this.vy;
+
+      // Friction
+      this.vx *= 0.98;
+      this.vy *= 0.98;
+    }
+
+    draw(ctx: CanvasRenderingContext2D) {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${this.alpha})`;
+      ctx.fill();
+    }
+
+    edges(width: number, height: number) {
+      // Wrap around edges (creates the "loop" effect)
+      if (this.x > width) {
+        this.x = 0;
+        this.y = Math.random() * height;
+      }
+      if (this.x < 0) {
+        this.x = width;
+        this.y = Math.random() * height;
+      }
+      if (this.y > height) {
+        this.y = 0;
+        this.x = Math.random() * width;
+      }
+      if (this.y < 0) {
+        this.y = height;
+        this.x = Math.random() * width;
+      }
+    }
+  }
+
+  // Initialize when DOM is ready
+  document.addEventListener('DOMContentLoaded', () => {
+    try {
+      new FlowField('flowfield-canvas');
+    } catch (e) {
+      console.warn('Flow field animation could not be initialized:', e);
+    }
+  });
+</script>

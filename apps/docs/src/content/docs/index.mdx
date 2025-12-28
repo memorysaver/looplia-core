@@ -16,16 +16,67 @@ hero:
 ---
 
 import { Card, CardGrid, Tabs, TabItem, Code, LinkCard } from '@astrojs/starlight/components';
+import HeroAnimation from '../../components/HeroAnimation.astro';
 
 <style>{`
-  /* Terminal Elegance Theme */
+  /* Light Clean Theme - Landing Page Styles */
   :root {
-    --looplia-amber: #F59E0B;
-    --looplia-amber-dim: #D97706;
-    --looplia-surface: #18181B;
-    --looplia-surface-elevated: #27272A;
-    --looplia-border: #3F3F46;
-    --looplia-text-muted: #A1A1AA;
+    --looplia-coral: #d97757;
+    --looplia-coral-light: #f5b8a6;
+    --looplia-coral-dark: #b85a3d;
+    --looplia-blue: #6a9bcc;
+    --looplia-green: #788c5d;
+    --looplia-bg: #faf9f5;
+    --looplia-surface: #ffffff;
+    --looplia-border: #e8e6dc;
+    --looplia-text: #141413;
+    --looplia-text-muted: #6b6a66;
+  }
+
+  /* Hero Section with Animation */
+  .hero {
+    position: relative;
+    padding-block: 5rem !important;
+    text-align: center !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 420px;
+    overflow: hidden;
+  }
+
+  .hero > * {
+    position: relative;
+    z-index: 1;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    text-align: center !important;
+  }
+
+  .hero h1 {
+    font-family: 'Poppins', sans-serif;
+    font-size: 3.5rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, var(--looplia-text) 0%, var(--looplia-coral-dark) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.5rem;
+  }
+
+  .hero .tagline {
+    font-family: 'Lora', Georgia, serif;
+    font-size: 1.25rem;
+    max-width: 48ch;
+    margin: 0 auto 2rem;
+    color: var(--looplia-text-muted);
+    line-height: 1.6;
+  }
+
+  .hero .actions {
+    justify-content: center !important;
+    gap: 1rem;
   }
 
   /* Splash page centering */
@@ -36,166 +87,123 @@ import { Card, CardGrid, Tabs, TabItem, Code, LinkCard } from '@astrojs/starligh
   }
 
   [data-page-type="splash"] .sl-markdown-content > * {
-    max-width: 65rem;
+    max-width: 68rem;
     margin-left: auto;
     margin-right: auto;
   }
 
-  /* Hero customization - center everything */
-  .hero {
-    padding-block: 4rem !important;
-    text-align: center !important;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  /* Section Headers */
+  .section-header {
+    text-align: center;
+    margin: 5rem 0 2.5rem;
   }
 
-  .hero > * {
-    margin-left: auto !important;
-    margin-right: auto !important;
-    text-align: center !important;
+  .section-header h2 {
+    font-family: 'Poppins', sans-serif;
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--looplia-text);
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.02em;
   }
 
-  .hero h1 {
-    text-align: center !important;
+  .section-header p {
+    font-family: 'Lora', Georgia, serif;
+    color: var(--looplia-text-muted);
+    font-size: 1.125rem;
+    max-width: 50ch;
+    margin: 0 auto;
+    line-height: 1.6;
   }
 
-  .hero .tagline {
-    text-align: center !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-  }
-
-  .hero .actions {
-    justify-content: center !important;
-  }
-
-  [data-theme="light"] .hero .tagline,
-  [data-theme="dark"] .hero .tagline {
-    font-size: 1.25rem;
-    max-width: 42ch;
-    margin-left: auto;
-    margin-right: auto;
-    color: var(--sl-color-gray-2);
-  }
-
-  /* Terminal code block styling */
-  .terminal-block {
-    background: linear-gradient(180deg, #1a1a1e 0%, #0f0f12 100%);
-    border: 1px solid #2a2a30;
-    border-radius: 12px;
+  /* Command Preview Card */
+  .command-preview {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--looplia-border);
+    border-radius: 16px;
     padding: 0;
-    margin: 2rem auto;
-    max-width: 640px;
+    margin: 3rem auto;
+    max-width: 600px;
     overflow: hidden;
-    box-shadow:
-      0 4px 6px -1px rgba(0, 0, 0, 0.3),
-      0 2px 4px -2px rgba(0, 0, 0, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 32px -8px rgba(20, 20, 19, 0.15),
+                0 4px 12px -4px rgba(20, 20, 19, 0.08);
   }
 
-  .terminal-header {
-    background: linear-gradient(180deg, #2a2a30 0%, #222228 100%);
+  .command-header {
+    background: linear-gradient(180deg, #f8f7f4 0%, #f0efeb 100%);
     padding: 12px 16px;
     display: flex;
     align-items: center;
     gap: 8px;
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid var(--looplia-border);
   }
 
-  .terminal-dot {
+  .command-dot {
     width: 12px;
     height: 12px;
     border-radius: 50%;
   }
 
-  .terminal-dot.red { background: #FF5F56; }
-  .terminal-dot.yellow { background: #FFBD2E; }
-  .terminal-dot.green { background: #27CA40; }
+  .command-dot.red { background: #FF6B6B; }
+  .command-dot.yellow { background: #FFE66D; }
+  .command-dot.green { background: #4ECDC4; }
 
-  .terminal-title {
+  .command-title {
     flex: 1;
     text-align: center;
-    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    font-family: 'Fira Code', monospace;
     font-size: 12px;
-    color: #71717A;
+    color: var(--looplia-text-muted);
     margin-right: 52px;
   }
 
-  .terminal-content {
-    padding: 20px 24px;
-    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  .command-content {
+    padding: 24px 28px;
+    font-family: 'Fira Code', monospace;
     font-size: 14px;
-    line-height: 1.7;
+    line-height: 1.8;
+    background: rgba(255, 255, 255, 0.98);
   }
 
-  .terminal-content .prompt {
-    color: #22D3EE;
+  .command-content .prompt {
+    color: var(--looplia-coral);
   }
 
-  .terminal-content .command {
-    color: #E4E4E7;
+  .command-content .cmd {
+    color: var(--looplia-text);
+    font-weight: 500;
   }
 
-  .terminal-content .flag {
-    color: #A78BFA;
+  .command-content .flag {
+    color: var(--looplia-blue);
   }
 
-  .terminal-content .arg {
-    color: #FCD34D;
+  .command-content .arg {
+    color: var(--looplia-green);
   }
 
-  .terminal-content .comment {
-    color: #52525B;
+  .command-content .comment {
+    color: var(--looplia-text-muted);
+    font-style: italic;
   }
 
-  /* Section headers */
-  .section-header {
-    text-align: center;
-    margin: 4rem 0 2rem;
-  }
-
-  .section-header h2 {
-    font-size: 1.75rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, #FAFAFA 0%, #A1A1AA 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .section-header p {
-    color: var(--sl-color-gray-3);
-    font-size: 1.1rem;
-    max-width: 50ch;
-    margin: 0 auto;
-  }
-
-  /* Feature cards enhancement */
-  .sl-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .sl-card:hover {
-    transform: translateY(-2px);
-  }
-
-  /* Workflow diagram */
+  /* Workflow Diagram */
   .workflow-diagram {
-    background: linear-gradient(135deg, #18181B 0%, #1F1F23 100%);
-    border: 1px solid #27272A;
-    border-radius: 12px;
-    padding: 2rem;
+    background: var(--looplia-surface);
+    border: 1px solid var(--looplia-border);
+    border-radius: 16px;
+    padding: 2.5rem;
     margin: 2rem 0;
     text-align: center;
-    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
-    font-size: 14px;
+    font-family: 'Fira Code', monospace;
+    font-size: 13px;
     overflow-x: auto;
+    box-shadow: 0 2px 12px -4px rgba(20, 20, 19, 0.06);
   }
 
   .workflow-diagram pre {
-    color: #E4E4E7;
+    color: var(--looplia-text);
     margin: 0;
     white-space: pre;
     background: transparent;
@@ -205,113 +213,145 @@ import { Card, CardGrid, Tabs, TabItem, Code, LinkCard } from '@astrojs/starligh
   }
 
   .workflow-diagram .highlight {
-    color: #F59E0B;
-  }
-
-  .workflow-diagram .dim {
-    color: #52525B;
-  }
-
-  .workflow-diagram .accent {
-    color: #22D3EE;
-  }
-
-  /* Quick links section */
-  .quick-links {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1rem;
-    margin: 2rem 0;
-  }
-
-  /* Version badge */
-  .version-badge {
-    display: inline-block;
-    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
-    color: #000;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 4px 10px;
-    border-radius: 9999px;
-    margin-left: 8px;
-    vertical-align: middle;
-    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
-  }
-
-  /* Tagline emphasis */
-  .tagline-emphasis {
-    color: #F59E0B;
+    color: var(--looplia-coral);
     font-weight: 500;
   }
 
-  /* Light theme adjustments */
-  [data-theme="light"] .terminal-block {
-    background: linear-gradient(180deg, #FAFAFA 0%, #F4F4F5 100%);
-    border-color: #E4E4E7;
-    box-shadow:
-      0 4px 6px -1px rgba(0, 0, 0, 0.1),
-      0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  .workflow-diagram .accent {
+    color: var(--looplia-blue);
   }
 
-  [data-theme="light"] .terminal-header {
-    background: linear-gradient(180deg, #E4E4E7 0%, #D4D4D8 100%);
-    border-color: #D4D4D8;
+  /* Version Badge */
+  .version-badge {
+    display: inline-flex;
+    align-items: center;
+    background: linear-gradient(135deg, var(--looplia-coral) 0%, var(--looplia-coral-dark) 100%);
+    color: white;
+    font-family: 'Fira Code', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-left: 8px;
+    box-shadow: 0 2px 8px -2px rgba(217, 119, 87, 0.4);
   }
 
-  [data-theme="light"] .terminal-content .command {
-    color: #18181B;
+  /* Footer */
+  .landing-footer {
+    text-align: center;
+    margin-top: 4rem;
+    padding: 2rem 0;
+    border-top: 1px solid var(--looplia-border);
   }
 
-  [data-theme="light"] .terminal-content .prompt {
-    color: #0891B2;
+  .landing-footer p {
+    font-family: 'Lora', Georgia, serif;
+    font-size: 0.95rem;
+    color: var(--looplia-text-muted);
   }
 
-  [data-theme="light"] .terminal-content .flag {
-    color: #7C3AED;
+  .landing-footer a {
+    color: var(--looplia-coral);
+    text-decoration: none;
+    font-weight: 500;
   }
 
-  [data-theme="light"] .terminal-content .arg {
-    color: #D97706;
+  .landing-footer a:hover {
+    text-decoration: underline;
   }
 
-  [data-theme="light"] .workflow-diagram {
-    background: linear-gradient(135deg, #FAFAFA 0%, #F4F4F5 100%);
-    border-color: #E4E4E7;
+  /* Content wrapper */
+  .landing-content {
+    max-width: 68rem;
+    margin: 0 auto;
+    padding: 0 1.5rem;
   }
 
-  [data-theme="light"] .workflow-diagram pre {
-    color: #18181B;
+  /* Dark theme adjustments */
+  [data-theme="dark"] .command-preview {
+    background: #1a1a1d;
+    border-color: #2a2a2e;
   }
 
-  [data-theme="light"] .section-header h2 {
-    background: linear-gradient(135deg, #18181B 0%, #52525B 100%);
+  [data-theme="dark"] .command-header {
+    background: linear-gradient(180deg, #222225 0%, #1e1e21 100%);
+    border-color: #2a2a2e;
+  }
+
+  [data-theme="dark"] .command-content {
+    background: #1a1a1d;
+  }
+
+  [data-theme="dark"] .command-content .cmd {
+    color: #e4e4e7;
+  }
+
+  [data-theme="dark"] .workflow-diagram {
+    background: #1a1a1d;
+    border-color: #2a2a2e;
+  }
+
+  [data-theme="dark"] .workflow-diagram pre {
+    color: #e4e4e7;
+  }
+
+  [data-theme="dark"] .section-header h2 {
+    color: #e4e4e7;
+  }
+
+  [data-theme="dark"] .hero h1 {
+    background: linear-gradient(135deg, #fafafa 0%, var(--looplia-coral-light) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
-  /* Main content wrapper for centering */
-  .landing-content {
-    max-width: 65rem;
-    margin: 0 auto;
-    padding: 0 1.5rem;
+  [data-theme="dark"] .landing-footer {
+    border-color: #2a2a2e;
+  }
+
+  /* Mobile refinements */
+  @media (max-width: 768px) {
+    .hero h1 {
+      font-size: 2.5rem;
+    }
+
+    .hero .tagline {
+      font-size: 1.1rem;
+      padding: 0 1rem;
+    }
+
+    .section-header h2 {
+      font-size: 1.75rem;
+    }
+
+    .command-preview {
+      margin: 2rem 1rem;
+    }
+
+    .workflow-diagram {
+      padding: 1.5rem;
+      font-size: 11px;
+    }
   }
 `}</style>
 
+<HeroAnimation />
+
 <div class="landing-content">
 
-<div class="terminal-block">
-  <div class="terminal-header">
-    <span class="terminal-dot red"></span>
-    <span class="terminal-dot yellow"></span>
-    <span class="terminal-dot green"></span>
-    <span class="terminal-title">looplia</span>
+<div class="command-preview">
+  <div class="command-header">
+    <span class="command-dot red"></span>
+    <span class="command-dot yellow"></span>
+    <span class="command-dot green"></span>
+    <span class="command-title">looplia</span>
   </div>
-  <div class="terminal-content">
-    <div><span class="prompt">$</span> <span class="command">bunx looplia init</span></div>
+  <div class="command-content">
+    <div><span class="prompt">$</span> <span class="cmd">bunx looplia init</span></div>
     <div><span class="comment"># Initialize workspace with AI skills</span></div>
-    <div style="margin-top: 8px;"><span class="prompt">$</span> <span class="command">bunx looplia run</span> <span class="arg">writing-kit</span> <span class="flag">--file</span> <span class="arg">article.md</span></div>
-    <div><span class="comment"># Transform your content into a structured writing kit</span></div>
+    <div style="margin-top: 8px;"><span class="prompt">$</span> <span class="cmd">bunx looplia run</span> <span class="arg">writing-kit</span> <span class="flag">--file</span> <span class="arg">article.md</span></div>
+    <div><span class="comment"># Transform content into a structured writing kit</span></div>
   </div>
 </div>
 
@@ -340,15 +380,15 @@ import { Card, CardGrid, Tabs, TabItem, Code, LinkCard } from '@astrojs/starligh
   <p>From content to structured output in three steps.</p>
 </div>
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  media-reviewer │───▶│  idea-synthesis │───▶│  writing-kit    │
+<div class="workflow-diagram">
+<pre>{`┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  `}<span class="highlight">media-reviewer</span>{` │───▶│  `}<span class="accent">idea-synthesis</span>{` │───▶│  `}<span class="highlight">writing-kit</span>{`    │
 │                 │    │                 │    │  -assembler     │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
         │                      │                      │
         ▼                      ▼                      ▼
-   summary.json          ideas.json          writing-kit.json
-```
+   summary.json          ideas.json          writing-kit.json`}</pre>
+</div>
 
 ```yaml title="workflows/writing-kit.md"
 ---
@@ -438,11 +478,9 @@ looplia run writing-kit --file article.md
   />
 </CardGrid>
 
----
-
-<div style="text-align: center; margin-top: 3rem; color: var(--sl-color-gray-3);">
-  <p style="font-size: 0.9rem;">
-    Built with Claude Agent SDK · <a href="https://github.com/memorysaver/looplia-core" style="color: var(--sl-color-text-accent);">Open Source</a> · <span class="version-badge">v0.6.6</span>
+<div class="landing-footer">
+  <p>
+    Built with Claude Agent SDK · <a href="https://github.com/memorysaver/looplia-core">Open Source</a> <span class="version-badge">v0.6.6</span>
   </p>
 </div>
 
