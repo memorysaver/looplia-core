@@ -3,7 +3,7 @@ title: Looplia
 description: Skills-first agentic workflow CLI. Compose AI skills and workflows for any task.
 template: splash
 hero:
-  tagline: Skills-first agentic workflow CLI — compose AI skills and workflows for any task. Powered by Claude Agent SDK.
+  tagline: Skills-first workflow automation for AI agents. Powered by Claude Agent SDK.
   actions:
     - text: Get Started
       link: /getting-started/installation/
@@ -58,6 +58,22 @@ import HeroAnimation from '../../components/HeroAnimation.astro';
     z-index: 0;
   }
 
+  /* CRT scan line overlay for retro-futurism effect */
+  .hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.02) 2px,
+      rgba(0, 0, 0, 0.02) 4px
+    );
+    pointer-events: none;
+    z-index: 3;
+  }
+
   .hero > * {
     position: relative;
     z-index: 1;
@@ -81,12 +97,13 @@ import HeroAnimation from '../../components/HeroAnimation.astro';
 
   .hero .tagline {
     font-family: 'Outfit', sans-serif;
-    font-size: 1.25rem;
+    font-size: 1.15rem;
     font-weight: 400;
-    max-width: 48ch;
+    max-width: 52ch;
     margin: 0 auto 2rem;
     color: var(--looplia-text-muted);
-    line-height: 1.6;
+    line-height: 1.7;
+    letter-spacing: 0.01em;
     text-shadow: 0 1px 8px rgba(250, 249, 245, 0.9);
   }
 
@@ -324,6 +341,16 @@ import HeroAnimation from '../../components/HeroAnimation.astro';
       rgba(15, 15, 16, 0.85) 0%,
       rgba(15, 15, 16, 0.4) 50%,
       rgba(15, 15, 16, 0) 80%);
+  }
+
+  [data-theme="dark"] .hero::after {
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.015) 2px,
+      rgba(255, 255, 255, 0.015) 4px
+    );
   }
 
   [data-theme="dark"] .hero h1 {

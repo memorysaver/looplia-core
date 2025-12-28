@@ -1,12 +1,12 @@
 ---
 /**
- * HeroAnimation - Flow Field Animation for Looplia Landing Page
+ * HeroAnimation - Retro-Futurism "Neon Circuitry" Animation
  *
- * Algorithmic Philosophy: "Perpetual Flow"
- * - Loops: Particles cycling through curved paths
- * - Iteration: Continuous movement, never static
- * - AI Agents: Multiple particle streams working in harmony
- * - Workflows: Visible flow lines connecting inputs to outputs
+ * Algorithmic Philosophy: "Neon Circuitry"
+ * - Perspective grid evoking 80s digital art
+ * - Orbital particle paths reinforcing "loop" brand identity
+ * - Neon glow effects with brand colors
+ * - CRT-inspired aesthetic with modern performance
  */
 ---
 
@@ -40,28 +40,27 @@
 </style>
 
 <script>
-  // Looplia Flow Field Animation
-  // Represents: loops, iteration, AI agents, and workflows
+  // Retro-Futurism "Neon Circuitry" Animation
+  // Combines perspective grid, orbital particles, and neon glow
 
-  class FlowField {
+  class NeonCircuitry {
     private canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
-    private particles: Particle[] = [];
-    private flowField: number[] = [];
-    private cols = 0;
-    private rows = 0;
-    private scale = 20;
-    private zoff = 0;
+    private particles: OrbitalParticle[] = [];
+    private gridLines: GridLine[] = [];
+    private pulseWaves: PulseWave[] = [];
     private animationId: number | null = null;
     private isVisible = true;
+    private time = 0;
+    private isDark = false;
 
-    // Looplia brand colors
-    private colors = [
-      { r: 217, g: 119, b: 87 },   // coral #d97757
-      { r: 245, g: 184, b: 166 },  // coral-light #f5b8a6
-      { r: 184, g: 90, b: 61 },    // coral-dark #b85a3d
-      { r: 106, g: 155, b: 204 },  // blue #6a9bcc
-    ];
+    // Looplia brand colors with glow variants
+    private colors = {
+      coral: { r: 217, g: 119, b: 87, glow: 'rgba(217, 119, 87, 0.6)' },
+      coralLight: { r: 245, g: 184, b: 166, glow: 'rgba(245, 184, 166, 0.5)' },
+      coralDark: { r: 184, g: 90, b: 61, glow: 'rgba(184, 90, 61, 0.6)' },
+      blue: { r: 106, g: 155, b: 204, glow: 'rgba(106, 155, 204, 0.5)' },
+    };
 
     constructor(canvasId: string) {
       const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
@@ -72,10 +71,15 @@
       if (!ctx) throw new Error('Could not get 2d context');
       this.ctx = ctx;
 
+      this.checkDarkMode();
       this.resize();
       this.init();
       this.setupListeners();
       this.animate();
+    }
+
+    private checkDarkMode() {
+      this.isDark = document.documentElement.dataset.theme === 'dark';
     }
 
     private resize() {
@@ -91,26 +95,55 @@
       this.canvas.style.height = `${rect.height}px`;
 
       this.ctx.scale(dpr, dpr);
-
-      this.cols = Math.ceil(rect.width / this.scale);
-      this.rows = Math.ceil(rect.height / this.scale);
-      this.flowField = new Array(this.cols * this.rows);
     }
 
     private init() {
+      const width = this.canvas.width / (window.devicePixelRatio || 1);
+      const height = this.canvas.height / (window.devicePixelRatio || 1);
+      const centerX = width / 2;
+      const centerY = height * 0.6; // Vanishing point below center
+
+      // Initialize orbital particles
       this.particles = [];
       const particleCount = Math.min(
-        Math.floor((this.canvas.width * this.canvas.height) / 8000),
-        800
+        Math.floor((width * height) / 12000),
+        120
       );
 
+      const colorKeys = Object.keys(this.colors) as (keyof typeof this.colors)[];
+
       for (let i = 0; i < particleCount; i++) {
-        this.particles.push(new Particle(
-          this.canvas.width / (window.devicePixelRatio || 1),
-          this.canvas.height / (window.devicePixelRatio || 1),
-          this.colors[Math.floor(Math.random() * this.colors.length)]
+        const colorKey = colorKeys[Math.floor(Math.random() * colorKeys.length)];
+        const color = this.colors[colorKey];
+        this.particles.push(new OrbitalParticle(
+          centerX,
+          centerY,
+          width,
+          height,
+          color
         ));
       }
+
+      // Initialize perspective grid lines
+      this.gridLines = [];
+      const gridCount = 12;
+
+      // Horizontal lines (receding into distance)
+      for (let i = 0; i < gridCount; i++) {
+        const t = i / (gridCount - 1);
+        const y = centerY + (height - centerY) * Math.pow(t, 1.5);
+        this.gridLines.push(new GridLine(0, y, width, y, 'horizontal', t));
+      }
+
+      // Vertical lines (converging to vanishing point)
+      for (let i = 0; i < gridCount; i++) {
+        const t = (i - gridCount / 2) / (gridCount / 2);
+        const bottomX = centerX + t * width * 0.8;
+        this.gridLines.push(new GridLine(centerX, centerY, bottomX, height, 'vertical', Math.abs(t)));
+      }
+
+      // Initialize pulse waves
+      this.pulseWaves = [];
     }
 
     private setupListeners() {
@@ -123,36 +156,36 @@
         }, 200);
       });
 
+      // Watch for theme changes
+      const observer = new MutationObserver(() => {
+        this.checkDarkMode();
+      });
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme']
+      });
+
       // Pause when not visible
-      const observer = new IntersectionObserver((entries) => {
+      const visibilityObserver = new IntersectionObserver((entries) => {
         this.isVisible = entries[0].isIntersecting;
       }, { threshold: 0.1 });
 
       if (this.canvas.parentElement) {
-        observer.observe(this.canvas.parentElement);
+        visibilityObserver.observe(this.canvas.parentElement);
       }
     }
 
-    private noise2D(x: number, y: number, z: number): number {
-      // Simple coherent noise approximation
-      const sin1 = Math.sin(x * 0.5 + z) * 0.5;
-      const sin2 = Math.sin(y * 0.3 + z * 0.7) * 0.5;
-      const sin3 = Math.sin((x + y) * 0.4 + z * 1.3) * 0.3;
-      return (sin1 + sin2 + sin3) * Math.PI * 2;
-    }
-
-    private updateFlowField() {
+    private spawnPulseWave() {
       const width = this.canvas.width / (window.devicePixelRatio || 1);
       const height = this.canvas.height / (window.devicePixelRatio || 1);
 
-      for (let y = 0; y < this.rows; y++) {
-        for (let x = 0; x < this.cols; x++) {
-          const index = x + y * this.cols;
-          const angle = this.noise2D(x * 0.08, y * 0.08, this.zoff);
-          this.flowField[index] = angle;
-        }
+      if (Math.random() < 0.003 && this.pulseWaves.length < 3) {
+        this.pulseWaves.push(new PulseWave(
+          width / 2,
+          height * 0.6,
+          this.colors.coral
+        ));
       }
-      this.zoff += 0.002; // Slow evolution
     }
 
     private animate = () => {
@@ -164,30 +197,55 @@
       const width = this.canvas.width / (window.devicePixelRatio || 1);
       const height = this.canvas.height / (window.devicePixelRatio || 1);
 
-      // Subtle fade for trails - check for dark mode
-      const isDark = document.documentElement.dataset.theme === 'dark';
-      this.ctx.fillStyle = isDark ? 'rgba(15, 15, 16, 0.08)' : 'rgba(250, 249, 245, 0.08)';
+      // Clear with theme-appropriate background
+      const bgColor = this.isDark ? 'rgba(15, 15, 16, 0.15)' : 'rgba(250, 249, 245, 0.12)';
+      this.ctx.fillStyle = bgColor;
       this.ctx.fillRect(0, 0, width, height);
 
-      this.updateFlowField();
+      this.time += 0.016;
 
+      // Draw perspective grid
+      this.drawGrid(width, height);
+
+      // Update and draw pulse waves
+      this.spawnPulseWave();
+      this.pulseWaves = this.pulseWaves.filter(wave => {
+        wave.update();
+        wave.draw(this.ctx, this.isDark);
+        return wave.isAlive();
+      });
+
+      // Update and draw particles
       for (const particle of this.particles) {
-        // Get flow field angle at particle position
-        const x = Math.floor(particle.x / this.scale);
-        const y = Math.floor(particle.y / this.scale);
-        const index = x + y * this.cols;
-
-        if (index >= 0 && index < this.flowField.length) {
-          const angle = this.flowField[index];
-          particle.applyForce(angle);
-        }
-
-        particle.update();
-        particle.draw(this.ctx);
-        particle.edges(width, height);
+        particle.update(this.time);
+        particle.draw(this.ctx, this.isDark);
       }
 
       this.animationId = requestAnimationFrame(this.animate);
+    }
+
+    private drawGrid(width: number, height: number) {
+      const gridAlpha = this.isDark ? 0.08 : 0.05;
+      const gridColor = this.isDark
+        ? `rgba(217, 119, 87, ${gridAlpha})`
+        : `rgba(184, 90, 61, ${gridAlpha})`;
+
+      this.ctx.strokeStyle = gridColor;
+      this.ctx.lineWidth = 1;
+
+      for (const line of this.gridLines) {
+        // Animate grid lines subtly
+        const pulseAlpha = gridAlpha * (0.8 + 0.2 * Math.sin(this.time * 0.5 + line.offset * 3));
+        const animatedColor = this.isDark
+          ? `rgba(217, 119, 87, ${pulseAlpha})`
+          : `rgba(184, 90, 61, ${pulseAlpha})`;
+
+        this.ctx.strokeStyle = animatedColor;
+        this.ctx.beginPath();
+        this.ctx.moveTo(line.x1, line.y1);
+        this.ctx.lineTo(line.x2, line.y2);
+        this.ctx.stroke();
+      }
     }
 
     destroy() {
@@ -197,82 +255,165 @@
     }
   }
 
-  class Particle {
-    x: number;
-    y: number;
-    vx = 0;
-    vy = 0;
-    private maxSpeed = 1.5;
-    private width: number;
-    private height: number;
-    private color: { r: number; g: number; b: number };
-    private alpha: number;
+  class OrbitalParticle {
+    private centerX: number;
+    private centerY: number;
+    private orbitRadiusX: number;
+    private orbitRadiusY: number;
+    private angle: number;
+    private speed: number;
+    private size: number;
+    private color: { r: number; g: number; b: number; glow: string };
+    private trail: { x: number; y: number }[] = [];
+    private maxTrailLength: number;
+    private glowSize: number;
+    private depth: number; // For parallax effect
 
-    constructor(width: number, height: number, color: { r: number; g: number; b: number }) {
-      this.width = width;
-      this.height = height;
-      this.x = Math.random() * width;
-      this.y = Math.random() * height;
+    constructor(
+      centerX: number,
+      centerY: number,
+      width: number,
+      height: number,
+      color: { r: number; g: number; b: number; glow: string }
+    ) {
+      this.centerX = centerX + (Math.random() - 0.5) * width * 0.3;
+      this.centerY = centerY + (Math.random() - 0.5) * height * 0.2;
+      this.orbitRadiusX = 30 + Math.random() * width * 0.35;
+      this.orbitRadiusY = 20 + Math.random() * height * 0.25;
+      this.angle = Math.random() * Math.PI * 2;
+      this.speed = 0.003 + Math.random() * 0.008;
+      this.depth = 0.3 + Math.random() * 0.7;
+      this.size = 1 + this.depth * 2;
       this.color = color;
-      this.alpha = 0.15 + Math.random() * 0.2; // Subtle opacity
+      this.maxTrailLength = Math.floor(8 + this.depth * 12);
+      this.glowSize = 4 + this.depth * 8;
     }
 
-    applyForce(angle: number) {
-      const force = 0.3;
-      this.vx += Math.cos(angle) * force;
-      this.vy += Math.sin(angle) * force;
+    update(time: number) {
+      // Orbital motion with slight wobble
+      const wobble = Math.sin(time * 2 + this.angle) * 0.1;
+      this.angle += this.speed * (1 + wobble);
+
+      const x = this.centerX + Math.cos(this.angle) * this.orbitRadiusX;
+      const y = this.centerY + Math.sin(this.angle) * this.orbitRadiusY * 0.6;
+
+      // Add to trail
+      this.trail.unshift({ x, y });
+      if (this.trail.length > this.maxTrailLength) {
+        this.trail.pop();
+      }
+    }
+
+    draw(ctx: CanvasRenderingContext2D, isDark: boolean) {
+      if (this.trail.length < 2) return;
+
+      const { r, g, b } = this.color;
+      const baseAlpha = isDark ? 0.5 : 0.35;
+
+      // Draw trail with gradient
+      ctx.beginPath();
+      ctx.moveTo(this.trail[0].x, this.trail[0].y);
+
+      for (let i = 1; i < this.trail.length; i++) {
+        ctx.lineTo(this.trail[i].x, this.trail[i].y);
+      }
+
+      const trailAlpha = baseAlpha * 0.3 * this.depth;
+      ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${trailAlpha})`;
+      ctx.lineWidth = this.size * 0.5;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // Draw particle with glow
+      const pos = this.trail[0];
+
+      // Glow effect
+      ctx.save();
+      ctx.shadowColor = this.color.glow;
+      ctx.shadowBlur = this.glowSize;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, this.size, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${baseAlpha * this.depth})`;
+      ctx.fill();
+      ctx.restore();
+
+      // Core bright point
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, this.size * 0.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${baseAlpha * 0.8 * this.depth})`;
+      ctx.fill();
+    }
+  }
+
+  class GridLine {
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    type: 'horizontal' | 'vertical';
+    offset: number;
+
+    constructor(
+      x1: number,
+      y1: number,
+      x2: number,
+      y2: number,
+      type: 'horizontal' | 'vertical',
+      offset: number
+    ) {
+      this.x1 = x1;
+      this.y1 = y1;
+      this.x2 = x2;
+      this.y2 = y2;
+      this.type = type;
+      this.offset = offset;
+    }
+  }
+
+  class PulseWave {
+    private x: number;
+    private y: number;
+    private radius: number;
+    private maxRadius: number;
+    private alpha: number;
+    private color: { r: number; g: number; b: number };
+
+    constructor(x: number, y: number, color: { r: number; g: number; b: number }) {
+      this.x = x;
+      this.y = y;
+      this.radius = 0;
+      this.maxRadius = 400;
+      this.alpha = 0.3;
+      this.color = color;
     }
 
     update() {
-      // Limit speed
-      const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-      if (speed > this.maxSpeed) {
-        this.vx = (this.vx / speed) * this.maxSpeed;
-        this.vy = (this.vy / speed) * this.maxSpeed;
-      }
-
-      this.x += this.vx;
-      this.y += this.vy;
-
-      // Friction
-      this.vx *= 0.98;
-      this.vy *= 0.98;
+      this.radius += 2;
+      this.alpha = 0.3 * (1 - this.radius / this.maxRadius);
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
+    draw(ctx: CanvasRenderingContext2D, isDark: boolean) {
+      const { r, g, b } = this.color;
+      const displayAlpha = this.alpha * (isDark ? 0.6 : 0.4);
+
       ctx.beginPath();
-      ctx.arc(this.x, this.y, 1.5, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${this.alpha})`;
-      ctx.fill();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${displayAlpha})`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
     }
 
-    edges(width: number, height: number) {
-      // Wrap around edges (creates the "loop" effect)
-      if (this.x > width) {
-        this.x = 0;
-        this.y = Math.random() * height;
-      }
-      if (this.x < 0) {
-        this.x = width;
-        this.y = Math.random() * height;
-      }
-      if (this.y > height) {
-        this.y = 0;
-        this.x = Math.random() * width;
-      }
-      if (this.y < 0) {
-        this.y = height;
-        this.x = Math.random() * width;
-      }
+    isAlive(): boolean {
+      return this.radius < this.maxRadius;
     }
   }
 
   // Initialize when DOM is ready
   document.addEventListener('DOMContentLoaded', () => {
     try {
-      new FlowField('flowfield-canvas');
+      new NeonCircuitry('flowfield-canvas');
     } catch (e) {
-      console.warn('Flow field animation could not be initialized:', e);
+      console.warn('Neon Circuitry animation could not be initialized:', e);
     }
   });
 </script>
