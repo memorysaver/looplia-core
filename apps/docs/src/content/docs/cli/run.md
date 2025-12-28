@@ -1,0 +1,164 @@
+---
+title: looplia run
+description: Execute a workflow on content.
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+The `run` command executes a workflow from `~/.looplia/workflows/` on provided content.
+
+## Usage
+
+```bash
+looplia run <workflow-id> [options]
+```
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `workflow-id` | Name of the workflow to run (e.g., `writing-kit`) |
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `--file <path>` | Input file to process (creates new sandbox) |
+| `--sandbox-id <id>` | Resume existing sandbox |
+| `--mock` | Mock mode (no API calls, for testing) |
+| `--no-streaming` | Batch mode without streaming TUI |
+
+## Examples
+
+### Start a New Run
+
+```bash
+# Run writing-kit on an article
+looplia run writing-kit --file ./my-article.md
+
+# Run on content in another directory
+looplia run writing-kit --file ~/Documents/blog-post.md
+```
+
+### Resume an Existing Run
+
+```bash
+# List available sandboxes
+ls ~/.looplia/sandbox/
+
+# Resume from a specific sandbox
+looplia run writing-kit --sandbox-id my-article-2025-12-28-x7km
+```
+
+<Aside type="tip">
+Use `--sandbox-id` to resume interrupted workflows. Looplia skips completed steps and continues from where it left off.
+</Aside>
+
+### Testing and Development
+
+```bash
+# Mock mode (no API calls)
+looplia run writing-kit --file test.md --mock
+
+# Batch mode (no streaming TUI)
+looplia run writing-kit --file test.md --no-streaming
+```
+
+## How It Works
+
+1. **Input Processing**
+   - With `--file`: Creates a new sandbox and copies your file to `inputs/content.md`
+   - With `--sandbox-id`: Loads existing sandbox state
+
+2. **Workflow Loading**
+   - Reads workflow definition from `~/.looplia/workflows/{workflow-id}.md`
+   - Parses YAML frontmatter for steps configuration
+
+3. **Step Execution**
+   - Executes each step using the `skill-executor`
+   - Respects `needs` dependencies between steps
+   - Validates outputs against step requirements
+
+4. **Output Generation**
+   - Writes artifacts to `sandbox/{id}/outputs/`
+   - Updates `validation.json` with completion status
+
+## Streaming TUI
+
+By default, `run` displays a streaming Terminal UI showing:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Looplia · writing-kit                              │
+│  Sandbox: my-article-2025-12-28-x7km                │
+└─────────────────────────────────────────────────────┘
+
+▶ Step 1/3: media-reviewer
+  Mission: Deep analysis of content to extract key themes
+  ├─ Reading input file...
+  ├─ Analyzing content structure
+  ├─ Extracting key themes: AI healthcare, diagnostics
+  ├─ Found 5 key points
+  └─ ✓ Output: outputs/summary.json
+
+▶ Step 2/3: idea-synthesis
+  Mission: Generate creative hooks, angles, and questions
+```
+
+Use `--no-streaming` for simpler output suitable for CI/CD or logging.
+
+## Sandbox Structure
+
+Each run creates an isolated sandbox:
+
+```
+~/.looplia/sandbox/my-article-2025-12-28-x7km/
+├── inputs/
+│   └── content.md        # Your input (copied from --file)
+├── outputs/
+│   ├── summary.json      # Step outputs
+│   ├── ideas.json
+│   └── writing-kit.json  # Final output
+├── logs/
+│   └── session.log       # Execution logs
+└── validation.json       # Step completion tracking
+```
+
+## Validation State
+
+The `validation.json` file tracks which steps are complete:
+
+```json
+{
+  "workflow": "writing-kit",
+  "version": "1.1.0",
+  "sandboxId": "my-article-2025-12-28-x7km",
+  "steps": {
+    "summary": { "output": "outputs/summary.json", "validated": true },
+    "ideas": { "output": "outputs/ideas.json", "validated": true },
+    "writing-kit": { "output": "outputs/writing-kit.json", "validated": false }
+  }
+}
+```
+
+## Error Handling
+
+If a step fails:
+
+1. The error is logged to `logs/session.log`
+2. `validation.json` remains unchanged for that step
+3. You can fix the issue and resume with `--sandbox-id`
+
+```bash
+# View error logs
+cat ~/.looplia/sandbox/my-article-2025-12-28-x7km/logs/session.log
+
+# Resume after fixing
+looplia run writing-kit --sandbox-id my-article-2025-12-28-x7km
+```
+
+## See Also
+
+- [Quick Start](/getting-started/quick-start/) — Run your first workflow
+- [Understanding Workflows](/workflows/understanding-workflows/) — Workflow schema reference
+- [build](/cli/build/) — Create custom workflows

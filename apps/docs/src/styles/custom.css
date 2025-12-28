@@ -1,0 +1,125 @@
+/* Looplia Documentation Custom Styles */
+
+/* Brand Colors */
+:root {
+  --sl-color-accent-low: #451a03;
+  --sl-color-accent: #f59e0b;
+  --sl-color-accent-high: #fef3c7;
+
+  --sl-color-white: #ffffff;
+  --sl-color-gray-1: #fafafa;
+  --sl-color-gray-2: #e4e4e7;
+  --sl-color-gray-3: #a1a1aa;
+  --sl-color-gray-4: #71717a;
+  --sl-color-gray-5: #3f3f46;
+  --sl-color-gray-6: #27272a;
+  --sl-color-black: #18181b;
+}
+
+[data-theme="dark"] {
+  --sl-color-accent-low: #451a03;
+  --sl-color-accent: #f59e0b;
+  --sl-color-accent-high: #fef3c7;
+}
+
+/* Typography refinements */
+:root {
+  --sl-font-system-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* Code block styling */
+.expressive-code pre {
+  border-radius: 8px;
+}
+
+/* Card hover effects */
+.sl-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sl-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.2);
+}
+
+/* Link card refinements */
+.sl-link-card {
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.sl-link-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--sl-color-accent);
+}
+
+/* Sidebar refinements */
+.sidebar-content {
+  padding-top: 1rem;
+}
+
+/* Content area */
+.sl-markdown-content {
+  max-width: 75ch;
+}
+
+/* Splash page (landing page) centering */
+[data-has-hero] main {
+  text-align: center;
+}
+
+[data-has-hero] .sl-markdown-content {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  text-align: left;
+}
+
+[data-has-hero] .sl-markdown-content > .sl-container {
+  max-width: 65rem;
+  margin: 0 auto;
+}
+
+/* Center CardGrid on splash pages */
+[data-has-hero] .sl-link-card-grid,
+[data-has-hero] .card-grid {
+  max-width: 65rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Code inline styling */
+.sl-markdown-content :not(pre) > code {
+  background: var(--sl-color-gray-6);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+[data-theme="light"] .sl-markdown-content :not(pre) > code {
+  background: var(--sl-color-gray-2);
+}
+
+/* Headings */
+.sl-markdown-content h1,
+.sl-markdown-content h2,
+.sl-markdown-content h3 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* Tables */
+.sl-markdown-content table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Aside/callout refinements */
+.starlight-aside {
+  border-radius: 8px;
+  border-left-width: 4px;
+}
+
+/* Tabs refinements */
+starlight-tabs {
+  margin: 1.5rem 0;
+}

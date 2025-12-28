@@ -1,0 +1,183 @@
+---
+title: Core Concepts
+description: Understand the key concepts behind Looplia's skills-first architecture.
+---
+
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
+
+Looplia is built on a **skills-first architecture** where AI capabilities are composed declaratively. This page explains the core concepts you'll encounter.
+
+## Skills
+
+A **skill** is a reusable AI capability that performs a specific task. Skills are the building blocks of workflows.
+
+```yaml
+skill: media-reviewer
+mission: |
+  Analyze the content to extract key themes, structure, and quotes.
+  Focus on actionable insights for content creators.
+```
+
+**Key characteristics:**
+- Skills are **declarative** — you describe *what* to do, not *how*
+- Skills receive **missions** in natural language
+- Claude determines the best approach to complete the mission
+- Skills produce **structured JSON outputs**
+
+### Built-in Skills
+
+<CardGrid>
+  <Card title="media-reviewer" icon="magnifier">
+    Deep content analysis. Extracts themes, quotes, key points, and structure.
+  </Card>
+  <Card title="idea-synthesis" icon="star">
+    Generates creative hooks, angles, questions, and writing prompts.
+  </Card>
+  <Card title="writing-kit-assembler" icon="document">
+    Combines analysis and ideas into a structured writing kit with outline.
+  </Card>
+  <Card title="workflow-executor" icon="rocket">
+    Orchestrates workflow execution, managing step dependencies.
+  </Card>
+</CardGrid>
+
+## Workflows
+
+A **workflow** is a sequence of skill executions that transform input into output. Workflows are defined as Markdown files with YAML frontmatter.
+
+```yaml
+---
+name: writing-kit
+version: 1.1.0
+description: Transform content into structured writing kit
+
+steps:
+  - id: summary
+    skill: media-reviewer
+    mission: Deep analysis of content
+    input: ${{ sandbox }}/inputs/content.md
+    output: ${{ sandbox }}/outputs/summary.json
+
+  - id: ideas
+    skill: idea-synthesis
+    mission: Generate creative hooks
+    needs: [summary]
+    input: ${{ steps.summary.output }}
+    output: ${{ sandbox }}/outputs/ideas.json
+---
+```
+
+**Key features:**
+- **Steps** execute in order, respecting `needs` dependencies
+- **Variable substitution** with `${{ }}` syntax
+- **Validation** ensures outputs meet requirements before proceeding
+- **Human-readable** Markdown format, version control friendly
+
+## Sandboxes
+
+A **sandbox** is an isolated execution environment for a single workflow run. Each `--file` creates a new sandbox.
+
+```
+~/.looplia/sandbox/my-article-2025-12-28-x7km/
+├── inputs/
+│   └── content.md        # Your input file (copied)
+├── outputs/
+│   ├── summary.json      # Step 1 output
+│   ├── ideas.json        # Step 2 output
+│   └── writing-kit.json  # Final output
+├── logs/
+│   └── session.log       # Execution logs
+└── validation.json       # Step completion tracking
+```
+
+**Benefits:**
+- **Isolation** — Each run is self-contained
+- **Resumable** — Use `--sandbox-id` to continue interrupted runs
+- **Auditable** — Full logs preserved for debugging
+- **Portable** — Share sandbox outputs with others
+
+### Sandbox ID Format
+
+Sandbox IDs follow the pattern: `{slug}-{YYYY-MM-DD}-{random4chars}`
+
+Example: `my-article-2025-12-28-x7km`
+
+## Missions
+
+A **mission** is the natural language instruction given to a skill. Missions describe the desired outcome, not the implementation.
+
+```yaml
+mission: |
+  Analyze the content to extract key themes, concepts, and structure.
+  Extract minimum 3 verbatim quotes that capture the essence.
+  Identify at least 5 key points that a reader should remember.
+  Consider the content from a content creator's perspective.
+```
+
+<Aside type="tip">
+Good missions are specific about *what* you want but flexible about *how* to achieve it. Include concrete requirements (minimum 3 quotes) but let Claude determine the best approach.
+</Aside>
+
+## Plugins
+
+Looplia uses a **two-plugin architecture** to separate concerns:
+
+| Plugin | Purpose | Contains |
+|--------|---------|----------|
+| **looplia-core** | Infrastructure | Workflow executor, validator, CLI commands |
+| **looplia-writer** | Domain | Content analysis skills (media-reviewer, idea-synthesis) |
+
+This separation allows:
+- Independent versioning of domain capabilities
+- Easy addition of new domain plugins
+- Clean separation between "how to run" and "what to run"
+
+## Validation-Driven Completion
+
+Steps complete when their output passes validation. The `validation.json` file tracks state:
+
+```json
+{
+  "workflow": "writing-kit",
+  "steps": {
+    "summary": { "output": "outputs/summary.json", "validated": true },
+    "ideas": { "output": "outputs/ideas.json", "validated": true },
+    "writing-kit": { "output": "outputs/writing-kit.json", "validated": false }
+  }
+}
+```
+
+When resuming with `--sandbox-id`, Looplia skips validated steps and continues from the first incomplete step.
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  CLI Commands                                                    │
+│  └─ looplia run    → Execute workflow                           │
+│  └─ looplia build  → Create workflow from description           │
+│  └─ looplia config → Manage settings                            │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Workflow-as-Markdown                                            │
+│  • YAML frontmatter + Markdown documentation                     │
+│  • Steps with skill: + mission: syntax                           │
+│  • ${{ }} variable substitution                                  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Skill Executor (Claude Agent SDK)                               │
+│  • Receives skill + mission                                      │
+│  • Orchestrates Claude to complete the task                      │
+│  • Produces validated JSON output                                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Next Steps
+
+- [Run Command](/cli/run/) — Execute workflows with options
+- [Understanding Workflows](/workflows/understanding-workflows/) — Deep dive into workflow schema
+- [Build Command](/cli/build/) — Create workflows from natural language

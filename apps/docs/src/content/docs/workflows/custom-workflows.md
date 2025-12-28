@@ -1,0 +1,334 @@
+---
+title: Building Custom Workflows
+description: Create your own workflows tailored to your content needs.
+---
+
+import { Aside, Tabs, TabItem, Steps } from '@astrojs/starlight/components';
+
+Learn how to create custom workflows that match your specific content processing needs.
+
+## Two Ways to Create Workflows
+
+<Tabs>
+  <TabItem label="AI-Assisted (Recommended)">
+Use the `build` command to generate workflows from natural language:
+
+```bash
+looplia build "analyze podcast transcripts and create newsletter content"
+```
+
+The AI will:
+1. Discover available skills
+2. Match your requirements
+3. Generate a valid workflow
+
+See [build command](/cli/build/) for details.
+  </TabItem>
+  <TabItem label="Manual">
+Create a workflow file directly in `~/.looplia/workflows/`:
+
+```bash
+touch ~/.looplia/workflows/my-workflow.md
+```
+
+Then edit with your preferred editor.
+  </TabItem>
+</Tabs>
+
+## Manual Workflow Creation
+
+<Steps>
+
+1. **Create the workflow file**
+
+   ```bash
+   # Create a new workflow
+   cat > ~/.looplia/workflows/podcast-summary.md << 'EOF'
+   ---
+   name: podcast-summary
+   version: 1.0.0
+   description: Summarize podcast transcripts into shareable content
+
+   steps:
+     - id: analyze
+       skill: media-reviewer
+       mission: |
+         Analyze the podcast transcript to extract:
+         - Main topics discussed
+         - Key quotes from speakers (with attribution)
+         - Actionable takeaways for listeners
+       input: ${{ sandbox }}/inputs/content.md
+       output: ${{ sandbox }}/outputs/analysis.json
+
+     - id: shareable
+       skill: writing-kit-assembler
+       mission: |
+         Create shareable content from the analysis:
+         - 3 tweet-sized quotes (under 280 chars)
+         - LinkedIn post summary (100-200 words)
+         - Newsletter blurb (50-100 words)
+       needs: [analyze]
+       input: ${{ steps.analyze.output }}
+       output: ${{ sandbox }}/outputs/shareable.json
+       final: true
+   ---
+
+   # Podcast Summary Workflow
+
+   Transforms podcast transcripts into shareable social content.
+
+   ## Usage
+
+   \`\`\`bash
+   looplia run podcast-summary --file transcript.md
+   \`\`\`
+   EOF
+   ```
+
+2. **Test the workflow**
+
+   ```bash
+   # Create a test transcript
+   echo "Host: Welcome to the show. Guest: Thanks for having me..." > test-transcript.md
+
+   # Run your new workflow
+   looplia run podcast-summary --file test-transcript.md
+   ```
+
+3. **Iterate and refine**
+
+   - Check outputs in `~/.looplia/sandbox/*/outputs/`
+   - Adjust missions for better results
+   - Add validation criteria
+
+</Steps>
+
+## Workflow Template
+
+Here's a template for common patterns:
+
+```yaml
+---
+name: my-workflow
+version: 1.0.0
+description: Short description of what this workflow does
+
+steps:
+  # Step 1: Analyze input content
+  - id: analyze
+    skill: media-reviewer
+    mission: |
+      Analyze the content to extract:
+      - [List specific requirements]
+      - [Include quantities where applicable]
+    input: ${{ sandbox }}/inputs/content.md
+    output: ${{ sandbox }}/outputs/analysis.json
+    validate:
+      required_fields: [field1, field2]
+
+  # Step 2: Transform/generate
+  - id: transform
+    skill: idea-synthesis    # or another skill
+    mission: |
+      Based on the analysis:
+      - [Describe transformation]
+      - [Specify output format]
+    needs: [analyze]
+    input: ${{ steps.analyze.output }}
+    output: ${{ sandbox }}/outputs/transformed.json
+
+  # Step 3: Assemble final output
+  - id: assemble
+    skill: writing-kit-assembler
+    mission: |
+      Combine inputs into final deliverable:
+      - [Describe final format]
+    needs: [analyze, transform]
+    input:
+      - ${{ steps.analyze.output }}
+      - ${{ steps.transform.output }}
+    output: ${{ sandbox }}/outputs/final.json
+    final: true
+---
+
+# My Workflow
+
+Description and usage instructions...
+```
+
+## Available Skills
+
+These skills are available in the default installation:
+
+### Content Analysis
+
+| Skill | Description |
+|-------|-------------|
+| `media-reviewer` | Deep content analysis, theme extraction, quote identification |
+
+### Content Generation
+
+| Skill | Description |
+|-------|-------------|
+| `idea-synthesis` | Generate hooks, angles, questions, prompts |
+| `writing-kit-assembler` | Combine inputs into structured output |
+
+<Aside>
+Run `looplia build` interactively to see all available skills with descriptions.
+</Aside>
+
+## Design Patterns
+
+### Sequential Processing
+
+Steps run one after another:
+
+```yaml
+steps:
+  - id: step1
+    skill: media-reviewer
+    # ...
+
+  - id: step2
+    skill: idea-synthesis
+    needs: [step1]
+    input: ${{ steps.step1.output }}
+    # ...
+```
+
+### Fan-Out Pattern
+
+One input feeds multiple parallel analyses:
+
+```yaml
+steps:
+  - id: analyze
+    skill: media-reviewer
+    input: ${{ sandbox }}/inputs/content.md
+    output: ${{ sandbox }}/outputs/analysis.json
+
+  - id: social-content
+    skill: writing-kit-assembler
+    needs: [analyze]
+    mission: Create social media posts
+    input: ${{ steps.analyze.output }}
+    output: ${{ sandbox }}/outputs/social.json
+
+  - id: newsletter
+    skill: writing-kit-assembler
+    needs: [analyze]
+    mission: Create newsletter content
+    input: ${{ steps.analyze.output }}
+    output: ${{ sandbox }}/outputs/newsletter.json
+```
+
+### Fan-In Pattern
+
+Multiple analyses combine into one output:
+
+```yaml
+steps:
+  - id: themes
+    skill: media-reviewer
+    mission: Extract themes
+    # ...
+
+  - id: quotes
+    skill: media-reviewer
+    mission: Extract quotes
+    # ...
+
+  - id: combined
+    skill: writing-kit-assembler
+    needs: [themes, quotes]
+    input:
+      - ${{ steps.themes.output }}
+      - ${{ steps.quotes.output }}
+    # ...
+```
+
+## Mission Writing Tips
+
+### Be Specific
+
+```yaml
+# Vague (avoid)
+mission: Analyze the content
+
+# Specific (better)
+mission: |
+  Analyze the content to extract:
+  - 3-5 main themes with supporting evidence
+  - At least 5 quotable statements (under 280 characters each)
+  - Key statistics or data points
+  - Inferred target audience
+```
+
+### Include Format Requirements
+
+```yaml
+mission: |
+  Generate social media content:
+  - 5 tweets (each under 280 characters, with hashtags)
+  - 1 LinkedIn post (150-200 words, professional tone)
+  - 1 Instagram caption (casual tone, with emoji suggestions)
+```
+
+### Provide Context
+
+```yaml
+mission: |
+  Analyze this podcast transcript for a technology newsletter audience.
+  Focus on:
+  - Practical implications for developers
+  - Controversial or surprising claims
+  - Quotable insights from the guest
+```
+
+## Validation
+
+Add validation to ensure quality:
+
+```yaml
+- id: analyze
+  skill: media-reviewer
+  validate:
+    required_fields: [themes, quotes, keyPoints]
+    min_quotes: 3
+    min_key_points: 5
+```
+
+If validation fails, the step is marked incomplete and you can adjust and retry.
+
+## Debugging
+
+### Check Outputs
+
+```bash
+# View step outputs
+cat ~/.looplia/sandbox/*/outputs/analysis.json | jq
+
+# Check validation state
+cat ~/.looplia/sandbox/*/validation.json
+```
+
+### View Logs
+
+```bash
+# Session logs
+cat ~/.looplia/sandbox/*/logs/session.log
+```
+
+### Mock Mode
+
+Test workflow structure without API calls:
+
+```bash
+looplia run my-workflow --file test.md --mock
+```
+
+## See Also
+
+- [Understanding Workflows](/workflows/understanding-workflows/) — Schema reference
+- [build Command](/cli/build/) — AI-assisted creation
+- [run Command](/cli/run/) — Execution options

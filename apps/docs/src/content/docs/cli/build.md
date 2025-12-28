@@ -1,0 +1,209 @@
+---
+title: looplia build
+description: Create a workflow from natural language description.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+The `build` command uses AI to generate a workflow definition from a natural language description.
+
+## Usage
+
+```bash
+looplia build [description] [options]
+```
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `description` | Natural language description of the workflow (optional) |
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `--name <name>` | Workflow name (auto-generated if not provided) |
+
+## Examples
+
+### Interactive Mode
+
+```bash
+# Start the interactive build wizard
+looplia build
+```
+
+The wizard guides you through:
+1. Describing what you want to accomplish
+2. Answering clarifying questions
+3. Reviewing the generated workflow
+4. Saving to `~/.looplia/workflows/`
+
+### Direct Mode
+
+```bash
+# Generate workflow from description
+looplia build "analyze videos and create blog outlines"
+
+# With explicit name
+looplia build --name video-to-blog "analyze YouTube video transcripts and generate blog post outlines with key points"
+```
+
+## How It Works
+
+The `build` command uses three skills in sequence:
+
+<Steps>
+
+1. **plugin-registry-scanner**
+
+   Discovers all available skills from installed plugins.
+
+   ```
+   Found 8 skills:
+   - media-reviewer (content analysis)
+   - idea-synthesis (creative generation)
+   - writing-kit-assembler (document assembly)
+   ...
+   ```
+
+2. **skill-capability-matcher**
+
+   Matches your requirements to available skills.
+
+   ```
+   Requirement: "analyze videos"
+   → Matched: media-reviewer (content analysis, supports video transcripts)
+
+   Requirement: "create blog outlines"
+   → Matched: writing-kit-assembler (structured output generation)
+   ```
+
+3. **workflow-schema-composer**
+
+   Generates a valid workflow YAML/Markdown definition.
+
+   ```yaml
+   ---
+   name: video-to-blog
+   steps:
+     - id: analyze
+       skill: media-reviewer
+       mission: Analyze video transcript for key themes...
+   ---
+   ```
+
+</Steps>
+
+## Interactive Build Wizard
+
+The interactive wizard provides a multi-step TUI:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Looplia Build Wizard                               │
+└─────────────────────────────────────────────────────┘
+
+Step 1/3: Describe Your Workflow
+┌─────────────────────────────────────────────────────┐
+│ What do you want to accomplish?                     │
+│                                                     │
+│ > analyze podcast transcripts and create            │
+│   newsletter content with key takeaways             │
+└─────────────────────────────────────────────────────┘
+
+Step 2/3: Clarifying Questions
+┌─────────────────────────────────────────────────────┐
+│ How long should the newsletter content be?          │
+│ ○ Brief (200-300 words)                             │
+│ ● Standard (500-800 words)                          │
+│ ○ Detailed (1000+ words)                            │
+└─────────────────────────────────────────────────────┘
+
+Step 3/3: Review & Save
+┌─────────────────────────────────────────────────────┐
+│ Generated workflow: podcast-newsletter              │
+│                                                     │
+│ Steps:                                              │
+│ 1. media-reviewer → Analyze transcript              │
+│ 2. idea-synthesis → Generate newsletter ideas       │
+│ 3. writing-kit-assembler → Create newsletter        │
+│                                                     │
+│ [Save] [Edit] [Cancel]                              │
+└─────────────────────────────────────────────────────┘
+```
+
+## Generated Workflow
+
+The output is a standard workflow markdown file:
+
+```yaml
+---
+name: podcast-newsletter
+version: 1.0.0
+description: Transform podcast transcripts into newsletter content
+
+steps:
+  - id: analyze
+    skill: media-reviewer
+    mission: |
+      Analyze the podcast transcript to extract:
+      - Main topics and themes discussed
+      - Key quotes from speakers
+      - Actionable insights for listeners
+    input: ${{ sandbox }}/inputs/content.md
+    output: ${{ sandbox }}/outputs/analysis.json
+
+  - id: ideas
+    skill: idea-synthesis
+    mission: |
+      Generate newsletter content ideas including:
+      - Compelling subject lines
+      - Key takeaways (3-5 bullet points)
+      - Call-to-action suggestions
+    needs: [analyze]
+    input: ${{ steps.analyze.output }}
+    output: ${{ sandbox }}/outputs/ideas.json
+
+  - id: newsletter
+    skill: writing-kit-assembler
+    mission: |
+      Assemble a complete newsletter draft (500-800 words)
+      with introduction, key points, and conclusion.
+    needs: [analyze, ideas]
+    input:
+      - ${{ steps.analyze.output }}
+      - ${{ steps.ideas.output }}
+    output: ${{ sandbox }}/outputs/newsletter.json
+    final: true
+---
+
+# Podcast Newsletter Workflow
+
+Transforms podcast transcripts into engaging newsletter content.
+```
+
+## Tips for Good Descriptions
+
+<Aside type="tip">
+Be specific about:
+- **Input type**: What content will you provide? (articles, videos, transcripts)
+- **Output format**: What do you want to create? (summary, outline, full draft)
+- **Key requirements**: Any specific elements? (quotes, statistics, call-to-action)
+</Aside>
+
+**Good descriptions:**
+- "Analyze YouTube video transcripts and create Twitter thread drafts with key insights"
+- "Transform research papers into accessible blog posts with simplified explanations"
+- "Extract action items and key decisions from meeting transcripts"
+
+**Vague descriptions (will prompt for clarification):**
+- "Process content" (what kind? what output?)
+- "Write something" (based on what? in what format?)
+
+## See Also
+
+- [Understanding Workflows](/workflows/understanding-workflows/) — Workflow schema reference
+- [Building Custom Workflows](/workflows/custom-workflows/) — Manual workflow creation
+- [run](/cli/run/) — Execute your new workflow

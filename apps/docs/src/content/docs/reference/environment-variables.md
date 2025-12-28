@@ -1,0 +1,183 @@
+---
+title: Environment Variables
+description: Complete reference for Looplia environment variables.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Looplia uses environment variables for API keys, model configuration, and development settings.
+
+## API Keys
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `ANTHROPIC_API_KEY` | Anthropic API key for Claude | Yes* |
+| `ZENMUX_API_KEY` | ZenMux proxy API key | Yes* |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Claude Code OAuth token (alternative auth) | No |
+
+<Aside>
+*Either `ANTHROPIC_API_KEY` or `ZENMUX_API_KEY` is required, depending on your provider configuration.
+</Aside>
+
+### Setting API Keys
+
+```bash
+# Option 1: Export in current session
+export ANTHROPIC_API_KEY=sk-ant-api03-...
+
+# Option 2: Add to shell profile (~/.zshrc or ~/.bashrc)
+echo 'export ANTHROPIC_API_KEY=sk-ant-api03-...' >> ~/.zshrc
+source ~/.zshrc
+
+# Option 3: Use .env file (for development)
+echo 'ANTHROPIC_API_KEY=sk-ant-api03-...' >> .env
+env $(cat .env) looplia run writing-kit --file test.md
+```
+
+## Model Configuration
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `LOOPLIA_AGENT_MODEL_MAIN` | Override main agent model | Provider default |
+| `LOOPLIA_AGENT_MODEL_EXECUTOR` | Override skill executor model | Provider default |
+
+### Model Override Examples
+
+```bash
+# Use Opus for main agent
+export LOOPLIA_AGENT_MODEL_MAIN=claude-opus-4-20250514
+
+# Use Haiku for executor (faster, cheaper)
+export LOOPLIA_AGENT_MODEL_EXECUTOR=claude-haiku-4-20250514
+
+# Run workflow
+looplia run writing-kit --file article.md
+```
+
+## Development Mode
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `LOOPLIA_DEV` | Enable development mode | `false` |
+| `LOOPLIA_DEV_ROOT` | Path to looplia-core source repository | - |
+| `LOOPLIA_DEBUG` | Enable debug logging | `false` |
+
+### Development Mode
+
+When developing Looplia from source, use dev mode to load plugins directly without running `init`:
+
+```bash
+# Enable dev mode
+export LOOPLIA_DEV=true
+export LOOPLIA_DEV_ROOT=~/projects/looplia-core
+
+# Run from any directory - plugins loaded from source
+cd ~/my-content
+looplia run writing-kit --file article.md
+```
+
+In dev mode:
+- Plugins are loaded from `$LOOPLIA_DEV_ROOT/plugins/`
+- Changes to plugin files take effect immediately
+- No need to run `looplia init` after changes
+
+### Debug Logging
+
+```bash
+# Enable debug output
+export LOOPLIA_DEBUG=1
+
+# Run with verbose logging
+looplia run writing-kit --file test.md
+```
+
+Debug logs are written to `~/.looplia/logs/`.
+
+## Provider Configuration
+
+These variables work with the provider system:
+
+| Variable | Description |
+|----------|-------------|
+| `ANTHROPIC_API_KEY` | Used when provider is `anthropic` |
+| `ZENMUX_API_KEY` | Used when provider is `zenmux` (auto-mapped to `ANTHROPIC_API_KEY` for SDK) |
+
+### Auto-Mapping
+
+When using ZenMux, Looplia automatically maps credentials:
+
+```bash
+# Set ZenMux key
+export ZENMUX_API_KEY=sk-zenmux-...
+
+# Configure ZenMux provider
+looplia config provider preset ZENMUX_ZAI_GLM47
+
+# The ZENMUX_API_KEY is automatically used
+looplia run writing-kit --file article.md
+```
+
+## Priority Order
+
+Environment variables take precedence over config file settings:
+
+1. **Environment variables** (highest priority)
+2. **Config file** (`~/.looplia/looplia.setting.json`)
+3. **Default values** (lowest priority)
+
+```bash
+# This overrides any config file setting
+export LOOPLIA_AGENT_MODEL_MAIN=claude-opus-4-20250514
+looplia run writing-kit --file article.md
+```
+
+## CI/CD Integration
+
+For CI/CD pipelines, set variables in your pipeline configuration:
+
+### GitHub Actions
+
+```yaml
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v1
+      - run: bunx looplia init --yes
+      - run: bunx looplia run writing-kit --file content.md --no-streaming
+```
+
+### Docker
+
+```dockerfile
+FROM oven/bun:latest
+ENV ANTHROPIC_API_KEY=""
+RUN bunx looplia init --yes
+CMD ["bunx", "looplia", "run", "writing-kit", "--file", "/data/content.md"]
+```
+
+```bash
+docker run -e ANTHROPIC_API_KEY=sk-ant-... -v ./content:/data my-looplia
+```
+
+## All Variables Reference
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `ANTHROPIC_API_KEY` | string | Anthropic API key |
+| `ZENMUX_API_KEY` | string | ZenMux proxy API key |
+| `CLAUDE_CODE_OAUTH_TOKEN` | string | OAuth token authentication |
+| `LOOPLIA_AGENT_MODEL_MAIN` | string | Main agent model override |
+| `LOOPLIA_AGENT_MODEL_EXECUTOR` | string | Executor model override |
+| `LOOPLIA_DEV` | boolean | Enable development mode |
+| `LOOPLIA_DEV_ROOT` | path | Development source path |
+| `LOOPLIA_DEBUG` | boolean | Enable debug logging |
+
+## See Also
+
+- [Installation](/getting-started/installation/) — Initial setup
+- [config Command](/cli/config/) — Configure via CLI
+- [Troubleshooting](/reference/troubleshooting/) — Common issues

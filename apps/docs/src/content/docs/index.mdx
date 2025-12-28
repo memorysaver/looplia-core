@@ -1,40 +1,449 @@
 ---
-title: Welcome to Starlight
-description: Get started building your docs site with Starlight.
-template: splash # Remove or comment out this line to display the site sidebar on this page.
+title: Looplia
+description: Skills-first agentic workflow CLI. Compose AI skills and workflows for any task.
+template: splash
 hero:
-  tagline: Congrats on setting up a new Starlight project!
-  image:
-    file: ../../assets/houston.webp
+  tagline: Skills-first agentic workflow CLI — compose AI skills and workflows for any task. Powered by Claude Agent SDK.
   actions:
-    - text: Example Guide
-      link: /guides/example/
+    - text: Get Started
+      link: /getting-started/installation/
       icon: right-arrow
-    - text: Read the Starlight docs
-      link: https://starlight.astro.build
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/memorysaver/looplia-core
       icon: external
       variant: minimal
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid, Tabs, TabItem, Code, LinkCard } from '@astrojs/starlight/components';
 
-## Next steps
+<style>{`
+  /* Terminal Elegance Theme */
+  :root {
+    --looplia-amber: #F59E0B;
+    --looplia-amber-dim: #D97706;
+    --looplia-surface: #18181B;
+    --looplia-surface-elevated: #27272A;
+    --looplia-border: #3F3F46;
+    --looplia-text-muted: #A1A1AA;
+  }
 
-<CardGrid stagger>
-	<Card title="Update content" icon="pencil">
-		Edit `src/content/docs/index.mdx` to see this page change.
-	</Card>
-	<Card title="Change page layout" icon="document">
-		Delete `template: splash` in `src/content/docs/index.mdx` to display a
-		sidebar on this page.
-	</Card>
-	<Card title="Add new content" icon="add-document">
-		Add Markdown or MDX files to `src/content/docs` to create new pages.
-	</Card>
-	<Card title="Configure your site" icon="setting">
-		Edit your `sidebar` and other config in `astro.config.mjs`.
-	</Card>
-	<Card title="Read the docs" icon="open-book">
-		Learn more in [the Starlight Docs](https://starlight.astro.build/).
-	</Card>
+  /* Splash page centering */
+  [data-page-type="splash"] .sl-markdown-content {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  [data-page-type="splash"] .sl-markdown-content > * {
+    max-width: 65rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Hero customization - center everything */
+  .hero {
+    padding-block: 4rem !important;
+    text-align: center !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .hero > * {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    text-align: center !important;
+  }
+
+  .hero h1 {
+    text-align: center !important;
+  }
+
+  .hero .tagline {
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .hero .actions {
+    justify-content: center !important;
+  }
+
+  [data-theme="light"] .hero .tagline,
+  [data-theme="dark"] .hero .tagline {
+    font-size: 1.25rem;
+    max-width: 42ch;
+    margin-left: auto;
+    margin-right: auto;
+    color: var(--sl-color-gray-2);
+  }
+
+  /* Terminal code block styling */
+  .terminal-block {
+    background: linear-gradient(180deg, #1a1a1e 0%, #0f0f12 100%);
+    border: 1px solid #2a2a30;
+    border-radius: 12px;
+    padding: 0;
+    margin: 2rem auto;
+    max-width: 640px;
+    overflow: hidden;
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.3),
+      0 2px 4px -2px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .terminal-header {
+    background: linear-gradient(180deg, #2a2a30 0%, #222228 100%);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #333;
+  }
+
+  .terminal-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+
+  .terminal-dot.red { background: #FF5F56; }
+  .terminal-dot.yellow { background: #FFBD2E; }
+  .terminal-dot.green { background: #27CA40; }
+
+  .terminal-title {
+    flex: 1;
+    text-align: center;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    color: #71717A;
+    margin-right: 52px;
+  }
+
+  .terminal-content {
+    padding: 20px 24px;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  .terminal-content .prompt {
+    color: #22D3EE;
+  }
+
+  .terminal-content .command {
+    color: #E4E4E7;
+  }
+
+  .terminal-content .flag {
+    color: #A78BFA;
+  }
+
+  .terminal-content .arg {
+    color: #FCD34D;
+  }
+
+  .terminal-content .comment {
+    color: #52525B;
+  }
+
+  /* Section headers */
+  .section-header {
+    text-align: center;
+    margin: 4rem 0 2rem;
+  }
+
+  .section-header h2 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #FAFAFA 0%, #A1A1AA 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .section-header p {
+    color: var(--sl-color-gray-3);
+    font-size: 1.1rem;
+    max-width: 50ch;
+    margin: 0 auto;
+  }
+
+  /* Feature cards enhancement */
+  .sl-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .sl-card:hover {
+    transform: translateY(-2px);
+  }
+
+  /* Workflow diagram */
+  .workflow-diagram {
+    background: linear-gradient(135deg, #18181B 0%, #1F1F23 100%);
+    border: 1px solid #27272A;
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 2rem 0;
+    text-align: center;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  .workflow-diagram pre {
+    color: #E4E4E7;
+    margin: 0;
+    white-space: pre;
+    background: transparent;
+    padding: 0;
+    text-align: left;
+    display: inline-block;
+  }
+
+  .workflow-diagram .highlight {
+    color: #F59E0B;
+  }
+
+  .workflow-diagram .dim {
+    color: #52525B;
+  }
+
+  .workflow-diagram .accent {
+    color: #22D3EE;
+  }
+
+  /* Quick links section */
+  .quick-links {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+  }
+
+  /* Version badge */
+  .version-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+    color: #000;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    margin-left: 8px;
+    vertical-align: middle;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  }
+
+  /* Tagline emphasis */
+  .tagline-emphasis {
+    color: #F59E0B;
+    font-weight: 500;
+  }
+
+  /* Light theme adjustments */
+  [data-theme="light"] .terminal-block {
+    background: linear-gradient(180deg, #FAFAFA 0%, #F4F4F5 100%);
+    border-color: #E4E4E7;
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  [data-theme="light"] .terminal-header {
+    background: linear-gradient(180deg, #E4E4E7 0%, #D4D4D8 100%);
+    border-color: #D4D4D8;
+  }
+
+  [data-theme="light"] .terminal-content .command {
+    color: #18181B;
+  }
+
+  [data-theme="light"] .terminal-content .prompt {
+    color: #0891B2;
+  }
+
+  [data-theme="light"] .terminal-content .flag {
+    color: #7C3AED;
+  }
+
+  [data-theme="light"] .terminal-content .arg {
+    color: #D97706;
+  }
+
+  [data-theme="light"] .workflow-diagram {
+    background: linear-gradient(135deg, #FAFAFA 0%, #F4F4F5 100%);
+    border-color: #E4E4E7;
+  }
+
+  [data-theme="light"] .workflow-diagram pre {
+    color: #18181B;
+  }
+
+  [data-theme="light"] .section-header h2 {
+    background: linear-gradient(135deg, #18181B 0%, #52525B 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Main content wrapper for centering */
+  .landing-content {
+    max-width: 65rem;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+`}</style>
+
+<div class="landing-content">
+
+<div class="terminal-block">
+  <div class="terminal-header">
+    <span class="terminal-dot red"></span>
+    <span class="terminal-dot yellow"></span>
+    <span class="terminal-dot green"></span>
+    <span class="terminal-title">looplia</span>
+  </div>
+  <div class="terminal-content">
+    <div><span class="prompt">$</span> <span class="command">bunx looplia init</span></div>
+    <div><span class="comment"># Initialize workspace with AI skills</span></div>
+    <div style="margin-top: 8px;"><span class="prompt">$</span> <span class="command">bunx looplia run</span> <span class="arg">writing-kit</span> <span class="flag">--file</span> <span class="arg">article.md</span></div>
+    <div><span class="comment"># Transform your content into a structured writing kit</span></div>
+  </div>
+</div>
+
+<div class="section-header">
+  <h2>Why Looplia?</h2>
+  <p>A new approach to AI workflows — skills as first-class citizens, not rigid code.</p>
+</div>
+
+<CardGrid>
+  <Card title="Skills-First Architecture" icon="puzzle">
+    Workflows declare **skills + missions** in natural language. Claude determines the best approach. No rigid agent definitions required.
+  </Card>
+  <Card title="Workflow-as-Markdown" icon="document">
+    Define workflows in readable **YAML frontmatter + Markdown**. Version control friendly, human-readable, easy to share and modify.
+  </Card>
+  <Card title="Build with AI" icon="rocket">
+    Describe what you want in plain English. **looplia build** generates a complete workflow definition automatically.
+  </Card>
+  <Card title="Sandbox Isolation" icon="seti:folder">
+    Each run creates an **isolated sandbox** with inputs, outputs, and logs. Pause and resume anytime with **--sandbox-id**.
+  </Card>
 </CardGrid>
+
+<div class="section-header">
+  <h2>How It Works</h2>
+  <p>From content to structured output in three steps.</p>
+</div>
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  media-reviewer │───▶│  idea-synthesis │───▶│  writing-kit    │
+│                 │    │                 │    │  -assembler     │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+        │                      │                      │
+        ▼                      ▼                      ▼
+   summary.json          ideas.json          writing-kit.json
+```
+
+```yaml title="workflows/writing-kit.md"
+---
+name: writing-kit
+version: 1.1.0
+description: Transform content into structured writing kit
+
+steps:
+  - id: summary
+    skill: media-reviewer
+    mission: |
+      Deep analysis of content to extract key themes.
+      Extract minimum 3 verbatim quotes, at least 5 key points.
+    input: ${{ sandbox }}/inputs/content.md
+    output: ${{ sandbox }}/outputs/summary.json
+
+  - id: ideas
+    skill: idea-synthesis
+    mission: Generate creative hooks, angles, and questions.
+    needs: [summary]
+    input: ${{ steps.summary.output }}
+    output: ${{ sandbox }}/outputs/ideas.json
+
+  - id: writing-kit
+    skill: writing-kit-assembler
+    mission: Assemble final writing kit with outline.
+    needs: [summary, ideas]
+    final: true
+---
+```
+
+<div class="section-header">
+  <h2>Multi-Provider Support</h2>
+  <p>Choose your AI provider. Switch models with a single command.</p>
+</div>
+
+<Tabs>
+  <TabItem label="Anthropic Direct">
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+looplia run writing-kit --file article.md
+```
+  </TabItem>
+  <TabItem label="ZenMux Proxy">
+```bash
+looplia config provider preset ZENMUX_ZAI_GLM47
+looplia config provider set auth-token sk-xxx
+looplia run writing-kit --file article.md
+```
+  </TabItem>
+</Tabs>
+
+<CardGrid>
+  <Card title="16+ Model Presets" icon="setting">
+    Anthropic Claude (Haiku, Sonnet), Google Gemini, OpenAI GPT, xAI Grok, DeepSeek, and more via ZenMux.
+  </Card>
+  <Card title="Cost Optimization" icon="approve-check">
+    Switch between providers based on cost, speed, or capability requirements per workflow.
+  </Card>
+</CardGrid>
+
+<div class="section-header">
+  <h2>Get Started</h2>
+  <p>From zero to first workflow in under 5 minutes.</p>
+</div>
+
+<CardGrid>
+  <LinkCard
+    title="Installation"
+    description="Set up Looplia and configure your API keys."
+    href="/getting-started/installation/"
+  />
+  <LinkCard
+    title="Quick Start"
+    description="Run your first workflow in 5 minutes."
+    href="/getting-started/quick-start/"
+  />
+  <LinkCard
+    title="CLI Reference"
+    description="Complete command reference for init, run, build, and config."
+    href="/cli/run/"
+  />
+  <LinkCard
+    title="Understanding Workflows"
+    description="Learn the skills-first workflow architecture."
+    href="/workflows/understanding-workflows/"
+  />
+</CardGrid>
+
+---
+
+<div style="text-align: center; margin-top: 3rem; color: var(--sl-color-gray-3);">
+  <p style="font-size: 0.9rem;">
+    Built with Claude Agent SDK · <a href="https://github.com/memorysaver/looplia-core" style="color: var(--sl-color-text-accent);">Open Source</a> · <span class="version-badge">v0.6.6</span>
+  </p>
+</div>
+
+</div>
