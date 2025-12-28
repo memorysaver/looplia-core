@@ -9,6 +9,11 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "Looplia",
+      logo: {
+        light: './src/assets/logo-light.svg',
+        dark: './src/assets/logo-dark.svg',
+        replacesTitle: true,
+      },
       description: "Skills-first agentic workflow CLI. Compose AI skills and workflows for any task.",
       social: [
         {

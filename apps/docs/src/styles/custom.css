@@ -135,6 +135,12 @@ nav, .sidebar, button, .sl-nav, .sidebar-content {
    5. HEADER & NAVIGATION
    ============================================ */
 
+/* Logo sizing */
+.site-title img {
+  height: 28px;
+  width: auto;
+}
+
 header a,
 header button,
 header .sl-nav a,
