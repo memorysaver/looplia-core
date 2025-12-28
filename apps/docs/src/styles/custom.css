@@ -1,69 +1,118 @@
-/* Looplia Documentation - Light Clean Theme */
-/* Brand: Coral/Orange palette with Syne + Outfit typography */
+/* ============================================
+   Looplia Documentation Theme
+   Brand: Coral/Orange palette with Syne + Outfit typography
+   ============================================ */
 
 /* Google Fonts - Retro-Futuristic Typography */
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap');
 
-/* Brand Colors - Coral/Orange Palette */
+/* ============================================
+   1. CSS VARIABLES - Light Theme (Default)
+   ============================================ */
 :root {
-  /* Primary Accent */
+  /* Brand Accent Colors */
   --sl-color-accent-low: #fef0eb;
   --sl-color-accent: #d97757;
   --sl-color-accent-high: #b85a3d;
 
-  /* Complementary Accents */
+  /* Looplia Brand Palette */
   --looplia-coral: #d97757;
   --looplia-coral-light: #f5b8a6;
   --looplia-coral-dark: #b85a3d;
   --looplia-blue: #6a9bcc;
   --looplia-green: #788c5d;
 
-  /* Light Theme Neutrals - Improved Contrast */
+  /* Grayscale - Light Theme (WCAG compliant) */
   --sl-color-white: #ffffff;
   --sl-color-gray-1: #faf9f5;
   --sl-color-gray-2: #f4f3ef;
   --sl-color-gray-3: #e8e6dc;
-  --sl-color-gray-4: #717171;  /* Tertiary/muted - WCAG AA */
-  --sl-color-gray-5: #4a4a4a;  /* Secondary text - WCAG AAA ~7.5:1 */
-  --sl-color-gray-6: #2d2d2d;  /* Primary text - WCAG AAA ~12:1 */
+  --sl-color-gray-4: #717171;  /* Muted - WCAG AA 4.6:1 */
+  --sl-color-gray-5: #4a4a4a;  /* Secondary - WCAG AAA 7.5:1 */
+  --sl-color-gray-6: #2d2d2d;  /* Primary - WCAG AAA 12:1 */
   --sl-color-black: #0d0d0c;
 
-  /* Background */
+  /* CRITICAL: Starlight text color variables */
+  --sl-color-text: var(--sl-color-gray-6);
+  --sl-color-text-accent: var(--looplia-coral);
+  --sl-color-text-invert: var(--sl-color-white);
+
+  /* Backgrounds */
   --sl-color-bg: #faf9f5;
   --sl-color-bg-nav: rgba(255, 255, 255, 0.95);
   --sl-color-bg-sidebar: rgba(255, 255, 255, 0.9);
 
-  /* Typography - Retro-Futuristic */
+  /* Typography */
   --sl-font: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
   --sl-font-system: 'Syne', -apple-system, BlinkMacSystemFont, sans-serif;
   --sl-font-system-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-/* Dark Theme Override - Improved Contrast */
+/* ============================================
+   2. CSS VARIABLES - Dark Theme
+   ============================================ */
 [data-theme="dark"] {
+  /* Brand Accent Colors */
   --sl-color-accent-low: #2d1a14;
   --sl-color-accent: #d97757;
   --sl-color-accent-high: #f5b8a6;
 
+  /* Grayscale - Dark Theme */
   --sl-color-gray-1: #18181b;
   --sl-color-gray-2: #27272a;
   --sl-color-gray-3: #3f3f46;
-  --sl-color-gray-4: #8a8a8a;  /* Muted text */
-  --sl-color-gray-5: #c4c4c4;  /* Secondary text */
-  --sl-color-gray-6: #f0f0f0;  /* Primary text */
+  --sl-color-gray-4: #8a8a8a;  /* Muted */
+  --sl-color-gray-5: #c4c4c4;  /* Secondary */
+  --sl-color-gray-6: #f0f0f0;  /* Primary */
 
+  /* CRITICAL: Starlight text color variables */
+  --sl-color-text: var(--sl-color-gray-6);
+  --sl-color-text-invert: var(--sl-color-black);
+
+  /* Backgrounds */
   --sl-color-bg: #0f0f10;
   --sl-color-bg-nav: rgba(15, 15, 16, 0.95);
   --sl-color-bg-sidebar: rgba(24, 24, 27, 0.9);
 }
 
-/* Global Typography */
+/* ============================================
+   3. GLOBAL TEXT COLOR INHERITANCE
+   This ensures consistent text colors across all components
+   ============================================ */
+
+/* Base text color on root elements */
 body {
   font-family: var(--sl-font);
+  color: var(--sl-color-text);
   background-color: var(--sl-color-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Primary text - headings and important content */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--sl-color-gray-6);
+}
+
+/* Secondary/muted text - descriptions, captions, inactive states */
+.description,
+[class*="description"],
+figcaption,
+.muted,
+[class*="muted"],
+small {
+  color: var(--sl-color-gray-5) !important;
+}
+
+/* Inactive tab states - catches all tab components */
+[role="tab"][aria-selected="false"],
+[role="tab"]:not([aria-selected="true"]) {
+  color: var(--sl-color-gray-5) !important;
+}
+
+/* ============================================
+   4. TYPOGRAPHY
+   ============================================ */
 
 /* Headings - Syne (Retro-Futuristic) */
 h1, h2, h3, h4, h5, h6,
@@ -82,7 +131,10 @@ nav, .sidebar, button, .sl-nav, .sidebar-content {
   font-family: 'Outfit', sans-serif;
 }
 
-/* Header navigation text contrast fix */
+/* ============================================
+   5. HEADER & NAVIGATION
+   ============================================ */
+
 header a,
 header button,
 header .sl-nav a,
@@ -100,7 +152,10 @@ header svg {
   color: var(--sl-color-gray-5) !important;
 }
 
-/* Code blocks */
+/* ============================================
+   6. CODE BLOCKS (Expressive Code)
+   ============================================ */
+
 .expressive-code pre,
 code {
   font-family: var(--sl-font-system-mono);
@@ -111,6 +166,19 @@ code {
   border-radius: 12px;
   border: 1px solid var(--sl-color-gray-3);
   background: var(--sl-color-gray-1) !important;
+}
+
+/* Code block header/filename tab - CRITICAL FIX */
+.expressive-code .header,
+.expressive-code figcaption,
+.expressive-code .title {
+  color: var(--sl-color-gray-5) !important;
+}
+
+[data-theme="dark"] .expressive-code .header,
+[data-theme="dark"] .expressive-code figcaption,
+[data-theme="dark"] .expressive-code .title {
+  color: var(--sl-color-gray-5) !important;
 }
 
 /* Inline code */
@@ -127,7 +195,38 @@ code {
   color: var(--looplia-coral-light);
 }
 
-/* Cards - Light & Clean */
+/* ============================================
+   7. TABS (Starlight Tabs)
+   ============================================ */
+
+starlight-tabs {
+  margin: 1.5rem 0;
+}
+
+starlight-tabs [role="tablist"] {
+  border-bottom: 2px solid var(--sl-color-gray-3);
+}
+
+starlight-tabs [role="tab"] {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px 8px 0 0;
+  transition: all 0.2s ease;
+  color: var(--sl-color-gray-5);  /* Default/inactive state */
+}
+
+starlight-tabs [role="tab"][aria-selected="true"] {
+  background: var(--sl-color-accent-low);
+  color: var(--looplia-coral) !important;
+  border-bottom: 2px solid var(--looplia-coral);
+  margin-bottom: -2px;
+}
+
+/* ============================================
+   8. CARDS
+   ============================================ */
+
 .card,
 .sl-card,
 article.card {
@@ -175,24 +274,12 @@ article.card:hover {
 [data-theme="dark"] article.card {
   background: var(--sl-color-gray-2) !important;
   border-color: var(--sl-color-gray-3) !important;
-  color: var(--sl-color-gray-6) !important;
 }
 
-[data-theme="dark"] .card .title,
-[data-theme="dark"] .card h2,
-[data-theme="dark"] .card h3,
-[data-theme="dark"] .sl-card .card-title,
-[data-theme="dark"] .sl-card h3 {
-  color: #e4e4e7 !important;
-}
+/* ============================================
+   9. LINK CARDS
+   ============================================ */
 
-[data-theme="dark"] .card .body,
-[data-theme="dark"] .card p,
-[data-theme="dark"] .sl-card p {
-  color: #a1a1aa !important;
-}
-
-/* Link Cards */
 .sl-link-card {
   background: var(--sl-color-white);
   border: 1px solid var(--sl-color-gray-3);
@@ -202,13 +289,14 @@ article.card:hover {
 
 .sl-link-card .sl-link-card__title,
 .sl-link-card h2,
-.sl-link-card [class*="title"] {
+.sl-link-card [class*="title"]:not(.description) {
   color: var(--sl-color-gray-6) !important;
   font-family: 'Syne', sans-serif;
   font-weight: 600;
 }
 
 .sl-link-card .sl-link-card__description,
+.sl-link-card .description,
 .sl-link-card p {
   color: var(--sl-color-gray-5) !important;
 }
@@ -220,8 +308,7 @@ article.card:hover {
 }
 
 .sl-link-card:hover .sl-link-card__title,
-.sl-link-card:hover h2,
-.sl-link-card:hover [class*="title"] {
+.sl-link-card:hover h2 {
   color: var(--looplia-coral) !important;
 }
 
@@ -229,124 +316,158 @@ article.card:hover {
   background: var(--sl-color-gray-2);
 }
 
-[data-theme="dark"] .sl-link-card .sl-link-card__title,
-[data-theme="dark"] .sl-link-card h2,
-[data-theme="dark"] .sl-link-card [class*="title"] {
-  color: var(--sl-color-gray-6) !important;
-}
+/* ============================================
+   10. SIDEBAR & TABLE OF CONTENTS
+   ============================================ */
 
-[data-theme="dark"] .sl-link-card .sl-link-card__description,
-[data-theme="dark"] .sl-link-card p {
-  color: var(--sl-color-gray-5) !important;
-}
-
-/* Sidebar */
 .sidebar-content {
   padding-top: 1rem;
 }
 
+/* LEFT SIDEBAR - Navigation links default color */
+.sidebar a,
+.sidebar-content a,
 nav.sidebar a {
+  color: var(--sl-color-gray-5) !important;
   border-radius: 8px;
   transition: all 0.2s ease;
 }
 
+/* Sidebar group labels/headers */
+.sidebar summary,
+.sidebar [class*="group-label"],
+.sidebar details > summary,
+.sidebar span {
+  color: var(--sl-color-gray-6) !important;
+}
+
 nav.sidebar a:hover {
   background: var(--sl-color-gray-2);
+  color: var(--sl-color-gray-6) !important;
 }
 
 nav.sidebar a[aria-current="page"] {
   background: var(--sl-color-accent-low);
-  color: var(--looplia-coral);
+  color: var(--looplia-coral) !important;
   font-weight: 500;
 }
 
-/* Content area */
-.sl-markdown-content {
-  max-width: 72ch;
-  line-height: 1.75;
+/* RIGHT SIDEBAR - Table of Contents */
+starlight-toc a,
+.right-sidebar a,
+[class*="toc"] a {
+  color: var(--sl-color-gray-5) !important;
 }
 
-/* Splash page styling */
-[data-has-hero] main {
-  text-align: center;
+starlight-toc a:hover,
+.right-sidebar a:hover {
+  color: var(--sl-color-gray-6) !important;
 }
 
-[data-has-hero] .sl-markdown-content {
-  max-width: 72rem;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-  text-align: left;
+starlight-toc a[aria-current="true"],
+starlight-toc a.current,
+.right-sidebar a[aria-current="true"] {
+  color: var(--looplia-coral) !important;
 }
 
-[data-has-hero] .sl-markdown-content > .sl-container {
-  max-width: 68rem;
-  margin: 0 auto;
+/* TOC heading */
+starlight-toc h2,
+.right-sidebar h2 {
+  color: var(--sl-color-gray-6) !important;
 }
 
-[data-has-hero] .sl-link-card-grid,
-[data-has-hero] .card-grid {
-  max-width: 68rem;
-  margin-left: auto;
-  margin-right: auto;
+/* ============================================
+   10b. PAGINATION (Next/Previous Links)
+   ============================================ */
+
+/* Pagination card container - uses accent background */
+.pagination-links a,
+nav[aria-label="Pagination"] a,
+a[rel="next"],
+a[rel="prev"] {
+  background: var(--sl-color-gray-2) !important;
+  border: 1px solid var(--sl-color-gray-3) !important;
 }
 
-/* Tables */
-.sl-markdown-content table {
-  border-radius: 12px;
-  overflow: hidden;
+/* Pagination text - direction label (Next/Previous) */
+.pagination-links a span,
+nav[aria-label="Pagination"] a span,
+a[rel="next"] span,
+a[rel="prev"] span {
+  color: var(--sl-color-gray-5) !important;
+}
+
+/* Pagination text - page title */
+.pagination-links a span:last-child,
+nav[aria-label="Pagination"] a span:last-child,
+a[rel="next"] span:last-child,
+a[rel="prev"] span:last-child {
+  color: var(--sl-color-gray-6) !important;
+  font-weight: 500;
+}
+
+/* Dark mode pagination */
+[data-theme="dark"] .pagination-links a,
+[data-theme="dark"] nav[aria-label="Pagination"] a,
+[data-theme="dark"] a[rel="next"],
+[data-theme="dark"] a[rel="prev"] {
+  background: var(--sl-color-gray-2) !important;
+  border-color: var(--sl-color-gray-3) !important;
+}
+
+[data-theme="dark"] .pagination-links a span,
+[data-theme="dark"] nav[aria-label="Pagination"] a span,
+[data-theme="dark"] a[rel="next"] span,
+[data-theme="dark"] a[rel="prev"] span {
+  color: var(--sl-color-gray-5) !important;
+}
+
+[data-theme="dark"] .pagination-links a span:last-child,
+[data-theme="dark"] nav[aria-label="Pagination"] a span:last-child,
+[data-theme="dark"] a[rel="next"] span:last-child,
+[data-theme="dark"] a[rel="prev"] span:last-child {
+  color: var(--sl-color-gray-6) !important;
+}
+
+/* ============================================
+   11. SEARCH
+   ============================================ */
+
+site-search button {
+  border-radius: 10px;
   border: 1px solid var(--sl-color-gray-3);
-}
-
-.sl-markdown-content th {
-  background: var(--sl-color-gray-2);
-  font-family: 'Syne', sans-serif;
-  font-weight: 500;
-}
-
-/* Aside/Callouts */
-.starlight-aside {
-  border-radius: 12px;
-  border-left-width: 4px;
-  background: var(--sl-color-gray-1);
-}
-
-.starlight-aside--tip {
-  border-left-color: var(--looplia-green);
-}
-
-.starlight-aside--note {
-  border-left-color: var(--looplia-blue);
-}
-
-.starlight-aside--caution {
-  border-left-color: var(--looplia-coral);
-}
-
-/* Tabs */
-starlight-tabs {
-  margin: 1.5rem 0;
-}
-
-starlight-tabs [role="tablist"] {
-  border-bottom: 2px solid var(--sl-color-gray-3);
-}
-
-starlight-tabs [role="tab"] {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 500;
-  padding: 0.75rem 1.25rem;
-  border-radius: 8px 8px 0 0;
+  background: var(--sl-color-white);
   transition: all 0.2s ease;
 }
 
-starlight-tabs [role="tab"][aria-selected="true"] {
-  background: var(--sl-color-accent-low);
-  color: var(--looplia-coral);
-  border-bottom: 2px solid var(--looplia-coral);
-  margin-bottom: -2px;
+site-search button:hover {
+  border-color: var(--looplia-coral-light);
 }
 
-/* Buttons / CTAs */
+site-search kbd {
+  background: var(--sl-color-gray-2) !important;
+  color: var(--sl-color-gray-6) !important;
+  border: 1px solid var(--sl-color-gray-3) !important;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+[data-theme="dark"] site-search button {
+  background: var(--sl-color-gray-2);
+  border-color: var(--sl-color-gray-3);
+}
+
+[data-theme="dark"] site-search kbd {
+  background: var(--sl-color-gray-3) !important;
+  border-color: var(--sl-color-gray-4) !important;
+}
+
+/* ============================================
+   12. BUTTONS / CTAs
+   ============================================ */
+
 .sl-flex.actions a {
   font-family: 'Outfit', sans-serif;
   font-weight: 500;
@@ -376,41 +497,82 @@ starlight-tabs [role="tab"][aria-selected="true"] {
   color: var(--looplia-coral);
 }
 
-/* Search */
-site-search button {
-  border-radius: 10px;
+/* ============================================
+   13. CONTENT AREA
+   ============================================ */
+
+.sl-markdown-content {
+  max-width: 72ch;
+  line-height: 1.75;
+}
+
+/* Splash page styling */
+[data-has-hero] main {
+  text-align: center;
+}
+
+[data-has-hero] .sl-markdown-content {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  text-align: left;
+}
+
+[data-has-hero] .sl-markdown-content > .sl-container {
+  max-width: 68rem;
+  margin: 0 auto;
+}
+
+[data-has-hero] .sl-link-card-grid,
+[data-has-hero] .card-grid {
+  max-width: 68rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ============================================
+   14. TABLES
+   ============================================ */
+
+.sl-markdown-content table {
+  border-radius: 12px;
+  overflow: hidden;
   border: 1px solid var(--sl-color-gray-3);
-  background: var(--sl-color-white);
-  transition: all 0.2s ease;
 }
 
-site-search button:hover {
-  border-color: var(--looplia-coral-light);
-}
-
-/* Search keyboard shortcut (⌘K) */
-site-search kbd {
-  background: var(--sl-color-gray-2) !important;
-  color: var(--sl-color-gray-6) !important;
-  border: 1px solid var(--sl-color-gray-3) !important;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-[data-theme="dark"] site-search button {
+.sl-markdown-content th {
   background: var(--sl-color-gray-2);
-  border-color: var(--sl-color-gray-3);
+  font-family: 'Syne', sans-serif;
+  font-weight: 500;
 }
 
-[data-theme="dark"] site-search kbd {
-  background: var(--sl-color-gray-3) !important;
-  color: var(--sl-color-gray-6) !important;
-  border-color: var(--sl-color-gray-4) !important;
+/* ============================================
+   15. ASIDE/CALLOUTS
+   ============================================ */
+
+.starlight-aside {
+  border-radius: 12px;
+  border-left-width: 4px;
+  background: var(--sl-color-gray-1);
 }
 
-/* Scrollbar styling */
+.starlight-aside--tip {
+  border-left-color: var(--looplia-green);
+}
+
+.starlight-aside--note {
+  border-left-color: var(--looplia-blue);
+}
+
+.starlight-aside--caution {
+  border-left-color: var(--looplia-coral);
+}
+
+/* ============================================
+   16. UTILITY STYLES
+   ============================================ */
+
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
