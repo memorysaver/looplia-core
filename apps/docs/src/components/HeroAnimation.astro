@@ -53,6 +53,8 @@
     private isVisible = true;
     private time = 0;
     private isDark = false;
+    private mutationObserver: MutationObserver | null = null;
+    private visibilityObserver: IntersectionObserver | null = null;
 
     // Looplia brand colors with glow variants
     private colors = {
@@ -94,6 +96,8 @@
       this.canvas.style.width = `${rect.width}px`;
       this.canvas.style.height = `${rect.height}px`;
 
+      // Reset transform before scaling to prevent accumulation on resize
+      this.ctx.setTransform(1, 0, 0, 1, 0, 0);
       this.ctx.scale(dpr, dpr);
     }
 
@@ -132,14 +136,14 @@
       for (let i = 0; i < gridCount; i++) {
         const t = i / (gridCount - 1);
         const y = centerY + (height - centerY) * Math.pow(t, 1.5);
-        this.gridLines.push(new GridLine(0, y, width, y, 'horizontal', t));
+        this.gridLines.push(new GridLine(0, y, width, y, t));
       }
 
       // Vertical lines (converging to vanishing point)
       for (let i = 0; i < gridCount; i++) {
         const t = (i - gridCount / 2) / (gridCount / 2);
         const bottomX = centerX + t * width * 0.8;
-        this.gridLines.push(new GridLine(centerX, centerY, bottomX, height, 'vertical', Math.abs(t)));
+        this.gridLines.push(new GridLine(centerX, centerY, bottomX, height, Math.abs(t)));
       }
 
       // Initialize pulse waves
@@ -157,21 +161,23 @@
       });
 
       // Watch for theme changes
-      const observer = new MutationObserver(() => {
+      this.mutationObserver = new MutationObserver(() => {
         this.checkDarkMode();
       });
-      observer.observe(document.documentElement, {
+      this.mutationObserver.observe(document.documentElement, {
         attributes: true,
         attributeFilter: ['data-theme']
       });
 
       // Pause when not visible
-      const visibilityObserver = new IntersectionObserver((entries) => {
-        this.isVisible = entries[0].isIntersecting;
+      this.visibilityObserver = new IntersectionObserver((entries) => {
+        if (entries.length > 0) {
+          this.isVisible = entries[0].isIntersecting;
+        }
       }, { threshold: 0.1 });
 
       if (this.canvas.parentElement) {
-        visibilityObserver.observe(this.canvas.parentElement);
+        this.visibilityObserver.observe(this.canvas.parentElement);
       }
     }
 
@@ -252,6 +258,8 @@
       if (this.animationId) {
         cancelAnimationFrame(this.animationId);
       }
+      this.mutationObserver?.disconnect();
+      this.visibilityObserver?.disconnect();
     }
   }
 
@@ -350,7 +358,6 @@
     y1: number;
     x2: number;
     y2: number;
-    type: 'horizontal' | 'vertical';
     offset: number;
 
     constructor(
@@ -358,14 +365,12 @@
       y1: number,
       x2: number,
       y2: number,
-      type: 'horizontal' | 'vertical',
       offset: number
     ) {
       this.x1 = x1;
       this.y1 = y1;
       this.x2 = x2;
       this.y2 = y2;
-      this.type = type;
       this.offset = offset;
     }
   }
