@@ -9,6 +9,7 @@ export const site = await Website("looplia-docs", {
   name: "looplia-docs",
   build: "bun run build",
   assets: "./dist",
+  domains: ["doc.looplia.run"],
 });
 
 console.log({ url: site.url });
