@@ -5,7 +5,7 @@ import { defineConfig } from "astro/config";
 
 // https://astro.build/config
 export default defineConfig({
-  site: "https://looplia.dev",
+  site: "https://docs.looplia.run",
   integrations: [
     starlight({
       title: "Looplia",
@@ -15,6 +15,28 @@ export default defineConfig({
         replacesTitle: true,
       },
       description: "Skills-first agentic workflow CLI. Compose AI skills and workflows for any task.",
+      head: [
+        {
+          tag: 'meta',
+          attrs: { property: 'og:image', content: 'https://docs.looplia.run/og-image.png' },
+        },
+        {
+          tag: 'meta',
+          attrs: { property: 'og:image:width', content: '1200' },
+        },
+        {
+          tag: 'meta',
+          attrs: { property: 'og:image:height', content: '630' },
+        },
+        {
+          tag: 'meta',
+          attrs: { name: 'twitter:card', content: 'summary_large_image' },
+        },
+        {
+          tag: 'meta',
+          attrs: { name: 'twitter:image', content: 'https://docs.looplia.run/og-image.png' },
+        },
+      ],
       social: [
         {
           icon: "github",
