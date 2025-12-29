@@ -1,40 +1,856 @@
 ---
-title: Welcome to Starlight
-description: Get started building your docs site with Starlight.
-template: splash # Remove or comment out this line to display the site sidebar on this page.
+title: Looplia
+description: Skills-first agentic workflow CLI. Compose AI skills and workflows for any task.
+template: splash
 hero:
-  tagline: Congrats on setting up a new Starlight project!
-  image:
-    file: ../../assets/houston.webp
+  tagline: "Skills-first agentic workflow automation for Human and AI Agents.<br>Powered by Claude Agent SDK."
   actions:
-    - text: Example Guide
-      link: /guides/example/
+    - text: Get Started
+      link: /getting-started/installation/
       icon: right-arrow
-    - text: Read the Starlight docs
-      link: https://starlight.astro.build
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/memorysaver/looplia-core
       icon: external
       variant: minimal
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid, Tabs, TabItem, Code, LinkCard, Image } from '@astrojs/starlight/components';
+import HeroAnimation from '../../components/HeroAnimation.astro';
+import workflowExecutorImg from '../../assets/workflow-executor.webp';
 
-## Next steps
+<style>{`
+  /* Light Clean Theme - Landing Page Styles */
+  :root {
+    --looplia-coral: #d97757;
+    --looplia-coral-light: #f5b8a6;
+    --looplia-coral-dark: #b85a3d;
+    --looplia-blue: #6a9bcc;
+    --looplia-green: #788c5d;
+    --looplia-bg: #faf9f5;
+    --looplia-surface: #ffffff;
+    --looplia-border: #e8e6dc;
+    --looplia-text: #2d2d2d;
+    --looplia-text-muted: #4a4a4a;
+  }
 
-<CardGrid stagger>
-	<Card title="Update content" icon="pencil">
-		Edit `src/content/docs/index.mdx` to see this page change.
-	</Card>
-	<Card title="Change page layout" icon="document">
-		Delete `template: splash` in `src/content/docs/index.mdx` to display a
-		sidebar on this page.
-	</Card>
-	<Card title="Add new content" icon="add-document">
-		Add Markdown or MDX files to `src/content/docs` to create new pages.
-	</Card>
-	<Card title="Configure your site" icon="setting">
-		Edit your `sidebar` and other config in `astro.config.mjs`.
-	</Card>
-	<Card title="Read the docs" icon="open-book">
-		Learn more in [the Starlight Docs](https://starlight.astro.build/).
-	</Card>
+  /* Hero Section with Animation */
+  .hero {
+    position: relative;
+    padding-block: 5rem !important;
+    text-align: center !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 420px;
+    overflow: hidden;
+  }
+
+  /* Radial gradient backdrop for hero text readability */
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center,
+      rgba(250, 249, 245, 0.85) 0%,
+      rgba(250, 249, 245, 0.4) 50%,
+      rgba(250, 249, 245, 0) 80%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* CRT scan line overlay for retro-futurism effect */
+  .hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.02) 2px,
+      rgba(0, 0, 0, 0.02) 4px
+    );
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  .hero > * {
+    position: relative;
+    z-index: 1;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    text-align: center !important;
+  }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 3.5rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, var(--looplia-text) 0%, var(--looplia-coral-dark) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 2px 20px rgba(250, 249, 245, 0.8);
+  }
+
+  .hero .tagline {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 400;
+    max-width: 52ch;
+    margin: 0 auto 2rem;
+    color: var(--looplia-text-muted);
+    line-height: 1.7;
+    letter-spacing: 0.01em;
+    text-shadow: 0 1px 8px rgba(250, 249, 245, 0.9);
+  }
+
+  .hero .actions {
+    justify-content: center !important;
+    gap: 1rem;
+  }
+
+  /* Splash page centering */
+  [data-page-type="splash"] .sl-markdown-content {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  [data-page-type="splash"] .sl-markdown-content > * {
+    max-width: 68rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Section Headers */
+  .section-header {
+    text-align: center;
+    margin: 5rem 0 2.5rem;
+  }
+
+  .section-header h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--looplia-text);
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.02em;
+  }
+
+  .section-header p {
+    font-family: 'Outfit', sans-serif;
+    color: var(--looplia-text-muted);
+    font-size: 1.125rem;
+    max-width: 50ch;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* Command Preview Card */
+  .command-preview {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--looplia-border);
+    border-radius: 16px;
+    padding: 0;
+    margin: 3rem auto;
+    max-width: 600px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px -8px rgba(20, 20, 19, 0.15),
+                0 4px 12px -4px rgba(20, 20, 19, 0.08);
+  }
+
+  .command-header {
+    background: linear-gradient(180deg, #f8f7f4 0%, #f0efeb 100%);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--looplia-border);
+  }
+
+  .command-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+
+  .command-dot.red { background: #FF6B6B; }
+  .command-dot.yellow { background: #FFE66D; }
+  .command-dot.green { background: #4ECDC4; }
+
+  .command-title {
+    flex: 1;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--looplia-text-muted);
+    margin-right: 52px;
+  }
+
+  .command-content {
+    padding: 24px 28px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    line-height: 1.8;
+    background: rgba(255, 255, 255, 0.98);
+  }
+
+  .command-content .prompt {
+    color: var(--looplia-coral);
+  }
+
+  .command-content .cmd {
+    color: var(--looplia-text);
+    font-weight: 500;
+  }
+
+  .command-content .flag {
+    color: var(--looplia-blue);
+  }
+
+  .command-content .arg {
+    color: var(--looplia-green);
+  }
+
+  .command-content .comment {
+    color: var(--looplia-text-muted);
+    font-style: italic;
+  }
+
+  /* Workflow Diagram */
+  .workflow-diagram {
+    background: var(--looplia-surface);
+    border: 1px solid var(--looplia-border);
+    border-radius: 16px;
+    padding: 2.5rem;
+    margin: 2rem 0;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    overflow-x: auto;
+    box-shadow: 0 2px 12px -4px rgba(20, 20, 19, 0.06);
+  }
+
+  .workflow-diagram pre {
+    color: var(--looplia-text);
+    margin: 0;
+    white-space: pre;
+    background: transparent;
+    padding: 0;
+    text-align: left;
+    display: inline-block;
+  }
+
+  .workflow-diagram .highlight {
+    color: var(--looplia-coral);
+    font-weight: 500;
+  }
+
+  .workflow-diagram .accent {
+    color: var(--looplia-blue);
+  }
+
+  /* Workflow Diagram Image */
+  .workflow-diagram-img {
+    margin: 2rem 0;
+    text-align: center;
+  }
+
+  .workflow-diagram-img img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px -4px rgba(20, 20, 19, 0.1);
+  }
+
+  /* Version Badge */
+  .version-badge {
+    display: inline-flex;
+    align-items: center;
+    background: linear-gradient(135deg, var(--looplia-coral) 0%, var(--looplia-coral-dark) 100%);
+    color: white;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-left: 8px;
+    box-shadow: 0 2px 8px -2px rgba(217, 119, 87, 0.4);
+  }
+
+  /* Footer */
+  .landing-footer {
+    text-align: center;
+    margin-top: 4rem;
+    padding: 2rem 0;
+    border-top: 1px solid var(--looplia-border);
+  }
+
+  .landing-footer p {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    color: var(--looplia-text-muted);
+  }
+
+  .landing-footer a {
+    color: var(--looplia-coral);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .landing-footer a:hover {
+    text-decoration: underline;
+  }
+
+  /* Content wrapper */
+  .landing-content {
+    max-width: 68rem;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  /* Dark theme adjustments */
+  [data-theme="dark"] .command-preview {
+    background: #1a1a1d;
+    border-color: #2a2a2e;
+  }
+
+  [data-theme="dark"] .command-header {
+    background: linear-gradient(180deg, #222225 0%, #1e1e21 100%);
+    border-color: #2a2a2e;
+  }
+
+  [data-theme="dark"] .command-content {
+    background: #1a1a1d;
+  }
+
+  [data-theme="dark"] .command-content .cmd {
+    color: #f0f0f0;
+  }
+
+  [data-theme="dark"] .workflow-diagram {
+    background: #1a1a1d;
+    border-color: #2a2a2e;
+  }
+
+  [data-theme="dark"] .workflow-diagram pre {
+    color: #f0f0f0;
+  }
+
+  [data-theme="dark"] .section-header h2 {
+    color: #f0f0f0;
+  }
+
+  [data-theme="dark"] .section-header p {
+    color: #c4c4c4;
+  }
+
+  [data-theme="dark"] .hero::before {
+    background: radial-gradient(ellipse at center,
+      rgba(15, 15, 16, 0.85) 0%,
+      rgba(15, 15, 16, 0.4) 50%,
+      rgba(15, 15, 16, 0) 80%);
+  }
+
+  [data-theme="dark"] .hero::after {
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.015) 2px,
+      rgba(255, 255, 255, 0.015) 4px
+    );
+  }
+
+  [data-theme="dark"] .hero h1 {
+    background: linear-gradient(135deg, #fafafa 0%, var(--looplia-coral-light) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  [data-theme="dark"] .hero .tagline {
+    color: #c4c4c4 !important;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+  }
+
+  [data-theme="dark"] .landing-footer {
+    border-color: #2a2a2e;
+  }
+
+  /* Architecture Cards */
+  .arch-wrapper {
+    margin: 2rem 0;
+  }
+
+  .arch-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    align-items: stretch;
+  }
+
+  .arch-card {
+    background: var(--looplia-surface);
+    border: 1px solid var(--looplia-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: left;
+    box-sizing: border-box;
+    height: 100%;
+    margin: 0;
+  }
+
+  .arch-card .arch-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--looplia-coral) 0%, var(--looplia-coral-dark) 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+  }
+
+  .arch-card h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--looplia-text);
+    margin: 0 0 0.5rem;
+  }
+
+  .arch-card p {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.9rem;
+    color: var(--looplia-text-muted);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .arch-card code {
+    background: rgba(217, 119, 87, 0.1);
+    color: var(--looplia-coral-dark);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+  }
+
+  /* Subsection Headers */
+  .subsection-header {
+    margin: 3.5rem 0 1.5rem;
+  }
+
+  .subsection-header h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--looplia-text);
+    margin-bottom: 0.5rem;
+  }
+
+  .subsection-header p {
+    font-family: 'Outfit', sans-serif;
+    color: var(--looplia-text-muted);
+    font-size: 1rem;
+    max-width: 60ch;
+    line-height: 1.6;
+  }
+
+  /* Pipeline Step Cards */
+  .pipeline-wrapper {
+    margin: 2rem 0;
+  }
+
+  .pipeline-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    align-items: stretch;
+  }
+
+  .pipeline-card {
+    background: var(--looplia-surface);
+    border: 1px solid var(--looplia-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    padding-top: 2rem;
+    text-align: left;
+    position: relative;
+    box-sizing: border-box;
+    height: 100%;
+    margin: 0;
+  }
+
+  .pipeline-card::before {
+    content: attr(data-step);
+    position: absolute;
+    top: -12px;
+    left: 1.5rem;
+    background: linear-gradient(135deg, var(--looplia-coral) 0%, var(--looplia-coral-dark) 100%);
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 12px;
+    letter-spacing: 0.05em;
+  }
+
+  .pipeline-card .skill-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--looplia-coral);
+    background: rgba(217, 119, 87, 0.1);
+    padding: 4px 10px;
+    border-radius: 6px;
+    display: inline-block;
+    margin-bottom: 0.75rem;
+  }
+
+  .pipeline-card h4 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--looplia-text);
+    margin: 0 0 0.5rem;
+  }
+
+  .pipeline-card .description {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.9rem;
+    color: var(--looplia-text-muted);
+    line-height: 1.5;
+    margin-bottom: 1rem;
+  }
+
+  .pipeline-card .output {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--looplia-blue);
+    background: rgba(106, 155, 204, 0.1);
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 0.75rem;
+  }
+
+  .pipeline-card .human-value {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem;
+    color: var(--looplia-green);
+    font-style: italic;
+    padding-left: 1rem;
+    border-left: 2px solid var(--looplia-green);
+    margin-top: 1rem;
+  }
+
+  /* Closing Statement */
+  .closing-statement {
+    background: linear-gradient(135deg, rgba(217, 119, 87, 0.08) 0%, rgba(245, 184, 166, 0.05) 100%);
+    border: 1px solid rgba(217, 119, 87, 0.2);
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 2.5rem 0;
+    text-align: center;
+  }
+
+  .closing-statement strong {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.25rem;
+    color: var(--looplia-coral-dark);
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  .closing-statement p {
+    font-family: 'Outfit', sans-serif;
+    color: var(--looplia-text-muted);
+    font-size: 1rem;
+    margin: 0;
+    max-width: 50ch;
+    margin: 0 auto;
+  }
+
+  /* Dark theme adjustments for new components */
+  [data-theme="dark"] .arch-card,
+  [data-theme="dark"] .pipeline-card {
+    background: #1a1a1d;
+    border-color: #2a2a2e;
+  }
+
+  [data-theme="dark"] .arch-card h3,
+  [data-theme="dark"] .pipeline-card h4 {
+    color: #f0f0f0;
+  }
+
+  [data-theme="dark"] .arch-card code {
+    background: rgba(245, 184, 166, 0.15);
+    color: var(--looplia-coral-light);
+  }
+
+  [data-theme="dark"] .subsection-header h3 {
+    color: #f0f0f0;
+  }
+
+  [data-theme="dark"] .closing-statement {
+    background: linear-gradient(135deg, rgba(217, 119, 87, 0.12) 0%, rgba(245, 184, 166, 0.08) 100%);
+    border-color: rgba(217, 119, 87, 0.25);
+  }
+
+  [data-theme="dark"] .closing-statement strong {
+    color: var(--looplia-coral-light);
+  }
+
+  /* Mobile refinements */
+  @media (max-width: 768px) {
+    .hero h1 {
+      font-size: 2.5rem;
+    }
+
+    .hero .tagline {
+      font-size: 1.1rem;
+      padding: 0 1rem;
+    }
+
+    .section-header h2 {
+      font-size: 1.75rem;
+    }
+
+    .command-preview {
+      margin: 2rem 1rem;
+    }
+
+    .workflow-diagram {
+      padding: 1.5rem;
+      font-size: 11px;
+    }
+
+    .arch-grid,
+    .pipeline-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .arch-card {
+      min-height: auto;
+    }
+
+    .pipeline-card {
+      min-height: auto;
+    }
+  }
+`}</style>
+
+<HeroAnimation />
+
+<div class="landing-content">
+
+<div class="command-preview">
+  <div class="command-header">
+    <span class="command-dot red"></span>
+    <span class="command-dot yellow"></span>
+    <span class="command-dot green"></span>
+    <span class="command-title">looplia</span>
+  </div>
+  <div class="command-content">
+    <div><span class="prompt">$</span> <span class="cmd">bunx looplia init</span></div>
+    <div><span class="comment"># Initialize workspace with AI skills</span></div>
+    <div style="margin-top: 8px;"><span class="prompt">$</span> <span class="cmd">bunx looplia run</span> <span class="arg">writing-kit</span> <span class="flag">--file</span> <span class="arg">article.md</span></div>
+    <div><span class="comment"># Transform content into a structured writing kit</span></div>
+  </div>
+</div>
+
+<div class="section-header">
+  <h2>Why Looplia?</h2>
+  <p>A new approach to AI workflows — skills as first-class citizens, not rigid code.</p>
+</div>
+
+<CardGrid>
+  <Card title="Skills-First Architecture" icon="puzzle">
+    Workflows declare **skills + missions** in natural language. Claude determines the best approach. No rigid agent definitions required.
+  </Card>
+  <Card title="Workflow-as-Markdown" icon="document">
+    Define workflows in readable **YAML frontmatter + Markdown**. Version control friendly, human-readable, easy to share and modify.
+  </Card>
+  <Card title="Build with AI" icon="rocket">
+    Describe what you want in plain English. **looplia build** generates a complete workflow definition automatically.
+  </Card>
+  <Card title="Sandbox Isolation" icon="seti:folder">
+    Each run creates an **isolated sandbox** with inputs, outputs, and logs. Pause and resume anytime with **--sandbox-id**.
+  </Card>
 </CardGrid>
+
+<div class="section-header">
+  <h2>How It Works</h2>
+  <p>Skills-first architecture for intelligent workflow automation</p>
+</div>
+
+<div class="arch-wrapper">
+  <div class="arch-grid">
+    <div class="arch-card">
+      <div class="arch-icon">⚡</div>
+      <h3>Universal Executor</h3>
+      <p>A single <code>skill-executor</code> handles ALL workflow steps. Every step uses the same pattern: <code>skill:</code> + <code>mission:</code>. No per-skill wrapper agents needed.</p>
+    </div>
+    <div class="arch-card">
+      <div class="arch-icon">🧩</div>
+      <h3>Plugin Architecture</h3>
+      <p>Two plugin types work together: <strong>looplia-core</strong> (infrastructure skills) and <strong>looplia-writer</strong> (domain skills). Each skill defines its own JSON output schema.</p>
+    </div>
+    <div class="arch-card">
+      <div class="arch-icon">✓</div>
+      <h3>Validation System</h3>
+      <p>Hook-based validation tracks completion per step via <code>validation.json</code>. Sandbox isolation enables pause and resume with full execution context.</p>
+    </div>
+  </div>
+</div>
+
+<div class="workflow-diagram-img">
+  <img src={workflowExecutorImg.src} alt="Workflow Executor Architecture - showing Universal Skill-Executor loading looplia-core and looplia-writer plugins, with sandbox validation" />
+</div>
+
+<div class="subsection-header">
+  <h3>Writing Kit: Human Engagement in Action</h3>
+  <p>See how domain skills transform content into creative fuel for writers. Each step produces structured output that the next step builds upon.</p>
+</div>
+
+<div class="pipeline-wrapper">
+  <div class="pipeline-grid">
+    <div class="pipeline-card" data-step="STEP 1">
+      <span class="skill-name">media-reviewer</span>
+      <h4>Deep Analysis</h4>
+      <p class="description">Extracts themes, quotes, and key concepts from source material. Identifies patterns and relationships in the content.</p>
+      <span class="output">→ summary.json</span>
+      <p class="human-value">No more re-watching or re-reading to find that perfect quote</p>
+    </div>
+    <div class="pipeline-card" data-step="STEP 2">
+      <span class="skill-name">idea-synthesis</span>
+      <h4>Creative Ideation</h4>
+      <p class="description">Generates creative hooks, writing angles, and thought-provoking questions. Builds on the analysis to spark ideas.</p>
+      <span class="output">→ ideas.json</span>
+      <p class="human-value">A brainstorming partner that never runs dry</p>
+    </div>
+    <div class="pipeline-card" data-step="STEP 3">
+      <span class="skill-name">writing-kit-assembler</span>
+      <h4>Kit Assembly</h4>
+      <p class="description">Combines analysis and ideas into an actionable writing brief with outlines, angles, and source references.</p>
+      <span class="output">→ writing-kit.json</span>
+      <p class="human-value">Your creative brief, ready to inspire</p>
+    </div>
+  </div>
+</div>
+
+```yaml title="workflows/writing-kit.md"
+---
+name: writing-kit
+version: 1.1.0
+description: Transform content into a comprehensive writing kit
+
+steps:
+  # Step 1: Deep content analysis
+  - id: summary
+    skill: media-reviewer
+    mission: |
+      Deep analysis of content to extract key themes.
+      Extract minimum 3 verbatim quotes, at least 5 key points.
+    input: ${{ sandbox }}/inputs/content.md
+    output: ${{ sandbox }}/outputs/summary.json
+
+  # Step 2: Creative ideation (depends on analysis)
+  - id: ideas
+    skill: idea-synthesis
+    mission: Generate creative hooks, angles, and questions.
+    needs: [summary]
+    input: ${{ steps.summary.output }}
+    output: ${{ sandbox }}/outputs/ideas.json
+
+  # Step 3: Assemble the writing kit (final deliverable)
+  - id: writing-kit
+    skill: writing-kit-assembler
+    mission: Combine insights into an actionable writing brief.
+    needs: [summary, ideas]
+    input:
+      summary: ${{ steps.summary.output }}
+      ideas: ${{ steps.ideas.output }}
+    output: ${{ sandbox }}/outputs/writing-kit.json
+    final: true
+---
+```
+
+<div class="closing-statement">
+  <strong>Not replacing writers, empowering them.</strong>
+  <p>Looplia handles the research grunt work so humans can focus on what they do best: crafting compelling narratives.</p>
+</div>
+
+<div class="section-header">
+  <h2>Multi-Provider Support</h2>
+  <p>Choose your AI provider. Switch models with a single command.</p>
+</div>
+
+<Tabs>
+  <TabItem label="Anthropic Direct">
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+looplia run writing-kit --file article.md
+```
+  </TabItem>
+  <TabItem label="ZenMux Proxy">
+```bash
+looplia config provider preset ZENMUX_ZAI_GLM47
+looplia config provider set auth-token sk-xxx
+looplia run writing-kit --file article.md
+```
+  </TabItem>
+</Tabs>
+
+<CardGrid>
+  <Card title="16+ Model Presets" icon="setting">
+    Anthropic Claude (Haiku, Sonnet), Google Gemini, OpenAI GPT, xAI Grok, DeepSeek, and more via ZenMux.
+  </Card>
+  <Card title="Cost Optimization" icon="approve-check">
+    Switch between providers based on cost, speed, or capability requirements per workflow.
+  </Card>
+</CardGrid>
+
+<div class="section-header">
+  <h2>Get Started</h2>
+  <p>From zero to first workflow in under 5 minutes.</p>
+</div>
+
+<CardGrid>
+  <LinkCard
+    title="Installation"
+    description="Set up Looplia and configure your API keys."
+    href="/getting-started/installation/"
+  />
+  <LinkCard
+    title="Quick Start"
+    description="Run your first workflow in 5 minutes."
+    href="/getting-started/quick-start/"
+  />
+  <LinkCard
+    title="CLI Reference"
+    description="Complete command reference for init, run, build, and config."
+    href="/cli/run/"
+  />
+  <LinkCard
+    title="Understanding Workflows"
+    description="Learn the skills-first workflow architecture."
+    href="/workflows/understanding-workflows/"
+  />
+</CardGrid>
+
+<div class="landing-footer">
+  <p>
+    Built with Claude Agent SDK · <a href="https://github.com/memorysaver/looplia-core">Open Source</a> <span class="version-badge">v0.6.6</span>
+  </p>
+</div>
+
+</div>

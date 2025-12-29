@@ -5,27 +5,80 @@ import { defineConfig } from "astro/config";
 
 // https://astro.build/config
 export default defineConfig({
+  site: "https://docs.looplia.run",
   integrations: [
     starlight({
-      title: "My Docs",
+      title: "Looplia",
+      logo: {
+        light: './src/assets/logo-light.svg',
+        dark: './src/assets/logo-dark.svg',
+        replacesTitle: true,
+      },
+      description: "Skills-first agentic workflow CLI. Compose AI skills and workflows for any task.",
+      head: [
+        {
+          tag: 'meta',
+          attrs: { property: 'og:image', content: 'https://docs.looplia.run/og-image.png' },
+        },
+        {
+          tag: 'meta',
+          attrs: { property: 'og:image:width', content: '1200' },
+        },
+        {
+          tag: 'meta',
+          attrs: { property: 'og:image:height', content: '630' },
+        },
+        {
+          tag: 'meta',
+          attrs: { name: 'twitter:card', content: 'summary_large_image' },
+        },
+        {
+          tag: 'meta',
+          attrs: { name: 'twitter:image', content: 'https://docs.looplia.run/og-image.png' },
+        },
+      ],
       social: [
         {
           icon: "github",
           label: "GitHub",
-          href: "https://github.com/withastro/starlight",
+          href: "https://github.com/memorysaver/looplia-core",
         },
+      ],
+      customCss: [
+        './src/styles/custom.css',
       ],
       sidebar: [
         {
-          label: "Guides",
+          label: "Getting Started",
           items: [
-            // Each item here is one entry in the navigation menu.
-            { label: "Example Guide", slug: "guides/example" },
+            { label: "Installation", slug: "getting-started/installation" },
+            { label: "Quick Start", slug: "getting-started/quick-start" },
+            { label: "Core Concepts", slug: "getting-started/concepts" },
+          ],
+        },
+        {
+          label: "CLI Commands",
+          items: [
+            { label: "init", slug: "cli/init" },
+            { label: "run", slug: "cli/run" },
+            { label: "build", slug: "cli/build" },
+            { label: "config", slug: "cli/config" },
+          ],
+        },
+        {
+          label: "Workflows",
+          items: [
+            { label: "Understanding Workflows", slug: "workflows/understanding-workflows" },
+            { label: "Writing Kit", slug: "workflows/writing-kit" },
+            { label: "Building Custom Workflows", slug: "workflows/custom-workflows" },
           ],
         },
         {
           label: "Reference",
-          autogenerate: { directory: "reference" },
+          items: [
+            { label: "Environment Variables", slug: "reference/environment-variables" },
+            { label: "Troubleshooting", slug: "reference/troubleshooting" },
+          ],
         },
       ],
     }),

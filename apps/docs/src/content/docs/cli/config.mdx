@@ -1,0 +1,241 @@
+---
+title: looplia config
+description: Manage user profile and provider settings.
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+The `config` command manages your Looplia settings, including user profile and model provider configuration.
+
+## Usage
+
+```bash
+looplia config <subcommand> [options]
+```
+
+## Subcommands
+
+| Subcommand | Description |
+|------------|-------------|
+| `show` | Display current configuration |
+| `topics` | Set topics of interest |
+| `style` | Set writing style preferences |
+| `provider` | Manage model provider settings |
+
+---
+
+## User Profile Commands
+
+### Show Configuration
+
+```bash
+looplia config show
+```
+
+Displays your current profile:
+
+```json
+{
+  "topics": ["AI", "productivity", "technology"],
+  "style": {
+    "tone": "expert",
+    "wordCount": 1500,
+    "voice": "first-person"
+  }
+}
+```
+
+### Set Topics
+
+```bash
+looplia config topics "AI, productivity, writing"
+```
+
+Topics influence content generation and idea synthesis.
+
+### Set Style
+
+```bash
+looplia config style --tone expert --word-count 1500 --voice first-person
+```
+
+| Option | Values | Description |
+|--------|--------|-------------|
+| `--tone` | `casual`, `professional`, `expert` | Writing tone |
+| `--word-count` | number | Target word count |
+| `--voice` | `first-person`, `third-person` | Narrative voice |
+
+---
+
+## Provider Command
+
+Configure which AI provider and model to use for workflow execution.
+
+### Show Provider Config
+
+```bash
+looplia config provider show
+```
+
+Output:
+
+```
+Current Provider Configuration
+──────────────────────────────
+Provider: anthropic
+Model: claude-sonnet-4-20250514
+Base URL: https://api.anthropic.com
+Auth Token: sk-ant-***...***
+
+Available Presets:
+  ANTHROPIC_CLAUDE_HAIKU
+  ANTHROPIC_CLAUDE_SONNET
+  ZENMUX_ZAI_GLM47
+  ZENMUX_GOOGLE_GEMINI3FLASH
+  ... (16 total)
+```
+
+### Apply a Preset
+
+```bash
+looplia config provider preset <PRESET_NAME>
+```
+
+Available presets:
+
+<Tabs>
+  <TabItem label="Anthropic Direct">
+| Preset | Model | Description |
+|--------|-------|-------------|
+| `ANTHROPIC_CLAUDE_HAIKU` | claude-haiku-4-20250514 | Fast, cost-effective |
+| `ANTHROPIC_CLAUDE_SONNET` | claude-sonnet-4-20250514 | Balanced performance |
+  </TabItem>
+  <TabItem label="ZenMux Proxy">
+| Preset | Model | Provider |
+|--------|-------|----------|
+| `ZENMUX_ZAI_GLM47` | glm-4.7 | Zhipu AI |
+| `ZENMUX_GOOGLE_GEMINI3FLASH` | gemini-3-flash | Google |
+| `ZENMUX_OPENAI_GPT51MINI` | gpt-5.1-codex-mini | OpenAI |
+| `ZENMUX_XAI_GROK41FAST` | grok-4.1-fast | xAI |
+| `ZENMUX_DEEPSEEK_REASONER` | deepseek-reasoner | DeepSeek |
+| `ZENMUX_MINIMAX_M21` | minimax-m21 | MiniMax |
+| ... | ... | ... |
+  </TabItem>
+</Tabs>
+
+Example:
+
+```bash
+# Use Claude Haiku for faster, cheaper runs
+looplia config provider preset ANTHROPIC_CLAUDE_HAIKU
+
+# Use ZenMux with GLM-4.7
+looplia config provider preset ZENMUX_ZAI_GLM47
+```
+
+### Set Individual Values
+
+```bash
+looplia config provider set <key> <value>
+```
+
+| Key | Description |
+|-----|-------------|
+| `auth-token` | API key for the provider |
+| `model` | Model identifier |
+| `base-url` | API endpoint URL |
+| `provider` | Provider name (`anthropic`, `zenmux`) |
+
+Examples:
+
+```bash
+# Set ZenMux API key
+looplia config provider set auth-token sk-zenmux-xxx
+
+# Override model
+looplia config provider set model claude-opus-4-20250514
+
+# Custom endpoint
+looplia config provider set base-url https://custom-proxy.example.com
+```
+
+### Reset Provider Config
+
+```bash
+looplia config provider reset
+```
+
+Clears all provider settings, reverting to defaults (Anthropic with `ANTHROPIC_API_KEY` environment variable).
+
+---
+
+## Configuration Files
+
+Settings are stored in `~/.looplia/`:
+
+| File | Purpose |
+|------|---------|
+| `user-profile.json` | Topics, style preferences |
+| `looplia.setting.json` | Provider configuration |
+
+### user-profile.json
+
+```json
+{
+  "topics": ["AI", "productivity"],
+  "style": {
+    "tone": "expert",
+    "wordCount": 1500,
+    "voice": "first-person"
+  }
+}
+```
+
+### looplia.setting.json
+
+```json
+{
+  "provider": "zenmux",
+  "model": "glm-4.7",
+  "baseUrl": "https://api.zenmux.ai/v1",
+  "authToken": "sk-zenmux-..."
+}
+```
+
+<Aside type="caution">
+The `looplia.setting.json` file contains your API key. Keep it secure and don't commit it to version control.
+</Aside>
+
+---
+
+## Dual-Strategy Execution
+
+Looplia uses different execution strategies based on provider:
+
+| Provider | Strategy | Agent Registration |
+|----------|----------|-------------------|
+| **Anthropic Direct** | Task subagents | Full skill-executor registration |
+| **ZenMux Proxy** | Inline execution | No subagent registration |
+
+This is handled automatically based on your provider configuration.
+
+---
+
+## Environment Variables
+
+Provider settings can also be set via environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `ANTHROPIC_API_KEY` | Anthropic API key (default) |
+| `ZENMUX_API_KEY` | ZenMux API key (auto-mapped) |
+| `LOOPLIA_AGENT_MODEL_MAIN` | Override main agent model |
+| `LOOPLIA_AGENT_MODEL_EXECUTOR` | Override executor model |
+
+Environment variables take precedence over config file settings.
+
+## See Also
+
+- [Installation](/getting-started/installation/) — Initial setup
+- [Environment Variables](/reference/environment-variables/) — Full reference
+- [run](/cli/run/) — Execute workflows with configured provider
