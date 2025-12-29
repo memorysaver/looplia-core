@@ -562,6 +562,13 @@ site-search kbd {
   background: var(--sl-color-gray-1);
 }
 
+/* Ensure all aside text has good contrast */
+.starlight-aside p,
+.starlight-aside li,
+.starlight-aside code {
+  color: var(--sl-color-gray-6) !important;
+}
+
 .starlight-aside--tip {
   border-left-color: var(--looplia-green);
 }
@@ -572,6 +579,29 @@ site-search kbd {
 
 .starlight-aside--caution {
   border-left-color: var(--looplia-coral);
+  background: #fef6f3;
+}
+
+.starlight-aside--caution .starlight-aside__title {
+  color: var(--looplia-coral-dark) !important;
+}
+
+.starlight-aside--caution p {
+  color: var(--sl-color-gray-6) !important;
+}
+
+/* Dark mode asides */
+[data-theme="dark"] .starlight-aside--caution {
+  background: rgba(217, 119, 87, 0.1);
+}
+
+[data-theme="dark"] .starlight-aside--caution .starlight-aside__title {
+  color: var(--looplia-coral-light) !important;
+}
+
+[data-theme="dark"] .starlight-aside p,
+[data-theme="dark"] .starlight-aside li {
+  color: var(--sl-color-gray-6) !important;
 }
 
 /* ============================================
