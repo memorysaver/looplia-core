@@ -1,6 +1,6 @@
 {
   "name": "@looplia/looplia-cli",
-  "version": "0.6.6",
+  "version": "0.6.8",
   "description": "Looplia CLI - AI-powered workflow automation tool",
   "type": "module",
   "license": "Elastic-2.0",
@@ -21,7 +21,7 @@
     "looplia"
   ],
   "bin": {
-    "looplia": "./dist/index.js"
+    "looplia": "./dist/cli.js"
   },
   "files": [
     "dist",
