@@ -10,6 +10,6 @@ export default defineConfig({
   banner: {
     js: "#!/usr/bin/env node",
   },
-  noExternal: ["@looplia-core/core"],
+  noExternal: ["@looplia-core/core", "@looplia-core/provider"],
   shims: true,
 });

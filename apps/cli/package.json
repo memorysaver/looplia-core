@@ -1,7 +1,25 @@
 {
-  "name": "@looplia-core/cli",
+  "name": "@looplia/looplia-cli",
   "version": "0.6.6",
+  "description": "Looplia CLI - AI-powered workflow automation tool",
   "type": "module",
+  "license": "Elastic-2.0",
+  "author": "Looplia",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/memorysaver/looplia-core"
+  },
+  "homepage": "https://github.com/memorysaver/looplia-core",
+  "bugs": {
+    "url": "https://github.com/memorysaver/looplia-core/issues"
+  },
+  "keywords": [
+    "cli",
+    "ai",
+    "workflow",
+    "automation",
+    "looplia"
+  ],
   "bin": {
     "looplia": "./dist/index.js"
   },
@@ -22,13 +40,13 @@
     "prepublishOnly": "bun run copy-plugins && bun run build"
   },
   "dependencies": {
-    "@looplia-core/core": "workspace:*",
-    "@looplia-core/provider": "workspace:*",
     "ink": "^6.5.1",
     "react": "^19.2.1"
   },
   "devDependencies": {
     "@looplia-core/config": "workspace:*",
+    "@looplia-core/core": "workspace:*",
+    "@looplia-core/provider": "workspace:*",
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.7",
     "tsup": "^8.5.1",
