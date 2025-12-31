@@ -117,16 +117,22 @@ looplia config provider preset ZENMUX_ZAI_GLM47
 looplia run writing-kit --file article.md
 ```
 
-## Priority Order
+## Priority Order (v0.6.9+)
 
-Environment variables take precedence over config file settings:
+**API Keys:** Config file takes precedence when explicitly set:
+
+1. **Config file `authToken`** (highest priority) — set via `looplia config provider set auth-token`
+2. **Endpoint-specific env var** — `ZENMUX_API_KEY` for ZenMux, `ANTHROPIC_API_KEY` for Anthropic
+3. **Default env var** (`ANTHROPIC_API_KEY`)
+
+**Model Settings:** Environment variables take precedence:
 
 1. **Environment variables** (highest priority)
 2. **Config file** (`~/.looplia/looplia.setting.json`)
 3. **Default values** (lowest priority)
 
 ```bash
-# This overrides any config file setting
+# Model env vars still override config
 export LOOPLIA_AGENT_MODEL_MAIN=claude-opus-4-20250514
 looplia run writing-kit --file article.md
 ```

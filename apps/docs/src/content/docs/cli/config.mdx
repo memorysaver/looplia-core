@@ -232,7 +232,7 @@ Provider settings can also be set via environment variables:
 | `LOOPLIA_AGENT_MODEL_MAIN` | Override main agent model |
 | `LOOPLIA_AGENT_MODEL_EXECUTOR` | Override executor model |
 
-Environment variables take precedence over config file settings.
+**API Key Priority (v0.6.9+):** Config file `authToken` takes precedence over environment variables when explicitly set via `looplia config provider set auth-token`. Environment variables serve as fallback when no `authToken` is configured.
 
 ## See Also
 
