@@ -698,8 +698,8 @@ import workflowExecutorImg from '../../assets/workflow-executor.webp';
   <div class="arch-grid">
     <div class="arch-card">
       <div class="arch-icon">⚡</div>
-      <h3>Universal Executor</h3>
-      <p>A single <code>skill-executor</code> handles ALL workflow steps. Every step uses the same pattern: <code>skill:</code> + <code>mission:</code>. No per-skill wrapper agents needed.</p>
+      <h3>Universal Skill Executor</h3>
+      <p>Each workflow step runs in its own context via the Skill Executor. Every step uses the same pattern: <code>skill:</code> + <code>mission:</code>. Context offload keeps the main agent clean.</p>
     </div>
     <div class="arch-card">
       <div class="arch-icon">🧩</div>
@@ -851,7 +851,7 @@ looplia run writing-kit --file article.md
 
 <div class="landing-footer">
   <p>
-    Built with Claude Agent SDK · <a href="https://github.com/memorysaver/looplia-core">Open Source</a> <span class="version-badge">v0.6.6</span>
+    Built with Claude Agent SDK · <a href="https://github.com/memorysaver/looplia-core">Open Source</a> <span class="version-badge">v0.6.9</span>
   </p>
 </div>
 

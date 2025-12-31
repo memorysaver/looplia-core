@@ -76,7 +76,8 @@ export type LoopliaSettings = {
     main: string;
 
     /**
-     * Model for skill executor agent
+     * Model for executor agent (reserved for future use)
+     * v0.6.9: Currently unused - using built-in general-purpose subagent
      * (injected as LOOPLIA_AGENT_MODEL_EXECUTOR)
      * @example "z-ai/glm-4.7" or "haiku"
      */
@@ -93,6 +94,9 @@ export type PresetDefinition = {
   baseUrl?: string;
   mainModel: string;
   executorModel: string;
+  haikuModel: string;
+  sonnetModel: string;
+  opusModel: string;
 };
 
 /**
@@ -105,7 +109,7 @@ export const DEFAULT_SETTINGS: LoopliaSettings = {
   },
   agents: {
     main: "claude-haiku-4-5-20251001",
-    executor: "haiku",
+    executor: "claude-haiku-4-5-20251001",
   },
 };
 
@@ -118,13 +122,19 @@ export const PRESETS: Record<string, PresetDefinition> = {
     name: "Anthropic Claude Haiku",
     apiProvider: "anthropic",
     mainModel: "claude-haiku-4-5-20251001",
-    executorModel: "haiku",
+    executorModel: "claude-haiku-4-5-20251001",
+    haikuModel: "claude-haiku-4-5-20251001",
+    sonnetModel: "claude-haiku-4-5-20251001",
+    opusModel: "claude-haiku-4-5-20251001",
   },
   ANTHROPIC_CLAUDE_SONNET: {
     name: "Anthropic Claude Sonnet",
     apiProvider: "anthropic",
     mainModel: "claude-sonnet-4-5-20250514",
-    executorModel: "haiku",
+    executorModel: "claude-sonnet-4-5-20250514",
+    haikuModel: "claude-sonnet-4-5-20250514",
+    sonnetModel: "claude-sonnet-4-5-20250514",
+    opusModel: "claude-sonnet-4-5-20250514",
   },
 
   // ZenMux Presets
@@ -134,6 +144,9 @@ export const PRESETS: Record<string, PresetDefinition> = {
     baseUrl: "https://zenmux.ai/api/anthropic",
     mainModel: "anthropic/claude-haiku-4.5",
     executorModel: "anthropic/claude-haiku-4.5",
+    haikuModel: "anthropic/claude-haiku-4.5",
+    sonnetModel: "anthropic/claude-haiku-4.5",
+    opusModel: "anthropic/claude-haiku-4.5",
   },
   ZENMUX_ZAI_GLM47: {
     name: "ZenMux GLM-4.7",
@@ -141,6 +154,9 @@ export const PRESETS: Record<string, PresetDefinition> = {
     baseUrl: "https://zenmux.ai/api/anthropic",
     mainModel: "z-ai/glm-4.7",
     executorModel: "z-ai/glm-4.7",
+    haikuModel: "z-ai/glm-4.7",
+    sonnetModel: "z-ai/glm-4.7",
+    opusModel: "z-ai/glm-4.7",
   },
   ZENMUX_MINIMAX_M21: {
     name: "ZenMux MiniMax-M2.1",
@@ -148,6 +164,9 @@ export const PRESETS: Record<string, PresetDefinition> = {
     baseUrl: "https://zenmux.ai/api/anthropic",
     mainModel: "minimax/minimax-m2.1",
     executorModel: "minimax/minimax-m2.1",
+    haikuModel: "minimax/minimax-m2.1",
+    sonnetModel: "minimax/minimax-m2.1",
+    opusModel: "minimax/minimax-m2.1",
   },
   ZENMUX_GOOGLE_GEMINI3FLASH: {
     name: "ZenMux Gemini-3-Flash",
@@ -155,6 +174,9 @@ export const PRESETS: Record<string, PresetDefinition> = {
     baseUrl: "https://zenmux.ai/api/anthropic",
     mainModel: "google/gemini-3-flash-preview",
     executorModel: "google/gemini-3-flash-preview",
+    haikuModel: "google/gemini-3-flash-preview",
+    sonnetModel: "google/gemini-3-flash-preview",
+    opusModel: "google/gemini-3-flash-preview",
   },
   ZENMUX_GOOGLE_GEMINI3FLASH_FREE: {
     name: "ZenMux Gemini-3-Flash (Free)",
@@ -162,6 +184,9 @@ export const PRESETS: Record<string, PresetDefinition> = {
     baseUrl: "https://zenmux.ai/api/anthropic",
     mainModel: "google/gemini-3-flash-preview-free",
     executorModel: "google/gemini-3-flash-preview-free",
+    haikuModel: "google/gemini-3-flash-preview-free",
+    sonnetModel: "google/gemini-3-flash-preview-free",
+    opusModel: "google/gemini-3-flash-preview-free",
   },
   ZENMUX_XIAOMI_MIMOV2FLASH: {
     name: "ZenMux MiMo-v2-Flash",
@@ -169,6 +194,9 @@ export const PRESETS: Record<string, PresetDefinition> = {
     baseUrl: "https://zenmux.ai/api/anthropic",
     mainModel: "xiaomi/mimo-v2-flash",
     executorModel: "xiaomi/mimo-v2-flash",
+    haikuModel: "xiaomi/mimo-v2-flash",
+    sonnetModel: "xiaomi/mimo-v2-flash",
+    opusModel: "xiaomi/mimo-v2-flash",
   },
   ZENMUX_XAI_GROK41FAST: {
     name: "ZenMux Grok-4.1-Fast",
@@ -176,6 +204,9 @@ export const PRESETS: Record<string, PresetDefinition> = {
     baseUrl: "https://zenmux.ai/api/anthropic",
     mainModel: "x-ai/grok-4.1-fast",
     executorModel: "x-ai/grok-4.1-fast",
+    haikuModel: "x-ai/grok-4.1-fast",
+    sonnetModel: "x-ai/grok-4.1-fast",
+    opusModel: "x-ai/grok-4.1-fast",
   },
   ZENMUX_DEEPSEEK_V32: {
     name: "ZenMux DeepSeek-v3.2",
@@ -183,6 +214,9 @@ export const PRESETS: Record<string, PresetDefinition> = {
     baseUrl: "https://zenmux.ai/api/anthropic",
     mainModel: "deepseek/deepseek-v3.2",
     executorModel: "deepseek/deepseek-v3.2",
+    haikuModel: "deepseek/deepseek-v3.2",
+    sonnetModel: "deepseek/deepseek-v3.2",
+    opusModel: "deepseek/deepseek-v3.2",
   },
   ZENMUX_DEEPSEEK_REASONER: {
     name: "ZenMux DeepSeek-Reasoner",
@@ -190,6 +224,9 @@ export const PRESETS: Record<string, PresetDefinition> = {
     baseUrl: "https://zenmux.ai/api/anthropic",
     mainModel: "deepseek/deepseek-reasoner",
     executorModel: "deepseek/deepseek-reasoner",
+    haikuModel: "deepseek/deepseek-reasoner",
+    sonnetModel: "deepseek/deepseek-reasoner",
+    opusModel: "deepseek/deepseek-reasoner",
   },
   ZENMUX_VOLCENGINE_DOUBAO_SEED: {
     name: "ZenMux Doubao-Seed-1.8",
@@ -197,6 +234,9 @@ export const PRESETS: Record<string, PresetDefinition> = {
     baseUrl: "https://zenmux.ai/api/anthropic",
     mainModel: "volcengine/doubao-seed-1.8",
     executorModel: "volcengine/doubao-seed-1.8",
+    haikuModel: "volcengine/doubao-seed-1.8",
+    sonnetModel: "volcengine/doubao-seed-1.8",
+    opusModel: "volcengine/doubao-seed-1.8",
   },
   ZENMUX_MISTRAL_LARGE2512: {
     name: "ZenMux Mistral-Large-2512",
@@ -204,6 +244,9 @@ export const PRESETS: Record<string, PresetDefinition> = {
     baseUrl: "https://zenmux.ai/api/anthropic",
     mainModel: "mistralai/mistral-large-2512",
     executorModel: "mistralai/mistral-large-2512",
+    haikuModel: "mistralai/mistral-large-2512",
+    sonnetModel: "mistralai/mistral-large-2512",
+    opusModel: "mistralai/mistral-large-2512",
   },
   ZENMUX_ZAI_GLM46VFLASH: {
     name: "ZenMux GLM-4.6v-Flash",
@@ -211,6 +254,9 @@ export const PRESETS: Record<string, PresetDefinition> = {
     baseUrl: "https://zenmux.ai/api/anthropic",
     mainModel: "z-ai/glm-4.6v-flash",
     executorModel: "z-ai/glm-4.6v-flash",
+    haikuModel: "z-ai/glm-4.6v-flash",
+    sonnetModel: "z-ai/glm-4.6v-flash",
+    opusModel: "z-ai/glm-4.6v-flash",
   },
   ZENMUX_ZAI_GLM46V: {
     name: "ZenMux GLM-4.6v",
@@ -218,6 +264,9 @@ export const PRESETS: Record<string, PresetDefinition> = {
     baseUrl: "https://zenmux.ai/api/anthropic",
     mainModel: "z-ai/glm-4.6v",
     executorModel: "z-ai/glm-4.6v",
+    haikuModel: "z-ai/glm-4.6v",
+    sonnetModel: "z-ai/glm-4.6v",
+    opusModel: "z-ai/glm-4.6v",
   },
   ZENMUX_OPENAI_GPT51CODEXMINI: {
     name: "ZenMux GPT-5.1 Codex Mini",
@@ -225,6 +274,9 @@ export const PRESETS: Record<string, PresetDefinition> = {
     baseUrl: "https://zenmux.ai/api/anthropic",
     mainModel: "openai/gpt-5.1-codex-mini",
     executorModel: "openai/gpt-5.1-codex-mini",
+    haikuModel: "openai/gpt-5.1-codex-mini",
+    sonnetModel: "openai/gpt-5.1-codex-mini",
+    opusModel: "openai/gpt-5.1-codex-mini",
   },
 };
 
@@ -292,10 +344,37 @@ export async function removeLoopliaSettings(): Promise<void> {
 }
 
 /**
+ * Set environment variable if not already set
+ */
+function setEnvIfNotSet(key: string, value: string): void {
+  if (!process.env[key]) {
+    process.env[key] = value;
+  }
+}
+
+/**
+ * Inject model tier environment variables
+ * All tiers default to the main agent model
+ */
+function injectModelTierEnv(mainModel: string, executorModel: string): void {
+  // Model tier defaults (Claude Agent SDK uses these)
+  setEnvIfNotSet("ANTHROPIC_DEFAULT_HAIKU_MODEL", mainModel);
+  setEnvIfNotSet("ANTHROPIC_DEFAULT_SONNET_MODEL", mainModel);
+  setEnvIfNotSet("ANTHROPIC_DEFAULT_OPUS_MODEL", mainModel);
+
+  // Agent models (looplia-specific)
+  setEnvIfNotSet("LOOPLIA_AGENT_MODEL_MAIN", mainModel);
+  setEnvIfNotSet("LOOPLIA_AGENT_MODEL_EXECUTOR", executorModel);
+}
+
+/**
  * Inject looplia settings as environment variables
  * Called before SDK query() invocation
  *
- * IMPORTANT: Only sets env vars if not already set (env vars take precedence)
+ * API Key Priority:
+ * 1. Settings file authToken (user explicitly configured via CLI)
+ * 2. Endpoint-specific env var (ZENMUX_API_KEY for ZenMux endpoint)
+ * 3. Generic ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN
  *
  * ZenMux API Pattern (per official sample):
  * ```python
@@ -304,38 +383,34 @@ export async function removeLoopliaSettings(): Promise<void> {
  *     base_url="https://zenmux.ai/api/anthropic"
  * )
  * ```
- * So we set ANTHROPIC_API_KEY (not AUTH_TOKEN) for ZenMux/custom providers.
  */
 export function injectLoopliaSettingsEnv(settings: LoopliaSettings): void {
   // For non-anthropic providers (ZenMux, custom)
   if (settings.apiProvider.type !== "anthropic") {
-    // Set API endpoint
+    // Set API endpoint (only if not already set in env)
     if (settings.apiProvider.baseUrl && !process.env.ANTHROPIC_BASE_URL) {
       process.env.ANTHROPIC_BASE_URL = settings.apiProvider.baseUrl;
     }
 
-    // Set API key for proxy providers
-    // For ZenMux: ALWAYS use ZENMUX_API_KEY when available (user explicitly selected ZenMux preset)
-    // This overrides any existing ANTHROPIC_API_KEY since we're targeting ZenMux endpoint
-    if (settings.apiProvider.type === "zenmux" && process.env.ZENMUX_API_KEY) {
-      process.env.ANTHROPIC_API_KEY = process.env.ZENMUX_API_KEY;
-    } else if (
-      !process.env.ANTHROPIC_API_KEY &&
-      settings.apiProvider.authToken
-    ) {
-      // Fallback to authToken from config if no API key is set
+    // API key selection based on priority:
+    // Priority 1: authToken from settings file (user explicitly configured)
+    if (settings.apiProvider.authToken) {
       process.env.ANTHROPIC_API_KEY = settings.apiProvider.authToken;
+    }
+    // Priority 2: Endpoint-specific env var fallback
+    else {
+      const isZenmuxEndpoint =
+        settings.apiProvider.type === "zenmux" ||
+        settings.apiProvider.baseUrl?.includes("zenmux.ai");
+
+      if (isZenmuxEndpoint && process.env.ZENMUX_API_KEY) {
+        process.env.ANTHROPIC_API_KEY = process.env.ZENMUX_API_KEY;
+      }
+      // For custom endpoints: ANTHROPIC_API_KEY is used as-is (no override needed)
     }
   }
 
-  // Agent models (looplia-specific)
-  if (!process.env.LOOPLIA_AGENT_MODEL_MAIN) {
-    process.env.LOOPLIA_AGENT_MODEL_MAIN = settings.agents.main;
-  }
-
-  if (!process.env.LOOPLIA_AGENT_MODEL_EXECUTOR) {
-    process.env.LOOPLIA_AGENT_MODEL_EXECUTOR = settings.agents.executor;
-  }
+  injectModelTierEnv(settings.agents.main, settings.agents.executor);
 }
 
 /**

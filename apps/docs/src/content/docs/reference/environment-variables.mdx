@@ -40,6 +40,13 @@ env $(cat .env) looplia run writing-kit --file test.md
 |----------|-------------|---------|
 | `LOOPLIA_AGENT_MODEL_MAIN` | Override main agent model | Provider default |
 | `LOOPLIA_AGENT_MODEL_EXECUTOR` | Override skill executor model | Provider default |
+| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | Override haiku tier model (SDK) | Main model |
+| `ANTHROPIC_DEFAULT_SONNET_MODEL` | Override sonnet tier model (SDK) | Main model |
+| `ANTHROPIC_DEFAULT_OPUS_MODEL` | Override opus tier model (SDK) | Main model |
+
+<Aside>
+Model tier variables (`ANTHROPIC_DEFAULT_*_MODEL`) are used by the Claude Agent SDK to map speed tiers (haiku, sonnet, opus) to actual model names. By default, all tiers use the main agent model from the preset configuration.
+</Aside>
 
 ### Model Override Examples
 
@@ -117,16 +124,22 @@ looplia config provider preset ZENMUX_ZAI_GLM47
 looplia run writing-kit --file article.md
 ```
 
-## Priority Order
+## Priority Order (v0.6.9+)
 
-Environment variables take precedence over config file settings:
+**API Keys:** Config file takes precedence when explicitly set:
+
+1. **Config file `authToken`** (highest priority) — set via `looplia config provider set auth-token`
+2. **Endpoint-specific env var** — `ZENMUX_API_KEY` for ZenMux, `ANTHROPIC_API_KEY` for Anthropic
+3. **Default env var** (`ANTHROPIC_API_KEY`)
+
+**Model Settings:** Environment variables take precedence:
 
 1. **Environment variables** (highest priority)
 2. **Config file** (`~/.looplia/looplia.setting.json`)
 3. **Default values** (lowest priority)
 
 ```bash
-# This overrides any config file setting
+# Model env vars still override config
 export LOOPLIA_AGENT_MODEL_MAIN=claude-opus-4-20250514
 looplia run writing-kit --file article.md
 ```
@@ -172,6 +185,9 @@ docker run -e ANTHROPIC_API_KEY=sk-ant-... -v ./content:/data my-looplia
 | `CLAUDE_CODE_OAUTH_TOKEN` | string | OAuth token authentication |
 | `LOOPLIA_AGENT_MODEL_MAIN` | string | Main agent model override |
 | `LOOPLIA_AGENT_MODEL_EXECUTOR` | string | Executor model override |
+| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | string | Haiku tier model (SDK) |
+| `ANTHROPIC_DEFAULT_SONNET_MODEL` | string | Sonnet tier model (SDK) |
+| `ANTHROPIC_DEFAULT_OPUS_MODEL` | string | Opus tier model (SDK) |
 | `LOOPLIA_DEV` | boolean | Enable development mode |
 | `LOOPLIA_DEV_ROOT` | path | Development source path |
 | `LOOPLIA_DEBUG` | boolean | Enable debug logging |

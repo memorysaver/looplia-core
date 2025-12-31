@@ -169,8 +169,9 @@ When resuming with `--sandbox-id`, Looplia skips validated steps and continues f
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  Skill Executor (Claude Agent SDK)                               │
-│  • Receives skill + mission                                      │
+│  Skill Executor (via general-purpose subagent)                   │
+│  • Each step runs in a separate context window                   │
+│  • Receives skill + mission from workflow                        │
 │  • Orchestrates Claude to complete the task                      │
 │  • Produces validated JSON output                                │
 └─────────────────────────────────────────────────────────────────┘

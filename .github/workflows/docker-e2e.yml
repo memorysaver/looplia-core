@@ -174,7 +174,7 @@ jobs:
             fi
           done
 
-      - name: Verify subagent execution (v0.6.1 skills-first)
+      - name: Verify subagent execution (v0.6.9 unified strategy)
         run: |
           SANDBOX_DIR=$(find test-workspace/sandbox -maxdepth 1 -type d ! -name sandbox | head -1)
           LOG_FILE=$(ls "$SANDBOX_DIR/logs/"*.log 2>/dev/null | head -1)
@@ -184,19 +184,19 @@ jobs:
             exit 0
           fi
 
-          echo "=== Checking skill-executor usage (v0.6.1) ==="
+          echo "=== Checking general-purpose subagent usage (v0.6.9) ==="
 
-          # Check for universal skill-executor (should appear for all steps)
-          SKILL_EXEC_COUNT=$(grep -c '"subagent_type".*"skill-executor"' "$LOG_FILE" 2>/dev/null || echo "0")
-          if [ "$SKILL_EXEC_COUNT" -ge 3 ]; then
-            echo "✓ skill-executor used $SKILL_EXEC_COUNT times (expected >= 3)"
+          # v0.6.9: All providers use general-purpose subagent for context offload
+          GP_COUNT=$(grep -c '"subagent_type".*"general-purpose"' "$LOG_FILE" 2>/dev/null || echo "0")
+          if [ "$GP_COUNT" -ge 3 ]; then
+            echo "✓ general-purpose used $GP_COUNT times (expected >= 3)"
           else
-            echo "✗ skill-executor count: $SKILL_EXEC_COUNT (expected >= 3)"
+            echo "✗ general-purpose count: $GP_COUNT (expected >= 3)"
             exit 1
           fi
 
-          # CRITICAL: Check for legacy agents (should NOT exist in v0.6.1)
-          for legacy in content-analyzer idea-generator writing-kit-builder; do
+          # CRITICAL: Check for legacy agents (should NOT exist)
+          for legacy in content-analyzer idea-generator writing-kit-builder skill-executor; do
             if grep -q "\"subagent_type\".*\"$legacy\"" "$LOG_FILE"; then
               echo "✗ FAIL: Legacy agent $legacy detected!"
               exit 1
@@ -204,21 +204,13 @@ jobs:
           done
           echo "✓ No legacy agents found"
 
-          # Check for general-purpose fallback (should NOT exist)
-          if grep -q '"subagent_type".*"general-purpose"' "$LOG_FILE"; then
-            echo "✗ FAIL: general-purpose subagent detected!"
-            exit 1
-          else
-            echo "✓ No general-purpose fallback"
-          fi
-
           # Count Task tool invocations
           TASK_COUNT=$(grep -c '"name".*"Task"' "$LOG_FILE" 2>/dev/null || echo "0")
           echo "Task tool invocations: $TASK_COUNT (expected >= 3)"
 
           # Verify correct skills used for each step
           # Log format: Task tool calls have:
-          # { "subagent_type": "skill-executor",
+          # { "subagent_type": "general-purpose",
           #   "description": "Execute step: {step-id}",
           #   "prompt": "Execute skill '{skill-name}' for step '{step-id}'..." }
 
@@ -361,38 +353,32 @@ jobs:
           [ -f "$SANDBOX_DIR/outputs/writing-kit.json" ] || (echo "ERROR: outputs/writing-kit.json not found (Stage 3)" && exit 1)
           echo "✓ outputs/writing-kit.json exists (Stage 3)"
 
-      - name: Verify inline execution (ZenMux strategy)
+      - name: Verify subagent execution (v0.6.9 unified strategy)
         run: |
           SANDBOX_DIR=$(find zenmux-test-workspace/sandbox -maxdepth 1 -type d ! -name sandbox | head -1)
           LOG_FILE=$(ls "$SANDBOX_DIR/logs/"*.log 2>/dev/null | head -1)
 
           if [ -z "$LOG_FILE" ]; then
-            echo "⚠ No log file found, skipping inline verification"
+            echo "⚠ No log file found, skipping subagent verification"
             exit 0
           fi
 
-          echo "=== Inline Strategy Verification (ZenMux) ==="
+          echo "=== Checking general-purpose subagent usage (v0.6.9) ==="
 
-          # CRITICAL: Must NOT see Task/subagent usage (inline mode)
-          echo "Subagent spawning (should be 0):"
-          SUBAGENT_COUNT=$(grep -c '"subagent_type"' "$LOG_FILE" 2>/dev/null || echo "0")
-          if [ "$SUBAGENT_COUNT" -eq 0 ]; then
-            echo "✓ No subagent_type found (inline mode confirmed)"
+          # v0.6.9: ZenMux now uses same general-purpose pattern as Anthropic
+          GP_COUNT=$(grep -c '"subagent_type".*"general-purpose"' "$LOG_FILE" 2>/dev/null || echo "0")
+          if [ "$GP_COUNT" -ge 3 ]; then
+            echo "✓ general-purpose used $GP_COUNT times (expected >= 3)"
           else
-            echo "✗ FAIL: Found $SUBAGENT_COUNT subagent_type entries (expected 0 for inline)"
+            echo "✗ general-purpose count: $GP_COUNT (expected >= 3)"
             exit 1
           fi
 
-          echo "Task tool usage (should be 0):"
+          # Count Task tool invocations
           TASK_COUNT=$(grep -c '"name".*"Task"' "$LOG_FILE" 2>/dev/null || echo "0")
-          if [ "$TASK_COUNT" -eq 0 ]; then
-            echo "✓ No Task tool invocations (inline mode confirmed)"
-          else
-            echo "✗ FAIL: Found $TASK_COUNT Task invocations (expected 0 for inline)"
-            exit 1
-          fi
+          echo "Task tool invocations: $TASK_COUNT (expected >= 3)"
 
-          # Must see Skill tool invocations (inline execution)
+          # Must see Skill tool invocations
           echo "Skill invocations (should be >= 3):"
           SKILL_COUNT=$(grep -c '"name".*"Skill"' "$LOG_FILE" 2>/dev/null || echo "0")
           if [ "$SKILL_COUNT" -ge 3 ]; then
@@ -403,7 +389,7 @@ jobs:
           fi
 
           echo ""
-          echo "=== ZenMux Inline Execution Verified ==="
+          echo "=== ZenMux v0.6.9 Unified Strategy Verified ==="
 
       - name: Upload test artifacts
         if: always()

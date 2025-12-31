@@ -38,22 +38,27 @@ const CLAUDE_CODE_PATHS = [
 
 /**
  * Cached Claude Code path (resolved once per process)
+ * - undefined: not yet searched
+ * - null: searched but not found
+ * - string: found path
  */
-let cachedClaudeCodePath: string | null = null;
+let cachedClaudeCodePath: string | null | undefined;
 
 /**
- * Find Claude Code executable path
+ * Find Claude Code executable path (optional)
  *
  * Results are cached at module level to avoid redundant filesystem
  * checks and subprocess spawns on subsequent calls.
  *
- * @returns Path to Claude Code executable
- * @throws Error if Claude Code is not found
+ * Returns undefined if Claude Code is not found, allowing the SDK
+ * to use its built-in executable as a fallback.
+ *
+ * @returns Path to Claude Code executable, or undefined if not found
  */
-export function findClaudeCodePath(): string {
-  // Return cached result if available
-  if (cachedClaudeCodePath !== null) {
-    return cachedClaudeCodePath;
+export function findClaudeCodePath(): string | undefined {
+  // Return cached result if available (null means "not found")
+  if (cachedClaudeCodePath !== undefined) {
+    return cachedClaudeCodePath ?? undefined;
   }
 
   // 1. Check environment variable override
@@ -92,34 +97,21 @@ export function findClaudeCodePath(): string {
     // PATH lookup command failed, continue
   }
 
-  // 4. Not found - throw helpful error
-  throw new Error(
-    `Claude Code not found. Looplia requires Claude Code to be installed.
-
-Install Claude Code:
-  npm install -g @anthropic-ai/claude-code
-
-Or set CLAUDE_CODE_PATH environment variable to your Claude installation.
-
-More info: https://docs.anthropic.com/claude-code`
-  );
+  // 4. Not found - cache null and return undefined to let SDK use built-in executable
+  cachedClaudeCodePath = null;
+  return;
 }
 
 /**
  * Check if Claude Code is installed
  */
 export function isClaudeCodeInstalled(): boolean {
-  try {
-    findClaudeCodePath();
-    return true;
-  } catch {
-    return false;
-  }
+  return findClaudeCodePath() !== undefined;
 }
 
 /**
  * Clear the cached Claude Code path (useful for testing)
  */
 export function clearClaudeCodePathCache(): void {
-  cachedClaudeCodePath = null;
+  cachedClaudeCodePath = undefined;
 }

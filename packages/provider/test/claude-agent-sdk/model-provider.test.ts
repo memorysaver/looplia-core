@@ -22,7 +22,9 @@ describe("model-provider", () => {
       expect(DEFAULT_SETTINGS.version).toBe("1.0");
       expect(DEFAULT_SETTINGS.apiProvider.type).toBe("anthropic");
       expect(DEFAULT_SETTINGS.agents.main).toBe("claude-haiku-4-5-20251001");
-      expect(DEFAULT_SETTINGS.agents.executor).toBe("haiku");
+      expect(DEFAULT_SETTINGS.agents.executor).toBe(
+        "claude-haiku-4-5-20251001"
+      );
     });
 
     it("should not have authToken or baseUrl in defaults", () => {
@@ -42,6 +44,19 @@ describe("model-provider", () => {
         expect(preset.apiProvider).toBeDefined();
         expect(preset.mainModel).toBeDefined();
         expect(preset.executorModel).toBeDefined();
+        expect(preset.haikuModel).toBeDefined();
+        expect(preset.sonnetModel).toBeDefined();
+        expect(preset.opusModel).toBeDefined();
+      }
+    });
+
+    it("should have all model fields set to the same value per preset", () => {
+      for (const [_key, preset] of Object.entries(PRESETS)) {
+        const expectedModel = preset.mainModel;
+        expect(preset.executorModel).toBe(expectedModel);
+        expect(preset.haikuModel).toBe(expectedModel);
+        expect(preset.sonnetModel).toBe(expectedModel);
+        expect(preset.opusModel).toBe(expectedModel);
       }
     });
 
@@ -207,6 +222,12 @@ describe("model-provider", () => {
         process.env.LOOPLIA_AGENT_MODEL_MAIN;
       originalEnv.LOOPLIA_AGENT_MODEL_EXECUTOR =
         process.env.LOOPLIA_AGENT_MODEL_EXECUTOR;
+      originalEnv.ANTHROPIC_DEFAULT_HAIKU_MODEL =
+        process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL;
+      originalEnv.ANTHROPIC_DEFAULT_SONNET_MODEL =
+        process.env.ANTHROPIC_DEFAULT_SONNET_MODEL;
+      originalEnv.ANTHROPIC_DEFAULT_OPUS_MODEL =
+        process.env.ANTHROPIC_DEFAULT_OPUS_MODEL;
 
       // Clear env vars for testing
       process.env.ANTHROPIC_BASE_URL = undefined;
@@ -214,6 +235,9 @@ describe("model-provider", () => {
       process.env.ZENMUX_API_KEY = undefined;
       process.env.LOOPLIA_AGENT_MODEL_MAIN = undefined;
       process.env.LOOPLIA_AGENT_MODEL_EXECUTOR = undefined;
+      process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = undefined;
+      process.env.ANTHROPIC_DEFAULT_SONNET_MODEL = undefined;
+      process.env.ANTHROPIC_DEFAULT_OPUS_MODEL = undefined;
     });
 
     afterEach(() => {
@@ -247,7 +271,7 @@ describe("model-provider", () => {
       );
     });
 
-    it("should prioritize ZENMUX_API_KEY over authToken for ZenMux providers", () => {
+    it("should prioritize authToken over ZENMUX_API_KEY for ZenMux providers", () => {
       process.env.ZENMUX_API_KEY = "sk-zenmux-key";
 
       const settings: LoopliaSettings = {
@@ -265,7 +289,8 @@ describe("model-provider", () => {
 
       injectLoopliaSettingsEnv(settings);
 
-      expect(process.env.ANTHROPIC_API_KEY).toBe("sk-zenmux-key");
+      // authToken from settings file takes priority over env var
+      expect(process.env.ANTHROPIC_API_KEY).toBe("sk-config-token");
     });
 
     it("should use authToken when ZENMUX_API_KEY not set", () => {
@@ -285,6 +310,28 @@ describe("model-provider", () => {
       injectLoopliaSettingsEnv(settings);
 
       expect(process.env.ANTHROPIC_API_KEY).toBe("sk-config-token");
+    });
+
+    it("should fallback to ZENMUX_API_KEY when authToken not set", () => {
+      process.env.ZENMUX_API_KEY = "sk-zenmux-key";
+
+      const settings: LoopliaSettings = {
+        version: "1.0",
+        apiProvider: {
+          type: "zenmux",
+          baseUrl: "https://zenmux.ai/api/anthropic",
+          // No authToken set
+        },
+        agents: {
+          main: "model",
+          executor: "model",
+        },
+      };
+
+      injectLoopliaSettingsEnv(settings);
+
+      // Falls back to ZENMUX_API_KEY when no authToken
+      expect(process.env.ANTHROPIC_API_KEY).toBe("sk-zenmux-key");
     });
 
     it("should set LOOPLIA_AGENT_MODEL_* env vars", () => {
@@ -345,6 +392,56 @@ describe("model-provider", () => {
       injectLoopliaSettingsEnv(settings);
 
       expect(process.env.ANTHROPIC_BASE_URL).toBeUndefined();
+    });
+
+    it("should set ANTHROPIC_DEFAULT_*_MODEL env vars from main agent model", () => {
+      const settings: LoopliaSettings = {
+        version: "1.0",
+        apiProvider: {
+          type: "anthropic",
+        },
+        agents: {
+          main: "claude-haiku-4-5-20251001",
+          executor: "claude-haiku-4-5-20251001",
+        },
+      };
+
+      injectLoopliaSettingsEnv(settings);
+
+      expect(process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL).toBe(
+        "claude-haiku-4-5-20251001"
+      );
+      expect(process.env.ANTHROPIC_DEFAULT_SONNET_MODEL).toBe(
+        "claude-haiku-4-5-20251001"
+      );
+      expect(process.env.ANTHROPIC_DEFAULT_OPUS_MODEL).toBe(
+        "claude-haiku-4-5-20251001"
+      );
+    });
+
+    it("should NOT override existing ANTHROPIC_DEFAULT_*_MODEL env vars", () => {
+      process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = "existing-haiku";
+      process.env.ANTHROPIC_DEFAULT_SONNET_MODEL = "existing-sonnet";
+      process.env.ANTHROPIC_DEFAULT_OPUS_MODEL = "existing-opus";
+
+      const settings: LoopliaSettings = {
+        version: "1.0",
+        apiProvider: {
+          type: "anthropic",
+        },
+        agents: {
+          main: "claude-haiku-4-5-20251001",
+          executor: "claude-haiku-4-5-20251001",
+        },
+      };
+
+      injectLoopliaSettingsEnv(settings);
+
+      expect(process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL).toBe("existing-haiku");
+      expect(process.env.ANTHROPIC_DEFAULT_SONNET_MODEL).toBe(
+        "existing-sonnet"
+      );
+      expect(process.env.ANTHROPIC_DEFAULT_OPUS_MODEL).toBe("existing-opus");
     });
   });
 

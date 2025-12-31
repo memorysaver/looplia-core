@@ -6,14 +6,14 @@ description: |
   "execute this looplia pipeline", "/run writing-kit", "start the looplia automation", or
   "process these workflow steps".
 
-  Architecture: One workflow step triggers one skill-executor subagent call, which then
-  invokes multiple skills to accomplish the step's mission. Handles sandbox management,
-  per-step skill-executor orchestration, and validation state tracking per v0.6.3.
+  Architecture: One workflow step triggers one general-purpose subagent call, which then
+  invokes skills to accomplish the step's mission. Each step = separate context window.
+  Handles sandbox management, per-step orchestration, and validation state tracking.
 
-  v0.6.3: Named inputs (${{ inputs.name }}), input-less workflow support.
+  v0.6.9: Unified general-purpose subagent strategy for all providers (context offload).
 ---
 
-# Workflow Executor Skill (v0.6.3)
+# Workflow Executor Skill (v0.6.9)
 
 Execute looplia workflows defined in `workflows/*.md` files using the skills-first architecture.
 
@@ -26,17 +26,17 @@ Use this skill when:
 
 ---
 
-## CRITICAL: Universal Skill-Executor Invocation
+## CRITICAL: Task Invocation with general-purpose Subagent
 
-**v0.6.1 BREAKING CHANGE:** ALL workflow steps use `skill-executor` subagent.
+**v0.6.9:** Using built-in `general-purpose` subagent for ALL workflow steps (all providers).
 
 When executing a step with `skill: {name}` and `mission:`:
 
 ```json
 {
-  "subagent_type": "skill-executor",
+  "subagent_type": "general-purpose",
   "description": "Execute step: {step.id}",
-  "prompt": "Execute skill '{step.skill}' for step '{step.id}'.\n\nMission: {step.mission}\n\nInput: {resolved input}\nOutput: {step.output}\nValidation: {step.validate}"
+  "prompt": "Execute skill '{step.skill}' for step '{step.id}'.\n\n## Mission\n{step.mission}\n\n## Execution Protocol\n1. Read input files (if provided)\n2. Invoke the skill using Skill tool\n3. Execute the mission with skill context\n4. Write JSON output to the specified path using Write tool\n\n## CRITICAL: Output Writing is MANDATORY\nYOU MUST CALL THE WRITE TOOL before completing. If you don't write the file, the workflow fails.\n\n## Rules\n- ALWAYS invoke the specified skill using Skill tool\n- ALWAYS write output to the exact path using Write tool\n- NEVER return results as text - always write JSON to output file\n- NEVER spawn Task subagents - execute skills directly\n- ALWAYS include contentId in JSON outputs\n\nInput: {resolved input path}\nOutput: {step.output}\nValidation: {step.validate JSON}"
 }
 ```
 
@@ -54,23 +54,22 @@ When executing a step with `skill: {name}` and `mission:`:
 **Task tool call:**
 ```json
 {
-  "subagent_type": "skill-executor",
+  "subagent_type": "general-purpose",
   "description": "Execute step: analyze-content",
-  "prompt": "Execute skill 'media-reviewer' for step 'analyze-content'.\n\nMission: Deep analysis of video transcript. Extract key themes, important quotes, and narrative structure.\n\nInput: sandbox/video-2025-01-15-abc123/inputs/content.md\nOutput: sandbox/video-2025-01-15-abc123/outputs/analysis.json\nValidation: {\"required_fields\":[\"contentId\",\"headline\",\"keyThemes\"]}"
+  "prompt": "Execute skill 'media-reviewer' for step 'analyze-content'.\n\n## Mission\nDeep analysis of video transcript. Extract key themes, important quotes, and narrative structure.\n\n## Execution Protocol\n1. Read input files (if provided)\n2. Invoke the skill using Skill tool\n3. Execute the mission with skill context\n4. Write JSON output to the specified path using Write tool\n\n## CRITICAL: Output Writing is MANDATORY\nYOU MUST CALL THE WRITE TOOL before completing. If you don't write the file, the workflow fails.\n\n## Rules\n- ALWAYS invoke the specified skill using Skill tool\n- ALWAYS write output to the exact path using Write tool\n- NEVER return results as text - always write JSON to output file\n- NEVER spawn Task subagents - execute skills directly\n- ALWAYS include contentId in JSON outputs\n\nInput: sandbox/video-2025-01-15-abc123/inputs/content.md\nOutput: sandbox/video-2025-01-15-abc123/outputs/analysis.json\nValidation: {\"required_fields\":[\"contentId\",\"headline\",\"keyThemes\"]}"
 }
 ```
 
 ### Rules
 
-- **ALWAYS** use `subagent_type: "skill-executor"` for ALL workflow steps
+- **ALWAYS** use `subagent_type: "general-purpose"` for ALL workflow steps
 - **NEVER** use custom subagent_type per step (removed in v0.6.1)
-- **NEVER** use `subagent_type: "general-purpose"` for workflow steps
 - **VALIDATE** that step has both `skill:` and `mission:` fields
 - **REJECT** steps using deprecated `run:` syntax
 
 ### Why Per-Step Task Calls (Context Isolation)
 
-Each `Task(skill-executor)` creates a **separate context window**:
+Each `Task(general-purpose)` creates a **separate context window**:
 - Isolates step processing from main agent context
 - Prevents context pollution across steps
 - Enables focused execution with only relevant inputs
@@ -249,7 +248,7 @@ Computed order: [analyze-content, generate-ideas, build-writing-kit]
 **Execute steps ONE AT A TIME (context isolation):**
 
 1. Get first unvalidated step from dependency order
-2. Make ONE `Task(skill-executor)` call for THIS step only
+2. Make ONE `Task(general-purpose)` call for THIS step only
 3. WAIT for Task completion before proceeding
 4. Validate output, update validation.json
 5. REPEAT for next unvalidated step
@@ -271,10 +270,10 @@ FOR EACH step in dependency order:
     ┌─────────┐    ┌─────────────────────────────┐
     │ SKIP    │    │ 1. INVOKE Task tool:        │
     │ (done)  │    │    subagent_type:           │
-    └─────────┘    │      "skill-executor"       │
+    └─────────┘    │      "general-purpose"      │
                    │                              │
-                   │ 2. skill-executor invokes    │
-                   │    the specified skill       │
+                   │ 2. Subagent invokes the      │
+                   │    specified skill           │
                    │                              │
                    │ 3. VALIDATE output           │
                    │                              │
@@ -302,9 +301,9 @@ For step:
 Invoke Task tool:
 ```json
 {
-  "subagent_type": "skill-executor",
+  "subagent_type": "general-purpose",
   "description": "Execute step: analyze-content",
-  "prompt": "Execute skill 'media-reviewer' for step 'analyze-content'.\n\nMission: Deep analysis of video transcript. Extract key themes, important quotes with timestamps, and narrative structure.\n\nInput: sandbox/article-2025-12-18-xk7m/inputs/content.md\nOutput: sandbox/article-2025-12-18-xk7m/outputs/analysis.json\nValidation: {\"required_fields\":[\"contentId\",\"headline\",\"keyThemes\"]}"
+  "prompt": "Execute skill 'media-reviewer' for step 'analyze-content'.\n\n## Mission\nDeep analysis of video transcript. Extract key themes, important quotes with timestamps, and narrative structure.\n\n## Execution Protocol\n1. Read input files (if provided)\n2. Invoke the skill using Skill tool\n3. Execute the mission with skill context\n4. Write JSON output to the specified path using Write tool\n\n## CRITICAL: Output Writing is MANDATORY\nYOU MUST CALL THE WRITE TOOL before completing.\n\n## Rules\n- ALWAYS invoke the specified skill using Skill tool\n- ALWAYS write output to the exact path using Write tool\n- NEVER return results as text - always write JSON to output file\n- ALWAYS include contentId in JSON outputs\n\nInput: sandbox/article-2025-12-18-xk7m/inputs/content.md\nOutput: sandbox/article-2025-12-18-xk7m/outputs/analysis.json\nValidation: {\"required_fields\":[\"contentId\",\"headline\",\"keyThemes\"]}"
 }
 ```
 
@@ -350,9 +349,9 @@ When step with `final: true` passes validation:
 
 ---
 
-## Variable Substitution (v0.6.3)
+## Variable Substitution (v0.6.9)
 
-Resolve variables before passing to skill-executor:
+Resolve variables before passing to general-purpose subagent:
 
 | Variable | Resolution | Example |
 |----------|------------|---------|
@@ -435,21 +434,21 @@ input: ${{ steps.analyze-content.output }}
 4. [ORDER] Computed: [analyze-content, generate-ideas, build-writing-kit]
 
 5. [STEP] analyze-content
-   - Task tool: subagent_type="skill-executor"
+   - Task tool: subagent_type="general-purpose"
    - Skill: media-reviewer
    - Output: outputs/analysis.json
    - Validate: PASSED
    - Update: validation.json (analyze-content.validated = true)
 
 6. [STEP] generate-ideas
-   - Task tool: subagent_type="skill-executor"
+   - Task tool: subagent_type="general-purpose"
    - Skill: idea-synthesis
    - Output: outputs/ideas.json
    - Validate: PASSED
    - Update: validation.json (generate-ideas.validated = true)
 
 7. [STEP] build-writing-kit
-   - Task tool: subagent_type="skill-executor"
+   - Task tool: subagent_type="general-purpose"
    - Skill: writing-kit-assembler
    - Output: outputs/writing-kit.json
    - Validate: PASSED
@@ -463,7 +462,7 @@ input: ${{ steps.analyze-content.output }}
 ## File References
 
 - Workflow definitions: `workflows/*.md`
-- Skill-executor: Inline subagent defined in CLI (see query-executor.ts)
+- Subagent: Built-in `general-purpose` agent (v0.6.9)
 - Skill definitions: `plugins/*/skills/*/SKILL.md`
 - Sandbox storage: `sandbox/{sandbox-id}/`
 - Validator script: `.claude/skills/workflow-validator/scripts/validate.ts`
