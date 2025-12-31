@@ -295,7 +295,10 @@ export async function removeLoopliaSettings(): Promise<void> {
  * Inject looplia settings as environment variables
  * Called before SDK query() invocation
  *
- * IMPORTANT: Only sets env vars if not already set (env vars take precedence)
+ * API Key Priority:
+ * 1. Settings file authToken (user explicitly configured via CLI)
+ * 2. Endpoint-specific env var (ZENMUX_API_KEY for ZenMux endpoint)
+ * 3. Generic ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN
  *
  * ZenMux API Pattern (per official sample):
  * ```python
@@ -304,27 +307,30 @@ export async function removeLoopliaSettings(): Promise<void> {
  *     base_url="https://zenmux.ai/api/anthropic"
  * )
  * ```
- * So we set ANTHROPIC_API_KEY (not AUTH_TOKEN) for ZenMux/custom providers.
  */
 export function injectLoopliaSettingsEnv(settings: LoopliaSettings): void {
   // For non-anthropic providers (ZenMux, custom)
   if (settings.apiProvider.type !== "anthropic") {
     // Set API endpoint
-    if (settings.apiProvider.baseUrl && !process.env.ANTHROPIC_BASE_URL) {
+    if (settings.apiProvider.baseUrl) {
       process.env.ANTHROPIC_BASE_URL = settings.apiProvider.baseUrl;
     }
 
-    // Set API key for proxy providers
-    // For ZenMux: ALWAYS use ZENMUX_API_KEY when available (user explicitly selected ZenMux preset)
-    // This overrides any existing ANTHROPIC_API_KEY since we're targeting ZenMux endpoint
-    if (settings.apiProvider.type === "zenmux" && process.env.ZENMUX_API_KEY) {
-      process.env.ANTHROPIC_API_KEY = process.env.ZENMUX_API_KEY;
-    } else if (
-      !process.env.ANTHROPIC_API_KEY &&
-      settings.apiProvider.authToken
-    ) {
-      // Fallback to authToken from config if no API key is set
+    // API key selection based on priority:
+    // Priority 1: authToken from settings file (user explicitly configured)
+    if (settings.apiProvider.authToken) {
       process.env.ANTHROPIC_API_KEY = settings.apiProvider.authToken;
+    }
+    // Priority 2: Endpoint-specific env var fallback
+    else {
+      const isZenmuxEndpoint =
+        settings.apiProvider.type === "zenmux" ||
+        settings.apiProvider.baseUrl?.includes("zenmux.ai");
+
+      if (isZenmuxEndpoint && process.env.ZENMUX_API_KEY) {
+        process.env.ANTHROPIC_API_KEY = process.env.ZENMUX_API_KEY;
+      }
+      // For custom endpoints: ANTHROPIC_API_KEY is used as-is (no override needed)
     }
   }
 

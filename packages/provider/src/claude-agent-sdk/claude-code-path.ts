@@ -42,15 +42,17 @@ const CLAUDE_CODE_PATHS = [
 let cachedClaudeCodePath: string | null = null;
 
 /**
- * Find Claude Code executable path
+ * Find Claude Code executable path (optional)
  *
  * Results are cached at module level to avoid redundant filesystem
  * checks and subprocess spawns on subsequent calls.
  *
- * @returns Path to Claude Code executable
- * @throws Error if Claude Code is not found
+ * Returns undefined if Claude Code is not found, allowing the SDK
+ * to use its built-in executable as a fallback.
+ *
+ * @returns Path to Claude Code executable, or undefined if not found
  */
-export function findClaudeCodePath(): string {
+export function findClaudeCodePath(): string | undefined {
   // Return cached result if available
   if (cachedClaudeCodePath !== null) {
     return cachedClaudeCodePath;
@@ -92,17 +94,8 @@ export function findClaudeCodePath(): string {
     // PATH lookup command failed, continue
   }
 
-  // 4. Not found - throw helpful error
-  throw new Error(
-    `Claude Code not found. Looplia requires Claude Code to be installed.
-
-Install Claude Code:
-  npm install -g @anthropic-ai/claude-code
-
-Or set CLAUDE_CODE_PATH environment variable to your Claude installation.
-
-More info: https://docs.anthropic.com/claude-code`
-  );
+  // 4. Not found - return undefined to let SDK use built-in executable
+  return;
 }
 
 /**

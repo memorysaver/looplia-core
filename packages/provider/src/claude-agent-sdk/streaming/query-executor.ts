@@ -272,14 +272,15 @@ YOU MUST CALL THE WRITE TOOL before completing. If you don't write the file, the
           },
         };
 
-    // v0.6.8: Resolve Claude Code executable path
+    // v0.6.8: Resolve Claude Code executable path (optional)
+    // Returns undefined if not found, allowing SDK to use built-in executable
     const claudeCodePath = findClaudeCodePath();
 
     const result = query({
       prompt,
       options: {
-        // v0.6.8: Use system-installed Claude Code
-        pathToClaudeCodeExecutable: claudeCodePath,
+        // v0.6.8: Use system-installed Claude Code if available, otherwise SDK uses built-in
+        ...(claudeCodePath && { pathToClaudeCodeExecutable: claudeCodePath }),
         // v0.6.6: Use configured main model
         model: mainModel,
         // v0.6.5: SDK works relative to ~/.looplia (sandbox, workflows, etc.)

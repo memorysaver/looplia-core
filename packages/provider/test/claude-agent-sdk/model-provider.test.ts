@@ -247,7 +247,7 @@ describe("model-provider", () => {
       );
     });
 
-    it("should prioritize ZENMUX_API_KEY over authToken for ZenMux providers", () => {
+    it("should prioritize authToken over ZENMUX_API_KEY for ZenMux providers", () => {
       process.env.ZENMUX_API_KEY = "sk-zenmux-key";
 
       const settings: LoopliaSettings = {
@@ -265,7 +265,8 @@ describe("model-provider", () => {
 
       injectLoopliaSettingsEnv(settings);
 
-      expect(process.env.ANTHROPIC_API_KEY).toBe("sk-zenmux-key");
+      // authToken from settings file takes priority over env var
+      expect(process.env.ANTHROPIC_API_KEY).toBe("sk-config-token");
     });
 
     it("should use authToken when ZENMUX_API_KEY not set", () => {
@@ -285,6 +286,28 @@ describe("model-provider", () => {
       injectLoopliaSettingsEnv(settings);
 
       expect(process.env.ANTHROPIC_API_KEY).toBe("sk-config-token");
+    });
+
+    it("should fallback to ZENMUX_API_KEY when authToken not set", () => {
+      process.env.ZENMUX_API_KEY = "sk-zenmux-key";
+
+      const settings: LoopliaSettings = {
+        version: "1.0",
+        apiProvider: {
+          type: "zenmux",
+          baseUrl: "https://zenmux.ai/api/anthropic",
+          // No authToken set
+        },
+        agents: {
+          main: "model",
+          executor: "model",
+        },
+      };
+
+      injectLoopliaSettingsEnv(settings);
+
+      // Falls back to ZENMUX_API_KEY when no authToken
+      expect(process.env.ANTHROPIC_API_KEY).toBe("sk-zenmux-key");
     });
 
     it("should set LOOPLIA_AGENT_MODEL_* env vars", () => {
