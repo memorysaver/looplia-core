@@ -5,6 +5,48 @@ All notable changes to Looplia-Core will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.9] - 2025-12-31
+
+### Changed
+
+- **Optional Claude Code Path** - SDK compatibility improvement
+  - `findClaudeCodePath()` now returns `undefined` instead of throwing
+  - SDK falls back to built-in Claude Code executable when not globally installed
+  - Fixes Docker E2E failures in containerized environments
+
+- **Endpoint-Aware API Key Selection** - Improved API key handling
+  - Settings file `authToken` now takes priority over environment variables
+  - Endpoint-based fallback: uses `ZENMUX_API_KEY` for ZenMux endpoints
+  - Cleaner logic: user explicit configuration first, then endpoint-specific env var
+
+### Documentation
+
+- **DESIGN-0.6.9.md** - Complete specification for SDK compatibility and API key selection
+- **README.md** - Updated architecture version and version history
+- **docs/README.md** - Added "What's New in v0.6.9" section
+
+## [0.6.8] - 2025-12-31
+
+### Fixed
+
+- **Claude Code Path Resolution** - Fix SDK finding wrong executable
+  - Added `findClaudeCodePath()` to explicitly locate Claude Code
+  - Prevents SDK from finding looplia's CLI instead of Claude Code
+  - Search order: `CLAUDE_CODE_PATH` env, common paths, `which claude`
+
+### Changed
+
+- **Docker Entrypoint** - Updated CLI path from `index.js` to `cli.js`
+  - Matches new tsup output filename after package rename
+
+## [0.6.7] - 2025-12-30
+
+### Changed
+
+- **Package Rename** - Renamed CLI package for npm publishing
+  - From `@looplia-core/cli` to `@looplia/looplia-cli`
+  - Prepares for npm registry publication
+
 ## [0.6.6] - 2025-12-28
 
 ### Added

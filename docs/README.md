@@ -9,7 +9,7 @@ This directory contains the core documentation for Looplia-Core, a Claude Agent 
 
 ## Core Documents (Latest)
 
-These are the current, authoritative documents for the v0.6.3 architecture:
+These are the current, authoritative documents for the v0.6.9 architecture:
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
@@ -36,6 +36,32 @@ These are the current, authoritative documents for the v0.6.3 architecture:
 |----------|---------|
 | [AGENTIC_CONCEPT-0.5.md](./archive/AGENTIC_CONCEPT-0.5.md) | Agent system design: Two-plugin model (historical) |
 | [TEST_PLAN-0.6.md](./archive/TEST_PLAN-0.6.md) | Test architecture with real API testing (historical) |
+
+---
+
+## What's New in v0.6.9
+
+### SDK Compatibility & Endpoint-Aware API Key Selection
+
+v0.6.9 improves SDK compatibility and API key handling:
+
+| Feature | Description |
+|---------|-------------|
+| **Optional Claude Code Path** | SDK uses built-in executable when Claude Code not globally installed |
+| **Settings File Priority** | `authToken` from settings takes priority over env vars |
+| **Endpoint-Based Fallback** | Falls back to endpoint-specific env var (e.g., `ZENMUX_API_KEY`) |
+
+**API Key Selection Priority:**
+
+| Endpoint | authToken set? | Key Used |
+|----------|---------------|----------|
+| ZenMux | Yes | `authToken` from settings |
+| ZenMux | No | `ZENMUX_API_KEY` env |
+| Anthropic | - | `ANTHROPIC_API_KEY` or `CLAUDE_CODE_OAUTH_TOKEN` |
+
+**Docker Compatibility:** SDK now works in Docker containers without Claude Code installed globally.
+
+See [DESIGN-0.6.9.md](./DESIGN-0.6.9.md) for full specification.
 
 ---
 
@@ -448,7 +474,7 @@ Previous versions are preserved in `/docs/archive/` for reference:
 ```
 
 **Version Progression:**
-- v0.6.0 → v0.6.1 → v0.6.2 → v0.6.3 → v0.6.4 → v0.6.5 → **v0.6.6** (current)
+- v0.6.0 → v0.6.1 → v0.6.2 → v0.6.3 → v0.6.4 → v0.6.5 → v0.6.6 → v0.6.7 → v0.6.8 → **v0.6.9** (current)
 
 **Key Documents:**
 - **GLOSSARY.md** defines terms used across all documents
@@ -705,4 +731,4 @@ Steps complete when `validation.json` shows `validated: true`:
 
 ---
 
-*This README provides navigation for Looplia-Core v0.6.6 documentation.*
+*This README provides navigation for Looplia-Core v0.6.9 documentation.*
