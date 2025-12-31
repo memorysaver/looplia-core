@@ -17,12 +17,29 @@ Get Looplia installed and configured in under 5 minutes.
 <Tabs>
   <TabItem label="bun (recommended)">
 ```bash
-bunx looplia init
+# Install globally
+bun install -g @looplia/looplia-cli
+
+# Initialize workspace
+looplia init
 ```
   </TabItem>
   <TabItem label="npm">
 ```bash
-npx looplia init
+# Install globally
+npm install -g @looplia/looplia-cli
+
+# Initialize workspace
+looplia init
+```
+  </TabItem>
+  <TabItem label="npx/bunx (no install)">
+```bash
+# Using bunx
+bunx @looplia/looplia-cli init
+
+# Or using npx
+npx @looplia/looplia-cli init
 ```
   </TabItem>
   <TabItem label="From Source">

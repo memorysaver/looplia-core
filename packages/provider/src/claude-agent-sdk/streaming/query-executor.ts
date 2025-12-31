@@ -7,6 +7,7 @@
 
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { getLoopliaPluginPath, getPluginPaths } from "../../bootstrap";
+import { findClaudeCodePath } from "../claude-code-path";
 import type { ClaudeAgentConfig, ProviderUsage } from "../config";
 import { resolveConfig } from "../config";
 import { createQueryLogger } from "../logger";
@@ -271,9 +272,14 @@ YOU MUST CALL THE WRITE TOOL before completing. If you don't write the file, the
           },
         };
 
+    // v0.6.8: Resolve Claude Code executable path
+    const claudeCodePath = findClaudeCodePath();
+
     const result = query({
       prompt,
       options: {
+        // v0.6.8: Use system-installed Claude Code
+        pathToClaudeCodeExecutable: claudeCodePath,
         // v0.6.6: Use configured main model
         model: mainModel,
         // v0.6.5: SDK works relative to ~/.looplia (sandbox, workflows, etc.)

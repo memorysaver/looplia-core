@@ -287,9 +287,9 @@ jobs:
             -e ZENMUX_API_KEY="$ZENMUX_API_KEY" \
             -v "$(pwd)/examples:/examples:ro" \
             $IMAGE_NAME \
-            -c "bun run /app/apps/cli/dist/index.js init --yes && \
-                bun run /app/apps/cli/dist/index.js config provider preset ZENMUX_ZAI_GLM47 && \
-                bun run /app/apps/cli/dist/index.js run writing-kit --file /examples/ai-healthcare.md \
+            -c "bun run /app/apps/cli/dist/cli.js init --yes && \
+                bun run /app/apps/cli/dist/cli.js config provider preset ZENMUX_ZAI_GLM47 && \
+                bun run /app/apps/cli/dist/cli.js run writing-kit --file /examples/ai-healthcare.md \
                 --topics 'ai,healthcare,technology' --tone 'expert'")
 
           # Run container and capture exit code

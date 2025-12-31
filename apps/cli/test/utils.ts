@@ -27,7 +27,8 @@ export function execCLI(args: string[]): Promise<{
 }> {
   return new Promise((resolve, reject) => {
     // Path to the compiled CLI entry point (relative to CLI root, not cwd)
-    const cliPath = join(CLI_ROOT, "dist", "index.js");
+    // v0.6.8: Output changed from index.js to cli.js for Agent SDK compatibility
+    const cliPath = join(CLI_ROOT, "dist", "cli.js");
 
     // Run from project root so getPluginPath() finds plugins/looplia-writer
     const child = spawn("node", [cliPath, ...args], {

@@ -39,4 +39,4 @@ jobs:
         run: bun test
 
       - name: Verify CLI works
-        run: node apps/cli/dist/index.js --help
+        run: node apps/cli/dist/cli.js --help
