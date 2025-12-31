@@ -106,12 +106,7 @@ export function findClaudeCodePath(): string | undefined {
  * Check if Claude Code is installed
  */
 export function isClaudeCodeInstalled(): boolean {
-  try {
-    findClaudeCodePath();
-    return true;
-  } catch {
-    return false;
-  }
+  return findClaudeCodePath() !== undefined;
 }
 
 /**
