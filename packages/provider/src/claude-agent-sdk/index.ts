@@ -3,7 +3,11 @@
 // Re-export WorkflowResult from core for convenience
 export type { WorkflowResult } from "@looplia-core/core";
 // Re-export Claude Code path utilities (v0.6.8)
-export { findClaudeCodePath, isClaudeCodeInstalled } from "./claude-code-path";
+export {
+  clearClaudeCodePathCache,
+  findClaudeCodePath,
+  isClaudeCodeInstalled,
+} from "./claude-code-path";
 export type {
   ClaudeAgentConfig,
   ConfigValidationResult,
