@@ -1,6 +1,6 @@
 # Looplia-Core Documentation
 
-> **Version:** 0.6.6
+> **Version:** 0.6.9
 > **Last Updated:** December 2025
 
 This directory contains the core documentation for Looplia-Core, a Claude Agent SDK-based agentic workflow platform.
