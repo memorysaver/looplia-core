@@ -14,6 +14,9 @@ These are the current, authoritative documents for the v0.6.9 architecture:
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | [AGENTIC_CONCEPT_1.0.md](./AGENTIC_CONCEPT_1.0.md) | **Skills-first architecture overview** - comprehensive guide to v0.6.1/v0.6.2 | All team members |
+| [DESIGN-0.6.9.md](./DESIGN-0.6.9.md) | **SDK Compatibility & API Key Selection**, optional Claude Code path, endpoint-aware keys | Developers, Architects |
+| [DESIGN-0.6.8.md](./DESIGN-0.6.8.md) | **Claude Code Path Resolution**, executable discovery, caching | Developers, Architects |
+| [DESIGN-0.6.7.md](./DESIGN-0.6.7.md) | **Docker E2E Support**, containerized testing, CI improvements | Developers, Architects |
 | [DESIGN-0.6.6.md](./DESIGN-0.6.6.md) | **Model Provider Configuration**, ZenMux support, dual-strategy execution | Developers, Architects |
 | [DESIGN-0.6.5.md](./DESIGN-0.6.5.md) | **Agent SDK plugin loading**, bootstrap module, dev mode | Developers, Architects |
 | [DESIGN-0.6.3.md](./DESIGN-0.6.3.md) | **Input-less workflows**, web-capable skills, named inputs | Developers, Architects |

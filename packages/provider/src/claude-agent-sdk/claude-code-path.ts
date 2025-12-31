@@ -38,8 +38,11 @@ const CLAUDE_CODE_PATHS = [
 
 /**
  * Cached Claude Code path (resolved once per process)
+ * - undefined: not yet searched
+ * - null: searched but not found
+ * - string: found path
  */
-let cachedClaudeCodePath: string | null = null;
+let cachedClaudeCodePath: string | null | undefined;
 
 /**
  * Find Claude Code executable path (optional)
@@ -53,9 +56,9 @@ let cachedClaudeCodePath: string | null = null;
  * @returns Path to Claude Code executable, or undefined if not found
  */
 export function findClaudeCodePath(): string | undefined {
-  // Return cached result if available
-  if (cachedClaudeCodePath !== null) {
-    return cachedClaudeCodePath;
+  // Return cached result if available (null means "not found")
+  if (cachedClaudeCodePath !== undefined) {
+    return cachedClaudeCodePath ?? undefined;
   }
 
   // 1. Check environment variable override
@@ -94,7 +97,8 @@ export function findClaudeCodePath(): string | undefined {
     // PATH lookup command failed, continue
   }
 
-  // 4. Not found - return undefined to let SDK use built-in executable
+  // 4. Not found - cache null and return undefined to let SDK use built-in executable
+  cachedClaudeCodePath = null;
   return;
 }
 
@@ -114,5 +118,5 @@ export function isClaudeCodeInstalled(): boolean {
  * Clear the cached Claude Code path (useful for testing)
  */
 export function clearClaudeCodePathCache(): void {
-  cachedClaudeCodePath = null;
+  cachedClaudeCodePath = undefined;
 }

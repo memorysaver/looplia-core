@@ -311,8 +311,8 @@ export async function removeLoopliaSettings(): Promise<void> {
 export function injectLoopliaSettingsEnv(settings: LoopliaSettings): void {
   // For non-anthropic providers (ZenMux, custom)
   if (settings.apiProvider.type !== "anthropic") {
-    // Set API endpoint
-    if (settings.apiProvider.baseUrl) {
+    // Set API endpoint (only if not already set in env)
+    if (settings.apiProvider.baseUrl && !process.env.ANTHROPIC_BASE_URL) {
       process.env.ANTHROPIC_BASE_URL = settings.apiProvider.baseUrl;
     }
 
