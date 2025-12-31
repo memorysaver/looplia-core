@@ -76,7 +76,8 @@ export type LoopliaSettings = {
     main: string;
 
     /**
-     * Model for skill executor agent
+     * Model for executor agent (reserved for future use)
+     * v0.6.9: Currently unused - using built-in general-purpose subagent
      * (injected as LOOPLIA_AGENT_MODEL_EXECUTOR)
      * @example "z-ai/glm-4.7" or "haiku"
      */

@@ -7,7 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.9] - 2025-12-31
 
+### Added
+
+- **Unified Skill Executor Strategy** - Context offload for all providers
+  - ALL providers (Anthropic, ZenMux, custom) now use built-in `general-purpose` subagent
+  - The `workflow-executor` skill provides execution protocol that teaches subagent how to invoke other skills
+  - Each workflow step = separate context window (context offload keeps main agent clean)
+  - Conceptually still a "skill executor", implemented via built-in agent + skill-provided instructions
+  - `workflow-executor-inline` kept as dormant fallback (not actively used)
+
 ### Changed
+
+- **Query Executor Simplification** - Removed provider-specific branching
+  - Removed `isProxyProvider` detection logic
+  - Removed `workflowExecutionHint` conditional
+  - Removed custom `skill-executor` agent registration
+  - Simplified to unified strategy for all API providers
 
 - **Optional Claude Code Path** - SDK compatibility improvement
   - `findClaudeCodePath()` now returns `undefined` instead of throwing
@@ -21,7 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
-- **DESIGN-0.6.9.md** - Complete specification for SDK compatibility and API key selection
+- **DESIGN-0.6.9.md** - Complete specification for unified skill executor, SDK compatibility, and API key selection
+- **workflow-executor/SKILL.md** - Updated to use `general-purpose` subagent with full execution protocol
 - **README.md** - Updated architecture version and version history
 - **docs/README.md** - Added "What's New in v0.6.9" section
 
