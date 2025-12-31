@@ -218,7 +218,7 @@ input:
 
 1. **Load Workflow** — Parse YAML frontmatter from workflow file
 2. **Resolve Dependencies** — Build execution graph from `needs`
-3. **Execute Steps** — Run each step through skill-executor
+3. **Execute Steps** — Run each step through the Skill Executor (separate context per step)
 4. **Validate Outputs** — Check against `validate` criteria
 5. **Track State** — Update `validation.json` after each step
 

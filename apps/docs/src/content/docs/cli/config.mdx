@@ -208,16 +208,17 @@ The `looplia.setting.json` file contains your API key. Keep it secure and don't 
 
 ---
 
-## Dual-Strategy Execution
+## Unified Execution Strategy (v0.6.9)
 
-Looplia uses different execution strategies based on provider:
+All providers use the same execution pattern for workflow steps:
 
-| Provider | Strategy | Agent Registration |
-|----------|----------|-------------------|
-| **Anthropic Direct** | Task subagents | Full skill-executor registration |
-| **ZenMux Proxy** | Inline execution | No subagent registration |
+| Component | Description |
+|-----------|-------------|
+| **Skill Executor** | Conceptual name for the step execution mechanism |
+| **Implementation** | Built-in `general-purpose` subagent from Claude Agent SDK |
+| **Context Offload** | Each workflow step runs in a separate context window |
 
-This is handled automatically based on your provider configuration.
+The `workflow-executor` skill provides the execution protocol that teaches the subagent how to invoke other skills. This unified strategy works across all providers (Anthropic, ZenMux, and custom endpoints).
 
 ---
 

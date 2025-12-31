@@ -75,7 +75,8 @@ looplia run writing-kit --file test.md --no-streaming
    - Parses YAML frontmatter for steps configuration
 
 3. **Step Execution**
-   - Executes each step using the `skill-executor`
+   - Executes each step via the Skill Executor (built-in `general-purpose` subagent)
+   - Each step runs in a separate context window for isolation
    - Respects `needs` dependencies between steps
    - Validates outputs against step requirements
 
