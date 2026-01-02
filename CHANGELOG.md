@@ -5,6 +5,46 @@ All notable changes to Looplia-Core will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.10] - 2026-01-03
+
+### Added
+
+- **Unified Command Initialization** - Shared initialization logic for build and run commands
+  - New `initializeCommandEnvironment()` function in `command-init.ts`
+  - Settings loaded before API key validation (fixes ZenMux preset not working with `build`)
+  - Mock mode (`--mock`) works without API key for testing
+  - Consistent behavior across both commands
+
+- **Comprehensive E2E Testing Skill** - New `.claude/skills/looplia-e2e/` skill
+  - Docker E2E testing script with ZenMux GLM 4.7 preset support
+  - Published CLI E2E testing with version consistency check
+  - v0.6.10 verification script for command initialization
+  - Common verification functions for workflow validation
+  - Test content fixture (ai-healthcare.md)
+
+### Changed
+
+- **E2E Test Scripts** - Standardized on ZenMux GLM 4.7 preset for cost savings
+  - `docker-e2e.sh` now prioritizes `ZENMUX_API_KEY` over `ANTHROPIC_API_KEY`
+  - All scripts use `ZENMUX_ZAI_GLM47` preset when ZenMux key available
+  - Fallback to Anthropic for backward compatibility
+
+- **Version Consistency Check** - CLI version now checked against package version
+  - `published-cli-e2e.sh` verifies `looplia --version` matches npm package version
+  - Catches VERSION constant sync issues before publishing
+
+### Fixed
+
+- **ZenMux Preset with Build Command** - Settings now loaded before API key validation
+  - Previously: `looplia build` failed with "API key required" even with ZenMux preset configured
+  - Now: Settings file read first, then API key validated (matching `run` behavior)
+
+### Documentation
+
+- **DESIGN-0.6.10.md** - Unified command initialization specification
+- **looplia-e2e SKILL.md** - Comprehensive E2E testing skill documentation
+- **SKILL.md Environment Variables** - Updated to prefer ZenMux for cost optimization
+
 ## [0.6.9] - 2025-12-31
 
 ### Added
@@ -652,7 +692,11 @@ The following were considered but **intentionally deferred** to v0.6+:
 
 ---
 
-[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.6.6...HEAD
+[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.6.10...HEAD
+[0.6.10]: https://github.com/memorysaver/looplia-core/compare/v0.6.9...v0.6.10
+[0.6.9]: https://github.com/memorysaver/looplia-core/compare/v0.6.8...v0.6.9
+[0.6.8]: https://github.com/memorysaver/looplia-core/compare/v0.6.7...v0.6.8
+[0.6.7]: https://github.com/memorysaver/looplia-core/compare/v0.6.6...v0.6.7
 [0.6.6]: https://github.com/memorysaver/looplia-core/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/memorysaver/looplia-core/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/memorysaver/looplia-core/compare/v0.6.3...v0.6.4
