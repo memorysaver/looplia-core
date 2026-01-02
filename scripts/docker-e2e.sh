@@ -2,8 +2,8 @@
 set -e
 
 # Looplia Docker E2E Test Script
-# Runs real API tests inside Docker container with v0.6.1 skills-first architecture
-# Tests: Workflow-as-Markdown with skill-executor, skills auto-loading, and sandbox isolation
+# Runs real API tests inside Docker container with v0.6.9 unified skill executor architecture
+# Tests: Workflow-as-Markdown with general-purpose subagent, skills auto-loading, and sandbox isolation
 
 # Colors for output
 RED='\033[0;31m'
@@ -169,21 +169,22 @@ verify_workflow_log() {
     return 1
   fi
 
-  print_step "Verifying workflow execution logs (v0.6.1 skills-first)..."
+  print_step "Verifying workflow execution logs (v0.6.9 unified executor)..."
 
   local pass=true
 
-  # Check for universal skill-executor (CRITICAL for v0.6.1)
-  SKILL_EXEC_COUNT=$(grep -c '"subagent_type".*"skill-executor"' "$LOG_FILE" 2>/dev/null || echo "0")
-  if [ "$SKILL_EXEC_COUNT" -ge 3 ]; then
-    print_pass "skill-executor used $SKILL_EXEC_COUNT times"
+  # Check for general-purpose subagent (CRITICAL for v0.6.9)
+  # v0.6.9: Uses built-in general-purpose subagent for all workflow steps
+  GP_COUNT=$(grep -c '"subagent_type".*"general-purpose"' "$LOG_FILE" 2>/dev/null || echo "0")
+  if [ "$GP_COUNT" -ge 3 ]; then
+    print_pass "general-purpose subagent used $GP_COUNT times"
   else
-    print_fail "skill-executor count: $SKILL_EXEC_COUNT (expected >= 3)"
+    print_fail "general-purpose count: $GP_COUNT (expected >= 3)"
     pass=false
   fi
 
-  # Check for legacy agents (should NOT exist in v0.6.1)
-  for legacy in content-analyzer idea-generator writing-kit-builder; do
+  # Check for legacy agents (should NOT exist)
+  for legacy in content-analyzer idea-generator writing-kit-builder skill-executor; do
     if grep -q "\"subagent_type\".*\"$legacy\"" "$LOG_FILE"; then
       print_fail "Legacy agent $legacy detected!"
       pass=false
@@ -191,14 +192,6 @@ verify_workflow_log() {
   done
   if [ "$pass" = true ]; then
     print_pass "No legacy agents found"
-  fi
-
-  # Check for general-purpose fallback (should NOT exist)
-  if grep -q '"subagent_type".*"general-purpose"' "$LOG_FILE"; then
-    print_fail "FAIL: general-purpose subagent detected!"
-    pass=false
-  else
-    print_pass "No general-purpose fallback"
   fi
 
   # Check Task tool invocations
@@ -214,8 +207,8 @@ verify_workflow_log() {
   print_info "Skill tool invocations: $SKILL_COUNT"
 
   # Verify correct skills used for each step
-  # Log format: Task tool calls have:
-  # { "subagent_type": "skill-executor",
+  # v0.6.9 Log format: Task tool calls have:
+  # { "subagent_type": "general-purpose",
   #   "description": "Execute step: {step-id}",
   #   "prompt": "Execute skill '{skill-name}' for step '{step-id}'..." }
   print_step "Checking skill-to-step mapping..."
@@ -231,7 +224,8 @@ verify_workflow_log() {
     expected_skill="${STEP_SKILL_MAP[$step]}"
 
     # Find Task call for this step and check if prompt contains expected skill
-    if grep -B5 "\"description\".*\"Execute step: $step\"" "$LOG_FILE" | grep -q "\"prompt\".*$expected_skill"; then
+    # v0.6.9: Uses general-purpose subagent with skill name in prompt
+    if grep -A10 "\"description\".*\"Execute step: $step\"" "$LOG_FILE" | grep -q "$expected_skill"; then
       print_pass "Step '$step' uses skill '$expected_skill'"
     else
       print_fail "Step '$step' should use skill '$expected_skill'"
@@ -547,7 +541,7 @@ print_summary() {
   # echo "  - vtt-test/ (Test 2: VTT caption)"      # Commented out
   # echo "  - srt-test/ (Test 3: SRT transcript)"   # Commented out
   echo ""
-  echo "Each sandbox folder contains (v0.6.1 skills-first architecture):"
+  echo "Each sandbox folder contains (v0.6.9 unified executor architecture):"
   echo "  - inputs/content.md (raw input)"
   echo "  - outputs/summary.json (Stage 1)"
   echo "  - outputs/ideas.json (Stage 2)"
@@ -560,9 +554,9 @@ print_summary() {
 # Main execution
 main() {
   print_header "Looplia Docker E2E Test Suite"
-  echo "  Version: 0.6.1"
+  echo "  Version: 0.6.9"
   echo "  Date: $(date '+%Y-%m-%d %H:%M:%S')"
-  echo "  Architecture: Skills-First Workflow with Sandbox Isolation"
+  echo "  Architecture: Unified Skill Executor with general-purpose Subagent"
 
   check_prerequisites
   prepare_workspace
