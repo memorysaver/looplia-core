@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.1.60",
+    "@anthropic-ai/claude-agent-sdk": "^0.1.75",
     "@looplia-core/core": "file:./packages/core",
     "@looplia-core/provider": "file:./packages/provider",
     "zod": "^3.24.2",

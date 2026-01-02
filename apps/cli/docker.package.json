@@ -1,16 +1,14 @@
 {
-  "name": "@looplia-core/cli",
-  "version": "0.6.5",
+  "name": "@looplia/looplia-cli",
+  "version": "0.6.9",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/cli.js",
   "bin": {
-    "looplia": "./dist/index.js"
+    "looplia": "./dist/cli.js"
   },
   "dependencies": {
     "@looplia-core/core": "file:../../packages/core",
     "@looplia-core/provider": "file:../../packages/provider",
-    "chalk": "^5.4.1",
-    "commander": "^13.1.0",
     "ink": "^6.5.1",
     "react": "^19.2.1"
   }
