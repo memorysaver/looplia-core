@@ -21,7 +21,10 @@ import { homedir } from "node:os";
 import { resolve } from "node:path";
 
 import type { StreamingEvent } from "@looplia-core/core";
-import { createClaudeAgentExecutor } from "@looplia-core/provider/claude-agent-sdk";
+import {
+  createClaudeAgentExecutor,
+  initializeCommandEnvironment,
+} from "@looplia-core/provider/claude-agent-sdk";
 import { renderStreamingQuery } from "../components/index.js";
 import { renderBuildWizard } from "../components/wizard/index.js";
 import { COMMANDS } from "../constants.js";
@@ -206,6 +209,9 @@ export function ensureWorkspace(mock: boolean): string {
 
 /**
  * Validate environment (API key)
+ * @deprecated Use initializeCommandEnvironment() from @looplia-core/provider/claude-agent-sdk instead.
+ * This function does not load workspace settings before validation.
+ * Will be removed in v0.7.0.
  */
 export function validateEnvironment(mock: boolean): void {
   if (mock) {
@@ -621,11 +627,11 @@ export async function runBuildCommand(args: string[]): Promise<void> {
   }
 
   try {
-    // 1. Validate environment
-    validateEnvironment(parsed.mock);
-
-    // 2. Ensure workspace
+    // 1. Ensure workspace
     const workspace = ensureWorkspace(parsed.mock);
+
+    // 2. Load settings, inject env vars, validate API key (v0.6.10)
+    await initializeCommandEnvironment({ mock: parsed.mock });
 
     // 3. Build /build prompt
     const prompt = buildPrompt(parsed);
