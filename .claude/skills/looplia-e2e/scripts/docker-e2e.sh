@@ -60,22 +60,26 @@ USE_ZENMUX=false
 
 # Get Docker environment arguments
 # Priority: ZENMUX_API_KEY (cheapest) > CLAUDE_CODE_OAUTH_TOKEN > ANTHROPIC_API_KEY > .env
+# Always sets LOOPLIA_DEV=false to ensure production mode in Docker
 get_env_args() {
+  # Always disable dev mode in Docker (uses ~/.looplia plugins instead of ./plugins)
+  local base_args="-e LOOPLIA_DEV=false"
+
   if [ -n "$ZENMUX_API_KEY" ]; then
     # ZenMux mode: cheapest option (GLM 4.7)
     USE_ZENMUX=true
-    echo "-e ZENMUX_API_KEY=$ZENMUX_API_KEY"
+    echo "$base_args -e ZENMUX_API_KEY=$ZENMUX_API_KEY"
   elif [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
     # CI mode: subscription plan token
-    echo "-e CLAUDE_CODE_OAUTH_TOKEN=$CLAUDE_CODE_OAUTH_TOKEN"
+    echo "$base_args -e CLAUDE_CODE_OAUTH_TOKEN=$CLAUDE_CODE_OAUTH_TOKEN"
   elif [ -n "$ANTHROPIC_API_KEY" ]; then
     # Direct API key from environment
-    echo "-e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY"
+    echo "$base_args -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY"
   elif [ -f "$ENV_FILE" ]; then
-    # Local mode: .env file
-    echo "--env-file $ENV_FILE"
+    # Local mode: .env file (override LOOPLIA_DEV from file)
+    echo "$base_args --env-file $ENV_FILE"
   else
-    echo ""
+    echo "$base_args"
   fi
 }
 

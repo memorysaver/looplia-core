@@ -15,6 +15,11 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+# Script and project root paths
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Navigate up: scripts/ -> looplia-e2e/ -> skills/ -> .claude/ -> project root
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
+
 # Test results
 TESTS_PASSED=0
 TESTS_FAILED=0
@@ -192,7 +197,7 @@ test_settings_loading_order() {
   print_step "Checking source code for initializeCommandEnvironment usage..."
 
   # Check build.ts uses initializeCommandEnvironment
-  BUILD_FILE="apps/cli/src/commands/build.ts"
+  BUILD_FILE="$PROJECT_ROOT/apps/cli/src/commands/build.ts"
   if [ -f "$BUILD_FILE" ]; then
     if grep -q "initializeCommandEnvironment" "$BUILD_FILE"; then
       print_pass "build.ts uses initializeCommandEnvironment"
@@ -204,7 +209,7 @@ test_settings_loading_order() {
   fi
 
   # Check run.ts uses initializeCommandEnvironment
-  RUN_FILE="apps/cli/src/commands/run.ts"
+  RUN_FILE="$PROJECT_ROOT/apps/cli/src/commands/run.ts"
   if [ -f "$RUN_FILE" ]; then
     if grep -q "initializeCommandEnvironment" "$RUN_FILE"; then
       print_pass "run.ts uses initializeCommandEnvironment"
@@ -216,7 +221,7 @@ test_settings_loading_order() {
   fi
 
   # Check command-init.ts exists and has correct order
-  INIT_FILE="packages/provider/src/claude-agent-sdk/command-init.ts"
+  INIT_FILE="$PROJECT_ROOT/packages/provider/src/claude-agent-sdk/command-init.ts"
   if [ -f "$INIT_FILE" ]; then
     print_pass "command-init.ts exists"
 
