@@ -10,8 +10,9 @@ node_modules
 # IDE and local config
 .vscode
 .idea
-.claude
+.claude/
 .ruler
+# Note: .claude-plugin folders must NOT be ignored - they contain plugin.json manifests
 
 # Build artifacts - keep dist folders for pre-built approach
 **/*.tsbuildinfo

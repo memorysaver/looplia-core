@@ -1,11 +1,11 @@
 # Looplia-Core E2E Test Plan
 
-> **Version:** 0.6.6
-> **Date:** December 2025
+> **Version:** 0.6.9
+> **Date:** January 2026
 > **Focus:** Model Provider Configuration & Dual-Strategy Execution
-> **Related:** [DESIGN-0.6.6.md](../DESIGN-0.6.6.md) | [TEST_PLAN-0.6.md](../archive/TEST_PLAN-0.6.md)
+> **Related:** [DESIGN-0.6.9.md](../DESIGN-0.6.9.md) | [TEST_PLAN-0.6.md](../archive/TEST_PLAN-0.6.md)
 
-This document provides comprehensive **end-to-end manual testing** procedures for validating Looplia-Core v0.6.6 features, focusing on the Model Provider Configuration and Dual-Strategy Execution patterns.
+This document provides comprehensive **end-to-end manual testing** procedures for validating Looplia-Core v0.6.9 features, focusing on the Model Provider Configuration and Dual-Strategy Execution patterns.
 
 ---
 
@@ -148,7 +148,7 @@ pwd
 
 ## 4. Init Command - Two-Plugin Verification
 
-The `init` command bootstraps the workspace with both plugins merged.
+The `init` command bootstraps the workspace with **separate plugin directories** (not merged).
 
 ### Step 1: Clean Existing Workspace
 
@@ -162,13 +162,29 @@ rm -rf ~/.looplia
 looplia init --yes
 ```
 
-### Step 3: Verify Two-Plugin Skill Structure
+> **Note:** Both local CLI and Docker E2E tests use the same init command:
+> - **Local:** `looplia init --yes`
+> - **Docker:** `bun run /app/apps/cli/dist/cli.js init --yes`
+
+### Step 3: Verify Two-Plugin Structure
+
+Each plugin is installed to its own directory:
 
 ```bash
-ls ~/.looplia/.claude/skills/
+# Verify looplia-core plugin
+ls ~/.looplia/looplia-core/
+# Expected: .claude-plugin/ hooks/ skills/ commands/
+
+# Verify looplia-writer plugin
+ls ~/.looplia/looplia-writer/
+# Expected: .claude-plugin/ skills/
 ```
 
-**Expected skills from looplia-core (6 skills):**
+**Skills in looplia-core (6 skills):**
+
+```bash
+ls ~/.looplia/looplia-core/skills/
+```
 
 | Skill | Purpose |
 |-------|---------|
@@ -179,7 +195,11 @@ ls ~/.looplia/.claude/skills/
 | `skill-capability-matcher/` | Match requirements to skills |
 | `workflow-schema-composer/` | Generate workflow definitions |
 
-**Expected skills from looplia-writer (5 skills):**
+**Skills in looplia-writer (5 skills):**
+
+```bash
+ls ~/.looplia/looplia-writer/skills/
+```
 
 | Skill | Purpose |
 |-------|---------|
@@ -189,14 +209,25 @@ ls ~/.looplia/.claude/skills/
 | `writing-kit-assembler/` | Assemble final writing kit |
 | `user-profile-reader/` | Read user preferences |
 
-### Step 4: Verify Workflows
+### Step 4: Verify Plugin Manifests
+
+```bash
+# Both plugins must have plugin.json
+cat ~/.looplia/looplia-core/.claude-plugin/plugin.json | jq .name
+# Expected: "looplia-core"
+
+cat ~/.looplia/looplia-writer/.claude-plugin/plugin.json | jq .name
+# Expected: "looplia-writer"
+```
+
+### Step 5: Verify Workflows
 
 ```bash
 ls ~/.looplia/workflows/
 # Expected: writing-kit.md
 ```
 
-### Step 5: Verify CLAUDE.md Entry Point
+### Step 6: Verify CLAUDE.md Entry Point
 
 ```bash
 ls ~/.looplia/CLAUDE.md
@@ -205,7 +236,10 @@ ls ~/.looplia/CLAUDE.md
 
 ### Verification Checklist
 
-- [ ] `~/.looplia/.claude/skills/` contains 11 skill folders
+- [ ] `~/.looplia/looplia-core/` exists with `.claude-plugin/plugin.json`
+- [ ] `~/.looplia/looplia-core/skills/` contains 6 skill folders
+- [ ] `~/.looplia/looplia-writer/` exists with `.claude-plugin/plugin.json`
+- [ ] `~/.looplia/looplia-writer/skills/` contains 5 skill folders
 - [ ] `~/.looplia/workflows/writing-kit.md` exists
 - [ ] `~/.looplia/CLAUDE.md` exists
 
@@ -505,9 +539,11 @@ looplia run writing-kit --file test.md
 
 ### Plugin System Verification
 
-- [ ] looplia-core skills present (6 skills)
-- [ ] looplia-writer skills present (5 skills)
-- [ ] `workflows/writing-kit.md` exists
+- [ ] `~/.looplia/looplia-core/.claude-plugin/plugin.json` exists
+- [ ] `~/.looplia/looplia-core/skills/` contains 6 skills
+- [ ] `~/.looplia/looplia-writer/.claude-plugin/plugin.json` exists
+- [ ] `~/.looplia/looplia-writer/skills/` contains 5 skills
+- [ ] `~/.looplia/workflows/writing-kit.md` exists
 - [ ] Sandbox created at `~/.looplia/sandbox/`
 
 ---
@@ -590,11 +626,11 @@ If `sandbox/{id}/logs/` is empty:
 
 ## Cross-References
 
-- **v0.6.6 Design:** [DESIGN-0.6.6.md](../DESIGN-0.6.6.md)
+- **v0.6.9 Design:** [DESIGN-0.6.9.md](../DESIGN-0.6.9.md)
 - **Previous Test Plan:** [TEST_PLAN-0.6.md](../archive/TEST_PLAN-0.6.md)
 - **Agent SDK Documentation:** [AGENT-SDK.md](../AGENT-SDK.md)
 - **Glossary:** [GLOSSARY.md](../GLOSSARY.md)
 
 ---
 
-*This test plan is maintained for Looplia-Core v0.6.6.*
+*This test plan is maintained for Looplia-Core v0.6.9.*
