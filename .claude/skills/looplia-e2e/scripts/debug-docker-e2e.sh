@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Debug Docker E2E Test with ZenMux
 # Usage: ZENMUX_API_KEY=xxx ./scripts/debug-docker-e2e.sh
 #
