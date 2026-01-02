@@ -76,6 +76,6 @@ LOCK_FILE="${VALIDATION_JSON}.lock"
   # Update validation.json to mark step as validated (v0.6.0 uses "steps")
   jq --arg art "$ARTIFACT" '.steps[$art].validated = true' "$VALIDATION_JSON" > "${VALIDATION_JSON}.tmp"
   mv "${VALIDATION_JSON}.tmp" "$VALIDATION_JSON"
-  echo "✓ Validated: $ARTIFACT.json"
+  echo "✓ Validated: $ARTIFACT.json" >&2
 
 ) 200>"$LOCK_FILE"

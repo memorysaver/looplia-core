@@ -34,9 +34,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Endpoint-based fallback: uses `ZENMUX_API_KEY` for ZenMux endpoints
   - Cleaner logic: user explicit configuration first, then endpoint-specific env var
 
+### Fixed
+
+- **Hook stdout Pollution** - Fix Docker E2E `JSON Parse error: Unexpected identifier "looplia"`
+  - Removed SessionStart echo hook that output to stdout before SDK communication established
+  - Changed `post-write-validate.sh` success messages to stderr (`>&2`)
+  - Root cause: v0.6.5+ `plugins:` option loads hooks immediately; v0.6.4 `settingSources:` did not
+  - Documented hook stdout usage guidelines in DESIGN-0.6.9.md
+
 ### Documentation
 
-- **DESIGN-0.6.9.md** - Complete specification for unified skill executor, SDK compatibility, and API key selection
+- **DESIGN-0.6.9.md** - Complete specification for unified skill executor, SDK compatibility, API key selection, and hook stdout fix
 - **workflow-executor/SKILL.md** - Updated to use `general-purpose` subagent with full execution protocol
 - **README.md** - Updated architecture version and version history
 - **docs/README.md** - Added "What's New in v0.6.9" section

@@ -17,7 +17,8 @@
 5. [Solution: Endpoint-Aware API Key Selection](#5-solution-endpoint-aware-api-key-selection)
 6. [Implementation Details](#6-implementation-details)
 7. [File Changes Summary](#7-file-changes-summary)
-8. [Summary](#summary)
+8. [Fix: Hook stdout Pollution Breaking SDK Communication](#8-fix-hook-stdout-pollution-breaking-sdk-communication)
+9. [Summary](#summary)
 
 ---
 
@@ -355,11 +356,79 @@ Updated `injectLoopliaSettingsEnv()` to use new priority order.
 | `packages/provider/src/claude-agent-sdk/claude-code-path.ts` | Return `undefined` instead of throwing |
 | `packages/provider/src/claude-agent-sdk/model-provider.ts` | Settings file `authToken` takes priority; `executor` reserved for future |
 | `packages/provider/test/claude-agent-sdk/model-provider.test.ts` | Updated tests for new priority |
+| `plugins/looplia-core/hooks/hooks.json` | Removed SessionStart echo hook that polluted SDK JSON stream |
+| `plugins/looplia-core/scripts/hooks/post-write-validate.sh` | Changed echo output to stderr to prevent SDK pollution |
 
 ---
 
-## Summary
+## 8. Fix: Hook stdout Pollution Breaking SDK Communication
+
+### 8.1 Problem Discovery
+
+After v0.6.9 release, Docker E2E tests failed with:
+```
+JSON Parse error: Unexpected identifier "looplia"
+```
+
+### 8.2 Root Cause
+
+A **SessionStart hook** was outputting to stdout, polluting the Claude Agent SDK's JSON communication stream:
+
+```json
+{
+  "event": "SessionStart",
+  "command": "echo '🚀 Looplia session started'",
+  "description": "Log session start"
+}
+```
+
+**Why it broke in v0.6.5+ but not v0.6.4:**
+
+| Version | Plugin Loading | Hooks Loaded? |
+|---------|---------------|---------------|
+| v0.6.4 | `settingSources: ["project"]` with `cwd: workspace` | No (no `.claude/` in sandbox) |
+| v0.6.5+ | `plugins: pluginPaths` explicit loading | Yes (hooks run immediately) |
+
+### 8.3 Solution
+
+1. **Remove SessionStart echo hook** - It was just logging, not part of validation system
+
+2. **Fix post-write-validate.sh** - Line 79 echo should go to stderr:
+   ```bash
+   # Before
+   echo "✓ Validated: $ARTIFACT.json"
+
+   # After
+   echo "✓ Validated: $ARTIFACT.json" >&2
+   ```
+
+### 8.4 Hook stdout Usage Guidelines
+
+| Hook | Event | stdout Usage | Reason |
+|------|-------|--------------|--------|
+| stop-guard.sh | Stop | JSON protocol | **Required** - Claude Code expects `{"decision": "block", ...}` |
+| compact-inject-state.sh | SessionStart:compact | Human-readable | **OK** - Has `matcher: "compact"`, runs during compaction |
+| post-write-validate.sh | PostToolUse:Write | stderr only | **Fixed** - Success messages to stderr |
+
+### 8.5 CLI vs SDK Output Architecture
+
+**Question:** Does CLI interactive output pollute JSON?
+
+**Answer:** No. Different processes, different stdout destinations:
+
+| Mode | stdout Destination |
+|------|-------------------|
+| Interactive CLI (`looplia`) | Terminal via Ink |
+| SDK Mode (subprocess) | SDK JSON parser |
+
+Only hook stdout during SDK execution matters. CLI Ink rendering is a separate process.
+
+---
+
+## 9. Summary
 
 v0.6.9 introduces a **unified skill executor strategy**: ALL providers (Anthropic, ZenMux, custom) now use the built-in `general-purpose` subagent for workflow step execution. The `workflow-executor` skill provides the execution protocol that teaches the subagent how to invoke other skills. This achieves context offload (each step runs in a separate context window) while simplifying the codebase by removing provider-specific branching.
 
 Additionally, v0.6.9 fixes Docker E2E failures by making Claude Code path optional (SDK uses built-in) and improves API key selection by giving settings file priority over environment variables with endpoint-based fallback.
+
+**Post-release fix:** Removed a SessionStart echo hook that was polluting the SDK's JSON communication stream. The hook output "🚀 Looplia session started" to stdout before SDK communication was established, causing JSON parse errors. Also fixed `post-write-validate.sh` to redirect success messages to stderr.
