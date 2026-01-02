@@ -15,7 +15,9 @@ NC='\033[0m' # No Color
 # Configuration
 IMAGE_NAME="looplia:test"
 WORKSPACE_DIR="./test-workspace"
-EXAMPLES_DIR="./examples"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SKILL_DIR="$(dirname "$SCRIPT_DIR")"
+TEST_CONTENT="$SKILL_DIR/assets/ai-healthcare.md"
 ENV_FILE=".env"
 
 # Test results
@@ -53,11 +55,18 @@ print_info() {
   echo -e "    $1"
 }
 
+# Track which provider to use
+USE_ZENMUX=false
+
 # Get Docker environment arguments
-# Supports: CLAUDE_CODE_OAUTH_TOKEN (CI), ANTHROPIC_API_KEY (env), .env file (local)
+# Priority: ZENMUX_API_KEY (cheapest) > CLAUDE_CODE_OAUTH_TOKEN > ANTHROPIC_API_KEY > .env
 get_env_args() {
-  if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
-    # CI mode: subscription plan token (cost-effective)
+  if [ -n "$ZENMUX_API_KEY" ]; then
+    # ZenMux mode: cheapest option (GLM 4.7)
+    USE_ZENMUX=true
+    echo "-e ZENMUX_API_KEY=$ZENMUX_API_KEY"
+  elif [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+    # CI mode: subscription plan token
     echo "-e CLAUDE_CODE_OAUTH_TOKEN=$CLAUDE_CODE_OAUTH_TOKEN"
   elif [ -n "$ANTHROPIC_API_KEY" ]; then
     # Direct API key from environment
@@ -74,18 +83,21 @@ get_env_args() {
 check_prerequisites() {
   print_header "Checking Prerequisites"
 
-  # Check API credentials
+  # Check API credentials (prefer ZenMux for cost savings)
   print_step "Checking API credentials..."
-  if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+  if [ -n "$ZENMUX_API_KEY" ]; then
+    print_pass "ZENMUX_API_KEY available (cheapest - GLM 4.7)"
+  elif [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
     print_pass "OAuth token available (CI mode)"
   elif [ -n "$ANTHROPIC_API_KEY" ]; then
-    print_pass "API key available via environment"
+    print_pass "ANTHROPIC_API_KEY available via environment"
   elif [ -f "$ENV_FILE" ]; then
     print_pass ".env file exists (local mode)"
   else
     print_fail "No API credentials found"
     echo ""
-    echo "Provide credentials via:"
+    echo "Provide credentials via (in order of preference):"
+    echo "  - ZENMUX_API_KEY (cheapest - uses GLM 4.7)"
     echo "  - CLAUDE_CODE_OAUTH_TOKEN (CI/subscription plan)"
     echo "  - ANTHROPIC_API_KEY environment variable"
     echo "  - .env file with ANTHROPIC_API_KEY=sk-ant-..."
@@ -113,13 +125,13 @@ check_prerequisites() {
   fi
   print_pass "jq is available"
 
-  # Check examples directory
+  # Check test content
   print_step "Checking test fixtures..."
-  if [ ! -f "$EXAMPLES_DIR/ai-healthcare.md" ]; then
-    print_fail "Test fixture not found: $EXAMPLES_DIR/ai-healthcare.md"
+  if [ ! -f "$TEST_CONTENT" ]; then
+    print_fail "Test fixture not found: $TEST_CONTENT"
     exit 1
   fi
-  print_pass "Markdown fixture available"
+  print_pass "Test content available: $(basename "$TEST_CONTENT")"
 
   # Check youtube fixtures (commented out - focus on markdown processing)
   # print_step "Checking YouTube test fixtures..."
@@ -273,13 +285,25 @@ test_workflow_markdown() {
   print_step "Running writing-kit workflow with real API..."
 
   ENV_ARGS=$(get_env_args)
-  CONTAINER_ID=$(docker create \
-    $ENV_ARGS \
-    -v "$(pwd)/$EXAMPLES_DIR:/examples:ro" \
-    "$IMAGE_NAME" \
-    run writing-kit --file /examples/ai-healthcare.md \
-    --topics "ai,healthcare,technology" \
-    --tone "expert")
+
+  # Build command based on provider
+  if [ "$USE_ZENMUX" = true ]; then
+    print_info "Using ZenMux GLM 4.7 preset (cheapest)"
+    CONTAINER_ID=$(docker create \
+      $ENV_ARGS \
+      -v "$TEST_CONTENT:/test-content.md:ro" \
+      --entrypoint sh \
+      "$IMAGE_NAME" \
+      -c "looplia config provider preset ZENMUX_ZAI_GLM47 && looplia run writing-kit --file /test-content.md --topics 'ai,healthcare,technology' --tone 'expert'")
+  else
+    CONTAINER_ID=$(docker create \
+      $ENV_ARGS \
+      -v "$TEST_CONTENT:/test-content.md:ro" \
+      "$IMAGE_NAME" \
+      run writing-kit --file /test-content.md \
+      --topics "ai,healthcare,technology" \
+      --tone "expert")
+  fi
 
   docker start -a "$CONTAINER_ID" || true
 

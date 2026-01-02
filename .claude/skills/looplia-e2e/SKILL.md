@@ -196,10 +196,12 @@ See [references/TROUBLESHOOTING.md](references/TROUBLESHOOTING.md) for common is
 
 ## Environment Variables
 
-| Variable | Required | Description |
+| Variable | Priority | Description |
 |----------|----------|-------------|
-| `ZENMUX_API_KEY` | Yes* | ZenMux API key |
-| `ANTHROPIC_API_KEY` | Yes* | Anthropic API key (alternative) |
+| `ZENMUX_API_KEY` | **Preferred** | ZenMux API key (cheapest - uses GLM 4.7) |
+| `ANTHROPIC_API_KEY` | Fallback | Anthropic API key (more expensive) |
+
+**Cost Optimization:** Always use `ZENMUX_API_KEY` for E2E testing. The ZenMux GLM 4.7 preset is significantly cheaper than Anthropic direct API.
 
 *One of ZENMUX_API_KEY or ANTHROPIC_API_KEY is required (unless using --mock).
 

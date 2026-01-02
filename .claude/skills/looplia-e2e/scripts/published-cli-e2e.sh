@@ -118,6 +118,35 @@ install_cli() {
   print_pass "CLI verified: $INSTALLED_VERSION"
 }
 
+# Verify version consistency between CLI and package
+verify_version_consistency() {
+  print_header "Verifying Version Consistency"
+
+  # Get CLI reported version
+  print_step "Checking CLI version..."
+  CLI_VERSION=$(looplia --version 2>/dev/null || echo "unknown")
+  print_info "CLI reports: $CLI_VERSION"
+
+  # Get package.json version from npm registry
+  print_step "Checking package version..."
+  if [ "$VERSION" = "latest" ]; then
+    PKG_VERSION=$(npm view "@looplia/looplia-cli" version 2>/dev/null || echo "unknown")
+  else
+    PKG_VERSION=$(npm view "@looplia/looplia-cli@$VERSION" version 2>/dev/null || echo "unknown")
+  fi
+  print_info "Package version: $PKG_VERSION"
+
+  # Compare versions
+  if [ "$CLI_VERSION" = "unknown" ] || [ "$PKG_VERSION" = "unknown" ]; then
+    print_fail "Could not determine versions"
+  elif [ "$CLI_VERSION" = "$PKG_VERSION" ]; then
+    print_pass "Version consistency: CLI ($CLI_VERSION) matches package ($PKG_VERSION)"
+  else
+    print_fail "Version mismatch: CLI=$CLI_VERSION, Package=$PKG_VERSION"
+    print_info "Fix: Update VERSION constant in apps/cli/src/index.ts"
+  fi
+}
+
 # Bootstrap workspace
 bootstrap_workspace() {
   print_header "Bootstrapping Workspace"
@@ -248,6 +277,7 @@ main() {
 
   check_prerequisites
   install_cli
+  verify_version_consistency
   bootstrap_workspace
   configure_provider
   run_workflow_test
