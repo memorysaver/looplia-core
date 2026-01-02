@@ -36,6 +36,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **SDK Bundled CLI Path Resolution** - Critical fix for Docker/bundled deployments
+  - Root cause: When CLI is bundled (tsup), SDK's internal `__dirname` resolves to bundle directory
+  - SDK spawned our CLI instead of its bundled Claude Code, causing JSON parse errors
+  - Fix: Added `findSdkBundledCliPath()` using `require.resolve()` to find SDK's `cli.js`
+  - `require.resolve()` works in bundled ESM via `createRequire(import.meta.url)`
+  - Search order now: env override → common paths → PATH lookup → SDK bundled CLI
+
 - **Hook stdout Pollution** - Fix Docker E2E `JSON Parse error: Unexpected identifier "looplia"`
   - Removed SessionStart echo hook that output to stdout before SDK communication established
   - Changed `post-write-validate.sh` success messages to stderr (`>&2`)

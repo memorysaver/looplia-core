@@ -18,7 +18,8 @@
 6. [Implementation Details](#6-implementation-details)
 7. [File Changes Summary](#7-file-changes-summary)
 8. [Fix: Hook stdout Pollution Breaking SDK Communication](#8-fix-hook-stdout-pollution-breaking-sdk-communication)
-9. [Summary](#summary)
+9. [Fix: SDK Bundled CLI Path Resolution for Docker Deployments](#9-fix-sdk-bundled-cli-path-resolution-for-docker-deployments)
+10. [Summary](#10-summary)
 
 ---
 
@@ -353,7 +354,7 @@ Updated `injectLoopliaSettingsEnv()` to use new priority order.
 |------|--------|
 | `packages/provider/src/claude-agent-sdk/streaming/query-executor.ts` | Removed `isProxyProvider`, `workflowExecutionHint`, `skill-executor` agent; conditionally pass `pathToClaudeCodeExecutable` |
 | `plugins/looplia-core/skills/workflow-executor/SKILL.md` | Changed to `general-purpose` subagent with full execution protocol |
-| `packages/provider/src/claude-agent-sdk/claude-code-path.ts` | Return `undefined` instead of throwing |
+| `packages/provider/src/claude-agent-sdk/claude-code-path.ts` | Return `undefined` instead of throwing; added `findSdkBundledCliPath()` using `require.resolve()` for Docker deployments |
 | `packages/provider/src/claude-agent-sdk/model-provider.ts` | Settings file `authToken` takes priority; `executor` reserved for future |
 | `packages/provider/test/claude-agent-sdk/model-provider.test.ts` | Updated tests for new priority |
 | `plugins/looplia-core/hooks/hooks.json` | Removed SessionStart echo hook that polluted SDK JSON stream |
@@ -425,10 +426,149 @@ Only hook stdout during SDK execution matters. CLI Ink rendering is a separate p
 
 ---
 
-## 9. Summary
+## 9. Fix: SDK Bundled CLI Path Resolution for Docker Deployments
+
+### 9.1 Problem Discovery
+
+After the hook stdout fix (Section 8), Docker E2E tests still failed with the same error:
+```
+JSON Parse error: Unexpected identifier "looplia"
+```
+
+**Critical observation:** The case didn't match!
+- SessionStart hook said "Looplia" (uppercase L)
+- Error message said "looplia" (lowercase l)
+
+This indicated a **different source** for the "looplia" string.
+
+### 9.2 Investigation
+
+Systematic elimination testing:
+| Test | Result |
+|------|--------|
+| Empty hooks | Still failed |
+| Renamed plugin name | Still failed |
+| No plugins (`LOOPLIA_NO_PLUGINS=true`) | Still failed |
+| Different HOME/paths | Still failed |
+| SDK update to v0.1.76 | Still failed |
+
+**Breakthrough:** Using `DEBUG_CLAUDE_AGENT_SDK=1` revealed the SDK spawn command:
+```
+Spawning Claude Code: bun /app/apps/cli/dist/cli.js --output-format stream-json ...
+```
+
+This was **our Looplia CLI**, not the SDK's bundled Claude Code!
+
+### 9.3 Root Cause
+
+When our CLI is bundled with tsup for Docker deployments:
+
+1. **`__dirname` misbehavior:** The SDK's internal `__dirname` resolves to our bundle's directory (`/app/apps/cli/dist/`), not the SDK package directory
+2. **Wrong executable:** SDK looked for `cli.js` and found our bundled CLI instead of its own
+3. **Help output instead of JSON:** Our CLI received `--output-format stream-json` which it doesn't recognize, so it called `printHelp()` outputting "looplia - Content intelligence CLI..."
+4. **JSON parse failure:** SDK expected JSON on stdout, got "looplia..." → parse error
+
+```
+Expected: SDK spawns /app/node_modules/@anthropic-ai/claude-agent-sdk/cli.js
+Actual:   SDK spawns /app/apps/cli/dist/cli.js (our CLI!)
+```
+
+### 9.4 Solution
+
+Added `findSdkBundledCliPath()` function in `claude-code-path.ts`:
+
+```typescript
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+import { existsSync } from "node:fs";
+
+/**
+ * Find the SDK's bundled Claude Code CLI path
+ *
+ * When our CLI is bundled, the SDK's internal path resolution fails
+ * because __dirname resolves to our bundle's directory, not the SDK's.
+ *
+ * This function uses require.resolve to find the SDK package and
+ * then locates the bundled cli.js relative to it.
+ */
+function findSdkBundledCliPath(): string | undefined {
+  try {
+    // Use createRequire to get a require function that works in ESM
+    const require = createRequire(import.meta.url);
+
+    // Resolve the SDK's package.json to find its directory
+    const sdkPackagePath = require.resolve(
+      "@anthropic-ai/claude-agent-sdk/package.json"
+    );
+    const sdkDir = dirname(sdkPackagePath);
+
+    // The bundled CLI is at the root of the SDK package
+    const cliPath = join(sdkDir, "cli.js");
+
+    if (existsSync(cliPath)) {
+      return cliPath;
+    }
+  } catch {
+    // SDK not found or path resolution failed
+  }
+  return;
+}
+```
+
+**Key insight:** `require.resolve()` correctly resolves npm package paths even when code is bundled, unlike `__dirname` which points to the bundle location.
+
+### 9.5 Why `require.resolve()` Works
+
+| Approach | In Bundled Code | Result |
+|----------|-----------------|--------|
+| `__dirname` | Points to bundle output directory | ❌ Wrong path |
+| `require.resolve()` | Traverses `node_modules` at runtime | ✅ Correct path |
+
+ESM doesn't have native `require`, but `createRequire(import.meta.url)` creates a CommonJS-compatible `require` function that can use `require.resolve()` to find package paths.
+
+### 9.6 Updated Search Order
+
+The `findClaudeCodePath()` function now searches in this order:
+
+1. `CLAUDE_CODE_PATH` environment variable override
+2. Common installation paths (`~/.local/bin/claude`, `/usr/local/bin/claude`, etc.)
+3. PATH lookup (`which claude` / `where claude`)
+4. **SDK's bundled CLI** (new - critical for Docker)
+
+```typescript
+export function findClaudeCodePath(): string | undefined {
+  // ... steps 1-3 ...
+
+  // 4. Try SDK's bundled CLI (critical for Docker and bundled deployments)
+  const sdkCliPath = findSdkBundledCliPath();
+  if (sdkCliPath) {
+    cachedClaudeCodePath = sdkCliPath;
+    return cachedClaudeCodePath;
+  }
+
+  // 5. Not found - return undefined to let SDK use built-in executable
+  cachedClaudeCodePath = null;
+  return;
+}
+```
+
+### 9.7 Verification
+
+After the fix, SDK debug logs show correct executable:
+```
+Spawning Claude Code: bun /app/node_modules/@anthropic-ai/claude-agent-sdk/cli.js --output-format stream-json ...
+```
+
+The workflow now runs successfully with proper JSON communication.
+
+---
+
+## 10. Summary
 
 v0.6.9 introduces a **unified skill executor strategy**: ALL providers (Anthropic, ZenMux, custom) now use the built-in `general-purpose` subagent for workflow step execution. The `workflow-executor` skill provides the execution protocol that teaches the subagent how to invoke other skills. This achieves context offload (each step runs in a separate context window) while simplifying the codebase by removing provider-specific branching.
 
 Additionally, v0.6.9 fixes Docker E2E failures by making Claude Code path optional (SDK uses built-in) and improves API key selection by giving settings file priority over environment variables with endpoint-based fallback.
 
-**Post-release fix:** Removed a SessionStart echo hook that was polluting the SDK's JSON communication stream. The hook output "🚀 Looplia session started" to stdout before SDK communication was established, causing JSON parse errors. Also fixed `post-write-validate.sh` to redirect success messages to stderr.
+**Critical fix - SDK Bundled CLI Path Resolution:** When our CLI is bundled with tsup for Docker deployments, the SDK's internal `__dirname` resolves to our bundle directory instead of the SDK package directory. This caused the SDK to spawn our CLI instead of its bundled Claude Code, resulting in JSON parse errors. The fix uses `createRequire()` + `require.resolve()` to correctly locate the SDK's bundled `cli.js` regardless of bundling.
+
+**Hook stdout fix:** Removed a SessionStart echo hook that was polluting the SDK's JSON communication stream. Also fixed `post-write-validate.sh` to redirect success messages to stderr.
