@@ -1,7 +1,9 @@
 import { runBuildCommand } from "./commands/build";
 import { runConfigCommand } from "./commands/config";
 import { runInitCommand } from "./commands/init";
+import { runRegistryCommand } from "./commands/registry";
 import { runRunCommand } from "./commands/run";
+import { runSkillCommand } from "./commands/skill";
 
 // Version injected from package.json at build time by tsup
 declare const __VERSION__: string;
@@ -19,6 +21,8 @@ Commands:
   run          Execute a workflow on content
   build        Build workflow from natural language
   config       Manage user profile settings
+  registry     Manage skill registry sources (v0.7.0)
+  skill        Manage skill installation (v0.7.0)
 
 Options:
   --help, -h     Show this help
@@ -28,6 +32,8 @@ Examples:
   looplia init
   looplia run writing-kit --file ./article.txt
   looplia config topics "ai,productivity,writing"
+  looplia registry sync
+  looplia skill list
 
 For command-specific help:
   looplia <command> --help
@@ -63,6 +69,12 @@ async function main(): Promise<void> {
       break;
     case "config":
       await runConfigCommand(rest);
+      break;
+    case "registry":
+      await runRegistryCommand(rest);
+      break;
+    case "skill":
+      await runSkillCommand(rest);
       break;
     default:
       console.error(`Unknown command: ${command}`);
