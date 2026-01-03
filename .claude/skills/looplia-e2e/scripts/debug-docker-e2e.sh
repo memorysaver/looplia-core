@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Debug Docker E2E Test with ZenMux
 # Usage: ZENMUX_API_KEY=xxx ./scripts/debug-docker-e2e.sh
 #
@@ -123,6 +123,7 @@ echo ""
 
 docker run \
   --rm \
+  -e LOOPLIA_DEV=false \
   -e LOOPLIA_DEBUG=true \
   -e ZENMUX_API_KEY="$ZENMUX_API_KEY" \
   -v "$(pwd)/examples:/examples:ro" \

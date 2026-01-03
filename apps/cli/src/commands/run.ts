@@ -28,8 +28,7 @@ import {
 } from "@looplia-core/core";
 import {
   createClaudeAgentExecutor,
-  injectLoopliaSettingsEnv,
-  readLoopliaSettings,
+  initializeCommandEnvironment,
   type WorkflowResult,
 } from "@looplia-core/provider/claude-agent-sdk";
 import { renderStreamingQuery } from "../components";
@@ -477,25 +476,6 @@ function ensureWorkspace(mock: boolean): string {
 }
 
 /**
- * Validate environment (API key)
- * ZenMux uses ANTHROPIC_API_KEY same as Anthropic SDK
- */
-function validateEnvironment(mock: boolean): void {
-  if (mock) {
-    return;
-  }
-
-  if (!(process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_CODE_OAUTH_TOKEN)) {
-    console.error(
-      "Error: ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN required"
-    );
-    console.error("Get your API key from: https://console.anthropic.com");
-    console.error("Or use --mock flag to run without API key");
-    process.exit(1);
-  }
-}
-
-/**
  * Build the /run prompt to inject into the agent
  * When sandboxId is provided (either from --sandbox-id or from createSandbox),
  * always use sandbox-id format so the logger can extract it
@@ -746,15 +726,8 @@ export async function runRunCommand(args: string[]): Promise<void> {
     const allowInputless = checkWorkflowInputless(workspace, parsed.workflowId);
     const sandboxId = resolveSandboxId(workspace, parsed, allowInputless);
 
-    // 3. Load and inject provider settings (v0.6.6)
-    // Must happen BEFORE env validation so ZenMux API key is available
-    const settings = await readLoopliaSettings();
-    if (settings) {
-      injectLoopliaSettingsEnv(settings);
-    }
-
-    // 4. Validate environment (after settings injection for ZenMux support)
-    validateEnvironment(parsed.mock);
+    // 3. Load settings, inject env vars, validate API key (v0.6.10)
+    await initializeCommandEnvironment({ mock: parsed.mock });
 
     // 4. Build /run prompt with sandbox ID
     const prompt = buildRunPrompt(parsed.workflowId, sandboxId);

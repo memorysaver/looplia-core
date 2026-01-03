@@ -8,7 +8,7 @@ Looplia Core is an agentic workflow platform powered by the Claude Agent SDK. It
 
 **Vision:** A universal CLI for AI-powered workflows — one tool, many domains, powered by composable skills.
 
-## v0.6.9 Architecture
+## v0.6.10 Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -254,7 +254,8 @@ looplia run writing-kit --file ./article.md
 | v0.6.6 | Model Provider Configuration, ZenMux Integration |
 | v0.6.7 | Package rename to @looplia/looplia-cli |
 | v0.6.8 | Claude Code path resolution fix |
-| **v0.6.9** | **SDK Compatibility, Endpoint-Aware API Key Selection** |
+| v0.6.9 | SDK Compatibility, Endpoint-Aware API Key Selection |
+| **v0.6.10** | **Unified Command Initialization, E2E Testing Skill** |
 
 ## License
 

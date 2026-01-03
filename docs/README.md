@@ -1,7 +1,7 @@
 # Looplia-Core Documentation
 
-> **Version:** 0.6.9
-> **Last Updated:** December 2025
+> **Version:** 0.6.10
+> **Last Updated:** January 2026
 
 This directory contains the core documentation for Looplia-Core, a Claude Agent SDK-based agentic workflow platform.
 
@@ -9,7 +9,7 @@ This directory contains the core documentation for Looplia-Core, a Claude Agent 
 
 ## Core Documents (Latest)
 
-These are the current, authoritative documents for the v0.6.9 architecture:
+These are the current, authoritative documents for the v0.6.10 architecture:
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
@@ -39,6 +39,43 @@ These are the current, authoritative documents for the v0.6.9 architecture:
 |----------|---------|
 | [AGENTIC_CONCEPT-0.5.md](./archive/AGENTIC_CONCEPT-0.5.md) | Agent system design: Two-plugin model (historical) |
 | [TEST_PLAN-0.6.md](./archive/TEST_PLAN-0.6.md) | Test architecture with real API testing (historical) |
+
+---
+
+## What's New in v0.6.10
+
+### Unified Command Initialization
+
+v0.6.10 unifies the initialization logic between `build` and `run` commands:
+
+| Feature | Description |
+|---------|-------------|
+| **initializeCommandEnvironment()** | Shared initialization for both build and run commands |
+| **Settings-First Loading** | Settings file loaded before API key validation |
+| **Mock Mode Support** | `--mock` works without API key for testing |
+| **Improved Error Messages** | Clear error messages with all available options |
+
+**Benefits:**
+- Consistent behavior across commands
+- ZenMux preset works correctly with both `build` and `run`
+- No API key required for mock mode testing
+
+### Comprehensive E2E Testing Skill
+
+New `looplia-e2e` skill for end-to-end testing:
+
+| Test Mode | Purpose |
+|-----------|---------|
+| `docker-e2e.sh` | Docker container testing for CI |
+| `published-cli-e2e.sh` | Published npm package validation |
+| `check-v0610.sh` | Version-specific initialization checks |
+
+**Features:**
+- Version consistency check (CLI --version vs package.json)
+- ZenMux GLM 4.7 preset standardization (cheaper testing)
+- Subagent architecture verification (v0.6.9+)
+
+See `.claude/skills/looplia-e2e/SKILL.md` for documentation.
 
 ---
 
@@ -477,7 +514,7 @@ Previous versions are preserved in `/docs/archive/` for reference:
 ```
 
 **Version Progression:**
-- v0.6.0 → v0.6.1 → v0.6.2 → v0.6.3 → v0.6.4 → v0.6.5 → v0.6.6 → v0.6.7 → v0.6.8 → **v0.6.9** (current)
+- v0.6.0 → v0.6.1 → v0.6.2 → v0.6.3 → v0.6.4 → v0.6.5 → v0.6.6 → v0.6.7 → v0.6.8 → v0.6.9 → **v0.6.10** (current)
 
 **Key Documents:**
 - **GLOSSARY.md** defines terms used across all documents
@@ -734,4 +771,4 @@ Steps complete when `validation.json` shows `validated: true`:
 
 ---
 
-*This README provides navigation for Looplia-Core v0.6.9 documentation.*
+*This README provides navigation for Looplia-Core v0.6.10 documentation.*

@@ -8,6 +8,9 @@ export {
   findClaudeCodePath,
   isClaudeCodeInstalled,
 } from "./claude-code-path";
+// Re-export command initialization (v0.6.10)
+export type { CommandInitOptions, CommandInitResult } from "./command-init";
+export { initializeCommandEnvironment } from "./command-init";
 export type {
   ClaudeAgentConfig,
   ConfigValidationResult,
