@@ -3,6 +3,7 @@
 # Sourced by other E2E test scripts
 #
 # Functions:
+#   load_env_file [env_file]
 #   verify_outputs <sandbox_dir>
 #   verify_validation_state <sandbox_dir>
 #   verify_subagent_usage <sandbox_dir>
@@ -34,6 +35,63 @@ _print_warn() {
 
 _print_info() {
   echo -e "    $1"
+}
+
+# Load .env file safely (handles special characters in API keys)
+# Usage: load_env_file [env_file]
+# Default: looks for .env in current directory, then project root
+load_env_file() {
+  local env_file="${1:-}"
+
+  # Auto-detect .env file location
+  if [ -z "$env_file" ]; then
+    # Try common locations
+    if [ -f ".env" ]; then
+      env_file=".env"
+    elif [ -f "../../.env" ]; then
+      env_file="../../.env"
+    elif [ -f "../../../.env" ]; then
+      env_file="../../../.env"
+    else
+      # Try to find project root (look for package.json)
+      local dir="$(pwd)"
+      while [ "$dir" != "/" ]; do
+        if [ -f "$dir/.env" ]; then
+          env_file="$dir/.env"
+          break
+        fi
+        dir="$(dirname "$dir")"
+      done
+    fi
+  fi
+
+  if [ ! -f "$env_file" ]; then
+    return 1
+  fi
+
+  # Read line by line, properly handle special characters
+  while IFS= read -r line || [ -n "$line" ]; do
+    # Skip comments and empty lines
+    [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+
+    # Extract key and value
+    if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+      local key="${BASH_REMATCH[1]}"
+      local value="${BASH_REMATCH[2]}"
+
+      # Remove surrounding quotes if present
+      if [[ "$value" =~ ^\"(.*)\"$ ]]; then
+        value="${BASH_REMATCH[1]}"
+      elif [[ "$value" =~ ^\'(.*)\'$ ]]; then
+        value="${BASH_REMATCH[1]}"
+      fi
+
+      # Export with proper quoting
+      export "$key=$value"
+    fi
+  done < "$env_file"
+
+  return 0
 }
 
 # Verify workflow outputs exist
@@ -242,6 +300,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   echo "  source verify-workflow.sh"
   echo ""
   echo "Available functions:"
+  echo "  load_env_file [env_file]        - Load .env file safely (handles special chars)"
   echo "  verify_outputs <sandbox_dir>"
   echo "  verify_validation_state <sandbox_dir>"
   echo "  verify_subagent_usage <sandbox_dir>"

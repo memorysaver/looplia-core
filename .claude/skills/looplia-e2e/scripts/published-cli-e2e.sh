@@ -3,14 +3,23 @@ set -e
 
 # Published CLI E2E Test Script
 # Tests the published @looplia/looplia-cli package after CI passes
-# Usage: ZENMUX_API_KEY=xxx ./published-cli-e2e.sh [version]
+# Usage: ./published-cli-e2e.sh [version]
 #
 # Arguments:
 #   version - Optional version to test (default: latest)
 #
-# Environment:
+# Environment (or .env file):
 #   ZENMUX_API_KEY - Required for ZenMux provider testing
 #   ANTHROPIC_API_KEY - Alternative for Anthropic direct testing
+
+# Get script directory for sourcing
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source common functions (including load_env_file)
+source "$SCRIPT_DIR/verify-workflow.sh"
+
+# Try to load .env file automatically
+load_env_file
 
 # Colors for output
 RED='\033[0;31m'
@@ -21,7 +30,6 @@ NC='\033[0m'
 
 # Configuration
 VERSION="${1:-latest}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_DIR="/tmp/looplia-e2e-$(date +%s)"
 TEST_CONTENT="$SCRIPT_DIR/../assets/ai-healthcare.md"
 
@@ -122,10 +130,12 @@ install_cli() {
 verify_version_consistency() {
   print_header "Verifying Version Consistency"
 
-  # Get CLI reported version
+  # Get CLI reported version (format: "looplia X.Y.Z")
   print_step "Checking CLI version..."
-  CLI_VERSION=$(looplia --version 2>/dev/null || echo "unknown")
-  print_info "CLI reports: $CLI_VERSION"
+  CLI_OUTPUT=$(looplia --version 2>/dev/null || echo "unknown")
+  # Extract just the version number (last word)
+  CLI_VERSION=$(echo "$CLI_OUTPUT" | awk '{print $NF}')
+  print_info "CLI reports: $CLI_OUTPUT (version: $CLI_VERSION)"
 
   # Get package.json version from npm registry
   print_step "Checking package version..."

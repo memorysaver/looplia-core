@@ -5,13 +5,6 @@ set -e
 # Runs real API tests inside Docker container with v0.6.9 unified skill executor architecture
 # Tests: Workflow-as-Markdown with general-purpose subagent, skills auto-loading, and sandbox isolation
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
 # Configuration
 IMAGE_NAME="looplia:test"
 WORKSPACE_DIR="./test-workspace"
@@ -19,6 +12,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_DIR="$(dirname "$SCRIPT_DIR")"
 TEST_CONTENT="$SKILL_DIR/assets/ai-healthcare.md"
 ENV_FILE=".env"
+
+# Source common functions (including load_env_file)
+source "$SCRIPT_DIR/verify-workflow.sh"
+
+# Try to load .env file automatically (for local env vars)
+load_env_file
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
 # Test results
 TESTS_PASSED=0

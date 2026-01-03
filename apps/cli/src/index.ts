@@ -3,7 +3,9 @@ import { runConfigCommand } from "./commands/config";
 import { runInitCommand } from "./commands/init";
 import { runRunCommand } from "./commands/run";
 
-const VERSION = "0.6.10";
+// Version injected from package.json at build time by tsup
+declare const __VERSION__: string;
+const VERSION = __VERSION__;
 
 function printHelp(): void {
   console.log(`

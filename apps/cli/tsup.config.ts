@@ -1,4 +1,5 @@
 import { defineConfig } from "tsup";
+import pkg from "./package.json";
 
 export default defineConfig({
   entry: { cli: "src/index.ts" },
@@ -12,4 +13,7 @@ export default defineConfig({
   },
   noExternal: ["@looplia-core/core", "@looplia-core/provider"],
   shims: true,
+  define: {
+    __VERSION__: JSON.stringify(pkg.version),
+  },
 });
