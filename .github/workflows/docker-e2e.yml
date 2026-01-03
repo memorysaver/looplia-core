@@ -67,9 +67,9 @@ jobs:
         run: |
           CONTAINER_ID=$(docker create \
             -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
-            -v "$(pwd)/examples:/examples:ro" \
+            -v "$(pwd)/.claude/skills/looplia-e2e/assets:/assets:ro" \
             $IMAGE_NAME \
-            run writing-kit --file /examples/ai-healthcare.md \
+            run writing-kit --file /assets/ai-healthcare.md \
             --topics "ai,healthcare,technology" \
             --tone "expert")
 
@@ -277,11 +277,11 @@ jobs:
           CONTAINER_ID=$(docker create \
             --entrypoint /bin/sh \
             -e ZENMUX_API_KEY="$ZENMUX_API_KEY" \
-            -v "$(pwd)/examples:/examples:ro" \
+            -v "$(pwd)/.claude/skills/looplia-e2e/assets:/assets:ro" \
             $IMAGE_NAME \
             -c "bun run /app/apps/cli/dist/cli.js init --yes && \
                 bun run /app/apps/cli/dist/cli.js config provider preset ZENMUX_ZAI_GLM47 && \
-                bun run /app/apps/cli/dist/cli.js run writing-kit --file /examples/ai-healthcare.md \
+                bun run /app/apps/cli/dist/cli.js run writing-kit --file /assets/ai-healthcare.md \
                 --topics 'ai,healthcare,technology' --tone 'expert'")
 
           # Run container and capture exit code
