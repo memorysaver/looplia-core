@@ -98,10 +98,11 @@ export type WorkflowStep = {
 };
 
 /**
- * Workflow Definition - declarative workflow configuration (v0.6.3)
+ * Workflow Definition - declarative workflow configuration (v0.7.0)
  *
  * Parsed from YAML frontmatter in ~/.looplia/workflows/{name}.md
  *
+ * v0.7.0: Added `skills` for explicit skill requirements (selective loading)
  * v0.6.3: Added `inputs` for named workflow inputs (0 to N)
  */
 export type WorkflowDefinition = {
@@ -111,6 +112,12 @@ export type WorkflowDefinition = {
   version?: string;
   /** Human-readable description */
   description: string;
+  /**
+   * v0.7.0: Explicit skills declaration.
+   * Lists all skills required to run this workflow.
+   * Used for selective plugin loading at runtime.
+   */
+  skills?: string[];
   /**
    * v0.6.3: Named inputs declaration.
    * Enables workflows to accept 0, 1, or N inputs.

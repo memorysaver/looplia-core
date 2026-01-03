@@ -1,12 +1,13 @@
 /**
- * Run Command (v0.6.3) - Thin Wrapper
+ * Run Command (v0.7.0) - Thin Wrapper
  *
  * Execute a workflow by injecting /run command into the agent.
  * All workflow logic is in the workflow-executor skill.
  *
+ * v0.7.0: JIT skill installation and skills extraction for logging
  * v0.6.3: Named inputs with --input name=value syntax
  *
- * @see docs/DESIGN-0.6.3.md
+ * @see docs/DESIGN-0.7.0.md
  * @see plugins/looplia-core/skills/workflow-executor/SKILL.md
  */
 
@@ -22,8 +23,10 @@ import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
 
 import {
+  extractWorkflowSkills,
   isInputlessWorkflow,
   parseWorkflow,
+  type ParsedWorkflow,
   type StreamingEvent,
 } from "@looplia-core/core";
 import {
@@ -31,6 +34,10 @@ import {
   initializeCommandEnvironment,
   type WorkflowResult,
 } from "@looplia-core/provider/claude-agent-sdk";
+import {
+  ensureWorkflowSkills,
+  loadCompiledRegistry,
+} from "@looplia-core/provider";
 import { renderStreamingQuery } from "../components";
 import { COMMANDS } from "../constants.js";
 import { isInteractive } from "../utils/terminal";
@@ -486,6 +493,37 @@ function buildRunPrompt(workflowId: string, sandboxId: string): string {
 }
 
 /**
+ * Parse workflow file and return metadata (v0.7.0)
+ * Returns workflow info including input-less capability and required skills.
+ *
+ * @param workspace - Workspace path (~/.looplia)
+ * @param workflowId - Workflow ID (e.g., "hn-reporter")
+ * @returns Workflow metadata or null if parse fails
+ */
+function parseWorkflowFile(
+  workspace: string,
+  workflowId: string
+): { parsed: ParsedWorkflow; isInputless: boolean; skills: string[] } | null {
+  const workflowPath = join(workspace, "workflows", `${workflowId}.md`);
+
+  if (!existsSync(workflowPath)) {
+    // Workflow doesn't exist - let it fail later with proper error
+    return null;
+  }
+
+  try {
+    const content = readFileSync(workflowPath, "utf-8");
+    const parsed = parseWorkflow(content);
+    const isInputless = isInputlessWorkflow(parsed.definition);
+    const skills = extractWorkflowSkills(parsed);
+    return { parsed, isInputless, skills };
+  } catch {
+    // Parse error - let it fail later with proper error
+    return null;
+  }
+}
+
+/**
  * Check if a workflow supports input-less execution (v0.6.3)
  * Parses the workflow definition and checks if it uses input-less capable skills.
  *
@@ -497,21 +535,8 @@ function checkWorkflowInputless(
   workspace: string,
   workflowId: string
 ): boolean {
-  const workflowPath = join(workspace, "workflows", `${workflowId}.md`);
-
-  if (!existsSync(workflowPath)) {
-    // Workflow doesn't exist - let it fail later with proper error
-    return false;
-  }
-
-  try {
-    const content = readFileSync(workflowPath, "utf-8");
-    const parsed = parseWorkflow(content);
-    return isInputlessWorkflow(parsed.definition);
-  } catch {
-    // Parse error - let it fail later with proper error
-    return false;
-  }
+  const result = parseWorkflowFile(workspace, workflowId);
+  return result?.isInputless ?? false;
 }
 
 /**
@@ -701,7 +726,7 @@ function renderResult(result: WorkflowResult): void {
 }
 
 /**
- * Main entry point for run command (v0.6.3 thin wrapper)
+ * Main entry point for run command (v0.7.0 thin wrapper)
  */
 export async function runRunCommand(args: string[]): Promise<void> {
   const parsed = parseArgs(args);
@@ -721,18 +746,48 @@ export async function runRunCommand(args: string[]): Promise<void> {
     // 1. Ensure workspace (needed to check workflow definition)
     const workspace = ensureWorkspace(parsed.mock);
 
-    // 2. Resolve or create sandbox (validates inputs before API key check)
-    // v0.6.3: Check if workflow supports input-less execution
-    const allowInputless = checkWorkflowInputless(workspace, parsed.workflowId);
+    // 2. Parse workflow to get metadata (v0.7.0)
+    const workflowInfo = parseWorkflowFile(workspace, parsed.workflowId);
+    const allowInputless = workflowInfo?.isInputless ?? false;
+
+    // 3. Resolve or create sandbox (validates inputs before API key check)
     const sandboxId = resolveSandboxId(workspace, parsed, allowInputless);
 
-    // 3. Load settings, inject env vars, validate API key (v0.6.10)
+    // 4. v0.7.0: JIT skill installation
+    if (workflowInfo && !parsed.mock) {
+      try {
+        const registry = await loadCompiledRegistry();
+        const ensureResult = await ensureWorkflowSkills(
+          workflowInfo.parsed,
+          registry
+        );
+
+        if (!ensureResult.ready) {
+          console.error(
+            `Failed to install required skills: ${ensureResult.failed.join(", ")}`
+          );
+          console.error('Run "looplia skill list --available" to see available skills.');
+          process.exit(1);
+        }
+
+        if (ensureResult.installed.length > 0) {
+          for (const installed of ensureResult.installed) {
+            console.error(`Installed skill: ${installed.skill}`);
+          }
+        }
+      } catch {
+        // Registry not available - continue with existing plugins
+        // This maintains backward compatibility
+      }
+    }
+
+    // 5. Load settings, inject env vars, validate API key (v0.6.10)
     await initializeCommandEnvironment({ mock: parsed.mock });
 
-    // 4. Build /run prompt with sandbox ID
+    // 6. Build /run prompt with sandbox ID
     const prompt = buildRunPrompt(parsed.workflowId, sandboxId);
 
-    // 5. Execute
+    // 7. Execute
     const result = await executeWorkflow(
       prompt,
       workspace,
@@ -740,7 +795,7 @@ export async function runRunCommand(args: string[]): Promise<void> {
       parsed
     );
 
-    // 6. Render result
+    // 8. Render result
     renderResult(result);
 
     if (result.status !== "success") {

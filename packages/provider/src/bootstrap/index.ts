@@ -438,3 +438,12 @@ export async function getPluginPaths(): Promise<
 export function isDevMode(): boolean {
   return process.env.LOOPLIA_DEV === "true";
 }
+
+// v0.7.0: Re-export selective plugin loading functions
+export {
+  CORE_SKILLS,
+  getPluginSkills,
+  getSelectivePluginPaths,
+  installThirdPartyPlugin,
+  isCoreSkill,
+} from "./skill-installer";
