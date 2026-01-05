@@ -16,6 +16,10 @@ import {
   removeSource,
 } from "@looplia-core/provider";
 
+// Top-level regex patterns for URL normalization
+const PROTOCOL_REGEX = /^https?:\/\//;
+const TRAILING_SLASH_REGEX = /\/$/;
+
 function printHelp(): void {
   console.log(`
 looplia registry - Manage skill registry sources
@@ -53,19 +57,25 @@ async function registryInit(force: boolean): Promise<void> {
 
   const registry = await compileRegistry();
 
-  console.log(`Synced ${registry.summary.totalSkills} skills from ${registry.sources.length} source(s)`);
+  console.log(
+    `Synced ${registry.summary.totalSkills} skills from ${registry.sources.length} source(s)`
+  );
 }
 
 async function registryAdd(url: string): Promise<void> {
   if (!url) {
     console.error("Error: URL required");
     console.error("Usage: looplia registry add <url>");
-    console.error("Example: looplia registry add github.com/user/looplia-my-skills");
+    console.error(
+      "Example: looplia registry add github.com/user/looplia-my-skills"
+    );
     process.exit(1);
   }
 
   // Normalize URL
-  const normalizedUrl = url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const normalizedUrl = url
+    .replace(PROTOCOL_REGEX, "")
+    .replace(TRAILING_SLASH_REGEX, "");
 
   console.log(`Adding registry source: ${normalizedUrl}`);
 
@@ -75,7 +85,9 @@ async function registryAdd(url: string): Promise<void> {
     console.log("Running sync to fetch skills...");
 
     const registry = await compileRegistry();
-    console.log(`Synced ${registry.summary.totalSkills} skills from ${registry.sources.length} source(s)`);
+    console.log(
+      `Synced ${registry.summary.totalSkills} skills from ${registry.sources.length} source(s)`
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`Error: ${message}`);
@@ -88,10 +100,10 @@ async function registrySync(): Promise<void> {
 
   const registry = await compileRegistry();
 
-  console.log(`\nRegistry compiled successfully!`);
+  console.log("\nRegistry compiled successfully!");
   console.log(`  Total skills: ${registry.summary.totalSkills}`);
   console.log(`  Sources: ${registry.sources.length}`);
-  console.log(`\nBy category:`);
+  console.log("\nBy category:");
 
   for (const [category, count] of Object.entries(registry.summary.byCategory)) {
     if (count > 0) {
@@ -99,7 +111,7 @@ async function registrySync(): Promise<void> {
     }
   }
 
-  console.log(`\nBy source:`);
+  console.log("\nBy source:");
   for (const [source, count] of Object.entries(registry.summary.bySource)) {
     console.log(`  ${source}: ${count}`);
   }
@@ -129,12 +141,14 @@ async function registryList(): Promise<void> {
   // Try to load compiled registry for stats
   try {
     const registry = await loadCompiledRegistry();
-    console.log("\n" + "─".repeat(60));
+    console.log(`\n${"─".repeat(60)}`);
     console.log("\nRegistry Summary:");
     console.log(`  Total skills: ${registry.summary.totalSkills}`);
     console.log(`  Last compiled: ${registry.compiledAt}`);
   } catch {
-    console.log("\nNo compiled registry found. Run 'looplia registry sync' to compile.");
+    console.log(
+      "\nNo compiled registry found. Run 'looplia registry sync' to compile."
+    );
   }
 
   console.log("");
@@ -160,7 +174,9 @@ async function registryRemove(sourceId: string): Promise<void> {
   console.log("Running sync to update registry...");
 
   const registry = await compileRegistry();
-  console.log(`Registry now has ${registry.summary.totalSkills} skills from ${registry.sources.length} source(s)`);
+  console.log(
+    `Registry now has ${registry.summary.totalSkills} skills from ${registry.sources.length} source(s)`
+  );
 }
 
 export async function runRegistryCommand(args: string[]): Promise<void> {

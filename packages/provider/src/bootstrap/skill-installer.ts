@@ -10,14 +10,20 @@
  */
 
 import { exec } from "node:child_process";
-import { mkdir, readdir, stat } from "node:fs/promises";
+import { mkdir, readdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import type { InstallResult } from "@looplia/core";
+import type { InstallResult } from "@looplia-core/core";
+import { pathExists } from "../utils/fs";
 import { getPluginPaths } from "./index";
 
 const execAsync = promisify(exec);
+
+// Top-level regex patterns for URL normalization
+const PROTOCOL_REGEX = /^https?:\/\//;
+const TRAILING_SLASH_REGEX = /\/$/;
+const SLASH_TO_DASH_REGEX = /\//g;
 
 /**
  * Core skills that are always loaded regardless of workflow
@@ -28,18 +34,6 @@ export const CORE_SKILLS = [
   "workflow-validator",
   "registry-loader",
 ];
-
-/**
- * Check if a path exists
- */
-async function pathExists(path: string): Promise<boolean> {
-  try {
-    await stat(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Build mapping of skill name to plugin path
@@ -121,10 +115,10 @@ export async function installThirdPartyPlugin(
 
   // Extract repo name for local folder
   const repoName = gitUrl
-    .replace(/^https?:\/\//, "")
+    .replace(PROTOCOL_REGEX, "")
     .replace("github.com/", "")
-    .replace(/\/$/, "")
-    .replace(/\//g, "-");
+    .replace(TRAILING_SLASH_REGEX, "")
+    .replace(SLASH_TO_DASH_REGEX, "-");
 
   const targetPath = join(pluginsDir, repoName);
 

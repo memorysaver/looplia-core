@@ -10,7 +10,7 @@
  * @see docs/DESIGN-0.7.0.md
  */
 
-import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type {
@@ -20,7 +20,9 @@ import type {
   RegistrySource,
   RemoteRegistryManifest,
   SkillCategory,
-} from "@looplia/core";
+} from "@looplia-core/core";
+import { pathExists } from "../utils/fs";
+import { createProgress } from "./progress";
 
 /** Official registry URL */
 const OFFICIAL_REGISTRY_URL =
@@ -32,17 +34,20 @@ const REGISTRY_SCHEMA_URL = "https://looplia.com/schema/registry.json";
 /** Registry format version */
 const REGISTRY_VERSION = "1.0.0";
 
-/**
- * Check if a path exists
- */
-async function pathExists(path: string): Promise<boolean> {
-  try {
-    await stat(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
+// Top-level regex patterns
+const TRAILING_SLASH_REGEX = /\/$/;
+const FRONTMATTER_REGEX = /^---\n([\s\S]*?)\n---/;
+
+// Capability inference patterns
+const CAPABILITY_PATTERNS = [
+  { pattern: /media|video|audio|image/, capability: "media-processing" },
+  { pattern: /content|text|document/, capability: "content-analysis" },
+  { pattern: /json|schema|structured/, capability: "structured-output" },
+  { pattern: /workflow|orchestrat/, capability: "workflow-management" },
+  { pattern: /search|find|discover/, capability: "search" },
+  { pattern: /generat|creat|produc/, capability: "generation" },
+  { pattern: /valid|check|verify/, capability: "validation" },
+] as const;
 
 /**
  * Get the registry directory path
@@ -126,7 +131,7 @@ export async function addSource(
   // Generate unique ID from URL
   const id =
     type === "github"
-      ? `github:${url.replace("github.com/", "").replace(/\/$/, "")}`
+      ? `github:${url.replace("github.com/", "").replace(TRAILING_SLASH_REGEX, "")}`
       : `local:${url}`;
 
   // Check for duplicates
@@ -192,6 +197,81 @@ async function fetchRemoteRegistry(
 }
 
 /**
+ * Parse YAML frontmatter into a key-value map
+ * Handles multiline values with YAML literal block scalar (|)
+ */
+function parseYamlFrontmatter(frontmatter: string): Record<string, string> {
+  const lines = frontmatter.split("\n");
+  const metadata: Record<string, string> = {};
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line === undefined) {
+      continue;
+    }
+    const colonIndex = line.indexOf(":");
+    if (colonIndex <= 0) {
+      continue;
+    }
+
+    const key = line.slice(0, colonIndex).trim();
+    let value = line.slice(colonIndex + 1).trim();
+
+    // Handle multi-line values with YAML literal block scalar (|)
+    if (value === "|") {
+      value = parseMultilineValue(lines, i + 1);
+    }
+
+    metadata[key] = value;
+  }
+
+  return metadata;
+}
+
+/**
+ * Extract multiline value from indented lines
+ */
+function parseMultilineValue(lines: string[], startIndex: number): string {
+  const multilineLines: string[] = [];
+  for (let j = startIndex; j < lines.length; j++) {
+    const nextLine = lines[j];
+    if (nextLine === undefined) {
+      break;
+    }
+    if (nextLine.startsWith("  ")) {
+      multilineLines.push(nextLine.trim());
+    } else if (nextLine.trim() !== "") {
+      break;
+    }
+  }
+  return multilineLines.join(" ");
+}
+
+/**
+ * Build CompiledSkill from parsed metadata
+ */
+function buildSkillFromMetadata(
+  metadata: Record<string, string>
+): Partial<CompiledSkill> {
+  const category = inferCategory(
+    metadata.name ?? "",
+    metadata.description ?? ""
+  );
+  const capabilities = inferCapabilities(metadata.description ?? "");
+
+  return {
+    name: metadata.name,
+    title: formatTitle(metadata.name ?? ""),
+    description: metadata.description ?? "",
+    category,
+    capabilities,
+    model: metadata.model,
+    inputless: metadata.inputless === "true",
+    tools: metadata.tools?.split(",").map((t) => t.trim()),
+  };
+}
+
+/**
  * Parse SKILL.md frontmatter for skill metadata
  */
 async function parseSkillMetadata(
@@ -205,45 +285,14 @@ async function parseSkillMetadata(
 
   try {
     const content = await readFile(skillMdPath, "utf-8");
+    const frontmatterMatch = content.match(FRONTMATTER_REGEX);
 
-    // Extract YAML frontmatter
-    const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
     if (!frontmatterMatch?.[1]) {
       return null;
     }
 
-    const frontmatter = frontmatterMatch[1];
-    const lines = frontmatter.split("\n");
-    const metadata: Record<string, string> = {};
-
-    for (const line of lines) {
-      const colonIndex = line.indexOf(":");
-      if (colonIndex > 0) {
-        const key = line.slice(0, colonIndex).trim();
-        const value = line.slice(colonIndex + 1).trim();
-        metadata[key] = value;
-      }
-    }
-
-    // Infer category from skill name or description
-    const category = inferCategory(
-      metadata.name ?? "",
-      metadata.description ?? ""
-    );
-
-    // Infer capabilities from description
-    const capabilities = inferCapabilities(metadata.description ?? "");
-
-    return {
-      name: metadata.name,
-      title: formatTitle(metadata.name ?? ""),
-      description: metadata.description ?? "",
-      category,
-      capabilities,
-      model: metadata.model,
-      inputless: metadata.inputless === "true",
-      tools: metadata.tools?.split(",").map((t) => t.trim()),
-    };
+    const metadata = parseYamlFrontmatter(frontmatterMatch[1]);
+    return buildSkillFromMetadata(metadata);
   } catch {
     return null;
   }
@@ -300,17 +349,7 @@ function inferCapabilities(description: string): string[] {
   const capabilities: string[] = [];
   const text = description.toLowerCase();
 
-  const capabilityPatterns = [
-    { pattern: /media|video|audio|image/, capability: "media-processing" },
-    { pattern: /content|text|document/, capability: "content-analysis" },
-    { pattern: /json|schema|structured/, capability: "structured-output" },
-    { pattern: /workflow|orchestrat/, capability: "workflow-management" },
-    { pattern: /search|find|discover/, capability: "search" },
-    { pattern: /generat|creat|produc/, capability: "generation" },
-    { pattern: /valid|check|verify/, capability: "validation" },
-  ];
-
-  for (const { pattern, capability } of capabilityPatterns) {
+  for (const { pattern, capability } of CAPABILITY_PATTERNS) {
     if (pattern.test(text)) {
       capabilities.push(capability);
     }
@@ -330,16 +369,67 @@ function formatTitle(name: string): string {
 }
 
 /**
- * Scan local plugins for installed skills
+ * Scan a single plugin directory for skills
  */
-async function scanLocalPlugins(
-  loopliaPath: string
+async function scanPluginDirectory(
+  pluginPath: string,
+  pluginName: string,
+  sourceType: "builtin" | "thirdparty"
 ): Promise<CompiledSkill[]> {
   const skills: CompiledSkill[] = [];
+  const skillsPath = join(pluginPath, "skills");
+
+  if (!(await pathExists(skillsPath))) {
+    return skills;
+  }
 
   try {
+    const skillEntries = await readdir(skillsPath, { withFileTypes: true });
+
+    for (const skillEntry of skillEntries) {
+      if (!skillEntry.isDirectory()) {
+        continue;
+      }
+
+      const skillPath = join(skillsPath, skillEntry.name);
+      const metadata = await parseSkillMetadata(skillPath);
+
+      if (metadata) {
+        skills.push({
+          name: metadata.name ?? skillEntry.name,
+          title: metadata.title ?? formatTitle(skillEntry.name),
+          description: metadata.description ?? "",
+          plugin: pluginName,
+          category: metadata.category ?? "utility",
+          capabilities: metadata.capabilities ?? [],
+          tools: metadata.tools,
+          model: metadata.model,
+          inputless: metadata.inputless,
+          source: "local",
+          sourceType,
+          installed: true,
+          installedPath: skillPath,
+        });
+      }
+    }
+  } catch {
+    // Ignore errors scanning skills
+  }
+
+  return skills;
+}
+
+/**
+ * Scan local plugins for installed skills
+ * Scans both built-in plugins (looplia-*) and third-party plugins (plugins/*)
+ */
+async function scanLocalPlugins(loopliaPath: string): Promise<CompiledSkill[]> {
+  const skills: CompiledSkill[] = [];
+
+  // Scan built-in plugins (looplia-core, looplia-writer, etc.)
+  try {
     const entries = await readdir(loopliaPath, { withFileTypes: true });
-    const pluginDirs = entries.filter(
+    const builtinDirs = entries.filter(
       (e) =>
         e.isDirectory() &&
         !e.name.startsWith(".") &&
@@ -349,45 +439,40 @@ async function scanLocalPlugins(
         e.name !== "plugins"
     );
 
-    for (const pluginDir of pluginDirs) {
+    for (const pluginDir of builtinDirs) {
       const pluginPath = join(loopliaPath, pluginDir.name);
-      const skillsPath = join(pluginPath, "skills");
-
-      if (!(await pathExists(skillsPath))) {
-        continue;
-      }
-
-      const skillEntries = await readdir(skillsPath, { withFileTypes: true });
-
-      for (const skillEntry of skillEntries) {
-        if (!skillEntry.isDirectory()) {
-          continue;
-        }
-
-        const skillPath = join(skillsPath, skillEntry.name);
-        const metadata = await parseSkillMetadata(skillPath);
-
-        if (metadata) {
-          skills.push({
-            name: metadata.name ?? skillEntry.name,
-            title: metadata.title ?? formatTitle(skillEntry.name),
-            description: metadata.description ?? "",
-            plugin: pluginDir.name,
-            category: metadata.category ?? "utility",
-            capabilities: metadata.capabilities ?? [],
-            tools: metadata.tools,
-            model: metadata.model,
-            inputless: metadata.inputless,
-            source: "local",
-            sourceType: "builtin",
-            installed: true,
-            installedPath: skillPath,
-          });
-        }
-      }
+      const pluginSkills = await scanPluginDirectory(
+        pluginPath,
+        pluginDir.name,
+        "builtin"
+      );
+      skills.push(...pluginSkills);
     }
   } catch {
-    // Ignore errors scanning plugins
+    // Ignore errors scanning built-in plugins
+  }
+
+  // Scan third-party plugins (~/.looplia/plugins/*)
+  const pluginsDir = join(loopliaPath, "plugins");
+  if (await pathExists(pluginsDir)) {
+    try {
+      const entries = await readdir(pluginsDir, { withFileTypes: true });
+      const thirdPartyDirs = entries.filter(
+        (e) => e.isDirectory() && !e.name.startsWith(".")
+      );
+
+      for (const pluginDir of thirdPartyDirs) {
+        const pluginPath = join(pluginsDir, pluginDir.name);
+        const pluginSkills = await scanPluginDirectory(
+          pluginPath,
+          pluginDir.name,
+          "thirdparty"
+        );
+        skills.push(...pluginSkills);
+      }
+    } catch {
+      // Ignore errors scanning third-party plugins
+    }
   }
 
   return skills;
@@ -417,50 +502,104 @@ function convertToCompiledSkill(
     sourceType: source.type === "official" ? "builtin" : "thirdparty",
     installed: installed !== undefined,
     installedPath: installed?.installedPath,
-    gitUrl:
-      source.type === "github" ? `https://${source.url}` : undefined,
+    gitUrl: source.type === "github" ? `https://${source.url}` : undefined,
     checksum: item.checksum,
     dependencies: item.registryDependencies,
   };
 }
 
 /**
- * Compile registry from all sources
+ * Process a single local source and add skills
  */
-export async function compileRegistry(): Promise<CompiledRegistry> {
-  const loopliaPath = join(homedir(), ".looplia");
-  const sources = await loadSources();
+async function processLocalSource(
+  source: RegistrySource,
+  seenSkills: Set<string>,
+  allSkills: CompiledSkill[],
+  progress: ReturnType<typeof createProgress> | null
+): Promise<void> {
+  progress?.start(`Scanning local source: ${source.id}`);
 
-  // Scan local plugins first
-  const localSkills = await scanLocalPlugins(loopliaPath);
-  const installedSkillsMap = new Map(localSkills.map((s) => [s.name, s]));
+  try {
+    const localPath = source.url.startsWith("~")
+      ? source.url.replace("~", homedir())
+      : source.url;
 
-  // Fetch remote registries
-  const allSkills: CompiledSkill[] = [...localSkills];
-  const seenSkills = new Set(localSkills.map((s) => s.name));
-
-  for (const source of sources.filter((s) => s.enabled)) {
-    if (source.type === "local") {
-      continue; // Already scanned
+    if (!(await pathExists(localPath))) {
+      progress?.fail(`Local source not found: ${source.url}`);
+      return;
     }
 
-    const manifest = await fetchRemoteRegistry(source);
-    if (!manifest) {
-      continue;
-    }
+    const skills = await scanPluginDirectory(
+      localPath,
+      source.id,
+      "thirdparty"
+    );
+    let addedCount = 0;
 
-    for (const item of manifest.items) {
-      if (seenSkills.has(item.name)) {
-        continue; // Skip duplicates, local takes priority
+    for (const skill of skills) {
+      if (seenSkills.has(skill.name)) {
+        continue;
       }
-
-      const skill = convertToCompiledSkill(item, source, installedSkillsMap);
+      skill.source = source.id;
       allSkills.push(skill);
-      seenSkills.add(item.name);
+      seenSkills.add(skill.name);
+      addedCount += 1;
     }
+
+    progress?.succeed(`Scanned ${source.id}: ${addedCount} skills`);
+  } catch {
+    progress?.fail(`Failed to scan: ${source.id}`);
+  }
+}
+
+/**
+ * Options for processing a remote source
+ */
+type ProcessRemoteSourceOptions = {
+  source: RegistrySource;
+  seenSkills: Set<string>;
+  allSkills: CompiledSkill[];
+  installedSkillsMap: Map<string, CompiledSkill>;
+  progress: ReturnType<typeof createProgress> | null;
+};
+
+/**
+ * Process a single remote source and add skills
+ */
+async function processRemoteSource(
+  options: ProcessRemoteSourceOptions
+): Promise<void> {
+  const { source, seenSkills, allSkills, installedSkillsMap, progress } =
+    options;
+  progress?.start(`Fetching registry: ${source.id}`);
+
+  const manifest = await fetchRemoteRegistry(source);
+  if (!manifest) {
+    progress?.fail(`Failed to fetch: ${source.id}`);
+    return;
   }
 
-  // Build summary
+  let addedCount = 0;
+  for (const item of manifest.items) {
+    if (seenSkills.has(item.name)) {
+      continue;
+    }
+    const skill = convertToCompiledSkill(item, source, installedSkillsMap);
+    allSkills.push(skill);
+    seenSkills.add(item.name);
+    addedCount += 1;
+  }
+
+  progress?.succeed(`Fetched ${source.id}: ${addedCount} new skills`);
+}
+
+/**
+ * Build registry summary from skills
+ */
+function buildRegistrySummary(skills: CompiledSkill[]): {
+  byCategory: Record<SkillCategory, number>;
+  bySource: Record<string, number>;
+} {
   const byCategory: Record<SkillCategory, number> = {
     analysis: 0,
     generation: 0,
@@ -470,33 +609,74 @@ export async function compileRegistry(): Promise<CompiledRegistry> {
     orchestration: 0,
     utility: 0,
   };
-
   const bySource: Record<string, number> = {};
 
-  for (const skill of allSkills) {
-    byCategory[skill.category]++;
+  for (const skill of skills) {
+    byCategory[skill.category] += 1;
     bySource[skill.source] = (bySource[skill.source] ?? 0) + 1;
   }
+
+  return { byCategory, bySource };
+}
+
+/**
+ * Compile registry from all sources
+ *
+ * @param showProgress - Whether to show progress indicators (default: false)
+ */
+export async function compileRegistry(
+  showProgress = false
+): Promise<CompiledRegistry> {
+  const progress = showProgress ? createProgress() : null;
+  const loopliaPath = join(homedir(), ".looplia");
+  const sources = await loadSources();
+
+  // Scan local plugins first
+  progress?.start("Scanning local plugins");
+  const localSkills = await scanLocalPlugins(loopliaPath);
+  const installedSkillsMap = new Map(localSkills.map((s) => [s.name, s]));
+  progress?.succeed(`Found ${localSkills.length} local skills`);
+
+  // Collect all skills
+  const allSkills: CompiledSkill[] = [...localSkills];
+  const seenSkills = new Set(localSkills.map((s) => s.name));
+
+  // Process local sources (custom plugin directories)
+  const localSources = sources.filter((s) => s.enabled && s.type === "local");
+  for (const source of localSources) {
+    await processLocalSource(source, seenSkills, allSkills, progress);
+  }
+
+  // Fetch remote registries (sorted by priority, higher priority wins)
+  const remoteSources = sources
+    .filter((s) => s.enabled && s.type !== "local")
+    .sort((a, b) => b.priority - a.priority);
+
+  for (const source of remoteSources) {
+    await processRemoteSource({
+      source,
+      seenSkills,
+      allSkills,
+      installedSkillsMap,
+      progress,
+    });
+  }
+
+  // Build summary and compiled registry
+  const { byCategory, bySource } = buildRegistrySummary(allSkills);
 
   const compiled: CompiledRegistry = {
     compiledAt: new Date().toISOString(),
     version: REGISTRY_VERSION,
     sources,
     skills: allSkills,
-    summary: {
-      totalSkills: allSkills.length,
-      byCategory,
-      bySource,
-    },
+    summary: { totalSkills: allSkills.length, byCategory, bySource },
   };
 
   // Write compiled registry
   const registryPath = getRegistryPath();
   await mkdir(registryPath, { recursive: true });
-  await writeFile(
-    getCompiledRegistryPath(),
-    JSON.stringify(compiled, null, 2)
-  );
+  await writeFile(getCompiledRegistryPath(), JSON.stringify(compiled, null, 2));
 
   return compiled;
 }

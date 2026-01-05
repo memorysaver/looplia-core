@@ -18,7 +18,7 @@ export {
   removeSource,
   saveSources,
 } from "./compiler";
-
+export type { ChecksumResult, RemoveResult } from "./loader";
 export {
   CORE_SKILLS,
   ensureWorkflowSkills,
@@ -31,5 +31,8 @@ export {
   installThirdPartySkill,
   isCoreSkill,
   loadCompiledRegistry,
+  removeSkill,
   updateSkill,
 } from "./loader";
+export type { ProgressIndicator } from "./progress";
+export { createProgress, withProgress } from "./progress";

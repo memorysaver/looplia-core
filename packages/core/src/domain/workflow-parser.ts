@@ -151,7 +151,12 @@ function processTopLevel(state: YamlParserState, trimmed: string): void {
     return;
   }
   state.currentKey = kv.key;
-  if (kv.key !== "steps" && kv.key !== "inputs" && kv.key !== "skills" && kv.value) {
+  if (
+    kv.key !== "steps" &&
+    kv.key !== "inputs" &&
+    kv.key !== "skills" &&
+    kv.value
+  ) {
     state.result[kv.key] = kv.value;
   }
   state.currentValidate = null;
@@ -699,10 +704,7 @@ export function isInputlessWorkflow(definition: WorkflowDefinition): boolean {
  */
 export function extractWorkflowSkills(workflow: ParsedWorkflow): string[] {
   // Explicit declaration takes priority (v0.7.0)
-  if (
-    workflow.definition.skills &&
-    workflow.definition.skills.length > 0
-  ) {
+  if (workflow.definition.skills && workflow.definition.skills.length > 0) {
     return workflow.definition.skills;
   }
 

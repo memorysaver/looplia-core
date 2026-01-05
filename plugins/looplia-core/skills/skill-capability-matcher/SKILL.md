@@ -50,16 +50,17 @@ Extract from the user's description:
 
 ### Step 2: Load Registry
 
-Read the plugin registry from plugin-registry-scanner output:
+Read the plugin registry from registry-loader output (v0.7.0):
 
 ```json
 {
   "plugins": [...],
-  "summary": { "totalSkills": N }
+  "summary": { "totalSkills": N, "installedSkills": N, "availableSkills": N }
 }
 ```
 
 Build a capability index from skill descriptions and inferred capabilities.
+Include `installed` status when scoring - prefer installed skills for immediate execution.
 
 ### Step 3: Match Capabilities
 

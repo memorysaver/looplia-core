@@ -25,19 +25,19 @@ import { basename, join, resolve } from "node:path";
 import {
   extractWorkflowSkills,
   isInputlessWorkflow,
-  parseWorkflow,
   type ParsedWorkflow,
+  parseWorkflow,
   type StreamingEvent,
 } from "@looplia-core/core";
+import {
+  ensureWorkflowSkills,
+  loadCompiledRegistry,
+} from "@looplia-core/provider";
 import {
   createClaudeAgentExecutor,
   initializeCommandEnvironment,
   type WorkflowResult,
 } from "@looplia-core/provider/claude-agent-sdk";
-import {
-  ensureWorkflowSkills,
-  loadCompiledRegistry,
-} from "@looplia-core/provider";
 import { renderStreamingQuery } from "../components";
 import { COMMANDS } from "../constants.js";
 import { isInteractive } from "../utils/terminal";
@@ -524,22 +524,6 @@ function parseWorkflowFile(
 }
 
 /**
- * Check if a workflow supports input-less execution (v0.6.3)
- * Parses the workflow definition and checks if it uses input-less capable skills.
- *
- * @param workspace - Workspace path (~/.looplia)
- * @param workflowId - Workflow ID (e.g., "hn-reporter")
- * @returns true if workflow can run without inputs, false otherwise
- */
-function checkWorkflowInputless(
-  workspace: string,
-  workflowId: string
-): boolean {
-  const result = parseWorkflowFile(workspace, workflowId);
-  return result?.isInputless ?? false;
-}
-
-/**
  * Execute in mock mode
  */
 function executeMock(args: RunArgs): WorkflowResult {
@@ -557,11 +541,13 @@ function executeMock(args: RunArgs): WorkflowResult {
 
 /**
  * Execute with streaming UI
+ * v0.7.0: Added requiredSkills for selective plugin loading
  */
 async function executeStreaming(
   prompt: string,
   workspace: string,
-  workflowId: string
+  workflowId: string,
+  requiredSkills?: string[]
 ): Promise<WorkflowResult> {
   const contentId = crypto.randomUUID();
   const executor = createClaudeAgentExecutor({ workspace });
@@ -569,6 +555,7 @@ async function executeStreaming(
   const generator = executor.executePromptStreaming(prompt, {
     workspace,
     contentId,
+    requiredSkills,
   });
 
   // Format workflow name for display (e.g., "writing-kit" -> "Writing Kit")
@@ -606,11 +593,13 @@ async function executeStreaming(
 
 /**
  * Execute in batch mode (non-streaming)
+ * v0.7.0: Added requiredSkills for selective plugin loading
  */
 async function executeBatch(
   prompt: string,
   workspace: string,
-  workflowId: string
+  workflowId: string,
+  requiredSkills?: string[]
 ): Promise<WorkflowResult> {
   console.error("⏳ Processing...");
 
@@ -619,6 +608,7 @@ async function executeBatch(
   const result = await executor.executePrompt(prompt, {
     workspace,
     contentId,
+    requiredSkills,
   });
 
   if (result.success && result.data) {
@@ -688,23 +678,34 @@ function resolveSandboxId(
 }
 
 /**
+ * Options for workflow execution
+ */
+type ExecuteWorkflowOptions = {
+  prompt: string;
+  workspace: string;
+  workflowId: string;
+  parsed: RunArgs;
+  requiredSkills?: string[];
+};
+
+/**
  * Execute workflow based on mode
+ * v0.7.0: Added requiredSkills for selective plugin loading
  */
 function executeWorkflow(
-  prompt: string,
-  workspace: string,
-  workflowId: string,
-  parsed: RunArgs
+  options: ExecuteWorkflowOptions
 ): Promise<WorkflowResult> {
+  const { prompt, workspace, workflowId, parsed, requiredSkills } = options;
+
   if (parsed.mock) {
     return Promise.resolve(executeMock(parsed));
   }
 
   if (isInteractive() && !parsed.noStreaming) {
-    return executeStreaming(prompt, workspace, workflowId);
+    return executeStreaming(prompt, workspace, workflowId, requiredSkills);
   }
 
-  return executeBatch(prompt, workspace, workflowId);
+  return executeBatch(prompt, workspace, workflowId, requiredSkills);
 }
 
 /**
@@ -722,6 +723,44 @@ function renderResult(result: WorkflowResult): void {
     }
   } else {
     console.error(`\n❌ Workflow failed: ${result.error ?? "Unknown error"}`);
+  }
+}
+
+/**
+ * Handle JIT skill installation (v0.7.0)
+ * Returns false if installation fails and should abort
+ */
+async function handleJitInstallation(
+  workflowInfo: ReturnType<typeof parseWorkflowFile>
+): Promise<boolean> {
+  if (!workflowInfo) {
+    return true;
+  }
+
+  try {
+    const registry = await loadCompiledRegistry();
+    const ensureResult = await ensureWorkflowSkills(
+      workflowInfo.parsed,
+      registry
+    );
+
+    if (!ensureResult.ready) {
+      console.error(
+        `Failed to install required skills: ${ensureResult.failed.join(", ")}`
+      );
+      console.error(
+        'Run "looplia skill list --available" to see available skills.'
+      );
+      return false;
+    }
+
+    for (const installed of ensureResult.installed) {
+      console.error(`Installed skill: ${installed.skill}`);
+    }
+    return true;
+  } catch {
+    // Registry not available - continue with existing plugins
+    return true;
   }
 }
 
@@ -754,31 +793,8 @@ export async function runRunCommand(args: string[]): Promise<void> {
     const sandboxId = resolveSandboxId(workspace, parsed, allowInputless);
 
     // 4. v0.7.0: JIT skill installation
-    if (workflowInfo && !parsed.mock) {
-      try {
-        const registry = await loadCompiledRegistry();
-        const ensureResult = await ensureWorkflowSkills(
-          workflowInfo.parsed,
-          registry
-        );
-
-        if (!ensureResult.ready) {
-          console.error(
-            `Failed to install required skills: ${ensureResult.failed.join(", ")}`
-          );
-          console.error('Run "looplia skill list --available" to see available skills.');
-          process.exit(1);
-        }
-
-        if (ensureResult.installed.length > 0) {
-          for (const installed of ensureResult.installed) {
-            console.error(`Installed skill: ${installed.skill}`);
-          }
-        }
-      } catch {
-        // Registry not available - continue with existing plugins
-        // This maintains backward compatibility
-      }
+    if (!(parsed.mock || (await handleJitInstallation(workflowInfo)))) {
+      process.exit(1);
     }
 
     // 5. Load settings, inject env vars, validate API key (v0.6.10)
@@ -787,13 +803,14 @@ export async function runRunCommand(args: string[]): Promise<void> {
     // 6. Build /run prompt with sandbox ID
     const prompt = buildRunPrompt(parsed.workflowId, sandboxId);
 
-    // 7. Execute
-    const result = await executeWorkflow(
+    // 7. Execute with selective plugin loading (v0.7.0)
+    const result = await executeWorkflow({
       prompt,
       workspace,
-      parsed.workflowId,
-      parsed
-    );
+      workflowId: parsed.workflowId,
+      parsed,
+      requiredSkills: workflowInfo?.skills,
+    });
 
     // 8. Render result
     renderResult(result);

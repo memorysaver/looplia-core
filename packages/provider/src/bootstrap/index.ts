@@ -17,12 +17,12 @@ import {
   readFile,
   realpath,
   rm,
-  stat,
   writeFile,
 } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { pathExists } from "../utils/fs";
 
 /**
  * Marketplace plugin entry
@@ -43,18 +43,6 @@ type Marketplace = {
   description: string;
   plugins: MarketplacePlugin[];
 };
-
-/**
- * Check if a path exists
- */
-async function pathExists(path: string): Promise<boolean> {
-  try {
-    await stat(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Compute SHA256 hash of a file

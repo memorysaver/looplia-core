@@ -25,6 +25,20 @@ const REGISTRY_HOMEPAGE = "https://github.com/memorysaver/looplia-core";
 /** Plugins directory relative to project root */
 const PLUGINS_DIR = "plugins";
 
+// Top-level regex patterns
+const FRONTMATTER_REGEX = /^---\n([\s\S]*?)\n---/;
+
+// Capability inference patterns
+const CAPABILITY_PATTERNS = [
+  { pattern: /media|video|audio|image/, capability: "media-processing" },
+  { pattern: /content|text|document/, capability: "content-analysis" },
+  { pattern: /json|schema|structured/, capability: "structured-output" },
+  { pattern: /workflow|orchestrat/, capability: "workflow-management" },
+  { pattern: /search|find|discover/, capability: "search" },
+  { pattern: /generat|creat|produc/, capability: "generation" },
+  { pattern: /valid|check|verify/, capability: "validation" },
+] as const;
+
 /** Skill categories */
 type SkillCategory =
   | "analysis"
@@ -92,13 +106,25 @@ function formatTitle(name: string): string {
 function inferCategory(name: string, description: string): SkillCategory {
   const text = `${name} ${description}`.toLowerCase();
 
-  if (text.includes("review") || text.includes("analyze") || text.includes("scan")) {
+  if (
+    text.includes("review") ||
+    text.includes("analyze") ||
+    text.includes("scan")
+  ) {
     return "analysis";
   }
-  if (text.includes("generate") || text.includes("synthesis") || text.includes("create")) {
+  if (
+    text.includes("generate") ||
+    text.includes("synthesis") ||
+    text.includes("create")
+  ) {
     return "generation";
   }
-  if (text.includes("assemble") || text.includes("document") || text.includes("compile")) {
+  if (
+    text.includes("assemble") ||
+    text.includes("document") ||
+    text.includes("compile")
+  ) {
     return "assembly";
   }
   if (text.includes("validate") || text.includes("check")) {
@@ -107,7 +133,11 @@ function inferCategory(name: string, description: string): SkillCategory {
   if (text.includes("search") || text.includes("find")) {
     return "search";
   }
-  if (text.includes("workflow") || text.includes("execute") || text.includes("orchestrat")) {
+  if (
+    text.includes("workflow") ||
+    text.includes("execute") ||
+    text.includes("orchestrat")
+  ) {
     return "orchestration";
   }
 
@@ -119,17 +149,7 @@ function inferCapabilities(description: string): string[] {
   const capabilities: string[] = [];
   const text = description.toLowerCase();
 
-  const capabilityPatterns = [
-    { pattern: /media|video|audio|image/, capability: "media-processing" },
-    { pattern: /content|text|document/, capability: "content-analysis" },
-    { pattern: /json|schema|structured/, capability: "structured-output" },
-    { pattern: /workflow|orchestrat/, capability: "workflow-management" },
-    { pattern: /search|find|discover/, capability: "search" },
-    { pattern: /generat|creat|produc/, capability: "generation" },
-    { pattern: /valid|check|verify/, capability: "validation" },
-  ];
-
-  for (const { pattern, capability } of capabilityPatterns) {
+  for (const { pattern, capability } of CAPABILITY_PATTERNS) {
     if (pattern.test(text)) {
       capabilities.push(capability);
     }
@@ -138,10 +158,47 @@ function inferCapabilities(description: string): string[] {
   return capabilities;
 }
 
+/** Parse multiline YAML value */
+function parseMultilineValue(lines: string[], startIndex: number): string {
+  const multiLines: string[] = [];
+  for (let i = startIndex; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.startsWith("  ")) {
+      multiLines.push(line.trim());
+    } else {
+      break;
+    }
+  }
+  return multiLines.join(" ");
+}
+
+/** Parse YAML frontmatter into metadata */
+function parseYamlFrontmatter(frontmatter: string): Record<string, string> {
+  const lines = frontmatter.split("\n");
+  const metadata: Record<string, string> = {};
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const colonIndex = line.indexOf(":");
+    if (colonIndex <= 0) {
+      continue;
+    }
+
+    const key = line.slice(0, colonIndex).trim();
+    let value = line.slice(colonIndex + 1).trim();
+
+    if (value === "|") {
+      value = parseMultilineValue(lines, i + 1);
+    }
+
+    metadata[key] = value;
+  }
+
+  return metadata;
+}
+
 /** Parse SKILL.md frontmatter */
-async function parseSkillMd(
-  skillPath: string
-): Promise<{
+async function parseSkillMd(skillPath: string): Promise<{
   name: string;
   description: string;
   tools?: string[];
@@ -156,41 +213,13 @@ async function parseSkillMd(
 
   try {
     const content = await readFile(skillMdPath, "utf-8");
+    const frontmatterMatch = content.match(FRONTMATTER_REGEX);
 
-    // Extract YAML frontmatter
-    const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
     if (!frontmatterMatch?.[1]) {
       return null;
     }
 
-    const frontmatter = frontmatterMatch[1];
-    const lines = frontmatter.split("\n");
-    const metadata: Record<string, string> = {};
-
-    for (const line of lines) {
-      const colonIndex = line.indexOf(":");
-      if (colonIndex > 0) {
-        const key = line.slice(0, colonIndex).trim();
-        let value = line.slice(colonIndex + 1).trim();
-
-        // Handle multi-line description (starts with |)
-        if (value === "|") {
-          const descLines: string[] = [];
-          const lineIndex = lines.indexOf(line);
-          for (let i = lineIndex + 1; i < lines.length; i++) {
-            const descLine = lines[i];
-            if (descLine.startsWith("  ")) {
-              descLines.push(descLine.trim());
-            } else {
-              break;
-            }
-          }
-          value = descLines.join(" ");
-        }
-
-        metadata[key] = value;
-      }
-    }
+    const metadata = parseYamlFrontmatter(frontmatterMatch[1]);
 
     return {
       name: metadata.name ?? "",
@@ -204,51 +233,54 @@ async function parseSkillMd(
   }
 }
 
+/** Scan a subdirectory for files of a given type */
+async function scanSubdirectory(
+  skillPath: string,
+  subdir: string,
+  type: SkillFile["type"],
+  extension?: string
+): Promise<SkillFile[]> {
+  const dirPath = join(skillPath, subdir);
+  if (!(await pathExists(dirPath))) {
+    return [];
+  }
+
+  try {
+    const entries = await readdir(dirPath, { withFileTypes: true });
+    return entries
+      .filter((e) => e.isFile() && (!extension || e.name.endsWith(extension)))
+      .map((e) => ({ path: `${subdir}/${e.name}`, type }));
+  } catch {
+    return [];
+  }
+}
+
 /** Scan skill directory for files */
 async function scanSkillFiles(skillPath: string): Promise<SkillFile[]> {
   const files: SkillFile[] = [];
 
-  // Check for SKILL.md
+  // Check for definition files
   if (await pathExists(join(skillPath, "SKILL.md"))) {
     files.push({ path: "SKILL.md", type: "skill:definition" });
   }
-
-  // Check for scripts directory
-  const scriptsDir = join(skillPath, "scripts");
-  if (await pathExists(scriptsDir)) {
-    try {
-      const entries = await readdir(scriptsDir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.isFile() && entry.name.endsWith(".ts")) {
-          files.push({ path: `scripts/${entry.name}`, type: "skill:script" });
-        }
-      }
-    } catch {
-      // Ignore errors reading scripts
-    }
-  }
-
-  // Check for templates directory
-  const templatesDir = join(skillPath, "templates");
-  if (await pathExists(templatesDir)) {
-    try {
-      const entries = await readdir(templatesDir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.isFile()) {
-          files.push({ path: `templates/${entry.name}`, type: "skill:template" });
-        }
-      }
-    } catch {
-      // Ignore errors reading templates
-    }
-  }
-
-  // Check for SCHEMA.md
   if (await pathExists(join(skillPath, "SCHEMA.md"))) {
     files.push({ path: "SCHEMA.md", type: "skill:schema" });
   }
 
-  return files;
+  // Scan subdirectories
+  const scripts = await scanSubdirectory(
+    skillPath,
+    "scripts",
+    "skill:script",
+    ".ts"
+  );
+  const templates = await scanSubdirectory(
+    skillPath,
+    "templates",
+    "skill:template"
+  );
+
+  return [...files, ...scripts, ...templates];
 }
 
 /** Scan a single plugin for skills */
@@ -352,13 +384,13 @@ function parseArgs(): { output: string; version: string } {
   let output = "registry.json";
   let version = "0.7.0";
 
-  for (let i = 0; i < args.length; i++) {
+  for (let i = 0; i < args.length; i += 1) {
     if (args[i] === "--output" && args[i + 1]) {
       output = args[i + 1];
-      i++;
+      i += 1;
     } else if (args[i] === "--version" && args[i + 1]) {
       version = args[i + 1];
-      i++;
+      i += 1;
     } else if (args[i] === "--help" || args[i] === "-h") {
       console.log(`
 Build Registry Script (v0.7.0)

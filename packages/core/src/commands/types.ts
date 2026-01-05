@@ -251,4 +251,6 @@ export type ExecutorOptions = {
   workspace: string;
   /** Content ID for session tracking */
   contentId: string;
+  /** Required skills for selective plugin loading (v0.7.0) */
+  requiredSkills?: string[];
 };

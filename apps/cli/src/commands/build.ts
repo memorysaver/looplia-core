@@ -21,6 +21,7 @@ import { homedir } from "node:os";
 import { resolve } from "node:path";
 
 import type { StreamingEvent } from "@looplia-core/core";
+import { compileRegistry } from "@looplia-core/provider";
 import {
   createClaudeAgentExecutor,
   initializeCommandEnvironment,
@@ -630,16 +631,25 @@ export async function runBuildCommand(args: string[]): Promise<void> {
     // 1. Ensure workspace
     const workspace = ensureWorkspace(parsed.mock);
 
-    // 2. Load settings, inject env vars, validate API key (v0.6.10)
+    // 2. v0.7.0: Sync registry to ensure freshest skill catalog
+    if (!parsed.mock) {
+      try {
+        await compileRegistry();
+      } catch {
+        // Registry sync failure is non-fatal - continue with existing cache
+      }
+    }
+
+    // 3. Load settings, inject env vars, validate API key (v0.6.10)
     await initializeCommandEnvironment({ mock: parsed.mock });
 
-    // 3. Build /build prompt
+    // 4. Build /build prompt
     const prompt = buildPrompt(parsed);
 
-    // 4. Execute
+    // 5. Execute
     const result = await executeBuild(prompt, workspace, parsed);
 
-    // 5. Render result
+    // 6. Render result
     renderResult(result);
 
     if (result.status !== "success") {

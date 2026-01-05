@@ -6,13 +6,14 @@
  * @see docs/DESIGN-0.7.0.md
  */
 
-import type { CompiledSkill } from "@looplia/core";
+import type { CompiledSkill } from "@looplia-core/core";
 import {
   findSkill,
   getAvailableSkills,
   getInstalledSkills,
   installSkill,
   loadCompiledRegistry,
+  removeSkill,
   updateSkill,
 } from "@looplia-core/provider";
 
@@ -48,13 +49,13 @@ Examples:
 
 function formatCategory(category: string): string {
   const colors: Record<string, string> = {
-    analysis: "\x1b[36m",     // cyan
-    generation: "\x1b[32m",   // green
-    assembly: "\x1b[33m",     // yellow
-    validation: "\x1b[35m",   // magenta
-    search: "\x1b[34m",       // blue
+    analysis: "\x1b[36m", // cyan
+    generation: "\x1b[32m", // green
+    assembly: "\x1b[33m", // yellow
+    validation: "\x1b[35m", // magenta
+    search: "\x1b[34m", // blue
     orchestration: "\x1b[31m", // red
-    utility: "\x1b[37m",      // white
+    utility: "\x1b[37m", // white
   };
   const color = colors[category] ?? "\x1b[37m";
   return `${color}${category}\x1b[0m`;
@@ -68,9 +69,10 @@ function formatSkillRow(skill: CompiledSkill): string {
 
   // Truncate description to fit
   const maxDescLen = 40;
-  const desc = skill.description.length > maxDescLen
-    ? `${skill.description.slice(0, maxDescLen - 3)}...`
-    : skill.description;
+  const desc =
+    skill.description.length > maxDescLen
+      ? `${skill.description.slice(0, maxDescLen - 3)}...`
+      : skill.description;
 
   return `  ${status} ${name.padEnd(28)} ${category.padEnd(22)} ${source.padEnd(15)} ${desc}`;
 }
@@ -84,7 +86,33 @@ async function skillAdd(name: string, from?: string): Promise<void> {
 
   console.log(`Installing skill: ${name}...`);
 
-  const result = await installSkill(name);
+  // Load registry and find skill (optionally filter by source)
+  const registry = await loadCompiledRegistry();
+  let skill: CompiledSkill | undefined;
+
+  if (from) {
+    // Filter by source when --from is specified
+    skill = registry.skills.find((s) => s.name === name && s.source === from);
+    if (!skill) {
+      console.error(`Skill not found: ${name} from source ${from}`);
+      console.error(
+        'Run "looplia skill list --available" to see available skills.'
+      );
+      process.exit(1);
+    }
+    console.log(`  Source: ${from}`);
+  } else {
+    skill = findSkill(registry, name);
+    if (!skill) {
+      console.error(`Skill not found: ${name}`);
+      console.error(
+        'Run "looplia skill list --available" to see available skills.'
+      );
+      process.exit(1);
+    }
+  }
+
+  const result = await installSkill(name, registry);
 
   switch (result.status) {
     case "installed":
@@ -106,10 +134,17 @@ async function skillAdd(name: string, from?: string): Promise<void> {
       console.error(`Failed to install skill: ${name}`);
       console.error(`  Error: ${result.error}`);
       process.exit(1);
+      break;
+
+    default:
+      console.log(`Unexpected status: ${result.status}`);
   }
 }
 
-async function skillList(options: { installed?: boolean; available?: boolean }): Promise<void> {
+async function skillList(options: {
+  installed?: boolean;
+  available?: boolean;
+}): Promise<void> {
   const registry = await loadCompiledRegistry();
 
   let skills: CompiledSkill[];
@@ -133,7 +168,9 @@ async function skillList(options: { installed?: boolean; available?: boolean }):
 
   console.log(`\n${title} (${skills.length}):`);
   console.log("─".repeat(100));
-  console.log("  ST NAME                         CATEGORY              SOURCE          DESCRIPTION");
+  console.log(
+    "  ST NAME                         CATEGORY              SOURCE          DESCRIPTION"
+  );
   console.log("─".repeat(100));
 
   // Sort by installed status, then by name
@@ -149,7 +186,7 @@ async function skillList(options: { installed?: boolean; available?: boolean }):
   }
 
   console.log("─".repeat(100));
-  console.log(`\n● = installed, ○ = not installed`);
+  console.log("\n● = installed, ○ = not installed");
   console.log("");
 }
 
@@ -165,7 +202,9 @@ async function skillInfo(name: string): Promise<void> {
 
   if (!skill) {
     console.error(`Skill not found: ${name}`);
-    console.error('Run "looplia skill list --available" to see available skills.');
+    console.error(
+      'Run "looplia skill list --available" to see available skills.'
+    );
     process.exit(1);
   }
 
@@ -188,7 +227,7 @@ async function skillInfo(name: string): Promise<void> {
   }
 
   if (skill.inputless) {
-    console.log(`  Input-less: Yes`);
+    console.log("  Input-less: Yes");
   }
 
   if (skill.capabilities && skill.capabilities.length > 0) {
@@ -217,31 +256,26 @@ async function skillRemove(name: string): Promise<void> {
     process.exit(1);
   }
 
-  const registry = await loadCompiledRegistry();
-  const skill = findSkill(registry, name);
+  console.log(`Removing skill: ${name}...`);
 
-  if (!skill) {
-    console.error(`Skill not found: ${name}`);
-    process.exit(1);
-  }
+  const result = await removeSkill(name);
 
-  if (!skill.installed) {
-    console.error(`Skill is not installed: ${name}`);
-    process.exit(1);
-  }
+  switch (result.status) {
+    case "removed":
+      console.log(`Skill removed: ${name}`);
+      if (result.path) {
+        console.log(`  Removed directory: ${result.path}`);
+      }
+      break;
 
-  if (skill.sourceType === "builtin") {
-    console.error(`Cannot remove built-in skill: ${name}`);
-    console.error("Built-in skills are part of the looplia installation.");
-    process.exit(1);
-  }
+    case "failed":
+      console.error(`Failed to remove skill: ${name}`);
+      console.error(`  Error: ${result.error}`);
+      process.exit(1);
+      break;
 
-  // For third-party skills, we would need to remove the git clone
-  // This is a simplified implementation - in production, we'd track
-  // which skills came from which cloned repo
-  console.log(`Note: To remove third-party skills, delete the plugin directory manually.`);
-  if (skill.installedPath) {
-    console.log(`  Path: ${skill.installedPath}`);
+    default:
+      console.log(`Unexpected status: ${result.status}`);
   }
 }
 
@@ -288,9 +322,7 @@ export async function runSkillCommand(args: string[]): Promise<void> {
 
   // Filter out options to get positional args
   const positionalArgs = args.filter(
-    (arg, i) =>
-      !arg.startsWith("--") &&
-      !(args[i - 1] === "--from")
+    (arg, i) => !(arg.startsWith("--") || args[i - 1] === "--from")
   );
 
   switch (subcommand) {
