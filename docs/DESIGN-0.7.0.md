@@ -17,6 +17,8 @@
 5. [CLI Commands](#5-cli-commands)
 6. [Build Integration](#6-build-integration)
 7. [Selective Plugin Loading](#7-selective-plugin-loading)
+   - [7.4 Environment Variables](#74-environment-variables)
+   - [7.5 Test Workspace Strategy](#75-test-workspace-strategy)
 8. [Run Command Enhancement](#8-run-command-enhancement)
 9. [Directory Structure](#9-directory-structure)
 10. [Implementation Plan](#10-implementation-plan)
@@ -1062,6 +1064,113 @@ Result: ~/.looplia/plugins/my-skill/   (auto-wrapped)
 | SKILL.md at repo root | Wrap root contents as skill |
 | No SKILL.md found | Return error with helpful message |
 | Existing plugin with same name | Return `already_installed` status |
+
+### 7.4 Environment Variables
+
+**File:** `packages/provider/src/bootstrap/index.ts`
+
+The plugin path resolution supports environment variables for testing and custom installations:
+
+```typescript
+/**
+ * Get the looplia plugin path
+ *
+ * Priority:
+ * 1. LOOPLIA_HOME env var (for testing/custom installations)
+ * 2. Default: ~/.looplia
+ */
+export function getLoopliaPluginPath(): string {
+  return process.env.LOOPLIA_HOME ?? join(homedir(), ".looplia");
+}
+
+/**
+ * Get plugin paths based on current mode
+ *
+ * Priority:
+ * 1. LOOPLIA_HOME env var: Scan custom path (for testing/custom installations)
+ * 2. LOOPLIA_DEV=true: Use source plugins directly (development)
+ * 3. Default: Scan ~/.looplia for installed plugins (production)
+ */
+export async function getPluginPaths(): Promise<
+  Array<{ type: "local"; path: string }>
+> {
+  // LOOPLIA_HOME takes precedence (for testing/custom installations)
+  if (process.env.LOOPLIA_HOME) {
+    return await getProdPluginPaths();
+  }
+  if (process.env.LOOPLIA_DEV === "true") {
+    const devRoot = process.env.LOOPLIA_DEV_ROOT ?? process.cwd();
+    return getDevPluginPaths(devRoot);
+  }
+  return await getProdPluginPaths();
+}
+```
+
+| Env Variable | Purpose | Example |
+|--------------|---------|---------|
+| `LOOPLIA_HOME` | Override `~/.looplia` path (testing/custom installs) | `/tmp/looplia-test-xxx` |
+| `LOOPLIA_DEV` | Enable development mode (use source plugins) | `true` |
+| `LOOPLIA_DEV_ROOT` | Repo root for dev mode | `/path/to/looplia-core` |
+
+### 7.5 Test Workspace Strategy
+
+**File:** `packages/provider/test/claude-agent-sdk/fixtures/test-data.ts`
+
+Integration tests use isolated temp workspaces to avoid polluting `~/.looplia`:
+
+```typescript
+/**
+ * Create an isolated looplia workspace that mirrors ~/.looplia structure
+ */
+export async function createLoopliaWorkspace(): Promise<LoopliaTestWorkspace> {
+  const path = await mkdtemp(join(tmpdir(), "looplia-workspace-"));
+
+  // Create workspace structure (plugins go directly in LOOPLIA_HOME)
+  await mkdir(join(path, "sandbox"), { recursive: true });
+  await mkdir(join(path, "workflows"), { recursive: true });
+  await mkdir(join(path, "registry"), { recursive: true });
+
+  return {
+    path,
+    cleanup: async () => {
+      await rm(path, { recursive: true, force: true });
+    },
+  };
+}
+
+/**
+ * Create a mock plugin in the test workspace
+ */
+export async function createMockPluginInWorkspace(
+  workspace: LoopliaTestWorkspace,
+  name: string,
+  skills: string[]
+): Promise<string>;
+```
+
+**Test Flow:**
+
+```
+beforeEach:
+  1. createLoopliaWorkspace() → /tmp/looplia-workspace-xxx/
+  2. process.env.LOOPLIA_HOME = workspace.path
+  3. createMockPluginInWorkspace(workspace, "plugin-a", ["skill-a"])
+
+test:
+  4. getSelectivePluginPaths(["skill-a"])
+     → Uses LOOPLIA_HOME → scans /tmp/looplia-workspace-xxx/
+     → Returns filtered plugin paths
+
+afterEach:
+  5. Restore process.env.LOOPLIA_HOME
+  6. workspace.cleanup() → rm -rf /tmp/looplia-workspace-xxx/
+```
+
+**Benefits:**
+- **Isolation**: Each test has its own workspace, no pollution of real `~/.looplia/`
+- **Real behavior**: Tests actual file system operations, not mocks
+- **Parallel safe**: Unique temp directories per test run
+- **Simple**: Just set `LOOPLIA_HOME` to redirect all path lookups
 
 ---
 
