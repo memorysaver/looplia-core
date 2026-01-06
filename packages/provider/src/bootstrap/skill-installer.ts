@@ -15,7 +15,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import type { InstallResult } from "@looplia-core/core";
-import { pathExists } from "../utils/fs";
+import { isValidGitUrl, pathExists } from "../utils/fs";
 import { getPluginPaths } from "./index";
 
 /**
@@ -146,7 +146,17 @@ export async function installThirdPartyPlugin(
 
     // Clone the repository
     const fullUrl = gitUrl.startsWith("http") ? gitUrl : `https://${gitUrl}`;
-    await execAsync(`git clone ${fullUrl} "${targetPath}"`);
+
+    // Security: Validate git URL before shell execution
+    if (!isValidGitUrl(fullUrl)) {
+      return {
+        skill: skillName ?? repoName,
+        status: "failed",
+        error: `Invalid or untrusted git URL: ${fullUrl}`,
+      };
+    }
+
+    await execAsync(`git clone "${fullUrl}" "${targetPath}"`);
 
     return {
       skill: skillName ?? repoName,
@@ -262,6 +272,16 @@ export async function installDefaultSources(): Promise<InstallResult[]> {
           path: targetPath,
         });
       } else {
+        // Security: Validate git URL before shell execution
+        if (!isValidGitUrl(source.url)) {
+          results.push({
+            skill: source.name,
+            status: "failed",
+            error: `Invalid or untrusted git URL: ${source.url}`,
+          });
+          continue;
+        }
+
         // Clone the repository
         await execAsync(`git clone "${source.url}" "${targetPath}"`);
         results.push({

@@ -1,8 +1,96 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { ensureDir, pathExists } from "../../src/utils/fs";
+import {
+  ensureDir,
+  isValidGitUrl,
+  isValidPathSegment,
+  pathExists,
+} from "../../src/utils/fs";
 import { createTempWorkspace } from "../claude-agent-sdk/fixtures/test-data";
+
+describe("utils/fs security", () => {
+  describe("isValidGitUrl", () => {
+    it("should accept valid GitHub HTTPS URLs", () => {
+      expect(isValidGitUrl("https://github.com/user/repo")).toBe(true);
+      expect(isValidGitUrl("https://github.com/user/repo.git")).toBe(true);
+      expect(isValidGitUrl("https://github.com/anthropics/skills")).toBe(true);
+    });
+
+    it("should accept valid GitLab HTTPS URLs", () => {
+      expect(isValidGitUrl("https://gitlab.com/user/repo")).toBe(true);
+      expect(isValidGitUrl("https://gitlab.com/user/repo.git")).toBe(true);
+    });
+
+    it("should accept valid Bitbucket HTTPS URLs", () => {
+      expect(isValidGitUrl("https://bitbucket.org/user/repo")).toBe(true);
+      expect(isValidGitUrl("https://bitbucket.org/user/repo.git")).toBe(true);
+    });
+
+    it("should reject HTTP URLs (require HTTPS)", () => {
+      expect(isValidGitUrl("http://github.com/user/repo")).toBe(false);
+    });
+
+    it("should reject untrusted hosts", () => {
+      expect(isValidGitUrl("https://evil.com/user/repo")).toBe(false);
+      expect(isValidGitUrl("https://github.evil.com/user/repo")).toBe(false);
+    });
+
+    it("should reject URLs with shell injection characters", () => {
+      expect(isValidGitUrl("https://github.com/user/repo; rm -rf /")).toBe(
+        false
+      );
+      expect(isValidGitUrl("https://github.com/user/repo`whoami`")).toBe(false);
+      expect(isValidGitUrl("https://github.com/user/repo$(whoami)")).toBe(
+        false
+      );
+      expect(
+        isValidGitUrl("https://github.com/user/repo|cat /etc/passwd")
+      ).toBe(false);
+      expect(isValidGitUrl("https://github.com/user/repo&echo")).toBe(false);
+    });
+
+    it("should reject empty or invalid inputs", () => {
+      expect(isValidGitUrl("")).toBe(false);
+      expect(isValidGitUrl("not-a-url")).toBe(false);
+      // @ts-expect-error Testing invalid input
+      expect(isValidGitUrl(null)).toBe(false);
+      // @ts-expect-error Testing invalid input
+      expect(isValidGitUrl(undefined)).toBe(false);
+    });
+  });
+
+  describe("isValidPathSegment", () => {
+    it("should accept valid path segments", () => {
+      expect(isValidPathSegment("skill-name")).toBe(true);
+      expect(isValidPathSegment("my_skill")).toBe(true);
+      expect(isValidPathSegment("skill123")).toBe(true);
+    });
+
+    it("should reject path traversal attempts", () => {
+      expect(isValidPathSegment("..")).toBe(false);
+      expect(isValidPathSegment("../etc/passwd")).toBe(false);
+      expect(isValidPathSegment("skill/../../etc")).toBe(false);
+    });
+
+    it("should reject absolute paths", () => {
+      expect(isValidPathSegment("/etc/passwd")).toBe(false);
+      expect(isValidPathSegment("/home/user")).toBe(false);
+    });
+
+    it("should reject null bytes", () => {
+      expect(isValidPathSegment("skill\0name")).toBe(false);
+    });
+
+    it("should reject empty or invalid inputs", () => {
+      expect(isValidPathSegment("")).toBe(false);
+      // @ts-expect-error Testing invalid input
+      expect(isValidPathSegment(null)).toBe(false);
+      // @ts-expect-error Testing invalid input
+      expect(isValidPathSegment(undefined)).toBe(false);
+    });
+  });
+});
 
 describe("utils/fs", () => {
   let tempWorkspace: { path: string; cleanup: () => Promise<void> };

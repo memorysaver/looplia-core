@@ -31,7 +31,7 @@ import type {
   ParsedWorkflow,
 } from "@looplia-core/core";
 import { extractWorkflowSkills } from "@looplia-core/core";
-import { pathExists } from "../utils/fs";
+import { isValidGitUrl, isValidPathSegment, pathExists } from "../utils/fs";
 import { compileRegistry, getCompiledRegistryPath } from "./compiler";
 import { createProgress } from "./progress";
 
@@ -46,6 +46,9 @@ const GITHUB_FULL_PATTERN =
   /^https?:\/\/github\.com\/([^/]+\/[^/]+)(?:\/tree\/[^/]+\/(.+))?$/;
 const GITHUB_SIMPLE_PATTERN =
   /^(?:https?:\/\/)?github\.com\/([^/]+\/[^/]+)\/?$/;
+
+// Maximum depth for searching SKILL.md files
+const MAX_SKILL_SEARCH_DEPTH = 5;
 
 /**
  * Checksum verification result
@@ -180,8 +183,8 @@ async function findSkillMdPath(repoPath: string): Promise<string | null> {
     return null;
   }
 
-  // Search up to 5 levels deep
-  return await searchDir(repoPath, 0, 5);
+  // Search up to MAX_SKILL_SEARCH_DEPTH levels deep
+  return await searchDir(repoPath, 0, MAX_SKILL_SEARCH_DEPTH);
 }
 
 /**
@@ -223,6 +226,13 @@ async function wrapSkillAsPlugin(
   targetPath: string,
   originalUrl: string
 ): Promise<void> {
+  // Security: Validate skill name to prevent path traversal
+  if (!isValidPathSegment(skillName)) {
+    throw new Error(
+      `Invalid skill name: "${skillName}" - contains path traversal characters`
+    );
+  }
+
   // 1. Create plugin directory structure
   await mkdir(join(targetPath, ".claude-plugin"), { recursive: true });
   const skillTargetDir = join(targetPath, "skills", skillName);
@@ -367,11 +377,20 @@ export async function installThirdPartySkill(
     .replace(TRAILING_SLASH_REGEX, "")
     .replace(SLASH_TO_DASH_REGEX, "-");
 
+  // Security: Validate git URL before shell execution
+  if (!isValidGitUrl(skill.gitUrl)) {
+    return {
+      skill: skill.name,
+      status: "failed",
+      error: `Invalid or untrusted git URL: ${skill.gitUrl}`,
+    };
+  }
+
   try {
     // 1. Clone to temp directory first
     const tempPath = join(tmpdir(), `looplia-install-${Date.now()}`);
     progress?.start(`Cloning ${skill.name}`);
-    await execAsync(`git clone ${skill.gitUrl} "${tempPath}"`);
+    await execAsync(`git clone "${skill.gitUrl}" "${tempPath}"`);
 
     // Verify checksum after clone
     const checksumResult = await verifyGitChecksum(tempPath, skill.checksum);
@@ -649,11 +668,20 @@ export async function installSkillFromUrl(
   const pluginsDir = join(loopliaPath, "plugins");
   await mkdir(pluginsDir, { recursive: true });
 
+  // Security: Validate git URL before shell execution
+  if (!isValidGitUrl(repoUrl)) {
+    return {
+      skill: "unknown",
+      status: "failed",
+      error: `Invalid or untrusted git URL: ${repoUrl}`,
+    };
+  }
+
   try {
     // 1. Clone repo to temp
     const tempPath = join(tmpdir(), `looplia-install-${Date.now()}`);
     progress?.start(`Cloning ${repoUrl}`);
-    await execAsync(`git clone --depth 1 ${repoUrl} "${tempPath}"`);
+    await execAsync(`git clone --depth 1 "${repoUrl}" "${tempPath}"`);
 
     // 2. Determine source directory
     const sourcePath = skillPath ? join(tempPath, skillPath) : tempPath;
@@ -801,11 +829,20 @@ export async function installMarketplaceSkill(
   const pluginsDir = join(loopliaPath, "plugins");
   await mkdir(pluginsDir, { recursive: true });
 
+  // Security: Validate git URL before shell execution
+  if (!isValidGitUrl(skill.gitUrl)) {
+    return {
+      skill: skill.name,
+      status: "failed",
+      error: `Invalid or untrusted git URL: ${skill.gitUrl}`,
+    };
+  }
+
   try {
     // 1. Clone marketplace repo (shallow)
     const tempPath = join(tmpdir(), `looplia-marketplace-${Date.now()}`);
     progress?.start(`Cloning marketplace: ${skill.name}`);
-    await execAsync(`git clone --depth 1 ${skill.gitUrl} "${tempPath}"`);
+    await execAsync(`git clone --depth 1 "${skill.gitUrl}" "${tempPath}"`);
 
     // 2. Navigate to skill path
     const skillSourcePath = join(tempPath, skill.skillPath);
