@@ -82,6 +82,9 @@ export type RegistrySkillItem = {
 
   /** Files included in this skill */
   files: SkillFile[];
+
+  /** Path within repo for marketplace skills (used for JIT installation) */
+  skillPath?: string;
 };
 
 /**
@@ -110,6 +113,10 @@ export type RemoteRegistryManifest = {
 
 /**
  * Registry source types
+ *
+ * GitHub sources auto-detect format:
+ * - marketplace.json: Used by anthropics/skills and similar repos
+ * - registry.json: Standard registry format via GitHub releases
  */
 export type RegistrySource = {
   /** Unique source identifier */
@@ -177,6 +184,9 @@ export type CompiledSkill = {
   /** Remote git URL for third-party */
   gitUrl?: string;
 
+  /** Path within marketplace repo (for selective JIT installation) */
+  skillPath?: string; // "./skills/xlsx" - used by marketplace sources
+
   /** Checksum for integrity */
   checksum?: string;
 
@@ -185,8 +195,11 @@ export type CompiledSkill = {
 };
 
 /**
- * Local compiled registry - aggregated from all sources
+ * Skill Catalog - aggregated from all sources
  * Used by build command for skill discovery
+ *
+ * @alias SkillCatalog (preferred name)
+ * @file ~/.looplia/registry/skill-catalog.json
  */
 export type CompiledRegistry = {
   /** When this cache was compiled */
@@ -239,3 +252,9 @@ export type EnsureSkillsResult = {
   /** Skills that failed to install */
   failed: string[];
 };
+
+/**
+ * Type alias: SkillCatalog is the preferred name for CompiledRegistry
+ * The catalog file is stored at ~/.looplia/registry/skill-catalog.json
+ */
+export type SkillCatalog = CompiledRegistry;

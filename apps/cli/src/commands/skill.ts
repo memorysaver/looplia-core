@@ -25,7 +25,7 @@ Usage:
   looplia skill <subcommand> [options]
 
 Subcommands:
-  add <name>        Install skill to workspace
+  add <name|url>    Install skill by name or GitHub URL
   list              List installed/available skills
   info <name>       Show skill details
   remove <name>     Remove skill from workspace
@@ -40,6 +40,8 @@ Options:
 Examples:
   looplia skill add media-reviewer
   looplia skill add custom-analyzer --from github:user/repo
+  looplia skill add https://github.com/user/my-skill
+  looplia skill add https://github.com/anthropics/skills/tree/main/skills/algorithmic-art
   looplia skill list
   looplia skill list --available
   looplia skill info media-reviewer
@@ -77,24 +79,60 @@ function formatSkillRow(skill: CompiledSkill): string {
   return `  ${status} ${name.padEnd(28)} ${category.padEnd(22)} ${source.padEnd(15)} ${desc}`;
 }
 
-async function skillAdd(name: string, from?: string): Promise<void> {
-  if (!name) {
-    console.error("Error: Skill name required");
-    console.error("Usage: looplia skill add <name>");
+// URL detection pattern for GitHub URLs
+const GITHUB_URL_PATTERN = /^(?:https?:\/\/)?github\.com\//;
+
+async function skillAdd(nameOrUrl: string, from?: string): Promise<void> {
+  if (!nameOrUrl) {
+    console.error("Error: Skill name or URL required");
+    console.error("Usage: looplia skill add <name|url>");
     process.exit(1);
   }
 
-  console.log(`Installing skill: ${name}...`);
+  // Check if input is a URL
+  if (GITHUB_URL_PATTERN.test(nameOrUrl)) {
+    console.log(`Installing skill from URL: ${nameOrUrl}...`);
 
-  // Load registry and find skill (optionally filter by source)
+    // Dynamic import to avoid circular dependency issue
+    const { installSkillFromUrl } = await import("@looplia-core/provider");
+    const result = await installSkillFromUrl(nameOrUrl, true);
+
+    switch (result.status) {
+      case "installed":
+        console.log(`Skill installed: ${result.skill}`);
+        console.log(`  Path: ${result.path}`);
+        break;
+
+      case "already_installed":
+        console.log(`Skill already installed: ${result.skill}`);
+        console.log(`  Path: ${result.path}`);
+        break;
+
+      case "failed":
+        console.error("Failed to install skill from URL");
+        console.error(`  Error: ${result.error}`);
+        process.exit(1);
+        break;
+
+      default:
+        console.log(`Unexpected status: ${result.status}`);
+    }
+    return;
+  }
+
+  // Name-based installation from registry
+  console.log(`Installing skill: ${nameOrUrl}...`);
+
   const registry = await loadCompiledRegistry();
   let skill: CompiledSkill | undefined;
 
   if (from) {
     // Filter by source when --from is specified
-    skill = registry.skills.find((s) => s.name === name && s.source === from);
+    skill = registry.skills.find(
+      (s) => s.name === nameOrUrl && s.source === from
+    );
     if (!skill) {
-      console.error(`Skill not found: ${name} from source ${from}`);
+      console.error(`Skill not found: ${nameOrUrl} from source ${from}`);
       console.error(
         'Run "looplia skill list --available" to see available skills.'
       );
@@ -102,9 +140,9 @@ async function skillAdd(name: string, from?: string): Promise<void> {
     }
     console.log(`  Source: ${from}`);
   } else {
-    skill = findSkill(registry, name);
+    skill = findSkill(registry, nameOrUrl);
     if (!skill) {
-      console.error(`Skill not found: ${name}`);
+      console.error(`Skill not found: ${nameOrUrl}`);
       console.error(
         'Run "looplia skill list --available" to see available skills.'
       );
@@ -112,26 +150,26 @@ async function skillAdd(name: string, from?: string): Promise<void> {
     }
   }
 
-  const result = await installSkill(name, registry);
+  const result = await installSkill(nameOrUrl, registry);
 
   switch (result.status) {
     case "installed":
-      console.log(`Skill installed: ${name}`);
+      console.log(`Skill installed: ${nameOrUrl}`);
       console.log(`  Path: ${result.path}`);
       break;
 
     case "updated":
-      console.log(`Skill updated: ${name}`);
+      console.log(`Skill updated: ${nameOrUrl}`);
       console.log(`  Path: ${result.path}`);
       break;
 
     case "already_installed":
-      console.log(`Skill already installed: ${name}`);
+      console.log(`Skill already installed: ${nameOrUrl}`);
       console.log(`  Path: ${result.path}`);
       break;
 
     case "failed":
-      console.error(`Failed to install skill: ${name}`);
+      console.error(`Failed to install skill: ${nameOrUrl}`);
       console.error(`  Error: ${result.error}`);
       process.exit(1);
       break;

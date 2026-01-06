@@ -29,7 +29,7 @@ Usage:
 
 Subcommands:
   init              Initialize local registry with official source
-  add <url>         Add registry source (GitHub URL for third-party)
+  add <url>         Add GitHub registry source (auto-detects format)
   sync              Compile from all sources (auto-runs on build)
   list              List configured sources and stats
   remove <id>       Remove a registry source
@@ -40,10 +40,10 @@ Options:
 
 Examples:
   looplia registry init
-  looplia registry add github.com/user/looplia-my-skills
+  looplia registry add github.com/anthropics/skills
   looplia registry sync
   looplia registry list
-  looplia registry remove github:user/looplia-my-skills
+  looplia registry remove github:anthropics/skills
 `);
 }
 
@@ -66,9 +66,7 @@ async function registryAdd(url: string): Promise<void> {
   if (!url) {
     console.error("Error: URL required");
     console.error("Usage: looplia registry add <url>");
-    console.error(
-      "Example: looplia registry add github.com/user/looplia-my-skills"
-    );
+    console.error("Example: looplia registry add github.com/anthropics/skills");
     process.exit(1);
   }
 
@@ -80,9 +78,9 @@ async function registryAdd(url: string): Promise<void> {
   console.log(`Adding registry source: ${normalizedUrl}`);
 
   try {
-    const source = await addSource(normalizedUrl, "github");
+    const source = await addSource(normalizedUrl);
     console.log(`Added source: ${source.id}`);
-    console.log("Running sync to fetch skills...");
+    console.log("Running sync to fetch skills (auto-detecting format)...");
 
     const registry = await compileRegistry();
     console.log(

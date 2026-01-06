@@ -14,6 +14,7 @@ export type {
   RegistrySkillItem,
   RegistrySource,
   RemoteRegistryManifest,
+  SkillCatalog,
   SkillCategory,
   SkillFile,
 } from "./registry";

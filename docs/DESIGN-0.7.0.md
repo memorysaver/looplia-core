@@ -37,7 +37,7 @@
 ### What v0.7.0 Introduces
 
 1. **Remote Registry**: JSON manifest hosted on GitHub Releases for skill discovery
-2. **Compiled Registry**: Local cache aggregated from multiple sources (auto-sync on build)
+2. **Skill Catalog**: Local cache aggregated from multiple sources (auto-sync on build)
 3. **Build Integration**: Search registry during workflow generation
 4. **Dynamic Skill Loading**: Only load required skills at runtime
 5. **Third-party Skills**: Live git clone/copy support for community plugins
@@ -63,7 +63,7 @@
 **After v0.7.0:**
 - Workflows declare required skills → only those are loaded
 - Registry enables discovery of official + third-party skills
-- Build command uses compiled registry (fast, comprehensive)
+- Build command uses skill catalog (fast, comprehensive)
 - `looplia skill add` installs skills from any registered source
 
 ---
@@ -166,8 +166,8 @@ The workflow uses `media-reviewer` but doesn't explicitly declare it. The system
 │                             │                                           │
 │                             ▼                                           │
 │           ┌─────────────────────────────────────────┐                   │
-│           │     Compiled Registry (compiled.json)   │                   │
-│           │  ~/.looplia/registry/compiled.json     │                   │
+│           │     Skill Catalog (skill-catalog.json)  │                   │
+│           │  ~/.looplia/registry/skill-catalog.json │                   │
 │           └─────────────────┬───────────────────────┘                   │
 │                             │                                           │
 │              ┌──────────────┼──────────────┐                            │
@@ -187,7 +187,7 @@ The workflow uses `media-reviewer` but doesn't explicitly declare it. The system
 ```
 1. User: looplia build "analyze videos and generate report"
 2. registry-loader skill syncs from all sources
-3. skill-capability-matcher searches compiled registry
+3. skill-capability-matcher searches skill catalog
 4. workflow-schema-composer generates workflow with skills: declaration
 5. Output: workflow with explicit skill dependencies
 ```
@@ -196,7 +196,7 @@ The workflow uses `media-reviewer` but doesn't explicitly declare it. The system
 ```
 1. User: looplia run my-workflow --file content.md
 2. Parse workflow → extract skills: [media-reviewer, idea-synthesis]
-3. Check installation status in compiled registry
+3. Check installation status in skill catalog
 4. JIT install missing skills (third-party: git clone)
 5. Build selective plugin paths (core + required only)
 6. Execute with filtered plugins
@@ -320,6 +320,10 @@ export type SkillFile = {
 ```typescript
 /**
  * Registry source types
+ *
+ * GitHub sources auto-detect format:
+ * - marketplace.json: Used by anthropics/skills and similar repos
+ * - registry.json: Standard registry format via GitHub releases
  */
 export type RegistrySource = {
   /** Unique source identifier */
@@ -342,16 +346,50 @@ export type RegistrySource = {
 };
 ```
 
-### 4.3 Compiled Registry Cache
+**Source Types:**
 
-**Location:** `~/.looplia/registry/compiled.json`
+| Type | Description | Example |
+|------|-------------|---------|
+| `official` | Official looplia registry | GitHub Releases URL |
+| `github` | Third-party GitHub repo | `github.com/user/my-plugin` |
+| `local` | Local filesystem path | `/path/to/plugins` |
+
+**GitHub Source Auto-Detection:**
+
+GitHub sources automatically detect the registry format by trying in order:
+
+1. **marketplace.json**: First tries `.claude-plugin/marketplace.json` (used by anthropics/skills and similar repos)
+2. **registry.json**: Falls back to `releases/latest/download/registry.json` (standard format)
+
+**Marketplace Format Example:**
+
+Repos using marketplace.json format (like `github.com/anthropics/skills`):
+
+```json
+{
+  "name": "anthropic-agent-skills",
+  "plugins": [
+    {
+      "name": "document-skills",
+      "description": "Document processing suite",
+      "skills": ["./skills/xlsx", "./skills/docx", "./skills/pdf"]
+    }
+  ]
+}
+```
+
+Skills from marketplace.json repos are indexed with `skillPath` for selective JIT installation.
+
+### 4.3 Skill Catalog
+
+**Location:** `~/.looplia/registry/skill-catalog.json`
 
 ```typescript
 /**
- * Local compiled registry - aggregated from all sources
+ * Local skill catalog - aggregated from all sources
  * Used by build command for skill discovery
  */
-export type CompiledRegistry = {
+export type SkillCatalog = {
   /** When this cache was compiled */
   compiledAt: string;  // ISO timestamp
 
@@ -417,6 +455,9 @@ export type CompiledSkill = {
 
   /** Remote git URL for third-party */
   gitUrl?: string;
+
+  /** Path within repo (for selective JIT installation from marketplace.json repos) */
+  skillPath?: string;  // "./skills/xlsx" - used by github sources with marketplace.json
 
   /** Checksum for integrity */
   checksum?: string;
@@ -507,17 +548,21 @@ looplia registry <subcommand> [options]
 
 Subcommands:
   init              Initialize local registry with official source
-  add <url>         Add registry source (GitHub URL for third-party)
+  add <url>         Add GitHub registry source (auto-detects format)
   sync              Compile from all sources (auto-runs on build)
   list              List configured sources and stats
   remove <id>       Remove a registry source
 
+Options:
+  --force, -f       Force reinitialization (for init)
+  --help, -h        Show this help
+
 Examples:
   looplia registry init
-  looplia registry add github.com/user/looplia-my-skills
+  looplia registry add github.com/anthropics/skills
   looplia registry sync
   looplia registry list
-  looplia registry remove github:user/looplia-my-skills
+  looplia registry remove github:anthropics/skills
 ```
 
 **Implementation:**
@@ -552,12 +597,12 @@ async function registrySync(): Promise<void> {
   // 1. Fetch remote registries
   // 2. Scan local plugins
   // 3. Merge and deduplicate
-  // 4. Write compiled.json
+  // 4. Write skill-catalog.json
 }
 
 async function registryList(): Promise<void> {
   // 1. Read sources.json
-  // 2. Read compiled.json for stats
+  // 2. Read skill-catalog.json for stats
   // 3. Display formatted table
 }
 
@@ -613,16 +658,16 @@ export type SkillArgs = {
 export async function runSkillCommand(args: string[]): Promise<void>;
 
 async function skillAdd(name: string, from?: string): Promise<void> {
-  // 1. Load compiled registry
+  // 1. Load skill catalog
   // 2. Find skill by name (optionally filter by source)
   // 3. Determine installation strategy:
   //    - builtin: Already in bundle, just verify
   //    - thirdparty: Git clone to ~/.looplia/plugins/
-  // 4. Update registry with installation status
+  // 4. Update catalog with installation status
 }
 
 async function skillList(options: { installed?: boolean; available?: boolean }): Promise<void> {
-  // 1. Load compiled registry
+  // 1. Load skill catalog
   // 2. Filter by installed/available
   // 3. Display formatted table
 }
@@ -680,22 +725,22 @@ model: claude-haiku-4-5-20251001
 # Registry Loader
 
 ## Purpose
-Provides fast access to compiled skill registry for the build pipeline.
+Provides fast access to skill catalog for the build pipeline.
 
 ## Behavior
 1. Sync registry from all configured sources (official + third-party)
-2. Compile into unified format at ~/.looplia/registry/compiled.json
-3. Return registry data for skill-capability-matcher
+2. Compile into unified format at ~/.looplia/registry/skill-catalog.json
+3. Return catalog data for skill-capability-matcher
 
 ## Output Format
-Same as CompiledRegistry type - skills array with installation status.
+Same as SkillCatalog type - skills array with installation status.
 ```
 
 ### 6.3 Enhanced Skill Capability Matcher
 
 Updates to `plugins/looplia-core/skills/skill-capability-matcher/SKILL.md`:
 
-- Accept compiled registry format (not just runtime scan format)
+- Accept skill catalog format (not just runtime scan format)
 - Include `installed` status in recommendations
 - Flag skills that need installation
 
@@ -804,9 +849,115 @@ async function buildSkillPluginMap(
 
 ### 7.3 Third-party Plugin Installation
 
+The installation system supports two paths to ensure all installed skills comply with Claude Code plugin structure:
+
+#### Installation Strategy
+
+| Priority | Detection | Action |
+|----------|-----------|--------|
+| 1. Standard Plugin | `.claude-plugin/plugin.json` or `marketplace.json` exists | Clone directly to `~/.looplia/plugins/` |
+| 2. Auto-Wrap Fallback | No plugin structure, but SKILL.md found | Wrap as plugin with generated plugin.json |
+
+**Note:** Both `plugin.json` and `marketplace.json` formats are supported. The `marketplace.json` format is used by Anthropic's official skills marketplace (github.com/anthropics/skills).
+
+#### Why Always Plugin Structure?
+
+The `query-executor` uses Claude Agent SDK's plugin loading system. All plugins in `~/.looplia/plugins/` must have valid structure:
+
+```
+~/.looplia/plugins/{plugin-name}/
+├── .claude-plugin/
+│   └── plugin.json          # Required for query-executor
+└── skills/
+    └── {skill-name}/
+        └── SKILL.md
+```
+
+#### Detection Functions
+
+```typescript
+/**
+ * Check if repository has valid Claude Code plugin structure
+ * Supports both plugin.json and marketplace.json formats
+ */
+async function isValidPluginStructure(repoPath: string): Promise<boolean> {
+  const claudePluginDir = join(repoPath, ".claude-plugin");
+
+  // Check for plugin.json (standard format)
+  if (await pathExists(join(claudePluginDir, "plugin.json"))) {
+    return true;
+  }
+
+  // Check for marketplace.json (Anthropic marketplace format)
+  if (await pathExists(join(claudePluginDir, "marketplace.json"))) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Find SKILL.md location in repository (recursive search)
+ */
+async function findSkillMdPath(repoPath: string): Promise<string | null> {
+  // Search recursively for SKILL.md
+  // Return the directory containing SKILL.md
+  // e.g., "repo/some/path/my-skill" if SKILL.md is at "repo/some/path/my-skill/SKILL.md"
+}
+
+/**
+ * Extract skill name from SKILL.md frontmatter
+ */
+async function extractSkillName(skillMdDir: string): Promise<string> {
+  const content = await readFile(join(skillMdDir, "SKILL.md"), "utf-8");
+  const frontmatter = parseFrontmatter(content);
+  return frontmatter.name ?? basename(skillMdDir);
+}
+```
+
+#### Auto-Wrap Function
+
+```typescript
+/**
+ * Wrap a standalone skill as a valid Claude Code plugin
+ */
+async function wrapSkillAsPlugin(
+  skillPath: string,      // Path to folder containing SKILL.md
+  skillName: string,      // Extracted skill name
+  targetPath: string,     // ~/.looplia/plugins/{skill-name}/
+  originalUrl: string     // For tracking source
+): Promise<void> {
+  // 1. Create plugin directory structure
+  await mkdir(join(targetPath, ".claude-plugin"), { recursive: true });
+  await mkdir(join(targetPath, "skills", skillName), { recursive: true });
+
+  // 2. Copy skill contents (everything at SKILL.md level)
+  await cp(skillPath, join(targetPath, "skills", skillName), { recursive: true });
+
+  // 3. Generate plugin.json
+  const pluginJson = {
+    name: skillName,
+    version: "1.0.0",
+    description: `Auto-wrapped skill from ${originalUrl}`,
+    source: {
+      type: "auto-wrapped",
+      originalUrl: originalUrl,
+      wrappedAt: new Date().toISOString()
+    }
+  };
+  await writeFile(
+    join(targetPath, ".claude-plugin", "plugin.json"),
+    JSON.stringify(pluginJson, null, 2)
+  );
+}
+```
+
+#### Main Installation Function
+
 ```typescript
 /**
  * Install a third-party plugin from git
+ * Supports both full plugins and standalone skills (auto-wrapped)
  */
 export async function installThirdPartyPlugin(
   workspace: string,
@@ -816,23 +967,101 @@ export async function installThirdPartyPlugin(
   const pluginsDir = join(workspace, "plugins");
   await mkdir(pluginsDir, { recursive: true });
 
-  // Extract repo name for local folder
-  const repoName = gitUrl.split("/").slice(-1)[0];
-  const targetPath = join(pluginsDir, repoName);
+  // 1. Clone to temp directory first
+  const tempPath = join(tmpdir(), `looplia-install-${Date.now()}`);
+  const fullUrl = `https://${gitUrl}`;
+  await execAsync(`git clone ${fullUrl} "${tempPath}"`);
 
-  if (await pathExists(targetPath)) {
-    // Already cloned - do git pull
-    await execAsync("git pull", { cwd: targetPath });
-    return { skill: skillName ?? repoName, status: "updated", path: targetPath };
+  // 2. Check if valid plugin structure (Priority 1)
+  if (await isValidPluginStructure(tempPath)) {
+    const repoName = gitUrl.split("/").slice(-1)[0];
+    const targetPath = join(pluginsDir, repoName);
+
+    if (await pathExists(targetPath)) {
+      // Already exists - update via git pull
+      await rm(tempPath, { recursive: true });
+      await execAsync("git pull", { cwd: targetPath });
+      return { skill: skillName ?? repoName, status: "updated", path: targetPath };
+    }
+
+    // Move to plugins directory
+    await rename(tempPath, targetPath);
+    return { skill: skillName ?? repoName, status: "installed", path: targetPath };
   }
 
-  // Clone the repository
-  const fullUrl = `https://${gitUrl}`;
-  await execAsync(`git clone ${fullUrl} ${targetPath}`);
+  // 3. Fallback: Find SKILL.md and auto-wrap (Priority 2)
+  const skillMdDir = await findSkillMdPath(tempPath);
+  if (!skillMdDir) {
+    await rm(tempPath, { recursive: true });
+    return {
+      skill: skillName ?? "unknown",
+      status: "failed",
+      error: "No .claude-plugin/plugin.json or SKILL.md found in repository"
+    };
+  }
 
-  return { skill: skillName ?? repoName, status: "installed", path: targetPath };
+  // 4. Extract skill name and auto-wrap
+  const extractedName = await extractSkillName(skillMdDir);
+  const targetPath = join(pluginsDir, extractedName);
+
+  if (await pathExists(targetPath)) {
+    await rm(tempPath, { recursive: true });
+    return { skill: extractedName, status: "already_installed", path: targetPath };
+  }
+
+  await wrapSkillAsPlugin(skillMdDir, extractedName, targetPath, gitUrl);
+
+  // 5. Cleanup temp
+  await rm(tempPath, { recursive: true });
+
+  return { skill: extractedName, status: "installed", path: targetPath };
 }
 ```
+
+#### Installation Examples
+
+**Example 1: Standard Plugin Repository**
+```
+Input:  github.com/user/my-plugin/
+        ├── .claude-plugin/plugin.json  ✓ Valid plugin
+        └── skills/analyzer/SKILL.md
+
+Result: ~/.looplia/plugins/my-plugin/  (cloned directly)
+```
+
+**Example 2: Skill-Only Repository**
+```
+Input:  github.com/user/my-skill/
+        ├── SKILL.md                    ✗ No plugin.json
+        ├── templates/
+        └── scripts/
+
+Result: ~/.looplia/plugins/my-skill/   (auto-wrapped)
+        ├── .claude-plugin/plugin.json  ← Generated
+        └── skills/my-skill/
+            ├── SKILL.md                ← Copied
+            ├── templates/
+            └── scripts/
+```
+
+**Example 3: Skill in Subfolder**
+```
+Input:  github.com/user/repo/tools/my-skill/SKILL.md
+
+Result: ~/.looplia/plugins/my-skill/   (auto-wrapped)
+        ├── .claude-plugin/plugin.json  ← Generated
+        └── skills/my-skill/
+            └── (contents from tools/my-skill/)
+```
+
+#### Edge Cases
+
+| Case | Handling |
+|------|----------|
+| Multiple SKILL.md in repo | Use first found at shallowest depth |
+| SKILL.md at repo root | Wrap root contents as skill |
+| No SKILL.md found | Return error with helpful message |
+| Existing plugin with same name | Return `already_installed` status |
 
 ---
 
@@ -857,14 +1086,14 @@ export async function runRunCommand(args: string[]): Promise<void> {
     const workflow = parseWorkflow(content);
     const requiredSkills = extractWorkflowSkills(workflow);
 
-    // 3. Load compiled registry
-    const registry = await loadCompiledRegistry(workspace);
+    // 3. Load skill catalog
+    const catalog = await loadSkillCatalog(workspace);
 
     // 4. NEW (v0.7.0): Just-in-time skill installation
     const installResult = await ensureWorkflowSkills(
       workspace,
       workflow,
-      registry
+      catalog
     );
 
     if (!installResult.ready) {
@@ -928,7 +1157,7 @@ export function extractWorkflowSkills(workflow: ParsedWorkflow): string[] {
 export async function ensureWorkflowSkills(
   workspace: string,
   workflow: ParsedWorkflow,
-  registry: CompiledRegistry
+  catalog: SkillCatalog
 ): Promise<{
   ready: boolean;
   installed: InstallResult[];
@@ -939,7 +1168,7 @@ export async function ensureWorkflowSkills(
   const failed: string[] = [];
 
   for (const skillName of requiredSkills) {
-    const skill = registry.skills.find(s => s.name === skillName);
+    const skill = catalog.skills.find(s => s.name === skillName);
 
     if (!skill) {
       failed.push(skillName);
@@ -982,7 +1211,7 @@ export async function ensureWorkflowSkills(
 ```
 ~/.looplia/
 ├── registry/                           # NEW: Registry system
-│   ├── compiled.json                   # Compiled registry cache
+│   ├── skill-catalog.json              # Skill catalog (aggregated from all sources)
 │   ├── sources.json                    # Configured sources
 │   └── cache/                          # Downloaded registry caches per source
 │       └── looplia-official/           # Cached remote registry
@@ -1091,7 +1320,7 @@ releases/v0.7.0/
 ### 11.2 Backward Compatibility Guarantees
 
 1. **Workflows without `skills:` field**: Derive skills from `steps[].skill`
-2. **Build without compiled registry**: Fallback to `plugin-registry-scanner`
+2. **Build without skill catalog**: Fallback to `plugin-registry-scanner`
 3. **Run without selective loading**: Load all plugins (existing behavior)
 
 ### 11.3 Deprecation Notes
@@ -1130,7 +1359,7 @@ The following are candidates for deprecation in future versions:
 | `packages/provider/src/claude-agent-sdk/streaming/query-executor.ts` | Accept `requiredSkills` |
 | `apps/cli/src/commands/run.ts` | Skills parsing & JIT |
 | `apps/cli/src/index.ts` | Command routing |
-| `plugins/looplia-core/skills/skill-capability-matcher/SKILL.md` | Compiled registry support |
+| `plugins/looplia-core/skills/skill-capability-matcher/SKILL.md` | Skill catalog support |
 | `plugins/looplia-core/skills/workflow-schema-composer/SKILL.md` | Generate `skills:` field |
 
 ---

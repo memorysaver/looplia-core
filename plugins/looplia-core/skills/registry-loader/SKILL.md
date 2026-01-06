@@ -1,12 +1,12 @@
 ---
 name: registry-loader
 description: |
-  Load the compiled skill registry for workflow building. This skill should be used when
+  Load the skill catalog for workflow building. This skill should be used when
   discovering available looplia skills or listing what capabilities are available. Use when
   someone says "what looplia skills are installed", "list available skills", "/build",
   "what can looplia do", or "show me all looplia capabilities".
 
-  v0.7.0: Replaces plugin-registry-scanner with compiled registry for faster access.
+  v0.7.0: Replaces plugin-registry-scanner with skill catalog for faster access.
   Auto-syncs from all sources on every build to ensure freshest skill catalog.
 tools: Read
 model: claude-haiku-4-5-20251001
@@ -14,34 +14,34 @@ model: claude-haiku-4-5-20251001
 
 # Registry Loader
 
-Load the compiled skill registry for workflow building and skill discovery.
+Load the skill catalog for workflow building and skill discovery.
 
 ## Purpose
 
-Provides fast access to the compiled skill registry for the build pipeline.
-Uses the pre-compiled `~/.looplia/registry/compiled.json` instead of runtime scanning.
+Provides fast access to the skill catalog for the build pipeline.
+Uses the pre-compiled `~/.looplia/registry/skill-catalog.json` instead of runtime scanning.
 
 ## Behavior
 
-1. Read the compiled registry from `~/.looplia/registry/compiled.json`
-2. If registry doesn't exist, return empty registry with instructions to run `looplia registry sync`
-3. Return registry data for skill-capability-matcher
+1. Read the skill catalog from `~/.looplia/registry/skill-catalog.json`
+2. If catalog doesn't exist, return empty registry with instructions to run `looplia registry sync`
+3. Return catalog data for skill-capability-matcher
 
 ## Process
 
-### 1. Load Compiled Registry
+### 1. Load Skill Catalog
 
-Read the compiled registry file:
+Read the skill catalog file:
 
 ```bash
-cat ~/.looplia/registry/compiled.json
+cat ~/.looplia/registry/skill-catalog.json
 ```
 
 Or use the Read tool to access the file directly.
 
-### 2. Parse Registry Data
+### 2. Parse Catalog Data
 
-The compiled registry contains:
+The skill catalog contains:
 
 ```json
 {
@@ -92,7 +92,7 @@ The compiled registry contains:
 
 ### 3. Format for skill-capability-matcher
 
-Transform the compiled registry into the format expected by skill-capability-matcher:
+Transform the skill catalog into the format expected by skill-capability-matcher:
 
 ```json
 {
@@ -163,13 +163,13 @@ Transform the compiled registry into the format expected by skill-capability-mat
 
 This skill is typically invoked as the first step in workflow building:
 
-1. Load compiled registry (this skill)
-2. Pass registry to skill-capability-matcher
+1. Load skill catalog (this skill)
+2. Pass catalog to skill-capability-matcher
 3. Use matched skills in workflow-schema-composer
 
 ## Notes
 
-- If compiled registry doesn't exist, advise user to run `looplia registry sync`
-- Registry is auto-synced on every `looplia build` command
+- If skill catalog doesn't exist, advise user to run `looplia registry sync`
+- Catalog is auto-synced on every `looplia build` command
 - Includes installation status for each skill
 - Third-party skills may show `installed: false` until installed via `looplia skill add`

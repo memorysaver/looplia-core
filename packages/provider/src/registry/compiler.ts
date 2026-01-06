@@ -1,11 +1,11 @@
 /**
  * Registry Compiler (v0.7.0)
  *
- * Compiles skill registry from multiple sources into a unified local cache.
- * - Fetches remote registries (official + third-party)
+ * Compiles skill catalog from multiple sources into a unified local cache.
+ * - Fetches remote registries (official + third-party + marketplace)
  * - Scans local plugins for installed skills
  * - Merges and deduplicates entries
- * - Writes compiled.json for fast lookup
+ * - Writes skill-catalog.json for fast lookup
  *
  * @see docs/DESIGN-0.7.0.md
  */
@@ -35,7 +35,9 @@ const REGISTRY_SCHEMA_URL = "https://looplia.com/schema/registry.json";
 const REGISTRY_VERSION = "1.0.0";
 
 // Top-level regex patterns
+const PROTOCOL_REGEX = /^https?:\/\//;
 const TRAILING_SLASH_REGEX = /\/$/;
+const LEADING_DOT_SLASH_REGEX = /^\.\//;
 const FRONTMATTER_REGEX = /^---\n([\s\S]*?)\n---/;
 
 // Capability inference patterns
@@ -57,11 +59,17 @@ export function getRegistryPath(): string {
 }
 
 /**
- * Get the compiled registry file path
+ * Get the skill catalog file path
+ * @alias getSkillCatalogPath
  */
 export function getCompiledRegistryPath(): string {
-  return join(getRegistryPath(), "compiled.json");
+  return join(getRegistryPath(), "skill-catalog.json");
 }
+
+/**
+ * Get the skill catalog file path (preferred name)
+ */
+export const getSkillCatalogPath = getCompiledRegistryPath;
 
 /**
  * Get the sources configuration file path
@@ -121,6 +129,9 @@ export async function saveSources(sources: RegistrySource[]): Promise<void> {
 
 /**
  * Add a new registry source
+ *
+ * For GitHub sources, the format (marketplace.json vs registry.json)
+ * is auto-detected during compilation.
  */
 export async function addSource(
   url: string,
@@ -128,11 +139,14 @@ export async function addSource(
 ): Promise<RegistrySource> {
   const sources = await loadSources();
 
+  // Normalize URL for ID generation
+  const normalizedPath = url
+    .replace(PROTOCOL_REGEX, "")
+    .replace("github.com/", "")
+    .replace(TRAILING_SLASH_REGEX, "");
+
   // Generate unique ID from URL
-  const id =
-    type === "github"
-      ? `github:${url.replace("github.com/", "").replace(TRAILING_SLASH_REGEX, "")}`
-      : `local:${url}`;
+  const id = type === "github" ? `github:${normalizedPath}` : `local:${url}`;
 
   // Check for duplicates
   if (sources.some((s) => s.id === id)) {
@@ -170,30 +184,151 @@ export async function removeSource(sourceId: string): Promise<boolean> {
 }
 
 /**
- * Fetch remote registry manifest
+ * Marketplace JSON format from Anthropic skills repo
  */
-async function fetchRemoteRegistry(
-  source: RegistrySource
+type MarketplacePlugin = {
+  name: string;
+  description: string;
+  skills: string[]; // ["./skills/xlsx", "./skills/pdf"]
+};
+
+type MarketplaceJson = {
+  name: string;
+  version?: string;
+  plugins: MarketplacePlugin[];
+};
+
+/**
+ * Result of fetching a remote registry with format detection
+ */
+type FetchResult = {
+  manifest: RemoteRegistryManifest;
+  format: "marketplace" | "registry";
+};
+
+/**
+ * Try to fetch marketplace.json from a GitHub repo
+ */
+async function tryFetchMarketplace(
+  repoPath: string
 ): Promise<RemoteRegistryManifest | null> {
+  const url = `https://raw.githubusercontent.com/${repoPath}/main/.claude-plugin/marketplace.json`;
+
   try {
-    let url = source.url;
-
-    // For GitHub sources, construct registry.json URL
-    if (source.type === "github" && !url.endsWith("registry.json")) {
-      url = `https://${source.url}/releases/latest/download/registry.json`;
-    }
-
     const response = await fetch(url);
     if (!response.ok) {
-      console.warn(`Failed to fetch registry from ${url}: ${response.status}`);
       return null;
     }
 
-    return (await response.json()) as RemoteRegistryManifest;
-  } catch (error) {
-    console.warn(`Error fetching registry from ${source.url}:`, error);
+    const marketplace = (await response.json()) as MarketplaceJson;
+
+    // Convert marketplace format to registry manifest format
+    const items: RegistrySkillItem[] = [];
+    for (const plugin of marketplace.plugins) {
+      for (const skillPath of plugin.skills) {
+        // Extract skill name from path (e.g., "./skills/xlsx" -> "xlsx")
+        const skillName = skillPath.split("/").pop() ?? skillPath;
+
+        items.push({
+          name: skillName,
+          type: "registry:skill",
+          title: formatTitle(skillName),
+          description: `Skill from ${plugin.name}`,
+          author: plugin.name,
+          plugin: plugin.name,
+          category: inferCategory(skillName, plugin.description),
+          capabilities: inferCapabilities(plugin.description),
+          downloadUrl: `https://github.com/${repoPath}`,
+          files: [],
+          // Store skillPath for JIT installation
+          skillPath: skillPath.replace(LEADING_DOT_SLASH_REGEX, ""),
+        });
+      }
+    }
+
+    return {
+      $schema: REGISTRY_SCHEMA_URL,
+      name: marketplace.name,
+      homepage: `https://github.com/${repoPath}`,
+      version: marketplace.version ?? "1.0.0",
+      updatedAt: new Date().toISOString(),
+      items,
+    };
+  } catch {
     return null;
   }
+}
+
+/**
+ * Try to fetch registry.json from GitHub releases
+ */
+async function tryFetchRegistryJson(
+  repoPath: string
+): Promise<RemoteRegistryManifest | null> {
+  const url = `https://github.com/${repoPath}/releases/latest/download/registry.json`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      return null;
+    }
+    return (await response.json()) as RemoteRegistryManifest;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch remote registry manifest with auto-detection
+ *
+ * For GitHub sources, tries marketplace.json first, then falls back to registry.json.
+ * This allows repos like anthropics/skills to work without special configuration.
+ */
+async function fetchRemoteRegistry(
+  source: RegistrySource
+): Promise<FetchResult | null> {
+  // For official registry, fetch directly
+  if (source.type === "official") {
+    try {
+      const response = await fetch(source.url);
+      if (!response.ok) {
+        console.warn(
+          `Failed to fetch registry from ${source.url}: ${response.status}`
+        );
+        return null;
+      }
+      return {
+        manifest: (await response.json()) as RemoteRegistryManifest,
+        format: "registry",
+      };
+    } catch (error) {
+      console.warn(`Error fetching registry from ${source.url}:`, error);
+      return null;
+    }
+  }
+
+  // For GitHub sources, auto-detect format
+  const repoPath = source.url
+    .replace(PROTOCOL_REGEX, "")
+    .replace("github.com/", "")
+    .replace(TRAILING_SLASH_REGEX, "");
+
+  // 1. Try marketplace.json first (most common for skill repos)
+  const marketplaceManifest = await tryFetchMarketplace(repoPath);
+  if (marketplaceManifest) {
+    return { manifest: marketplaceManifest, format: "marketplace" };
+  }
+
+  // 2. Fall back to registry.json in releases
+  const registryManifest = await tryFetchRegistryJson(repoPath);
+  if (registryManifest) {
+    return { manifest: registryManifest, format: "registry" };
+  }
+
+  console.warn(
+    `No registry found for ${source.url} (tried marketplace.json and registry.json)`
+  );
+  return null;
 }
 
 /**
@@ -479,36 +614,6 @@ async function scanLocalPlugins(loopliaPath: string): Promise<CompiledSkill[]> {
 }
 
 /**
- * Convert registry item to compiled skill
- */
-function convertToCompiledSkill(
-  item: RegistrySkillItem,
-  source: RegistrySource,
-  installedSkills: Map<string, CompiledSkill>
-): CompiledSkill {
-  const installed = installedSkills.get(item.name);
-
-  return {
-    name: item.name,
-    title: item.title,
-    description: item.description,
-    plugin: item.plugin,
-    category: item.category,
-    capabilities: item.capabilities,
-    tools: item.tools,
-    model: item.model,
-    inputless: item.inputless,
-    source: source.id,
-    sourceType: source.type === "official" ? "builtin" : "thirdparty",
-    installed: installed !== undefined,
-    installedPath: installed?.installedPath,
-    gitUrl: source.type === "github" ? `https://${source.url}` : undefined,
-    checksum: item.checksum,
-    dependencies: item.registryDependencies,
-  };
-}
-
-/**
  * Process a single local source and add skills
  */
 async function processLocalSource(
@@ -565,32 +670,68 @@ type ProcessRemoteSourceOptions = {
 
 /**
  * Process a single remote source and add skills
+ *
+ * For GitHub sources, auto-detects format (marketplace.json vs registry.json)
+ * and processes accordingly.
  */
 async function processRemoteSource(
   options: ProcessRemoteSourceOptions
 ): Promise<void> {
   const { source, seenSkills, allSkills, installedSkillsMap, progress } =
     options;
+
   progress?.start(`Fetching registry: ${source.id}`);
 
-  const manifest = await fetchRemoteRegistry(source);
-  if (!manifest) {
+  const result = await fetchRemoteRegistry(source);
+  if (!result) {
     progress?.fail(`Failed to fetch: ${source.id}`);
     return;
   }
 
+  const { manifest, format } = result;
   let addedCount = 0;
+
   for (const item of manifest.items) {
     if (seenSkills.has(item.name)) {
       continue;
     }
-    const skill = convertToCompiledSkill(item, source, installedSkillsMap);
+
+    const installed = installedSkillsMap.get(item.name);
+
+    // For marketplace format, include skillPath for JIT installation
+    // The skillPath is already set in the item from tryFetchMarketplace
+    const skill: CompiledSkill = {
+      name: item.name,
+      title: item.title,
+      description: item.description,
+      plugin: item.plugin,
+      category: item.category,
+      capabilities: item.capabilities,
+      tools: item.tools,
+      model: item.model,
+      inputless: item.inputless,
+      source: source.id,
+      sourceType: source.type === "official" ? "builtin" : "thirdparty",
+      installed: installed !== undefined,
+      installedPath: installed?.installedPath,
+      gitUrl:
+        format === "marketplace" || source.type === "github"
+          ? item.downloadUrl
+          : undefined,
+      skillPath: item.skillPath, // Set by marketplace format, undefined for registry.json
+      checksum: item.checksum,
+      dependencies: item.registryDependencies,
+    };
+
     allSkills.push(skill);
     seenSkills.add(item.name);
     addedCount += 1;
   }
 
-  progress?.succeed(`Fetched ${source.id}: ${addedCount} new skills`);
+  const formatLabel = format === "marketplace" ? "marketplace" : "registry";
+  progress?.succeed(
+    `Fetched ${source.id} (${formatLabel}): ${addedCount} skills`
+  );
 }
 
 /**

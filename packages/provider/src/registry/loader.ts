@@ -11,9 +11,17 @@
  */
 
 import { exec } from "node:child_process";
-import { mkdir, readFile, rm } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import {
+  cp,
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import { homedir, tmpdir } from "node:os";
+import { basename, join } from "node:path";
 import { promisify } from "node:util";
 import type {
   CompiledRegistry,
@@ -34,6 +42,10 @@ const GIT_COMMIT_HASH_REGEX = /^[a-f0-9]{40}$/i;
 const PROTOCOL_REGEX = /^https?:\/\//;
 const TRAILING_SLASH_REGEX = /\/$/;
 const SLASH_TO_DASH_REGEX = /\//g;
+const GITHUB_FULL_PATTERN =
+  /^https?:\/\/github\.com\/([^/]+\/[^/]+)(?:\/tree\/[^/]+\/(.+))?$/;
+const GITHUB_SIMPLE_PATTERN =
+  /^(?:https?:\/\/)?github\.com\/([^/]+\/[^/]+)\/?$/;
 
 /**
  * Checksum verification result
@@ -96,6 +108,144 @@ async function verifyGitChecksum(
       message: "Could not verify git HEAD",
     };
   }
+}
+
+// Frontmatter regex for extracting skill name
+const FRONTMATTER_REGEX = /^---\n([\s\S]*?)\n---/;
+
+/**
+ * Check if repository has valid Claude Code plugin structure
+ * Supports both plugin.json and marketplace.json formats
+ */
+async function isValidPluginStructure(repoPath: string): Promise<boolean> {
+  const claudePluginDir = join(repoPath, ".claude-plugin");
+
+  // Check for plugin.json (standard format)
+  const pluginJsonPath = join(claudePluginDir, "plugin.json");
+  if (await pathExists(pluginJsonPath)) {
+    return true;
+  }
+
+  // Check for marketplace.json (Anthropic marketplace format)
+  const marketplaceJsonPath = join(claudePluginDir, "marketplace.json");
+  if (await pathExists(marketplaceJsonPath)) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Find SKILL.md location in repository using glob pattern
+ * Returns the directory containing SKILL.md at the shallowest depth
+ */
+async function findSkillMdPath(repoPath: string): Promise<string | null> {
+  // Use a simple recursive search with early termination
+  async function searchDir(
+    dirPath: string,
+    depth: number,
+    maxDepth: number
+  ): Promise<string | null> {
+    if (depth > maxDepth) {
+      return null;
+    }
+
+    const entries = await readdir(dirPath, { withFileTypes: true }).catch(
+      () => []
+    );
+
+    // Check for SKILL.md in current directory
+    const hasSkillMd = entries.some((e) => e.isFile() && e.name === "SKILL.md");
+    if (hasSkillMd) {
+      return dirPath;
+    }
+
+    // Search subdirectories
+    const subdirs = entries.filter(
+      (e) =>
+        e.isDirectory() && !e.name.startsWith(".") && e.name !== "node_modules"
+    );
+
+    for (const subdir of subdirs) {
+      const found = await searchDir(
+        join(dirPath, subdir.name),
+        depth + 1,
+        maxDepth
+      );
+      if (found) {
+        return found;
+      }
+    }
+
+    return null;
+  }
+
+  // Search up to 5 levels deep
+  return await searchDir(repoPath, 0, 5);
+}
+
+/**
+ * Extract skill name from SKILL.md frontmatter
+ */
+async function extractSkillName(skillMdDir: string): Promise<string> {
+  try {
+    const content = await readFile(join(skillMdDir, "SKILL.md"), "utf-8");
+    const match = content.match(FRONTMATTER_REGEX);
+
+    if (match?.[1]) {
+      // Parse frontmatter for name field
+      const lines = match[1].split("\n");
+      for (const line of lines) {
+        const colonIndex = line.indexOf(":");
+        if (colonIndex > 0) {
+          const key = line.slice(0, colonIndex).trim();
+          const value = line.slice(colonIndex + 1).trim();
+          if (key === "name" && value) {
+            return value;
+          }
+        }
+      }
+    }
+  } catch {
+    // Fall through to basename
+  }
+
+  // Fallback: use directory name
+  return basename(skillMdDir);
+}
+
+/**
+ * Wrap a standalone skill as a valid Claude Code plugin
+ */
+async function wrapSkillAsPlugin(
+  skillPath: string,
+  skillName: string,
+  targetPath: string,
+  originalUrl: string
+): Promise<void> {
+  // 1. Create plugin directory structure
+  await mkdir(join(targetPath, ".claude-plugin"), { recursive: true });
+  const skillTargetDir = join(targetPath, "skills", skillName);
+  await mkdir(skillTargetDir, { recursive: true });
+
+  // 2. Copy skill contents (everything at SKILL.md level)
+  await cp(skillPath, skillTargetDir, { recursive: true });
+
+  // 3. Generate plugin.json
+  const pluginJson = {
+    name: skillName,
+    version: "1.0.0",
+    description: `Auto-wrapped skill from ${originalUrl}`,
+    source: {
+      type: "auto-wrapped",
+      originalUrl,
+      wrappedAt: new Date().toISOString(),
+    },
+  };
+  await writeFile(
+    join(targetPath, ".claude-plugin", "plugin.json"),
+    JSON.stringify(pluginJson, null, 2)
+  );
 }
 
 /**
@@ -174,9 +324,18 @@ export function getSkillsBySource(
 
 /**
  * Install a third-party skill from git
+ * Supports both full plugins and standalone skills (auto-wrapped)
+ *
+ * Installation Strategy:
+ * 1. If skillPath exists (marketplace skill): use selective extraction
+ * 2. Clone to temp directory
+ * 3. Check if valid Claude Code plugin structure (.claude-plugin/plugin.json)
+ * 4. If valid plugin: move directly to ~/.looplia/plugins/
+ * 5. If no plugin structure: find SKILL.md, auto-wrap as plugin
  *
  * @param skill - The skill to install
  * @param showProgress - Whether to show progress indicators (default: false)
+ * @see docs/DESIGN-0.7.0.md section 7.3
  */
 export async function installThirdPartySkill(
   skill: CompiledSkill,
@@ -192,61 +351,103 @@ export async function installThirdPartySkill(
     };
   }
 
+  // Check if this is a marketplace skill (has skillPath for selective extraction)
+  if (skill.skillPath) {
+    return await installMarketplaceSkill(skill, showProgress);
+  }
+
   const loopliaPath = join(homedir(), ".looplia");
   const pluginsDir = join(loopliaPath, "plugins");
   await mkdir(pluginsDir, { recursive: true });
 
-  // Extract repo name from git URL
+  // Extract repo name from git URL for naming
   const repoName = skill.gitUrl
     .replace(PROTOCOL_REGEX, "")
     .replace("github.com/", "")
     .replace(TRAILING_SLASH_REGEX, "")
     .replace(SLASH_TO_DASH_REGEX, "-");
 
-  const targetPath = join(pluginsDir, repoName);
-
   try {
-    if (await pathExists(targetPath)) {
-      // Already cloned - do git pull
-      progress?.start(`Updating ${skill.name}`);
-      await execAsync("git pull", { cwd: targetPath });
+    // 1. Clone to temp directory first
+    const tempPath = join(tmpdir(), `looplia-install-${Date.now()}`);
+    progress?.start(`Cloning ${skill.name}`);
+    await execAsync(`git clone ${skill.gitUrl} "${tempPath}"`);
 
-      // Verify checksum after pull
-      const checksumResult = await verifyGitChecksum(
-        targetPath,
-        skill.checksum
-      );
-      if (!checksumResult.verified) {
-        console.warn(`Checksum warning: ${checksumResult.message}`);
+    // Verify checksum after clone
+    const checksumResult = await verifyGitChecksum(tempPath, skill.checksum);
+    if (!checksumResult.verified) {
+      console.warn(`Checksum warning: ${checksumResult.message}`);
+    }
+
+    // 2. Check if valid plugin structure (Priority 1)
+    if (await isValidPluginStructure(tempPath)) {
+      const targetPath = join(pluginsDir, repoName);
+
+      if (await pathExists(targetPath)) {
+        // Already exists - update via git pull
+        await rm(tempPath, { recursive: true, force: true });
+        progress?.start(`Updating ${skill.name}`);
+        await execAsync("git pull", { cwd: targetPath });
+        progress?.succeed(`Updated ${skill.name}`);
+        return {
+          skill: skill.name,
+          status: "updated",
+          path: targetPath,
+        };
       }
 
-      progress?.succeed(`Updated ${skill.name}`);
+      // Move to plugins directory
+      await rename(tempPath, targetPath);
+      progress?.succeed(`Installed ${skill.name} (plugin)`);
       return {
         skill: skill.name,
-        status: "updated",
+        status: "installed",
         path: targetPath,
       };
     }
 
-    // Clone the repository
-    progress?.start(`Cloning ${skill.name}`);
-    await execAsync(`git clone ${skill.gitUrl} "${targetPath}"`);
+    // 3. Fallback: Find SKILL.md and auto-wrap (Priority 2)
+    progress?.start(`Analyzing ${skill.name} structure`);
+    const skillMdDir = await findSkillMdPath(tempPath);
 
-    // Verify checksum after clone
-    const checksumResult = await verifyGitChecksum(targetPath, skill.checksum);
-    if (!checksumResult.verified) {
-      console.warn(`Checksum warning: ${checksumResult.message}`);
-    } else if (
-      checksumResult.method !== "skipped" &&
-      checksumResult.message?.includes("skipped")
-    ) {
-      // SHA256 checksum provided but using git - log info
-      console.info(`Note: ${checksumResult.message}`);
+    if (!skillMdDir) {
+      await rm(tempPath, { recursive: true, force: true });
+      progress?.fail("No plugin structure or SKILL.md found");
+      return {
+        skill: skill.name,
+        status: "failed",
+        error: "No .claude-plugin/plugin.json or SKILL.md found in repository",
+      };
     }
 
-    progress?.succeed(`Installed ${skill.name}`);
+    // 4. Extract skill name and auto-wrap
+    const extractedName = await extractSkillName(skillMdDir);
+    const targetPath = join(pluginsDir, extractedName);
+
+    if (await pathExists(targetPath)) {
+      await rm(tempPath, { recursive: true, force: true });
+      progress?.succeed(`${extractedName} already installed`);
+      return {
+        skill: extractedName,
+        status: "already_installed",
+        path: targetPath,
+      };
+    }
+
+    progress?.start(`Auto-wrapping ${extractedName} as plugin`);
+    await wrapSkillAsPlugin(
+      skillMdDir,
+      extractedName,
+      targetPath,
+      skill.gitUrl
+    );
+
+    // 5. Cleanup temp
+    await rm(tempPath, { recursive: true, force: true });
+
+    progress?.succeed(`Installed ${extractedName} (auto-wrapped)`);
     return {
-      skill: skill.name,
+      skill: extractedName,
       status: "installed",
       path: targetPath,
     };
@@ -416,6 +617,260 @@ export const CORE_SKILLS = [
  */
 export function isCoreSkill(skillName: string): boolean {
   return CORE_SKILLS.includes(skillName);
+}
+
+/**
+ * Install a skill from a direct URL (not from catalog)
+ * Supports:
+ * - Full GitHub repo URL: https://github.com/user/repo
+ * - Skill path within repo: https://github.com/user/repo/tree/main/skills/name
+ *
+ * @param url - The URL to install from
+ * @param showProgress - Whether to show progress indicators
+ */
+export async function installSkillFromUrl(
+  url: string,
+  showProgress = false
+): Promise<InstallResult> {
+  const progress = showProgress ? createProgress() : null;
+
+  // Parse URL to extract repo and optional skill path
+  const urlParts = parseGitHubUrl(url);
+  if (!urlParts) {
+    return {
+      skill: "unknown",
+      status: "failed",
+      error: `Invalid GitHub URL: ${url}`,
+    };
+  }
+
+  const { repoUrl, skillPath } = urlParts;
+  const loopliaPath = join(homedir(), ".looplia");
+  const pluginsDir = join(loopliaPath, "plugins");
+  await mkdir(pluginsDir, { recursive: true });
+
+  try {
+    // 1. Clone repo to temp
+    const tempPath = join(tmpdir(), `looplia-install-${Date.now()}`);
+    progress?.start(`Cloning ${repoUrl}`);
+    await execAsync(`git clone --depth 1 ${repoUrl} "${tempPath}"`);
+
+    // 2. Determine source directory
+    const sourcePath = skillPath ? join(tempPath, skillPath) : tempPath;
+    if (skillPath && !(await pathExists(sourcePath))) {
+      await rm(tempPath, { recursive: true, force: true });
+      progress?.fail(`Skill path not found: ${skillPath}`);
+      return {
+        skill: skillPath,
+        status: "failed",
+        error: `Path not found in repository: ${skillPath}`,
+      };
+    }
+
+    // 3. Check for valid plugin structure
+    if (await isValidPluginStructure(tempPath)) {
+      // Full plugin - install directly
+      const repoName = repoUrl
+        .split("/")
+        .slice(-2)
+        .join("-")
+        .replace(".git", "");
+      const targetPath = join(pluginsDir, repoName);
+
+      if (await pathExists(targetPath)) {
+        await rm(tempPath, { recursive: true, force: true });
+        progress?.succeed("Plugin already installed");
+        return {
+          skill: repoName,
+          status: "already_installed",
+          path: targetPath,
+        };
+      }
+
+      await rename(tempPath, targetPath);
+      progress?.succeed(`Installed plugin: ${repoName}`);
+      return {
+        skill: repoName,
+        status: "installed",
+        path: targetPath,
+      };
+    }
+
+    // 4. Find SKILL.md in source path
+    progress?.start("Analyzing skill structure");
+    const skillMdDir = await findSkillMdPath(sourcePath);
+
+    if (!skillMdDir) {
+      await rm(tempPath, { recursive: true, force: true });
+      progress?.fail("No plugin structure or SKILL.md found");
+      return {
+        skill: "unknown",
+        status: "failed",
+        error: "No .claude-plugin/plugin.json or SKILL.md found",
+      };
+    }
+
+    // 5. Extract skill name and auto-wrap
+    const extractedName = await extractSkillName(skillMdDir);
+    const targetPath = join(pluginsDir, extractedName);
+
+    if (await pathExists(targetPath)) {
+      await rm(tempPath, { recursive: true, force: true });
+      progress?.succeed(`${extractedName} already installed`);
+      return {
+        skill: extractedName,
+        status: "already_installed",
+        path: targetPath,
+      };
+    }
+
+    progress?.start(`Auto-wrapping ${extractedName} as plugin`);
+    await wrapSkillAsPlugin(skillMdDir, extractedName, targetPath, url);
+
+    // 6. Cleanup and recompile
+    await rm(tempPath, { recursive: true, force: true });
+    progress?.succeed(`Installed ${extractedName} (auto-wrapped)`);
+
+    // Recompile registry to include new skill
+    await compileRegistry();
+
+    return {
+      skill: extractedName,
+      status: "installed",
+      path: targetPath,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    progress?.fail("Failed to install from URL");
+    return {
+      skill: "unknown",
+      status: "failed",
+      error: message,
+    };
+  }
+}
+
+/**
+ * Parse GitHub URL to extract repo and optional skill path
+ */
+function parseGitHubUrl(
+  url: string
+): { repoUrl: string; skillPath?: string } | null {
+  // Pattern: https://github.com/user/repo(/tree/branch/path)?
+  const match = url.match(GITHUB_FULL_PATTERN);
+
+  if (!match) {
+    // Try simple format: github.com/user/repo
+    const simpleMatch = url.match(GITHUB_SIMPLE_PATTERN);
+    if (simpleMatch?.[1]) {
+      return { repoUrl: `https://github.com/${simpleMatch[1]}.git` };
+    }
+    return null;
+  }
+
+  const repo = match[1];
+  const path = match[2];
+
+  return {
+    repoUrl: `https://github.com/${repo}.git`,
+    skillPath: path,
+  };
+}
+
+/**
+ * Install a marketplace skill (selective extraction by skillPath)
+ *
+ * Marketplace skills have a skillPath like "skills/xlsx" that points
+ * to a specific skill within a larger repository.
+ */
+export async function installMarketplaceSkill(
+  skill: CompiledSkill,
+  showProgress = false
+): Promise<InstallResult> {
+  const progress = showProgress ? createProgress() : null;
+
+  if (!(skill.gitUrl && skill.skillPath)) {
+    return {
+      skill: skill.name,
+      status: "failed",
+      error: "Missing gitUrl or skillPath for marketplace skill",
+    };
+  }
+
+  const loopliaPath = join(homedir(), ".looplia");
+  const pluginsDir = join(loopliaPath, "plugins");
+  await mkdir(pluginsDir, { recursive: true });
+
+  try {
+    // 1. Clone marketplace repo (shallow)
+    const tempPath = join(tmpdir(), `looplia-marketplace-${Date.now()}`);
+    progress?.start(`Cloning marketplace: ${skill.name}`);
+    await execAsync(`git clone --depth 1 ${skill.gitUrl} "${tempPath}"`);
+
+    // 2. Navigate to skill path
+    const skillSourcePath = join(tempPath, skill.skillPath);
+    if (!(await pathExists(skillSourcePath))) {
+      await rm(tempPath, { recursive: true, force: true });
+      progress?.fail(`Skill path not found: ${skill.skillPath}`);
+      return {
+        skill: skill.name,
+        status: "failed",
+        error: `Path not found in marketplace: ${skill.skillPath}`,
+      };
+    }
+
+    // 3. Find SKILL.md
+    const skillMdDir = await findSkillMdPath(skillSourcePath);
+    if (!skillMdDir) {
+      await rm(tempPath, { recursive: true, force: true });
+      progress?.fail("No SKILL.md found in skill path");
+      return {
+        skill: skill.name,
+        status: "failed",
+        error: `No SKILL.md found at ${skill.skillPath}`,
+      };
+    }
+
+    // 4. Extract skill name and auto-wrap
+    const extractedName = await extractSkillName(skillMdDir);
+    const targetPath = join(pluginsDir, extractedName);
+
+    if (await pathExists(targetPath)) {
+      await rm(tempPath, { recursive: true, force: true });
+      progress?.succeed(`${extractedName} already installed`);
+      return {
+        skill: extractedName,
+        status: "already_installed",
+        path: targetPath,
+      };
+    }
+
+    progress?.start(`Auto-wrapping ${extractedName} as plugin`);
+    await wrapSkillAsPlugin(
+      skillMdDir,
+      extractedName,
+      targetPath,
+      `${skill.gitUrl}/${skill.skillPath}`
+    );
+
+    // 5. Cleanup
+    await rm(tempPath, { recursive: true, force: true });
+    progress?.succeed(`Installed ${extractedName} (marketplace)`);
+
+    return {
+      skill: extractedName,
+      status: "installed",
+      path: targetPath,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    progress?.fail(`Failed to install ${skill.name}`);
+    return {
+      skill: skill.name,
+      status: "failed",
+      error: message,
+    };
+  }
 }
 
 /**
