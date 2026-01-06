@@ -78,10 +78,14 @@ async function validateExtractedPaths(baseDir: string): Promise<void> {
 }
 
 /**
- * Get the looplia plugin path (~/.looplia)
+ * Get the looplia plugin path
+ *
+ * Priority:
+ * 1. LOOPLIA_HOME env var (for testing/custom installations)
+ * 2. Default: ~/.looplia
  */
 export function getLoopliaPluginPath(): string {
-  return join(homedir(), ".looplia");
+  return process.env.LOOPLIA_HOME ?? join(homedir(), ".looplia");
 }
 
 /**
@@ -406,13 +410,19 @@ export async function getProdPluginPaths(): Promise<
 /**
  * Get plugin paths based on current mode
  *
- * - LOOPLIA_DEV=true: Use source plugins directly (development)
- *   - LOOPLIA_DEV_ROOT specifies repo root (defaults to cwd)
- * - Otherwise: Scan ~/.looplia for installed plugins (production)
+ * Priority:
+ * 1. LOOPLIA_HOME env var: Scan custom path (for testing/custom installations)
+ * 2. LOOPLIA_DEV=true: Use source plugins directly (development)
+ *    - LOOPLIA_DEV_ROOT specifies repo root (defaults to cwd)
+ * 3. Default: Scan ~/.looplia for installed plugins (production)
  */
 export async function getPluginPaths(): Promise<
   Array<{ type: "local"; path: string }>
 > {
+  // LOOPLIA_HOME takes precedence (for testing/custom installations)
+  if (process.env.LOOPLIA_HOME) {
+    return await getProdPluginPaths();
+  }
   if (process.env.LOOPLIA_DEV === "true") {
     const devRoot = process.env.LOOPLIA_DEV_ROOT ?? process.cwd();
     return getDevPluginPaths(devRoot);

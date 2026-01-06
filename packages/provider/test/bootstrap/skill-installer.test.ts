@@ -5,9 +5,9 @@
  * - CORE_SKILLS constant
  * - isCoreSkill()
  * - getPluginSkills()
- * - getSelectivePluginPaths()
+ * - getSelectivePluginPaths() with test workspace
  *
- * Uses temp directories with mock plugin structures.
+ * Uses LOOPLIA_HOME env var to redirect to temp workspace for integration tests.
  */
 
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
@@ -22,9 +22,14 @@ import {
   getSelectivePluginPaths,
   isCoreSkill,
 } from "../../src/bootstrap/skill-installer";
+import {
+  createLoopliaWorkspace,
+  createMockPluginInWorkspace,
+  type LoopliaTestWorkspace,
+} from "../claude-agent-sdk/fixtures/test-data";
 
 /**
- * Create a mock plugin with specified skills
+ * Create a mock plugin with specified skills (for unit tests with custom temp dir)
  */
 async function createMockPlugin(
   basePath: string,
@@ -187,27 +192,109 @@ describe("bootstrap/skill-installer", () => {
     });
   });
 
-  describe("getSelectivePluginPaths()", () => {
+  describe("getSelectivePluginPaths() - backward compatibility", () => {
     it("should return all plugins when requiredSkills is undefined", async () => {
-      // This test uses the real getPluginPaths() which reads from ~/.looplia
-      // We can only verify it doesn't throw and returns an array
       const result = await getSelectivePluginPaths(undefined);
-
       expect(Array.isArray(result)).toBe(true);
     });
 
     it("should return all plugins when requiredSkills is empty array", async () => {
       const result = await getSelectivePluginPaths([]);
-
       expect(Array.isArray(result)).toBe(true);
     });
 
     it("should handle unknown skills gracefully", async () => {
-      // Request a skill that doesn't exist
       const result = await getSelectivePluginPaths(["non-existent-skill-xyz"]);
-
-      // Should not throw, returns filtered array (may be empty or just core plugins)
       expect(Array.isArray(result)).toBe(true);
+    });
+  });
+
+  describe("getSelectivePluginPaths() - with test workspace", () => {
+    let workspace: LoopliaTestWorkspace;
+    let originalHome: string | undefined;
+
+    beforeEach(async () => {
+      workspace = await createLoopliaWorkspace();
+      originalHome = process.env.LOOPLIA_HOME;
+      process.env.LOOPLIA_HOME = workspace.path;
+    });
+
+    afterEach(async () => {
+      process.env.LOOPLIA_HOME = originalHome;
+      await workspace.cleanup();
+    });
+
+    it("should filter to plugins containing required skills", async () => {
+      // Setup: Create plugins with different skills
+      await createMockPluginInWorkspace(workspace, "plugin-a", [
+        "skill-a",
+        "skill-b",
+      ]);
+      await createMockPluginInWorkspace(workspace, "plugin-b", [
+        "skill-c",
+        "workflow-executor", // Core skill
+      ]);
+      await createMockPluginInWorkspace(workspace, "plugin-c", ["skill-d"]);
+
+      // Act: Request only skill-a
+      const result = await getSelectivePluginPaths(["skill-a"]);
+      const paths = result.map((p) => p.path);
+
+      // Assert: plugin-a (has skill-a) and plugin-b (has core skill) should be included
+      expect(paths.some((p) => p.includes("plugin-a"))).toBe(true);
+      expect(paths.some((p) => p.includes("plugin-b"))).toBe(true);
+      // plugin-c (only has skill-d) should NOT be included
+      expect(paths.some((p) => p.includes("plugin-c"))).toBe(false);
+    });
+
+    it("should always include plugins with core skills", async () => {
+      // Setup: One plugin with core skill, one without
+      await createMockPluginInWorkspace(workspace, "core-plugin", [
+        "workflow-executor",
+        "workflow-validator",
+      ]);
+      await createMockPluginInWorkspace(workspace, "non-core-plugin", [
+        "custom-skill",
+      ]);
+
+      // Act: Request a non-existent skill (no direct match)
+      const result = await getSelectivePluginPaths(["non-existent-xyz"]);
+      const paths = result.map((p) => p.path);
+
+      // Assert: core-plugin should still be included due to core skills
+      expect(paths.some((p) => p.includes("core-plugin"))).toBe(true);
+      // non-core-plugin should NOT be included (no match)
+      expect(paths.some((p) => p.includes("non-core-plugin"))).toBe(false);
+    });
+
+    it("should deduplicate plugins when multiple required skills are in same plugin", async () => {
+      // Setup: Single plugin with multiple skills
+      await createMockPluginInWorkspace(workspace, "multi-skill-plugin", [
+        "skill-a",
+        "skill-b",
+        "skill-c",
+      ]);
+
+      // Act: Request multiple skills from same plugin
+      const result = await getSelectivePluginPaths([
+        "skill-a",
+        "skill-b",
+        "skill-c",
+      ]);
+      const paths = result.map((p) => p.path);
+
+      // Assert: Plugin appears only once
+      const multiSkillCount = paths.filter((p) =>
+        p.includes("multi-skill-plugin")
+      ).length;
+      expect(multiSkillCount).toBe(1);
+    });
+
+    it("should return empty when no plugins exist and no required skills", async () => {
+      // Workspace is empty (no plugins created)
+      const result = await getSelectivePluginPaths(["some-skill"]);
+
+      expect(result).toHaveLength(0);
     });
   });
 
@@ -273,26 +360,56 @@ describe("bootstrap/skill-installer", () => {
   });
 
   describe("selective loading flow (workflow → skills → plugins)", () => {
-    it("should correctly chain workflow extraction to plugin filtering", async () => {
-      // Given: A workflow with specific skills
-      const workflow = createTestWorkflow("chain-test", [
-        "xlsx",
-        "pdf",
-        "custom-skill",
-      ]);
+    let workspace: LoopliaTestWorkspace;
+    let originalHome: string | undefined;
 
-      // When: Extract skills
-      const skills = extractWorkflowSkills(workflow);
-
-      // Then: Skills match workflow definition
-      expect(skills).toEqual(["xlsx", "pdf", "custom-skill"]);
-
-      // And: Can pass to selective loading (won't crash even if skills don't exist)
-      const plugins = await getSelectivePluginPaths(skills);
-      expect(Array.isArray(plugins)).toBe(true);
+    beforeEach(async () => {
+      workspace = await createLoopliaWorkspace();
+      originalHome = process.env.LOOPLIA_HOME;
+      process.env.LOOPLIA_HOME = workspace.path;
     });
 
-    it("should include core skills in filtering even when not in workflow", async () => {
+    afterEach(async () => {
+      process.env.LOOPLIA_HOME = originalHome;
+      await workspace.cleanup();
+    });
+
+    it("should correctly chain workflow extraction to plugin filtering", async () => {
+      // Setup: Create plugins
+      await createMockPluginInWorkspace(workspace, "xlsx-plugin", ["xlsx"]);
+      await createMockPluginInWorkspace(workspace, "pdf-plugin", ["pdf"]);
+      await createMockPluginInWorkspace(workspace, "unused-plugin", [
+        "unused-skill",
+      ]);
+
+      // Given: A workflow with specific skills
+      const workflow = createTestWorkflow("chain-test", ["xlsx", "pdf"]);
+
+      // When: Extract skills and filter plugins
+      const skills = extractWorkflowSkills(workflow);
+      const plugins = await getSelectivePluginPaths(skills);
+      const paths = plugins.map((p) => p.path);
+
+      // Then: Skills match workflow definition
+      expect(skills).toEqual(["xlsx", "pdf"]);
+
+      // And: Only needed plugins are loaded
+      expect(paths.some((p) => p.includes("xlsx-plugin"))).toBe(true);
+      expect(paths.some((p) => p.includes("pdf-plugin"))).toBe(true);
+      expect(paths.some((p) => p.includes("unused-plugin"))).toBe(false);
+    });
+
+    it("should include core skills plugin even when not in workflow", async () => {
+      // Setup: Create core plugin and custom plugin
+      await createMockPluginInWorkspace(workspace, "core-plugin", [
+        "workflow-executor",
+        "workflow-validator",
+        "registry-loader",
+      ]);
+      await createMockPluginInWorkspace(workspace, "custom-plugin", [
+        "my-skill",
+      ]);
+
       // Given: A workflow with only custom skills (no core skills)
       const workflow = createTestWorkflow("no-core-test", ["my-skill"]);
 
@@ -302,11 +419,14 @@ describe("bootstrap/skill-installer", () => {
       expect(skills).not.toContain("workflow-executor");
       expect(skills).not.toContain("workflow-validator");
 
-      // But getSelectivePluginPaths should internally add them
-      // We can't directly test this without mocking getPluginPaths,
-      // but we verify the function doesn't throw
+      // When: Filter plugins
       const plugins = await getSelectivePluginPaths(skills);
-      expect(Array.isArray(plugins)).toBe(true);
+      const paths = plugins.map((p) => p.path);
+
+      // Then: Core plugin is included (because it has core skills)
+      expect(paths.some((p) => p.includes("core-plugin"))).toBe(true);
+      // And: Custom plugin is included (because it has required skill)
+      expect(paths.some((p) => p.includes("custom-plugin"))).toBe(true);
     });
   });
 });

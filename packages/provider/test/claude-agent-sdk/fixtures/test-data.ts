@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -76,6 +76,79 @@ export async function createTempWorkspace(): Promise<{
       }
     },
   };
+}
+
+/**
+ * Looplia workspace structure for integration testing
+ */
+export type LoopliaTestWorkspace = {
+  path: string;
+  cleanup: () => Promise<void>;
+};
+
+/**
+ * Create an isolated looplia workspace that mirrors ~/.looplia structure
+ *
+ * Use with LOOPLIA_HOME env var:
+ * ```
+ * process.env.LOOPLIA_HOME = workspace.path;
+ * ```
+ */
+export async function createLoopliaWorkspace(): Promise<LoopliaTestWorkspace> {
+  const path = await mkdtemp(join(tmpdir(), "looplia-workspace-"));
+
+  // Create workspace structure (plugins go directly in LOOPLIA_HOME)
+  await mkdir(join(path, "sandbox"), { recursive: true });
+  await mkdir(join(path, "workflows"), { recursive: true });
+  await mkdir(join(path, "registry"), { recursive: true });
+
+  return {
+    path,
+    cleanup: async () => {
+      try {
+        await rm(path, { recursive: true, force: true });
+      } catch (error) {
+        console.warn(`Failed to cleanup looplia workspace ${path}:`, error);
+      }
+    },
+  };
+}
+
+/**
+ * Create a mock plugin in the test workspace
+ *
+ * @param workspace - The looplia workspace
+ * @param name - Plugin name (will be created as a directory)
+ * @param skills - Array of skill names to create in the plugin
+ */
+export async function createMockPluginInWorkspace(
+  workspace: LoopliaTestWorkspace,
+  name: string,
+  skills: string[]
+): Promise<string> {
+  const pluginPath = join(workspace.path, name);
+  await mkdir(join(pluginPath, ".claude-plugin"), { recursive: true });
+
+  // Create plugin.json
+  await writeFile(
+    join(pluginPath, ".claude-plugin", "plugin.json"),
+    JSON.stringify({ name, version: "1.0.0" })
+  );
+
+  // Create skills directories
+  if (skills.length > 0) {
+    await mkdir(join(pluginPath, "skills"), { recursive: true });
+    for (const skill of skills) {
+      const skillDir = join(pluginPath, "skills", skill);
+      await mkdir(skillDir, { recursive: true });
+      await writeFile(
+        join(skillDir, "SKILL.md"),
+        `---\nname: ${skill}\ndescription: Mock skill for testing\n---\n# ${skill}\n\nMock skill content.`
+      );
+    }
+  }
+
+  return pluginPath;
 }
 
 /**
