@@ -246,6 +246,18 @@ export async function copyPlugins(
     JSON.stringify(createDefaultProfile(), null, 2),
     "utf-8"
   );
+
+  // Download default skill marketplaces (e.g., Anthropic skills)
+  // This clones repos to plugins/ and generates registry/sources.json
+  const { installDefaultSources } = await import("./skill-installer");
+  const installResults = await installDefaultSources();
+  for (const result of installResults) {
+    if (result.status === "failed") {
+      console.warn(
+        `Warning: Failed to download ${result.skill}: ${result.error}`
+      );
+    }
+  }
 }
 
 /**
@@ -385,7 +397,9 @@ export async function getProdPluginPaths(): Promise<
   Array<{ type: "local"; path: string }>
 > {
   const loopliaPath = getLoopliaPluginPath();
+  const results: Array<{ type: "local"; path: string }> = [];
 
+  // Scan root level (first-party plugins: looplia-core, looplia-writer)
   try {
     const entries = await readdir(loopliaPath, { withFileTypes: true });
     const pluginDirs = entries
@@ -394,17 +408,35 @@ export async function getProdPluginPaths(): Promise<
           e.isDirectory() &&
           !e.name.startsWith(".") &&
           e.name !== "sandbox" &&
-          e.name !== "workflows"
+          e.name !== "workflows" &&
+          e.name !== "plugins" &&
+          e.name !== "registry"
       )
       .map((e) => e.name);
 
-    return pluginDirs.map((name) => ({
-      type: "local" as const,
-      path: join(loopliaPath, name),
-    }));
+    for (const name of pluginDirs) {
+      results.push({ type: "local", path: join(loopliaPath, name) });
+    }
   } catch {
-    return [];
+    // Ignore errors reading root
   }
+
+  // Scan plugins/ directory (third-party plugins from marketplaces)
+  const pluginsDir = join(loopliaPath, "plugins");
+  try {
+    const entries = await readdir(pluginsDir, { withFileTypes: true });
+    const thirdPartyDirs = entries
+      .filter((e) => e.isDirectory() && !e.name.startsWith("."))
+      .map((e) => e.name);
+
+    for (const name of thirdPartyDirs) {
+      results.push({ type: "local", path: join(pluginsDir, name) });
+    }
+  } catch {
+    // plugins/ directory may not exist yet
+  }
+
+  return results;
 }
 
 /**

@@ -10,13 +10,24 @@
  */
 
 import { exec } from "node:child_process";
-import { mkdir, readdir } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import type { InstallResult } from "@looplia-core/core";
 import { pathExists } from "../utils/fs";
 import { getPluginPaths } from "./index";
+
+/**
+ * Default sources configuration type
+ */
+type DefaultSourcesConfig = {
+  sources: Array<{
+    name: string;
+    url: string;
+    description?: string;
+  }>;
+};
 
 const execAsync = promisify(exec);
 
@@ -174,4 +185,116 @@ export async function getPluginSkills(pluginPath: string): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+/**
+ * Get path to default-sources.json config
+ * Resolves from project root where .claude-plugin/ lives
+ */
+function getDefaultSourcesPath(): string {
+  // Use import.meta.dir for Bun, fallback to __dirname pattern
+  const currentDir =
+    typeof import.meta.dir === "string"
+      ? import.meta.dir
+      : join(homedir(), ".looplia"); // Fallback
+
+  // Navigate from src/bootstrap/ → project root → .claude-plugin/
+  // Path: packages/provider/src/bootstrap/ → ../../../../.claude-plugin/
+  return join(
+    currentDir,
+    "..",
+    "..",
+    "..",
+    "..",
+    ".claude-plugin",
+    "default-sources.json"
+  );
+}
+
+/**
+ * Install all default marketplace sources during looplia init
+ *
+ * Reads from .claude-plugin/default-sources.json and:
+ * 1. Clones repos to ~/.looplia/plugins/{name}/
+ * 2. Generates registry/sources.json entries
+ *
+ * @returns Install results for each source
+ */
+export async function installDefaultSources(): Promise<InstallResult[]> {
+  const loopliaPath = process.env.LOOPLIA_HOME ?? join(homedir(), ".looplia");
+  const pluginsDir = join(loopliaPath, "plugins");
+  const registryDir = join(loopliaPath, "registry");
+
+  await mkdir(pluginsDir, { recursive: true });
+  await mkdir(registryDir, { recursive: true });
+
+  // Read default sources config
+  const configPath = getDefaultSourcesPath();
+  let config: DefaultSourcesConfig;
+  try {
+    const content = await readFile(configPath, "utf-8");
+    config = JSON.parse(content);
+  } catch {
+    // Config not found - return empty (graceful degradation)
+    return [];
+  }
+
+  const results: InstallResult[] = [];
+  const sourceEntries: Array<{
+    id: string;
+    type: string;
+    url: string;
+    enabled: boolean;
+    priority: number;
+    addedAt: string;
+  }> = [];
+
+  for (const source of config.sources) {
+    const targetPath = join(pluginsDir, source.name);
+
+    try {
+      if (await pathExists(targetPath)) {
+        // Already cloned - do git pull
+        await execAsync("git pull", { cwd: targetPath });
+        results.push({
+          skill: source.name,
+          status: "updated",
+          path: targetPath,
+        });
+      } else {
+        // Clone the repository
+        await execAsync(`git clone "${source.url}" "${targetPath}"`);
+        results.push({
+          skill: source.name,
+          status: "installed",
+          path: targetPath,
+        });
+      }
+
+      // Add to sources.json entries
+      sourceEntries.push({
+        id: `github:${source.name}`,
+        type: "github",
+        url: source.url,
+        enabled: true,
+        priority: 50,
+        addedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      results.push({
+        skill: source.name,
+        status: "failed",
+        error: message,
+      });
+    }
+  }
+
+  // Write sources.json with all configured sources
+  if (sourceEntries.length > 0) {
+    const sourcesPath = join(registryDir, "sources.json");
+    await writeFile(sourcesPath, JSON.stringify(sourceEntries, null, 2));
+  }
+
+  return results;
 }

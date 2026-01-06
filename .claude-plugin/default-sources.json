@@ -1,0 +1,11 @@
+{
+  "$schema": "https://looplia.com/schema/default-sources.json",
+  "description": "Default skill marketplaces to install during looplia init",
+  "sources": [
+    {
+      "name": "anthropic-skills",
+      "url": "https://github.com/anthropics/skills",
+      "description": "Official Anthropic skills - xlsx, pdf, pptx, docx, frontend-design, and more"
+    }
+  ]
+}

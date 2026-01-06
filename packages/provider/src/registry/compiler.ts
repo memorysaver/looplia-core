@@ -10,9 +10,14 @@
  * @see docs/DESIGN-0.7.0.md
  */
 
+import { exec } from "node:child_process";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { promisify } from "node:util";
+
+const execAsync = promisify(exec);
+
 import type {
   CompiledRegistry,
   CompiledSkill,
@@ -504,6 +509,20 @@ function formatTitle(name: string): string {
 }
 
 /**
+ * Get git remote URL for a repository
+ */
+async function getGitRemoteUrl(repoPath: string): Promise<string | undefined> {
+  try {
+    const { stdout } = await execAsync("git remote get-url origin", {
+      cwd: repoPath,
+    });
+    return stdout.trim() || undefined;
+  } catch {
+    return;
+  }
+}
+
+/**
  * Scan a single plugin directory for skills
  */
 async function scanPluginDirectory(
@@ -517,6 +536,10 @@ async function scanPluginDirectory(
   if (!(await pathExists(skillsPath))) {
     return skills;
   }
+
+  // For third-party plugins, try to get git remote URL
+  const gitUrl =
+    sourceType === "thirdparty" ? await getGitRemoteUrl(pluginPath) : undefined;
 
   try {
     const skillEntries = await readdir(skillsPath, { withFileTypes: true });
@@ -544,6 +567,7 @@ async function scanPluginDirectory(
           sourceType,
           installed: true,
           installedPath: skillPath,
+          gitUrl,
         });
       }
     }
