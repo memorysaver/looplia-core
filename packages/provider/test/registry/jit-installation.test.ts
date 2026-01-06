@@ -28,6 +28,11 @@ import {
 } from "../../src/registry/compiler";
 import { ensureWorkflowSkills } from "../../src/registry/loader";
 import { pathExists } from "../../src/utils/fs";
+import {
+  createLoopliaWorkspace,
+  createMockPluginInWorkspace,
+  type LoopliaTestWorkspace,
+} from "../claude-agent-sdk/fixtures/test-data";
 
 // Track installed skills for cleanup
 let installedSkills: string[] = [];
@@ -35,7 +40,7 @@ let installedSkills: string[] = [];
 // Top-level regex patterns
 const SKILLS_PATH_PREFIX_PATTERN = /^skills\//;
 
-// Plugins directory path
+// Plugins directory path - will be updated per test workspace
 const PLUGINS_DIR = join(homedir(), ".looplia", "plugins");
 
 /**
@@ -144,6 +149,28 @@ describe("registry/jit-installation", () => {
   });
 
   describe("ensureWorkflowSkills - all skills installed", () => {
+    let workspace: LoopliaTestWorkspace;
+    let originalHome: string | undefined;
+
+    beforeEach(async () => {
+      // Create test workspace with mock plugins
+      workspace = await createLoopliaWorkspace();
+      originalHome = process.env.LOOPLIA_HOME;
+      process.env.LOOPLIA_HOME = workspace.path;
+
+      // Create mock plugin with core skills
+      await createMockPluginInWorkspace(workspace, "looplia-core", [
+        "workflow-executor",
+        "workflow-validator",
+        "registry-loader",
+      ]);
+    });
+
+    afterEach(async () => {
+      process.env.LOOPLIA_HOME = originalHome;
+      await workspace.cleanup();
+    });
+
     it(
       "should return ready: true when all skills are already installed",
       async () => {
@@ -184,6 +211,26 @@ describe("registry/jit-installation", () => {
   });
 
   describe("ensureWorkflowSkills - skill not in registry", () => {
+    let workspace: LoopliaTestWorkspace;
+    let originalHome: string | undefined;
+
+    beforeEach(async () => {
+      workspace = await createLoopliaWorkspace();
+      originalHome = process.env.LOOPLIA_HOME;
+      process.env.LOOPLIA_HOME = workspace.path;
+
+      // Create mock plugin with core skills
+      await createMockPluginInWorkspace(workspace, "looplia-core", [
+        "workflow-executor",
+        "workflow-validator",
+      ]);
+    });
+
+    afterEach(async () => {
+      process.env.LOOPLIA_HOME = originalHome;
+      await workspace.cleanup();
+    });
+
     it(
       "should return ready: false for skill not in registry",
       async () => {
