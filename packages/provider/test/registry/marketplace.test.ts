@@ -128,7 +128,7 @@ describe("github registry integration", () => {
   });
 
   describe("marketplace JSON parsing", () => {
-    it("should correctly parse marketplace.json format", () => {
+    it("should correctly parse Anthropic-style marketplace.json (with skills array)", () => {
       // Mock marketplace.json content
       const marketplaceJson = {
         name: "anthropic-skills",
@@ -165,6 +165,96 @@ describe("github registry integration", () => {
         name: "algorithmic-art",
         skillPath: "skills/algorithmic-art",
       });
+    });
+
+    it("should correctly parse ComposioHQ-style marketplace.json (no skills array)", () => {
+      // Mock ComposioHQ marketplace.json content
+      type ComposioPlugin = {
+        name: string;
+        description: string;
+        source: string;
+        skills?: string[];
+      };
+      const marketplaceJson: { name: string; plugins: ComposioPlugin[] } = {
+        name: "awesome-claude-skills",
+        plugins: [
+          {
+            name: "brand-guidelines",
+            description: "Brand colors and typography",
+            source: "./brand-guidelines",
+          },
+          {
+            name: "mcp-builder",
+            description: "MCP server builder",
+            source: "./mcp-builder",
+          },
+        ],
+      };
+
+      // Parse skills from ComposioHQ format (no skills array)
+      const plugins: Array<{ name: string; skillName: string }> = [];
+      for (const plugin of marketplaceJson.plugins) {
+        if (!plugin.skills?.length) {
+          // ComposioHQ style: source IS the skill, name matches plugin name
+          plugins.push({
+            name: plugin.name,
+            skillName: plugin.name, // Skill name = plugin name
+          });
+        }
+      }
+
+      expect(plugins).toHaveLength(2);
+      expect(plugins[0]).toEqual({
+        name: "brand-guidelines",
+        skillName: "brand-guidelines",
+      });
+      expect(plugins[1]).toEqual({
+        name: "mcp-builder",
+        skillName: "mcp-builder",
+      });
+    });
+
+    it("should handle unified marketplace parsing for both formats", () => {
+      // Mock mixed marketplace with both Anthropic and ComposioHQ style entries
+      type MixedPlugin = {
+        name: string;
+        description: string;
+        source: string;
+        skills?: string[];
+      };
+      const marketplaceJson: { name: string; plugins: MixedPlugin[] } = {
+        name: "test-marketplace",
+        plugins: [
+          {
+            name: "doc-skills",
+            description: "Document skills (Anthropic style)",
+            source: "./",
+            skills: ["./skills/xlsx", "./skills/pdf"],
+          },
+          {
+            name: "custom-skill",
+            description: "Single skill (ComposioHQ style)",
+            source: "./custom-skill",
+          },
+        ],
+      };
+
+      const results: Array<{ pluginName: string; skillCount: number }> = [];
+
+      for (const plugin of marketplaceJson.plugins) {
+        if (plugin.skills?.length) {
+          results.push({
+            pluginName: plugin.name,
+            skillCount: plugin.skills.length,
+          });
+        } else {
+          results.push({ pluginName: plugin.name, skillCount: 1 });
+        }
+      }
+
+      expect(results).toHaveLength(2);
+      expect(results[0]).toEqual({ pluginName: "doc-skills", skillCount: 2 });
+      expect(results[1]).toEqual({ pluginName: "custom-skill", skillCount: 1 });
     });
   });
 });

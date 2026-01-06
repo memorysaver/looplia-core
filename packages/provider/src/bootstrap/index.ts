@@ -258,6 +258,10 @@ export async function copyPlugins(
       );
     }
   }
+
+  // Compile skill catalog for query-executor lookups
+  const { compileRegistry } = await import("../registry/compiler");
+  await compileRegistry();
 }
 
 /**

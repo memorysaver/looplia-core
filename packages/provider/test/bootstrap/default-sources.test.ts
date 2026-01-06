@@ -275,26 +275,27 @@ describe("bootstrap/default-sources", () => {
       });
 
       it(
-        "should clone anthropic-skills from GitHub",
+        "should split anthropic-skills into document-skills and example-skills",
         async () => {
           const results = await installDefaultSources();
 
-          // Find result for anthropic-skills
-          const anthropicResult = results.find(
-            (r) => r.skill === "anthropic-skills"
+          // Find results for split plugins
+          const docResult = results.find((r) => r.skill === "document-skills");
+          const exampleResult = results.find(
+            (r) => r.skill === "example-skills"
           );
 
-          // Should have installed or updated (if already exists)
-          expect(anthropicResult).toBeDefined();
-          expect(["installed", "updated"]).toContain(anthropicResult?.status);
+          // Should have installed (split from anthropic-skills)
+          expect(docResult).toBeDefined();
+          expect(docResult?.status).toBe("installed");
+          expect(exampleResult).toBeDefined();
+          expect(exampleResult?.status).toBe("installed");
 
-          // Verify directory was created
-          const pluginPath = join(
-            workspace.path,
-            "plugins",
-            "anthropic-skills"
-          );
-          expect(await pathExists(pluginPath)).toBe(true);
+          // Verify directories were created
+          const docPath = join(workspace.path, "plugins", "document-skills");
+          const examplePath = join(workspace.path, "plugins", "example-skills");
+          expect(await pathExists(docPath)).toBe(true);
+          expect(await pathExists(examplePath)).toBe(true);
         },
         { timeout: 60_000 }
       );
@@ -304,19 +305,31 @@ describe("bootstrap/default-sources", () => {
         async () => {
           await installDefaultSources();
 
-          const pluginPath = join(
+          // Check document-skills plugin structure
+          const docPluginPath = join(
             workspace.path,
             "plugins",
-            "anthropic-skills"
+            "document-skills"
           );
-          const skillsDir = join(pluginPath, "skills");
+          const docSkillsDir = join(docPluginPath, "skills");
 
           // Should have skills directory
-          expect(await pathExists(skillsDir)).toBe(true);
+          expect(await pathExists(docSkillsDir)).toBe(true);
 
-          // Should have at least some skills (xlsx, pdf, etc.)
-          const entries = await readdir(skillsDir);
-          expect(entries.length).toBeGreaterThan(0);
+          // Should have document skills (xlsx, pdf, docx, pptx)
+          const docSkills = await readdir(docSkillsDir);
+          expect(docSkills).toContain("xlsx");
+          expect(docSkills).toContain("pdf");
+          expect(docSkills).toContain("docx");
+          expect(docSkills).toContain("pptx");
+
+          // Should have plugin.json
+          const pluginJsonPath = join(
+            docPluginPath,
+            ".claude-plugin",
+            "plugin.json"
+          );
+          expect(await pathExists(pluginJsonPath)).toBe(true);
         },
         { timeout: 60_000 }
       );
@@ -346,19 +359,83 @@ describe("bootstrap/default-sources", () => {
       );
 
       it(
-        "should update existing clone with git pull",
+        "should reinstall plugins on second call (fresh clone + split)",
         async () => {
-          // First clone
+          // First install
           const results1 = await installDefaultSources();
-          const result1 = results1.find((r) => r.skill === "anthropic-skills");
-          expect(result1?.status).toBe("installed");
+          const docResult1 = results1.find(
+            (r) => r.skill === "document-skills"
+          );
+          expect(docResult1?.status).toBe("installed");
 
-          // Second call should do git pull
+          // Second call reinstalls (clones fresh to temp, then splits)
+          // This tests idempotency - should still succeed
           const results2 = await installDefaultSources();
-          const result2 = results2.find((r) => r.skill === "anthropic-skills");
-          expect(result2?.status).toBe("updated");
+          const docResult2 = results2.find(
+            (r) => r.skill === "document-skills"
+          );
+          expect(docResult2?.status).toBe("installed");
         },
         { timeout: 120_000 }
+      );
+
+      it(
+        "should create individual plugins from awesome-claude-skills (ComposioHQ)",
+        async () => {
+          const results = await installDefaultSources();
+
+          // ComposioHQ style: each plugins[] entry = 1 plugin
+          const brandResult = results.find(
+            (r) => r.skill === "brand-guidelines"
+          );
+          const mcpResult = results.find((r) => r.skill === "mcp-builder");
+
+          expect(brandResult).toBeDefined();
+          expect(brandResult?.status).toBe("installed");
+          expect(mcpResult).toBeDefined();
+          expect(mcpResult?.status).toBe("installed");
+
+          // Verify directories created
+          const brandPath = join(workspace.path, "plugins", "brand-guidelines");
+          const mcpPath = join(workspace.path, "plugins", "mcp-builder");
+          expect(await pathExists(brandPath)).toBe(true);
+          expect(await pathExists(mcpPath)).toBe(true);
+        },
+        { timeout: 60_000 }
+      );
+
+      it(
+        "should create ComposioHQ plugins with single skill matching plugin name",
+        async () => {
+          await installDefaultSources();
+
+          // Each ComposioHQ plugin has 1 skill with same name as plugin
+          const brandSkillsDir = join(
+            workspace.path,
+            "plugins",
+            "brand-guidelines",
+            "skills"
+          );
+          expect(await pathExists(brandSkillsDir)).toBe(true);
+
+          const brandSkills = await readdir(brandSkillsDir);
+          expect(brandSkills).toHaveLength(1);
+          expect(brandSkills).toContain("brand-guidelines"); // Skill name = plugin name
+        },
+        { timeout: 60_000 }
+      );
+
+      it(
+        "should install 29+ plugins total from both marketplaces",
+        async () => {
+          const results = await installDefaultSources();
+
+          const installed = results.filter((r) => r.status === "installed");
+
+          // 2 from Anthropic (document-skills, example-skills) + 27 from ComposioHQ
+          expect(installed.length).toBeGreaterThanOrEqual(29);
+        },
+        { timeout: 60_000 }
       );
     }
   );

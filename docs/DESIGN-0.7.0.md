@@ -185,10 +185,21 @@ The workflow uses `media-reviewer` but doesn't explicitly declare it. The system
 
 ### 3.2 Data Flow
 
+**Init Command (looplia init):**
+```
+1. User: looplia init
+2. Copy bundled plugins (looplia-core, looplia-writer) to ~/.looplia/
+3. Clone marketplace repos to temp directory
+4. Read marketplace.json, split by plugins[] entries
+5. For each entry: create plugin folder, copy skills, generate plugin.json
+6. Compile skill-catalog.json via compileRegistry()
+7. Output: ~/.looplia/ with 29+ plugins ready for selective loading
+```
+
 **Build Command (Workflow Generation):**
 ```
 1. User: looplia build "analyze videos and generate report"
-2. registry-loader skill syncs from all sources
+2. registry-loader reads cached skill-catalog.json
 3. skill-capability-matcher searches skill catalog
 4. workflow-schema-composer generates workflow with skills: declaration
 5. Output: workflow with explicit skill dependencies
@@ -363,10 +374,37 @@ GitHub sources automatically detect the registry format by trying in order:
 1. **marketplace.json**: First tries `.claude-plugin/marketplace.json` (used by anthropics/skills and similar repos)
 2. **registry.json**: Falls back to `releases/latest/download/registry.json` (standard format)
 
-**Marketplace Format Example:**
+**Unified Marketplace Handling (v0.7.0 Implementation):**
 
-Repos using marketplace.json format (like `github.com/anthropics/skills`):
+Both marketplace formats use the same `plugins[]` array but with different structures:
 
+| Format | `skills` key | `source` key | Result |
+|--------|--------------|--------------|--------|
+| Anthropic | Array of skill paths | `"./"` (root) | One plugin per entry with multiple skills |
+| ComposioHQ | Not present | Path to skill dir | One plugin per entry with 1 skill |
+
+Each `plugins[]` entry creates one plugin folder in `~/.looplia/plugins/`:
+
+```typescript
+// packages/provider/src/bootstrap/skill-installer.ts
+for (const plugin of marketplace.plugins) {
+  const pluginDir = join(pluginsDir, plugin.name);
+
+  if (plugin.skills?.length) {
+    // Anthropic style: copy each skill from skills array
+    for (const skillPath of plugin.skills) {
+      await cp(join(temp, skillPath), join(pluginDir, "skills", basename(skillPath)));
+    }
+  } else {
+    // ComposioHQ style: source IS the skill, copy as skill named after plugin
+    await cp(join(temp, plugin.source), join(pluginDir, "skills", plugin.name));
+  }
+}
+```
+
+**Marketplace Format Examples:**
+
+Anthropic style (with `skills` array):
 ```json
 {
   "name": "anthropic-agent-skills",
@@ -374,13 +412,28 @@ Repos using marketplace.json format (like `github.com/anthropics/skills`):
     {
       "name": "document-skills",
       "description": "Document processing suite",
-      "skills": ["./skills/xlsx", "./skills/docx", "./skills/pdf"]
+      "source": "./",
+      "skills": ["./skills/xlsx", "./skills/docx", "./skills/pdf", "./skills/pptx"]
     }
   ]
 }
 ```
+→ Creates `document-skills/` plugin with 4 skills
 
-Skills from marketplace.json repos are indexed with `skillPath` for selective JIT installation.
+ComposioHQ style (no `skills` array):
+```json
+{
+  "name": "awesome-claude-skills",
+  "plugins": [
+    {
+      "name": "brand-guidelines",
+      "description": "Brand colors and typography",
+      "source": "./brand-guidelines"
+    }
+  ]
+}
+```
+→ Creates `brand-guidelines/` plugin with 1 skill
 
 ### 4.3 Skill Catalog
 
@@ -1319,41 +1372,87 @@ export async function ensureWorkflowSkills(
 
 ```
 ~/.looplia/
-├── registry/                           # NEW: Registry system
-│   ├── skill-catalog.json              # Skill catalog (aggregated from all sources)
-│   ├── sources.json                    # Configured sources
-│   └── cache/                          # Downloaded registry caches per source
-│       └── looplia-official/           # Cached remote registry
+├── registry/                           # Registry system
+│   ├── skill-catalog.json              # Compiled during init (56+ skills)
+│   └── sources.json                    # Configured marketplace sources
 │
-├── looplia-core/                       # Built-in core plugin (from bundle)
+├── looplia-core/                       # First-party: core plugin (from bundle)
 │   ├── .claude-plugin/
 │   │   └── plugin.json
 │   └── skills/
 │       ├── workflow-executor/
 │       ├── workflow-validator/
-│       ├── registry-loader/            # NEW: v0.7.0
+│       ├── registry-loader/
 │       └── ...
 │
-├── looplia-writer/                     # Built-in writer plugin (from bundle)
+├── looplia-writer/                     # First-party: writer plugin (from bundle)
 │   └── skills/
 │       ├── media-reviewer/
 │       ├── idea-synthesis/
 │       └── ...
 │
-├── plugins/                            # NEW: Third-party plugins (live cloned)
-│   ├── user-looplia-my-skills/         # e.g., from github.com/user/looplia-my-skills
-│   │   ├── .claude-plugin/
+├── plugins/                            # Third-party plugins (from marketplaces)
+│   │
+│   │   # Anthropic marketplace (split by plugins[] entries)
+│   ├── document-skills/                # 4 skills
+│   │   ├── .claude-plugin/plugin.json  # Generated with source metadata
 │   │   └── skills/
-│   └── another-repo/
+│   │       ├── xlsx/
+│   │       ├── pdf/
+│   │       ├── docx/
+│   │       └── pptx/
+│   ├── example-skills/                 # 12 skills
+│   │   ├── .claude-plugin/plugin.json
+│   │   └── skills/
+│   │       ├── algorithmic-art/
+│   │       ├── frontend-design/
+│   │       └── ...
+│   │
+│   │   # ComposioHQ marketplace (each entry = 1 plugin with 1 skill)
+│   ├── brand-guidelines/               # 1 skill
+│   │   ├── .claude-plugin/plugin.json
+│   │   └── skills/brand-guidelines/
+│   ├── mcp-builder/                    # 1 skill
+│   │   ├── .claude-plugin/plugin.json
+│   │   └── skills/mcp-builder/
+│   ├── slack-gif-creator/              # 1 skill
+│   │   └── ...
+│   └── ... (29 total plugins from 2 marketplaces)
 │
-├── sandbox/                            # Execution sandboxes (existing)
+├── sandbox/                            # Execution sandboxes
 │   └── {sandboxId}/
 │
-├── workflows/                          # Workflow definitions (existing)
+├── workflows/                          # Workflow definitions
 │   └── *.md
 │
-├── looplia.setting.json                # Provider configuration (existing)
-└── user-profile.json                   # User settings (existing)
+├── looplia.setting.json                # Provider configuration
+└── user-profile.json                   # User settings
+```
+
+**Plugin Path Resolution:**
+
+`getProdPluginPaths()` scans two levels:
+1. **Root level**: First-party plugins (`looplia-core`, `looplia-writer`)
+2. **plugins/ directory**: Third-party plugins from marketplaces
+
+```typescript
+// packages/provider/src/bootstrap/index.ts
+const results = [];
+
+// Scan root (first-party)
+const rootEntries = await readdir(loopliaPath);
+for (const name of rootEntries) {
+  if (name !== "plugins" && name !== "sandbox" && ...) {
+    results.push({ type: "local", path: join(loopliaPath, name) });
+  }
+}
+
+// Scan plugins/ (third-party)
+const pluginsDir = join(loopliaPath, "plugins");
+const thirdPartyEntries = await readdir(pluginsDir);
+for (const name of thirdPartyEntries) {
+  results.push({ type: "local", path: join(pluginsDir, name) });
+}
 ```
 
 ### 9.2 GitHub Release Assets

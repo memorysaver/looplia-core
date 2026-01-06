@@ -510,8 +510,28 @@ function formatTitle(name: string): string {
 
 /**
  * Get git remote URL for a repository
+ * Tries multiple methods:
+ * 1. Read from plugin.json source.url (marketplace-installed plugins)
+ * 2. Run git remote get-url origin (git-cloned plugins)
  */
 async function getGitRemoteUrl(repoPath: string): Promise<string | undefined> {
+  // 1. Try reading from plugin.json (marketplace plugins have source.url)
+  const pluginJsonPath = join(repoPath, ".claude-plugin", "plugin.json");
+  try {
+    if (await pathExists(pluginJsonPath)) {
+      const content = await readFile(pluginJsonPath, "utf-8");
+      const pluginJson = JSON.parse(content) as {
+        source?: { url?: string };
+      };
+      if (pluginJson.source?.url) {
+        return pluginJson.source.url;
+      }
+    }
+  } catch {
+    // Fall through to git method
+  }
+
+  // 2. Try git remote (for directly cloned repos)
   try {
     const { stdout } = await execAsync("git remote get-url origin", {
       cwd: repoPath,
