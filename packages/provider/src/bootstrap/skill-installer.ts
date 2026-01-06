@@ -249,64 +249,97 @@ export async function installDefaultSources(): Promise<InstallResult[]> {
     return [];
   }
 
-  const results: InstallResult[] = [];
-  const sourceEntries: Array<{
-    id: string;
-    type: string;
-    url: string;
-    enabled: boolean;
-    priority: number;
-    addedAt: string;
-  }> = [];
+  // Type for parallel install results
+  type SourceInstallResult = {
+    result: InstallResult;
+    sourceEntry?: {
+      id: string;
+      type: string;
+      url: string;
+      enabled: boolean;
+      priority: number;
+      addedAt: string;
+    };
+  };
 
-  for (const source of config.sources) {
-    const targetPath = join(pluginsDir, source.name);
+  // Install all sources in parallel for faster initialization
+  const installPromises = config.sources.map(
+    async (source): Promise<SourceInstallResult> => {
+      const targetPath = join(pluginsDir, source.name);
 
-    try {
-      if (await pathExists(targetPath)) {
-        // Already cloned - do git pull
-        await execAsync("git pull", { cwd: targetPath });
-        results.push({
-          skill: source.name,
-          status: "updated",
-          path: targetPath,
-        });
-      } else {
+      try {
+        if (await pathExists(targetPath)) {
+          // Already cloned - do git pull
+          await execAsync("git pull", { cwd: targetPath });
+          return {
+            result: {
+              skill: source.name,
+              status: "updated",
+              path: targetPath,
+            },
+            sourceEntry: {
+              id: `github:${source.name}`,
+              type: "github",
+              url: source.url,
+              enabled: true,
+              priority: 50,
+              addedAt: new Date().toISOString(),
+            },
+          };
+        }
+
         // Security: Validate git URL before shell execution
         if (!isValidGitUrl(source.url)) {
-          results.push({
-            skill: source.name,
-            status: "failed",
-            error: `Invalid or untrusted git URL: ${source.url}`,
-          });
-          continue;
+          return {
+            result: {
+              skill: source.name,
+              status: "failed",
+              error: `Invalid or untrusted git URL: ${source.url}`,
+            },
+          };
         }
 
         // Clone the repository
         await execAsync(`git clone "${source.url}" "${targetPath}"`);
-        results.push({
-          skill: source.name,
-          status: "installed",
-          path: targetPath,
-        });
+        return {
+          result: {
+            skill: source.name,
+            status: "installed",
+            path: targetPath,
+          },
+          sourceEntry: {
+            id: `github:${source.name}`,
+            type: "github",
+            url: source.url,
+            enabled: true,
+            priority: 50,
+            addedAt: new Date().toISOString(),
+          },
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          result: {
+            skill: source.name,
+            status: "failed",
+            error: message,
+          },
+        };
       }
+    }
+  );
 
-      // Add to sources.json entries
-      sourceEntries.push({
-        id: `github:${source.name}`,
-        type: "github",
-        url: source.url,
-        enabled: true,
-        priority: 50,
-        addedAt: new Date().toISOString(),
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      results.push({
-        skill: source.name,
-        status: "failed",
-        error: message,
-      });
+  // Wait for all parallel installs to complete
+  const installResults = await Promise.all(installPromises);
+
+  // Collect results and source entries
+  const results: InstallResult[] = [];
+  const sourceEntries: SourceInstallResult["sourceEntry"][] = [];
+
+  for (const { result, sourceEntry } of installResults) {
+    results.push(result);
+    if (sourceEntry) {
+      sourceEntries.push(sourceEntry);
     }
   }
 
