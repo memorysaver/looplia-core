@@ -15,6 +15,12 @@ import {
   execCLI,
 } from "../utils";
 
+// Read version from package.json for version tests
+const packageJson = JSON.parse(
+  readFileSync(join(__dirname, "../../package.json"), "utf-8")
+);
+const expectedVersion = `looplia ${packageJson.version}`;
+
 describe("CLI E2E Tests", () => {
   let tempDir: { path: string; cleanup: () => void };
 
@@ -61,14 +67,14 @@ describe("CLI E2E Tests", () => {
       const result = await execCLI(["--version"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia 0.6.10");
+      expect(result.stdout).toContain(expectedVersion);
     });
 
     it("should show version with -v flag", async () => {
       const result = await execCLI(["-v"]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("looplia 0.6.10");
+      expect(result.stdout).toContain(expectedVersion);
     });
 
     it("should error on unknown command", async () => {
