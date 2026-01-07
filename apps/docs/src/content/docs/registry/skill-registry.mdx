@@ -1,0 +1,127 @@
+---
+title: Skill Registry
+description: Discover, install, and manage AI skills from marketplaces
+---
+
+import { Aside, Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+The **Skill Registry** is a shadcn/ui-inspired system for discovering and installing AI skills from curated marketplaces. Skills are modular AI capabilities that can be composed into workflows.
+
+## How It Works
+
+The registry system enables:
+
+- **Skill Discovery** — Browse and search available skills from multiple sources
+- **On-demand Installation** — Install only the skills you need via JIT (just-in-time) cloning
+- **Version Management** — Update skills independently from the core CLI
+- **Selective Loading** — Declare required skills per workflow to reduce context usage
+
+---
+
+## Understanding Sources vs Skills
+
+| Concept | What it is | Command | When to use |
+|---------|------------|---------|-------------|
+| **Source** | A GitHub repo containing many skills (marketplace) | `looplia registry add <url>` | Access a whole collection of skills |
+| **Skill** | A single modular AI capability | `looplia skill add <name>` | Install a specific skill |
+
+Think of it like package managers:
+- **Source** = Adding a new npm registry or apt repository
+- **Skill** = Installing a specific package from available registries
+
+### Example Workflow
+
+1. Sources are configured (default: Anthropic + ComposioHQ)
+2. Skills from all sources appear in the catalog
+3. Install individual skills as needed:
+
+```bash
+# See all available skills from all sources
+looplia skill list --available
+
+# Install just what you need
+looplia skill add xlsx
+looplia skill add frontend-design
+```
+
+<Aside type="tip">
+Most users only need `looplia skill add`. Use `looplia registry add` only when you want skills from a third-party marketplace not included by default.
+</Aside>
+
+## Default Marketplaces
+
+Looplia ships with two official marketplace sources:
+
+<CardGrid>
+  <Card title="Anthropic Skills" icon="star">
+    Official skills from Anthropic including document processing, design tools, and productivity utilities.
+
+    [Browse skills on GitHub](https://github.com/anthropics/anthropic-agent-skills)
+  </Card>
+  <Card title="ComposioHQ Skills" icon="add-document">
+    Community-curated skills for brand guidelines, media creation, and more.
+
+    [Browse skills on GitHub](https://github.com/ComposioHQ/awesome-claude-skills)
+  </Card>
+</CardGrid>
+
+<Aside type="tip">
+Skills from default marketplaces are automatically cataloged during `looplia init`. Run `looplia skill list --available` to see all available skills.
+</Aside>
+
+---
+
+## Workflow Skills Declaration
+
+Workflows can declare which skills they need using the `skills:` field in frontmatter:
+
+```yaml
+---
+name: document-processor
+skills:
+  - xlsx
+  - pdf
+  - docx
+steps:
+  - skill: xlsx
+    input:
+      file: "{input.spreadsheet}"
+---
+```
+
+When you declare skills in your workflow:
+
+- **Only declared skills** are loaded into the Claude Code context
+- **Core skills** are always loaded automatically
+- This **reduces context window usage** significantly
+
+<Aside type="note">
+Without the `skills:` declaration, all installed skills are loaded. For large workspaces, explicitly declaring skills improves performance.
+</Aside>
+
+---
+
+## Learn More
+
+<CardGrid>
+  <LinkCard
+    title="Marketplace & Plugins"
+    description="Understand marketplace.json structure and plugin architecture"
+    href="/registry/marketplace-plugins/"
+  />
+  <LinkCard
+    title="Bootstrap Process"
+    description="How looplia init downloads sources and compiles the catalog"
+    href="/registry/bootstrap-process/"
+  />
+  <LinkCard
+    title="registry Command"
+    description="Manage skill sources and catalog"
+    href="/cli/registry/"
+  />
+  <LinkCard
+    title="skill Command"
+    description="Install and manage individual skills"
+    href="/cli/skill/"
+  />
+</CardGrid>

@@ -1,0 +1,288 @@
+---
+title: Bootstrap Process
+description: How looplia init bootstraps the registry system
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+When you run `looplia init`, the CLI bootstraps your workspace with plugins and skills from multiple sources. This page explains the complete bootstrap flow.
+
+## Overview
+
+The bootstrap process has three main phases:
+
+```
+looplia init
+    │
+    ▼
+┌─────────────────────────────────┐
+│ 1. Copy Built-in Plugins        │
+│    (looplia-core, looplia-writer)│
+└─────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────┐
+│ 2. Install Default Sources      │
+│    • Clone from GitHub          │
+│    • Detect marketplace format  │
+│    • Extract plugins            │
+└─────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────┐
+│ 3. Compile Skill Catalog        │
+│    • Scan local plugins         │
+│    • Parse SKILL.md metadata    │
+│    • Write skill-catalog.json   │
+└─────────────────────────────────┘
+```
+
+---
+
+## Phase 1: Copy Built-in Plugins
+
+The CLI ships with two built-in plugins that are copied to your workspace:
+
+| Plugin | Purpose |
+|--------|---------|
+| `looplia-core` | Infrastructure — workflow executor, validator, registry loader |
+| `looplia-writer` | Domain — content analysis skills (media-reviewer, idea-synthesis) |
+
+These are copied directly to `~/.looplia/` at the root level.
+
+---
+
+## Phase 2: Install Default Sources
+
+Looplia installs skills from two default marketplace sources:
+
+| Source | Repository |
+|--------|------------|
+| **Anthropic Skills** | [github.com/anthropics/skills](https://github.com/anthropics/skills) |
+| **ComposioHQ Skills** | [github.com/ComposioHQ/awesome-claude-skills](https://github.com/ComposioHQ/awesome-claude-skills) |
+
+### Installation Process
+
+For each source, the following steps occur:
+
+1. **Clone** — `git clone --depth 1` to a temp directory
+2. **Detect Format** — Check for `.claude-plugin/marketplace.json`
+3. **Extract Plugins** — Split marketplace into individual plugins
+4. **Copy to Workspace** — Write to `~/.looplia/plugins/`
+5. **Register Source** — Add entry to `sources.json`
+
+<Aside type="note">
+Sources are installed in parallel for faster initialization.
+</Aside>
+
+### Marketplace Format Detection
+
+Looplia auto-detects which format a marketplace uses:
+
+| Format | Detection | Structure |
+|--------|-----------|-----------|
+| **Anthropic** | Has `skills` array in plugin entries | One plugin entry → multiple skills |
+| **ComposioHQ** | Has `source` path only | One plugin entry → one skill |
+
+### Plugin Extraction Examples
+
+**Anthropic format** — One plugin with multiple skills:
+
+```json
+{
+  "plugins": [{
+    "name": "example-skills",
+    "description": "Document processing skills",
+    "skills": ["./skills/xlsx", "./skills/pdf", "./skills/docx"]
+  }]
+}
+```
+
+Creates:
+```
+~/.looplia/plugins/example-skills/
+├── .claude-plugin/
+│   └── plugin.json
+└── skills/
+    ├── xlsx/
+    ├── pdf/
+    └── docx/
+```
+
+**ComposioHQ format** — Each plugin is a single skill:
+
+```json
+{
+  "plugins": [{
+    "name": "brand-guidelines",
+    "description": "Apply brand styling",
+    "source": "./brand-guidelines"
+  }]
+}
+```
+
+Creates:
+```
+~/.looplia/plugins/brand-guidelines/
+├── .claude-plugin/
+│   └── plugin.json
+└── skills/
+    └── brand-guidelines/
+```
+
+---
+
+## Phase 3: Compile Skill Catalog
+
+After plugins are installed, the registry compiler scans all skills and builds `skill-catalog.json`.
+
+### Scanning Locations
+
+The compiler scans skills from three locations:
+
+```
+~/.looplia/
+├── looplia-core/skills/       # Built-in (sourceType: builtin)
+├── looplia-writer/skills/     # Built-in (sourceType: builtin)
+└── plugins/*/skills/          # Third-party (sourceType: thirdparty)
+```
+
+### Metadata Extraction
+
+For each skill directory, the compiler parses `SKILL.md` frontmatter:
+
+```yaml
+---
+name: xlsx
+description: |
+  Create and manipulate Excel spreadsheets with support for
+  formulas, formatting, and data analysis.
+category: generation
+tools: Read, Write, Bash
+model: claude-opus-4-5-20251101
+inputless: false
+---
+```
+
+### Category Inference
+
+If `category` is not specified in the frontmatter, looplia infers it from keywords:
+
+| Category | Keywords |
+|----------|----------|
+| `analysis` | review, analyze, scan |
+| `generation` | generate, synthesis, create |
+| `assembly` | assemble, document, compile |
+| `validation` | validate, check |
+| `search` | search, find |
+| `orchestration` | workflow, execute, orchestrat |
+| `utility` | (default) |
+
+### Capability Inference
+
+Capabilities are inferred from pattern matching:
+
+| Capability | Patterns |
+|------------|----------|
+| `media-processing` | media, video, audio, image |
+| `content-analysis` | content, text, document |
+| `structured-output` | json, schema, structured |
+| `workflow-management` | workflow, orchestrat |
+
+---
+
+## Data Structures
+
+### sources.json
+
+Located at `~/.looplia/registry/sources.json`:
+
+```json
+{
+  "sources": [
+    {
+      "id": "github:anthropics/skills",
+      "type": "github",
+      "url": "https://github.com/anthropics/skills",
+      "enabled": true,
+      "priority": 50,
+      "addedAt": "2026-01-07T12:00:00.000Z"
+    },
+    {
+      "id": "github:ComposioHQ/awesome-claude-skills",
+      "type": "github",
+      "url": "https://github.com/ComposioHQ/awesome-claude-skills",
+      "enabled": true,
+      "priority": 50,
+      "addedAt": "2026-01-07T12:00:00.000Z"
+    }
+  ]
+}
+```
+
+### skill-catalog.json
+
+Located at `~/.looplia/registry/skill-catalog.json`:
+
+```json
+{
+  "compiledAt": "2026-01-07T12:00:00.000Z",
+  "version": "1.0.0",
+  "sources": [...],
+  "skills": [
+    {
+      "name": "xlsx",
+      "title": "Xlsx",
+      "description": "Create and manipulate spreadsheets",
+      "plugin": "example-skills",
+      "category": "generation",
+      "capabilities": ["generation", "structured-output"],
+      "source": "github:anthropics/skills",
+      "sourceType": "thirdparty",
+      "installed": true,
+      "gitUrl": "https://github.com/anthropics/skills",
+      "skillPath": "skills/xlsx"
+    }
+  ],
+  "summary": {
+    "totalSkills": 56,
+    "byCategory": {
+      "generation": 20,
+      "analysis": 15,
+      "assembly": 10,
+      "utility": 11
+    },
+    "bySource": {
+      "github:anthropics/skills": 42,
+      "github:ComposioHQ/awesome-claude-skills": 14
+    }
+  }
+}
+```
+
+---
+
+## Re-initialization
+
+To update your workspace with the latest skills:
+
+```bash
+looplia init --yes
+```
+
+This will:
+- Re-download marketplace sources
+- Extract new/updated plugins
+- Recompile the skill catalog
+
+<Aside type="caution">
+Re-initialization overwrites plugin files but preserves your sandboxes, user profile, and provider settings.
+</Aside>
+
+---
+
+## See Also
+
+- [Skill Registry Overview](/registry/skill-registry/) — Discover and install skills
+- [Marketplace & Plugins](/registry/marketplace-plugins/) — Understanding the plugin architecture
+- [init Command](/cli/init/) — Full init command reference

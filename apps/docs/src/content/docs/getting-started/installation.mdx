@@ -61,6 +61,7 @@ bun run apps/cli/dist/index.js init --yes
 </Tabs>
 
 The `init` command creates a workspace at `~/.looplia/` with:
+- **Skills** from default marketplaces ([Anthropic](https://github.com/anthropics/anthropic-agent-skills), [ComposioHQ](https://github.com/ComposioHQ/awesome-claude-skills))
 - **Plugin files** — Skills and commands
 - **Workflow definitions** — Ready-to-use workflows like `writing-kit`
 - **Configuration** — User profile and settings
@@ -118,12 +119,16 @@ After installation, your workspace looks like this:
 
 ```
 ~/.looplia/
+├── registry/               # Skill catalog and sources
+│   ├── skill-catalog.json  # Skills from marketplaces
+│   └── sources.json        # Configured registry sources
 ├── looplia-core/           # Infrastructure plugin
 │   ├── commands/           # CLI commands
 │   ├── skills/             # Workflow execution skills
 │   └── hooks/              # Lifecycle hooks
 ├── looplia-writer/         # Domain plugin
 │   └── skills/             # Content analysis skills
+├── plugins/                # Third-party marketplace plugins
 ├── workflows/              # Workflow definitions
 │   └── writing-kit.md      # Built-in writing kit workflow
 ├── sandbox/                # Workflow execution sandboxes
@@ -135,4 +140,5 @@ After installation, your workspace looks like this:
 
 - [Quick Start](/getting-started/quick-start/) — Run your first workflow
 - [Core Concepts](/getting-started/concepts/) — Understand skills and workflows
+- [Skill Registry](/registry/skill-registry/) — Discover 56+ available skills
 - [CLI Reference](/cli/run/) — Explore all commands

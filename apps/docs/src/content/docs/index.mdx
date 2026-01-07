@@ -15,7 +15,7 @@ hero:
       variant: minimal
 ---
 
-import { Card, CardGrid, Tabs, TabItem, Code, LinkCard, Image } from '@astrojs/starlight/components';
+import { Card, CardGrid, Tabs, TabItem, Code, LinkCard } from '@astrojs/starlight/components';
 import HeroAnimation from '../../components/HeroAnimation.astro';
 import workflowExecutorImg from '../../assets/workflow-executor.webp';
 
@@ -663,7 +663,7 @@ import workflowExecutorImg from '../../assets/workflow-executor.webp';
     <div><span class="prompt">$</span> <span class="cmd">bun install -g @looplia/looplia-cli</span></div>
     <div><span class="comment"># Install Looplia CLI globally</span></div>
     <div style="margin-top: 8px;"><span class="prompt">$</span> <span class="cmd">looplia init</span></div>
-    <div><span class="comment"># Initialize workspace with AI skills</span></div>
+    <div><span class="comment"># Initialize workspace with skills from marketplace</span></div>
     <div style="margin-top: 8px;"><span class="prompt">$</span> <span class="cmd">looplia run</span> <span class="arg">writing-kit</span> <span class="flag">--file</span> <span class="arg">article.md</span></div>
     <div><span class="comment"># Transform content into a structured writing kit</span></div>
   </div>
@@ -704,7 +704,7 @@ import workflowExecutorImg from '../../assets/workflow-executor.webp';
     <div class="arch-card">
       <div class="arch-icon">🧩</div>
       <h3>Plugin Architecture</h3>
-      <p>Two plugin types work together: <strong>looplia-core</strong> (infrastructure skills) and <strong>looplia-writer</strong> (domain skills). Each skill defines its own JSON output schema.</p>
+      <p>Built-in plugins (<strong>looplia-core</strong>, <strong>looplia-writer</strong>) plus skills from default marketplaces (Anthropic, ComposioHQ). Install more via <code>looplia skill add</code>.</p>
     </div>
     <div class="arch-card">
       <div class="arch-icon">✓</div>
@@ -822,6 +822,23 @@ looplia run writing-kit --file article.md
 </CardGrid>
 
 <div class="section-header">
+  <h2>Skill Registry</h2>
+  <p>Skills from curated marketplaces, ready to use.</p>
+</div>
+
+<CardGrid>
+  <Card title="Default Marketplaces" icon="star">
+    Skills from [Anthropic](https://github.com/anthropics/anthropic-agent-skills) and [ComposioHQ](https://github.com/ComposioHQ/awesome-claude-skills) installed automatically.
+  </Card>
+  <Card title="Third-party Skills" icon="add-document">
+    Add community marketplaces with `looplia registry add`. Install individual skills with `looplia skill add`.
+  </Card>
+  <Card title="Selective Loading" icon="rocket">
+    Declare required skills in workflow `skills:` field. Only needed skills are loaded, reducing context usage.
+  </Card>
+</CardGrid>
+
+<div class="section-header">
   <h2>Get Started</h2>
   <p>From zero to first workflow in under 5 minutes.</p>
 </div>
@@ -847,11 +864,16 @@ looplia run writing-kit --file article.md
     description="Learn the skills-first workflow architecture."
     href="/workflows/understanding-workflows/"
   />
+  <LinkCard
+    title="Skill Registry"
+    description="Discover and install skills from marketplaces."
+    href="/registry/skill-registry/"
+  />
 </CardGrid>
 
 <div class="landing-footer">
   <p>
-    Built with Claude Agent SDK · <a href="https://github.com/memorysaver/looplia-core">Open Source</a> <span class="version-badge">v0.6.10</span>
+    Built with Claude Agent SDK · <a href="https://github.com/memorysaver/looplia-core">Open Source</a> <span class="version-badge">v0.7.0</span>
   </p>
 </div>
 

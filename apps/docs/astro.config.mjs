@@ -63,6 +63,8 @@ export default defineConfig({
             { label: "run", slug: "cli/run" },
             { label: "build", slug: "cli/build" },
             { label: "config", slug: "cli/config" },
+            { label: "registry", slug: "cli/registry" },
+            { label: "skill", slug: "cli/skill" },
           ],
         },
         {
@@ -71,6 +73,14 @@ export default defineConfig({
             { label: "Understanding Workflows", slug: "workflows/understanding-workflows" },
             { label: "Writing Kit", slug: "workflows/writing-kit" },
             { label: "Building Custom Workflows", slug: "workflows/custom-workflows" },
+          ],
+        },
+        {
+          label: "Agent Skill Registry",
+          items: [
+            { label: "Overview", slug: "registry/skill-registry" },
+            { label: "Marketplace & Plugins", slug: "registry/marketplace-plugins" },
+            { label: "Bootstrap Process", slug: "registry/bootstrap-process" },
           ],
         },
         {
