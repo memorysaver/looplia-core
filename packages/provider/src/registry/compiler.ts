@@ -57,10 +57,18 @@ const CAPABILITY_PATTERNS = [
 ] as const;
 
 /**
+ * Get the looplia home directory path
+ * Respects LOOPLIA_HOME env var for testing/custom installations
+ */
+function getLoopliaHome(): string {
+  return process.env.LOOPLIA_HOME ?? join(homedir(), ".looplia");
+}
+
+/**
  * Get the registry directory path
  */
 export function getRegistryPath(): string {
-  return join(homedir(), ".looplia", "registry");
+  return join(getLoopliaHome(), "registry");
 }
 
 /**
@@ -813,7 +821,7 @@ export async function compileRegistry(
   showProgress = false
 ): Promise<CompiledRegistry> {
   const progress = showProgress ? createProgress() : null;
-  const loopliaPath = join(homedir(), ".looplia");
+  const loopliaPath = getLoopliaHome();
   const sources = await loadSources();
 
   // Scan local plugins first
