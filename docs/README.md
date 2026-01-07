@@ -1,6 +1,6 @@
 # Looplia-Core Documentation
 
-> **Version:** 0.6.10
+> **Version:** 0.7.0
 > **Last Updated:** January 2026
 
 This directory contains the core documentation for Looplia-Core, a Claude Agent SDK-based agentic workflow platform.
@@ -9,10 +9,11 @@ This directory contains the core documentation for Looplia-Core, a Claude Agent 
 
 ## Core Documents (Latest)
 
-These are the current, authoritative documents for the v0.6.10 architecture:
+These are the current, authoritative documents for the v0.7.0 architecture:
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
+| [DESIGN-0.7.0.md](./DESIGN-0.7.0.md) | **Skill Registry System**, marketplace integration, selective loading | Developers, Architects |
 | [AGENTIC_CONCEPT_1.0.md](./AGENTIC_CONCEPT_1.0.md) | **Skills-first architecture overview** - comprehensive guide to v0.6.1/v0.6.2 | All team members |
 | [DESIGN-0.6.9.md](./DESIGN-0.6.9.md) | **SDK Compatibility & API Key Selection**, optional Claude Code path, endpoint-aware keys | Developers, Architects |
 | [DESIGN-0.6.8.md](./DESIGN-0.6.8.md) | **Claude Code Path Resolution**, executable discovery, caching | Developers, Architects |
@@ -39,6 +40,98 @@ These are the current, authoritative documents for the v0.6.10 architecture:
 |----------|---------|
 | [AGENTIC_CONCEPT-0.5.md](./archive/AGENTIC_CONCEPT-0.5.md) | Agent system design: Two-plugin model (historical) |
 | [TEST_PLAN-0.6.md](./archive/TEST_PLAN-0.6.md) | Test architecture with real API testing (historical) |
+
+---
+
+## What's New in v0.7.0
+
+### Skill Registry System
+
+v0.7.0 introduces a **shadcn/ui-inspired skill registry system** for skill discovery and installation:
+
+| Feature | Description |
+|---------|-------------|
+| **Remote Registry** | JSON manifest hosted on GitHub Releases for skill discovery |
+| **Skill Catalog** | Local cache aggregated from multiple sources (`~/.looplia/registry/skill-catalog.json`) |
+| **Build Integration** | Search registry during workflow generation |
+| **Selective Loading** | Only load skills required by workflow (reduced context usage) |
+| **Third-party Skills** | Live git clone support for community plugins |
+
+### Default Marketplace Installation
+
+During `looplia init`, **56+ skills** are automatically installed from default sources:
+
+| Source | Description | Skills |
+|--------|-------------|--------|
+| **Anthropic** | anthropic-agent-skills marketplace | 42+ (xlsx, pdf, docx, pptx, frontend-design, etc.) |
+| **ComposioHQ** | awesome-claude-skills marketplace | 14+ (brand-guidelines, slack-gif-creator, etc.) |
+
+### Registry CLI Commands
+
+New `looplia registry` command family:
+
+```bash
+looplia registry init              # Initialize registry with official source
+looplia registry add <url>         # Add GitHub registry source
+looplia registry sync              # Compile skill catalog from all sources
+looplia registry list              # List configured sources and stats
+looplia registry remove <id>       # Remove a registry source
+```
+
+### Skill CLI Commands
+
+New `looplia skill` command family:
+
+```bash
+looplia skill add <name>           # Install skill to workspace (JIT from git)
+looplia skill list                 # List installed skills
+looplia skill list --available     # Show all available skills
+looplia skill info <name>          # Show skill details
+looplia skill remove <name>        # Remove skill from workspace
+looplia skill update <name>        # Update third-party skill (git pull)
+```
+
+### Workflow Skills Declaration
+
+Workflows can now explicitly declare required skills in frontmatter:
+
+```yaml
+---
+name: writing-kit
+version: 1.2.0
+description: Transform content into structured writing kit
+
+# v0.7.0: Explicit skill requirements
+skills:
+  - media-reviewer
+  - idea-synthesis
+  - writing-kit-assembler
+
+steps:
+  - id: summary
+    skill: media-reviewer
+    # ...
+---
+```
+
+**Benefits:**
+- Selective plugin loading at runtime
+- Reduced context window usage
+- Clear dependency declaration
+- JIT installation of missing skills
+
+### LOOPLIA_HOME Environment Variable
+
+New environment variable for custom workspace paths:
+
+```bash
+export LOOPLIA_HOME=/custom/path     # Override ~/.looplia
+looplia init                         # Creates workspace at custom path
+```
+
+Useful for testing and isolated installations.
+
+See [DESIGN-0.7.0.md](./DESIGN-0.7.0.md) for full specification.
 
 ---
 
@@ -514,9 +607,10 @@ Previous versions are preserved in `/docs/archive/` for reference:
 ```
 
 **Version Progression:**
-- v0.6.0 → v0.6.1 → v0.6.2 → v0.6.3 → v0.6.4 → v0.6.5 → v0.6.6 → v0.6.7 → v0.6.8 → v0.6.9 → **v0.6.10** (current)
+- v0.6.0 → v0.6.1 → v0.6.2 → v0.6.3 → v0.6.4 → v0.6.5 → v0.6.6 → v0.6.7 → v0.6.8 → v0.6.9 → v0.6.10 → **v0.7.0** (current)
 
 **Key Documents:**
+- **DESIGN-0.7.0.md** documents skill registry system (marketplace, selective loading)
 - **GLOSSARY.md** defines terms used across all documents
 - **DESIGN-0.6.2.md** documents schema-in-skill architecture (skills define JSON schemas)
 - **DESIGN-0.6.1.md** documents skills-first architecture with universal skill-executor
@@ -535,8 +629,14 @@ Workflows are markdown files with YAML frontmatter defining multi-step skill orc
 ```yaml
 ---
 name: writing-kit
-version: 1.1.0
+version: 1.2.0
 description: Transform content into structured writing kit
+
+# v0.7.0: Explicit skill requirements for selective loading
+skills:
+  - media-reviewer
+  - idea-synthesis
+  - writing-kit-assembler
 
 steps:
   - id: summary
@@ -576,6 +676,17 @@ Documentation and usage instructions...
 ```
 
 ### Schema Fields
+
+**Workflow-level fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | **Yes** | Workflow identifier |
+| `version` | string | No | Semantic version |
+| `description` | string | **Yes** | Workflow description |
+| `skills` | array | No | v0.7.0: Explicit skill dependencies for selective loading |
+
+**Step-level fields:**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -622,7 +733,40 @@ looplia-core/
 
 ### Runtime Layout (~/.looplia)
 
-After `looplia init`, see [Runtime Structure](#runtime-structure) above for the installed layout.
+After `looplia init`, the following structure is created:
+
+```
+~/.looplia/
+├── registry/                           # Skill Registry System (v0.7.0)
+│   ├── skill-catalog.json              # Compiled skill catalog (56+ skills)
+│   └── sources.json                    # Configured marketplace sources
+│
+├── looplia-core/                       # Built-in: core plugin
+│   ├── .claude-plugin/plugin.json
+│   └── skills/
+│       ├── workflow-executor/
+│       ├── workflow-validator/
+│       ├── registry-loader/            # New in v0.7.0
+│       └── ...
+│
+├── looplia-writer/                     # Built-in: writer plugin
+│   └── skills/
+│       ├── media-reviewer/
+│       ├── idea-synthesis/
+│       └── ...
+│
+├── plugins/                            # Third-party plugins (v0.7.0)
+│   ├── document-skills/                # From Anthropic marketplace
+│   │   └── skills/xlsx/, pdf/, docx/, pptx/
+│   ├── example-skills/                 # From Anthropic marketplace
+│   │   └── skills/frontend-design/, algorithmic-art/, ...
+│   ├── brand-guidelines/               # From ComposioHQ marketplace
+│   └── ...
+│
+├── sandbox/                            # Workflow execution sandboxes
+├── workflows/                          # Workflow definitions
+└── looplia.setting.json                # Provider configuration
+```
 
 ---
 

@@ -5,6 +5,81 @@ All notable changes to Looplia-Core will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-01-04
+
+### Added
+
+- **Skill Registry System** - shadcn/ui-inspired registry for skill discovery and installation
+  - Remote registry manifest on GitHub Releases
+  - Skill catalog compilation from multiple sources (official + third-party)
+  - Default marketplace installation during `looplia init` (Anthropic, ComposioHQ)
+  - 56+ skills available out of the box after initialization
+
+- **Registry CLI Commands** - New `looplia registry` command family
+  - `init` - Initialize local registry with official source
+  - `add <url>` - Add GitHub registry source (auto-detects marketplace.json/registry.json)
+  - `sync` - Compile skill catalog from all sources
+  - `list` - List configured sources and stats
+  - `remove <id>` - Remove a registry source
+
+- **Skill CLI Commands** - New `looplia skill` command family
+  - `add <name>` - Install skill to workspace (JIT from git)
+  - `list` - List installed/available skills
+  - `info <name>` - Show skill details
+  - `remove <name>` - Remove skill from workspace
+  - `update <name>` - Update third-party skill (git pull)
+
+- **Selective Plugin Loading** - Only load plugins required by workflow
+  - New `skills:` field in workflow frontmatter declares dependencies
+  - Core skills always loaded: workflow-executor, workflow-validator, registry-loader
+  - Reduces context window usage and tool discovery overhead
+
+- **Third-party Skill Installation** - Community skill support
+  - Git clone to `~/.looplia/plugins/{repo-name}/`
+  - Auto-wrap standalone SKILL.md repos as valid plugins
+  - Just-in-Time (JIT) installation during workflow run
+
+- **Unified Marketplace Handling** - Support for both marketplace formats
+  - Anthropic style: `skills[]` array with multiple skills per plugin
+  - ComposioHQ style: `source` path with 1 skill per plugin
+  - Auto-detection during sync
+
+- **registry-loader Skill** - New skill for build pipeline
+  - Loads compiled skill catalog for workflow building
+  - Replaces runtime plugin-registry-scanner for faster builds
+
+- **LOOPLIA_HOME Environment Variable** - Custom workspace path
+  - Overrides `~/.looplia` path for testing/custom installations
+  - Used for isolated test workspaces
+
+### Changed
+
+- **Init Command** - Enhanced with marketplace installation
+  - Downloads and installs default marketplace sources in parallel
+  - Creates plugin structure for each marketplace entry
+  - Compiles skill-catalog.json after installation
+
+- **Build Command** - Uses compiled skill catalog
+  - registry-loader reads cached skill-catalog.json
+  - skill-capability-matcher enhanced for installed status
+  - workflow-schema-composer generates `skills:` field
+
+- **Run Command** - JIT skill installation
+  - Parses workflow to extract required skills
+  - Installs missing third-party skills before execution
+  - Passes requiredSkills to selective plugin loading
+
+- **Workspace Structure** - New registry and plugins directories
+  - `~/.looplia/registry/` for skill-catalog.json and sources.json
+  - `~/.looplia/plugins/` for third-party installed plugins
+  - First-party plugins remain at root level
+
+### Documentation
+
+- **DESIGN-0.7.0.md** - Complete specification for Skill Registry System
+- **README.md** - Updated architecture, CLI commands, environment variables
+- **docs/README.md** - Added "What's New in v0.7.0" section
+
 ## [0.6.10] - 2026-01-03
 
 ### Added
@@ -692,7 +767,8 @@ The following were considered but **intentionally deferred** to v0.6+:
 
 ---
 
-[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.6.10...HEAD
+[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/memorysaver/looplia-core/compare/v0.6.10...v0.7.0
 [0.6.10]: https://github.com/memorysaver/looplia-core/compare/v0.6.9...v0.6.10
 [0.6.9]: https://github.com/memorysaver/looplia-core/compare/v0.6.8...v0.6.9
 [0.6.8]: https://github.com/memorysaver/looplia-core/compare/v0.6.7...v0.6.8
