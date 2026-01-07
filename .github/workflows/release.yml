@@ -113,7 +113,20 @@ jobs:
         run: bun run copy-plugins
         working-directory: apps/cli
 
+      - name: Check if version exists
+        id: check-version
+        run: |
+          VERSION=$(jq -r '.version' apps/cli/package.json)
+          if npm view @looplia/looplia-cli@$VERSION version 2>/dev/null; then
+            echo "Version $VERSION already published, skipping"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Version $VERSION not found, will publish"
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish to npm
+        if: steps.check-version.outputs.exists == 'false'
         run: npm publish --provenance --access public
         working-directory: apps/cli
         env:
