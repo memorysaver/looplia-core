@@ -1,0 +1,129 @@
+---
+title: looplia skill
+description: Install and manage skills
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The `skill` command installs and manages individual skills from the catalog.
+
+## Usage
+
+```bash
+looplia skill <subcommand>
+```
+
+## Subcommands
+
+### add
+
+Install a skill from the catalog to your workspace.
+
+```bash
+looplia skill add <name>
+```
+
+**Examples:**
+
+```bash
+looplia skill add xlsx
+looplia skill add frontend-design
+```
+
+<Aside type="note">
+Skills are installed via JIT (just-in-time) cloning from their source repository.
+</Aside>
+
+### list
+
+List skills in your workspace.
+
+```bash
+# List installed skills
+looplia skill list
+
+# List all available skills from catalog
+looplia skill list --available
+```
+
+### info
+
+Display detailed information about a skill including its source, description, and usage.
+
+```bash
+looplia skill info <name>
+```
+
+**Example:**
+
+```bash
+looplia skill info xlsx
+```
+
+### remove
+
+Remove an installed skill from your workspace.
+
+```bash
+looplia skill remove <name>
+```
+
+### update
+
+Update a third-party skill by pulling the latest changes from its source repository.
+
+```bash
+looplia skill update <name>
+```
+
+---
+
+## Quick Reference
+
+| Command | Description |
+|---------|-------------|
+| `looplia skill add <name>` | Install a skill |
+| `looplia skill list` | List installed skills |
+| `looplia skill list --available` | List all available skills |
+| `looplia skill info <name>` | Show skill details |
+| `looplia skill remove <name>` | Uninstall a skill |
+| `looplia skill update <name>` | Update a skill |
+
+---
+
+## Workflow Skills Declaration
+
+Workflows can declare which skills they need using the `skills:` field in frontmatter:
+
+```yaml
+---
+name: document-processor
+skills:
+  - xlsx
+  - pdf
+  - docx
+steps:
+  - skill: xlsx
+    input:
+      file: "{input.spreadsheet}"
+---
+```
+
+When you declare skills in your workflow:
+
+- **Only declared skills** are loaded into the Claude Code context
+- **Core skills** are always loaded automatically
+- This **reduces context window usage** significantly
+
+<Aside type="tip">
+Without the `skills:` declaration, all installed skills are loaded. For large workspaces, explicitly declaring skills improves performance.
+</Aside>
+
+---
+
+## See Also
+
+- [Skill Registry Overview](/registry/skill-registry/) — Core concepts
+- [Marketplace & Plugins](/registry/marketplace-plugins/) — Architecture details
+- [Bootstrap Process](/registry/bootstrap-process/) — How initialization works
+- [registry](/cli/registry/) — Manage skill sources

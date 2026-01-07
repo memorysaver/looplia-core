@@ -41,6 +41,10 @@ mission: |
   </Card>
 </CardGrid>
 
+<Aside type="tip">
+After `looplia init`, you have access to skills from default marketplaces including document processing, design, and productivity tools. See [Skill Registry](/registry/skill-registry/) for details.
+</Aside>
+
 ## Workflows
 
 A **workflow** is a sequence of skill executions that transform input into output. Workflows are defined as Markdown files with YAML frontmatter.
@@ -132,6 +136,55 @@ This separation allows:
 - Easy addition of new domain plugins
 - Clean separation between "how to run" and "what to run"
 
+## Skill Registry
+
+The **Skill Registry** is a curated collection of skills from multiple sources. It enables skill discovery and installation similar to package managers like npm or shadcn/ui.
+
+### Default Marketplaces
+
+After `looplia init`, skills are available from two sources:
+
+| Source | Examples |
+|--------|----------|
+| [**Anthropic**](https://github.com/anthropics/anthropic-agent-skills) | xlsx, pdf, docx, pptx, frontend-design, algorithmic-art |
+| [**ComposioHQ**](https://github.com/ComposioHQ/awesome-claude-skills) | brand-guidelines, slack-gif-creator, webapp-testing |
+
+### Managing Skills
+
+```bash
+# List all available skills
+looplia skill list --available
+
+# Install a specific skill
+looplia skill add xlsx
+
+# Add a third-party marketplace
+looplia registry add https://github.com/user/my-skills
+```
+
+### Workflow Skills Declaration
+
+Workflows can declare required skills for selective loading:
+
+```yaml
+---
+name: document-processor
+skills:
+  - xlsx
+  - pdf
+steps:
+  - id: analyze
+    skill: xlsx
+    mission: Process spreadsheet data
+---
+```
+
+When a workflow declares `skills:`, only those skills are loaded into the Claude Code context, reducing context window usage.
+
+<Aside type="note">
+See the [Skill Registry](/registry/skill-registry/) reference for complete documentation on registry commands and skill management.
+</Aside>
+
 ## Validation-Driven Completion
 
 Steps complete when their output passes validation. The `validation.json` file tracks state:
@@ -154,9 +207,11 @@ When resuming with `--sandbox-id`, Looplia skips validated steps and continues f
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  CLI Commands                                                    │
-│  └─ looplia run    → Execute workflow                           │
-│  └─ looplia build  → Create workflow from description           │
-│  └─ looplia config → Manage settings                            │
+│  └─ looplia run      → Execute workflow                         │
+│  └─ looplia build    → Create workflow from description         │
+│  └─ looplia registry → Manage skill sources                     │
+│  └─ looplia skill    → Install/manage skills                    │
+│  └─ looplia config   → Manage settings                          │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -179,6 +234,7 @@ When resuming with `--sandbox-id`, Looplia skips validated steps and continues f
 
 ## Next Steps
 
+- [Skill Registry](/registry/skill-registry/) — Discover and install skills from marketplaces
 - [Run Command](/cli/run/) — Execute workflows with options
 - [Understanding Workflows](/workflows/understanding-workflows/) — Deep dive into workflow schema
 - [Build Command](/cli/build/) — Create workflows from natural language

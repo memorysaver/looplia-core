@@ -1,0 +1,139 @@
+---
+title: Marketplace & Plugin Architecture
+description: Understanding how looplia organizes skills from marketplaces and plugins
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Understanding how looplia organizes skills from different sources.
+
+## Concepts
+
+| Term | Definition |
+|------|------------|
+| **Marketplace** | A GitHub repository that publishes multiple skills via a manifest file (`.claude-plugin/marketplace.json`). Think of it as a "skill store". |
+| **Plugin** | An individual skill package with its own manifest (`.claude-plugin/plugin.json`). Plugins are the units that get loaded into Claude Code. |
+
+A marketplace *contains* multiple plugins. When you add a marketplace source, looplia extracts individual plugins from it.
+
+---
+
+## Marketplace Structure
+
+A valid marketplace repository must have `.claude-plugin/marketplace.json`:
+
+```json
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "my-skills",
+  "description": "My awesome skills collection",
+  "owner": { "name": "Your Name" },
+  "plugins": [
+    {
+      "name": "document-processor",
+      "description": "Process various document formats",
+      "source": "./document-processor",
+      "skills": ["./skills/xlsx", "./skills/pdf"],
+      "category": "productivity"
+    }
+  ]
+}
+```
+
+### Two Supported Formats
+
+| Format | Structure | Example |
+|--------|-----------|---------|
+| **Anthropic** | Plugin with `skills` array pointing to skill directories | One plugin entry → multiple skills |
+| **ComposioHQ** | Plugin where `source` path is the skill itself | One plugin entry → one skill |
+
+<Aside type="note">
+Looplia auto-detects the format and handles both transparently during extraction.
+</Aside>
+
+---
+
+## Plugin Structure
+
+A valid plugin requires a `.claude-plugin/plugin.json` manifest:
+
+```
+my-plugin/
+├── .claude-plugin/
+│   └── plugin.json      # Required manifest
+├── CLAUDE.md            # Optional instructions
+└── skills/
+    └── my-skill/
+        └── skill.md     # Skill definition
+```
+
+### plugin.json Schema
+
+```json
+{
+  "name": "my-plugin",
+  "description": "What this plugin does",
+  "version": "1.0.0",
+  "author": { "name": "Author Name" },
+  "keywords": ["productivity", "documents"],
+  "homepage": "https://github.com/user/my-plugin"
+}
+```
+
+---
+
+## How Sources Are Processed
+
+When you run `looplia registry add <url>`:
+
+1. **Detection** — Checks for `.claude-plugin/marketplace.json` in the repository
+2. **Format Detection** — Determines Anthropic or ComposioHQ format based on plugin structure
+3. **Extraction** — For each plugin entry:
+   - Creates directory in `~/.looplia/plugins/`
+   - Generates `plugin.json` with metadata from marketplace
+   - Copies skill files to proper structure
+4. **Catalog Update** — Indexes all skills in `~/.looplia/registry/skill-catalog.json`
+
+---
+
+## Workspace Organization
+
+Looplia organizes plugins at two levels:
+
+```
+~/.looplia/
+├── registry/
+│   ├── skill-catalog.json    # Compiled skill index
+│   └── sources.json          # Marketplace sources
+│
+├── looplia-core/             # First-party (root level)
+├── looplia-writer/           # First-party (root level)
+│
+└── plugins/                  # Third-party (from marketplaces)
+    ├── document-skills/      # Anthropic format: multiple skills
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       ├── xlsx/
+    │       ├── pdf/
+    │       └── docx/
+    │
+    └── brand-guidelines/     # ComposioHQ format: single skill
+        ├── .claude-plugin/
+        │   └── plugin.json
+        └── skills/
+            └── brand-guidelines/
+```
+
+### Organization Rules
+
+- **First-party plugins** — Located directly in `~/.looplia/` (bundled with CLI)
+- **Third-party plugins** — Located in `~/.looplia/plugins/` (from marketplaces)
+- **Each plugin** — Must have `.claude-plugin/plugin.json` manifest
+
+---
+
+## See Also
+
+- [Skill Registry Overview](/registry/skill-registry/) — Discover and install skills
+- [init Command](/cli/init/) — Initialize workspace with marketplaces

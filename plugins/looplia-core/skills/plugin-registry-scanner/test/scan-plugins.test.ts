@@ -1,10 +1,14 @@
 import { describe, expect, it } from "bun:test";
+import { join } from "node:path";
 import {
   CAPABILITY_PATTERNS,
   extractFrontmatter,
   inferCapabilities,
   scanPlugins,
 } from "../scripts/scan-plugins";
+
+// Use absolute path to ensure tests work from any directory
+const PLUGINS_DIR = join(import.meta.dir, "../../../..");
 
 describe("scan-plugins", () => {
   describe("extractFrontmatter", () => {
@@ -162,7 +166,7 @@ description: Missing closing delimiter
 
   describe("scanPlugins", () => {
     it("should discover looplia-core skills", async () => {
-      const result = await scanPlugins("plugins");
+      const result = await scanPlugins(PLUGINS_DIR);
       const corePlugin = result.plugins.find((p) => p.name === "looplia-core");
 
       expect(corePlugin).toBeDefined();
@@ -175,7 +179,7 @@ description: Missing closing delimiter
     });
 
     it("should discover looplia-writer skills", async () => {
-      const result = await scanPlugins("plugins");
+      const result = await scanPlugins(PLUGINS_DIR);
       const writerPlugin = result.plugins.find(
         (p) => p.name === "looplia-writer"
       );
@@ -190,7 +194,7 @@ description: Missing closing delimiter
     });
 
     it("should return valid registry JSON schema", async () => {
-      const result = await scanPlugins("plugins");
+      const result = await scanPlugins(PLUGINS_DIR);
 
       // Check top-level structure
       expect(result).toHaveProperty("plugins");
@@ -214,7 +218,7 @@ description: Missing closing delimiter
     });
 
     it("should include tools and model when specified", async () => {
-      const result = await scanPlugins("plugins");
+      const result = await scanPlugins(PLUGINS_DIR);
       const corePlugin = result.plugins.find((p) => p.name === "looplia-core");
       const scanner = corePlugin?.skills.find(
         (s) => s.name === "plugin-registry-scanner"
@@ -234,7 +238,7 @@ description: Missing closing delimiter
     });
 
     it("should calculate correct totals", async () => {
-      const result = await scanPlugins("plugins");
+      const result = await scanPlugins(PLUGINS_DIR);
 
       const calculatedTotal = result.plugins.reduce(
         (sum, p) => sum + p.skills.length,
@@ -245,11 +249,11 @@ description: Missing closing delimiter
       expect(result.summary.totalPlugins).toBe(result.plugins.length);
     });
 
-    it("should discover exactly 14 skills after adding workflow-executor-inline", async () => {
-      const result = await scanPlugins("plugins");
+    it("should discover exactly 15 skills after adding registry-loader", async () => {
+      const result = await scanPlugins(PLUGINS_DIR);
 
-      // After adding workflow-executor-inline skill, we should have all 14 skills
-      expect(result.summary.totalSkills).toBe(14);
+      // After adding registry-loader skill, we should have all 15 skills
+      expect(result.summary.totalSkills).toBe(15);
       expect(result.summary.totalPlugins).toBe(2);
     });
   });

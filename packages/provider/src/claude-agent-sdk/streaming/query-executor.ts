@@ -6,7 +6,11 @@
  */
 
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { getLoopliaPluginPath, getPluginPaths } from "../../bootstrap";
+import {
+  getLoopliaPluginPath,
+  getPluginPaths,
+  getSelectivePluginPaths,
+} from "../../bootstrap";
 import { findClaudeCodePath } from "../claude-code-path";
 import type { ClaudeAgentConfig, ProviderUsage } from "../config";
 import { resolveConfig } from "../config";
@@ -198,8 +202,11 @@ export async function* executeAgenticQueryStreaming<T>(
       resolvedConfig.model
     );
 
-    // v0.6.5: Get plugin paths based on mode (dev vs prod)
-    const pluginPaths = await getPluginPaths();
+    // v0.7.0: Use selective loading when requiredSkills is provided
+    // Falls back to loading all plugins if not specified (backward compatible)
+    const pluginPaths = config?.requiredSkills
+      ? await getSelectivePluginPaths(config.requiredSkills)
+      : await getPluginPaths();
 
     // v0.6.5: Capture user's working directory before SDK starts
     const userCwd = process.cwd();

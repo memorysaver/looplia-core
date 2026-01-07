@@ -6,10 +6,11 @@ description: |
   someone says "create a looplia workflow", "generate workflow.md", "compose workflow steps",
   "build me an automation pipeline", or "/build" (final step).
 
-  Final step in looplia workflow building: transforms skill recommendations into valid v0.6.3
+  Final step in looplia workflow building: transforms skill recommendations into valid v0.7.0
   workflow YAML/Markdown files. Each step uses skill: + mission: syntax, following the one
   workflow step → one skill-executor → multiple skills architecture.
 
+  v0.7.0: Generates explicit `skills:` declaration for selective plugin loading.
   v0.6.3: Supports input-less workflows using input-less capable skills (e.g., search).
 model: claude-haiku-4-5-20251001
 ---
@@ -122,7 +123,7 @@ Based on skill output type:
 - Idea skills: `required_fields: [contentId, hooks, angles]`
 - Assembly skills: `required_fields: [contentId, suggestedOutline]`
 
-### Step 6: Compose Frontmatter
+### Step 6: Compose Frontmatter (v0.7.0)
 
 **CRITICAL: If `--name` flag was provided, use that exact name. Do not derive or modify it.**
 
@@ -132,15 +133,26 @@ name: {explicit-name OR derived-from-description}
 version: 1.0.0
 description: {user's original description, cleaned up}
 
+# v0.7.0: Explicit skills declaration for selective plugin loading
+skills:
+  - {skill-name-1}
+  - {skill-name-2}
+  - ...
+
 steps:
   - id: ...
 ---
 ```
 
+**Skills Declaration (v0.7.0):**
+Extract unique skill names from all step recommendations and list them in the `skills:` field.
+This enables selective plugin loading at runtime - only required skills are loaded.
+
 Naming rules:
 1. If `--name article-summary` was provided → use `article-summary` exactly
 2. If no `--name` → derive from description (e.g., "analyze videos" → "video-analyzer")
 3. Always use kebab-case for names
+4. Always include `skills:` field with all unique skills from steps
 
 ### Step 7: Generate Markdown Body
 
@@ -216,6 +228,12 @@ name: video-to-blog
 version: 1.0.0
 description: Analyze YouTube videos and create blog outlines
 
+# v0.7.0: Explicit skills declaration for selective plugin loading
+skills:
+  - media-reviewer
+  - idea-synthesis
+  - writing-kit-assembler
+
 steps:
   - id: analyze-content
     skill: media-reviewer
@@ -281,6 +299,7 @@ looplia run video-to-blog --file <transcript.md>
 6. **Respect --name flag** - If `--name X` is provided, the workflow MUST be named `X` and saved as `X.md`
 7. **Detect input-less workflows** - If first step uses `search` skill, OMIT input field
 8. **Incorporate user preferences (v0.6.4)** - Extract preferences from "User clarifications" and inject into step missions. Each preference MUST appear in at least one mission.
+9. **Include skills declaration (v0.7.0)** - Always add `skills:` field listing all unique skill names from steps. This enables selective plugin loading at runtime.
 
 ## Example: Input-Less Workflow (v0.6.3)
 
@@ -291,6 +310,11 @@ When the workflow fetches data autonomously (no user input needed):
 name: daily-news-digest
 version: 1.0.0
 description: Fetch trending news and compile a digest report
+
+# v0.7.0: Explicit skills declaration
+skills:
+  - search
+  - content-documenter
 
 steps:
   - id: fetch-news

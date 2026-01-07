@@ -30,6 +30,13 @@ export type ClaudeAgentConfig = {
 
   /** Request timeout in ms (default: 60000) */
   timeout?: number;
+
+  /**
+   * v0.7.0: Skills required by the workflow for selective loading.
+   * When provided, only plugins containing these skills are loaded.
+   * If not provided, all plugins are loaded (backward compatible).
+   */
+  requiredSkills?: string[];
 };
 
 /**

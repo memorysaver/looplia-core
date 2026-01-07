@@ -1,0 +1,95 @@
+---
+title: looplia registry
+description: Manage skill sources and catalog
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The `registry` command manages skill sources and the compiled skill catalog.
+
+## Usage
+
+```bash
+looplia registry <subcommand>
+```
+
+## Subcommands
+
+### init
+
+Initialize the registry with default marketplace sources.
+
+```bash
+looplia registry init
+```
+
+Downloads default marketplaces and compiles the skill catalog. This runs automatically during `looplia init`.
+
+### add
+
+Add a third-party GitHub repository as a skill source.
+
+```bash
+looplia registry add <url>
+```
+
+**Example:**
+
+```bash
+looplia registry add https://github.com/user/my-skills
+```
+
+<Aside type="note">
+The repository must have a valid `.claude-plugin/marketplace.json` manifest.
+</Aside>
+
+### sync
+
+Recompile the skill catalog from all configured sources.
+
+```bash
+looplia registry sync
+```
+
+Use this after adding new sources or when skills have been updated upstream.
+
+### list
+
+Display all configured registry sources with their skill counts and status.
+
+```bash
+looplia registry list
+```
+
+### remove
+
+Remove a registry source by its ID.
+
+```bash
+looplia registry remove <source-id>
+```
+
+<Aside type="caution">
+Built-in sources (Anthropic, ComposioHQ) cannot be removed.
+</Aside>
+
+---
+
+## Quick Reference
+
+| Command | Description |
+|---------|-------------|
+| `looplia registry init` | Initialize registry with default sources |
+| `looplia registry add <url>` | Add a marketplace source |
+| `looplia registry sync` | Recompile skill catalog |
+| `looplia registry list` | Show configured sources |
+| `looplia registry remove <id>` | Remove a source |
+
+---
+
+## See Also
+
+- [Skill Registry Overview](/registry/skill-registry/) — Core concepts
+- [Marketplace & Plugins](/registry/marketplace-plugins/) — Architecture details
+- [Bootstrap Process](/registry/bootstrap-process/) — How initialization works
+- [skill](/cli/skill/) — Install and manage individual skills

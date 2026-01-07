@@ -24,11 +24,15 @@ looplia init [options]
 The `init` command:
 
 1. **Creates the workspace directory** at `~/.looplia/`
-2. **Installs plugins** from the marketplace:
+2. **Downloads default marketplaces** from GitHub:
+   - Anthropic `anthropic-agent-skills` (42+ skills)
+   - ComposioHQ `awesome-claude-skills` (14+ skills)
+3. **Installs built-in plugins**:
    - `looplia-core` — Infrastructure plugin with commands and executor
    - `looplia-writer` — Domain plugin with content analysis skills
-3. **Extracts workflows** to `~/.looplia/workflows/`
-4. **Creates configuration files** for user profile and provider settings
+4. **Compiles skill catalog** to `~/.looplia/registry/skill-catalog.json`
+5. **Extracts workflows** to `~/.looplia/workflows/`
+6. **Creates configuration files** for user profile and provider settings
 
 <Aside type="caution">
 Running `init` is a **destructive refresh**. It will overwrite existing plugin files in `~/.looplia/`. Your sandbox outputs and user configuration are preserved.
@@ -50,21 +54,25 @@ After initialization:
 
 ```
 ~/.looplia/
-├── looplia-core/              # Infrastructure plugin
+├── registry/                     # Skill Registry (v0.7.0)
+│   ├── skill-catalog.json        # Compiled skill catalog
+│   └── sources.json              # Configured marketplace sources
+│
+├── looplia-core/                 # Infrastructure plugin
 │   ├── .claude-plugin/
-│   │   └── plugin.json        # Plugin manifest
-│   ├── CLAUDE.md              # Plugin instructions
+│   │   └── plugin.json           # Plugin manifest
+│   ├── CLAUDE.md                 # Plugin instructions
 │   ├── commands/
-│   │   ├── run.md             # /looplia:run command
-│   │   └── build.md           # /looplia:build command
+│   │   ├── run.md                # /looplia:run command
+│   │   └── build.md              # /looplia:build command
 │   ├── skills/
 │   │   ├── workflow-executor/
 │   │   ├── workflow-validator/
-│   │   └── ...
+│   │   └── registry-loader/      # NEW in v0.7.0
 │   └── hooks/
 │       └── session-logger.md
 │
-├── looplia-writer/            # Domain plugin
+├── looplia-writer/               # Domain plugin
 │   ├── .claude-plugin/
 │   │   └── plugin.json
 │   └── skills/
@@ -72,12 +80,17 @@ After initialization:
 │       ├── idea-synthesis/
 │       └── writing-kit-assembler/
 │
-├── workflows/                 # Workflow definitions
+├── plugins/                      # Third-party plugins (v0.7.0)
+│   ├── document-skills/          # xlsx, pdf, docx, pptx
+│   ├── example-skills/           # frontend-design, algorithmic-art
+│   └── ...                       # From ComposioHQ
+│
+├── workflows/                    # Workflow definitions
 │   └── writing-kit.md
 │
-├── sandbox/                   # Execution sandboxes (preserved)
-├── user-profile.json          # User preferences (preserved)
-└── looplia.setting.json       # Provider config (preserved)
+├── sandbox/                      # Execution sandboxes (preserved)
+├── user-profile.json             # User preferences (preserved)
+└── looplia.setting.json          # Provider config (preserved)
 ```
 
 ## Re-initialization
@@ -118,5 +131,6 @@ looplia init --yes
 ## See Also
 
 - [Installation](/getting-started/installation/) — Full installation guide
+- [Skill Registry](/registry/skill-registry/) — Manage skills from marketplaces
 - [run](/cli/run/) — Execute workflows
 - [config](/cli/config/) — Configure settings

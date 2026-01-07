@@ -67,6 +67,7 @@ looplia run writing-kit --file article.md
 |----------|-------------|---------|
 | `LOOPLIA_DEV` | Enable development mode | `false` |
 | `LOOPLIA_DEV_ROOT` | Path to looplia-core source repository | - |
+| `LOOPLIA_HOME` | Override workspace path | `~/.looplia` |
 | `LOOPLIA_DEBUG` | Enable debug logging | `false` |
 
 ### Development Mode
@@ -99,6 +100,25 @@ looplia run writing-kit --file test.md
 ```
 
 Debug logs are written to `~/.looplia/logs/`.
+
+### Custom Workspace Path
+
+Use `LOOPLIA_HOME` to override the default workspace location:
+
+```bash
+# Use custom path
+export LOOPLIA_HOME=/custom/path
+looplia init
+
+# Useful for testing
+export LOOPLIA_HOME=$(mktemp -d)
+looplia init --yes
+```
+
+This is useful for:
+- Testing isolated installations
+- Running multiple workspaces
+- CI/CD with temporary directories
 
 ## Provider Configuration
 
@@ -190,6 +210,7 @@ docker run -e ANTHROPIC_API_KEY=sk-ant-... -v ./content:/data my-looplia
 | `ANTHROPIC_DEFAULT_OPUS_MODEL` | string | Opus tier model (SDK) |
 | `LOOPLIA_DEV` | boolean | Enable development mode |
 | `LOOPLIA_DEV_ROOT` | path | Development source path |
+| `LOOPLIA_HOME` | path | Override workspace path (~/.looplia) |
 | `LOOPLIA_DEBUG` | boolean | Enable debug logging |
 
 ## See Also

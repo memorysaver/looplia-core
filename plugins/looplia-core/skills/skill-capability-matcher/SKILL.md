@@ -1,12 +1,16 @@
 ---
 name: skill-capability-matcher
 description: |
-  This skill should be used when the user wants to find the right looplia skills for a task,
-  match requirements to available capabilities, or determine which skills should handle each
-  workflow step. Use when someone says "which looplia skill handles X", "find skills for this
-  task", "match my requirements to skills", or "/build" (after registry scan).
+  This skill should be used when matching user requirements to available skills from a
+  compiled registry. It receives a skill registry (from registry-loader) and user requirements,
+  then scores each skill based on capability alignment, producing prioritized matches with
+  confidence scores.
 
-  Second step in looplia workflow building: takes user requirements and skill registry,
+  Triggers: "match skills to requirements", "find relevant skills for workflow", "which skill
+  handles X", "score skill capabilities", "/build" (after registry load), "find skills for
+  this task", "match my requirements to skills".
+
+  Second step in looplia workflow building pipeline: takes user requirements and skill registry,
   recommends skill sequences with missions. Designs one workflow step → one skill-executor
   → multiple skills orchestration pattern.
 model: claude-haiku-4-5-20251001
@@ -50,16 +54,17 @@ Extract from the user's description:
 
 ### Step 2: Load Registry
 
-Read the plugin registry from plugin-registry-scanner output:
+Read the plugin registry from registry-loader output (v0.7.0):
 
 ```json
 {
   "plugins": [...],
-  "summary": { "totalSkills": N }
+  "summary": { "totalSkills": N, "installedSkills": N, "availableSkills": N }
 }
 ```
 
 Build a capability index from skill descriptions and inferred capabilities.
+Include `installed` status when scoring - prefer installed skills for immediate execution.
 
 ### Step 3: Match Capabilities
 
@@ -231,6 +236,69 @@ Provide:
 | Partial capability match | 0.5-0.7 |
 | Weak/inferred match | 0.3-0.5 |
 | No clear match | < 0.3 |
+
+## Scoring Rubric
+
+Use these concrete criteria when assigning scores:
+
+### Relevance Score (Primary Factor)
+- **90-100**: Skill's primary purpose directly addresses requirement
+- **70-89**: Skill clearly capable of addressing requirement
+- **50-69**: Skill partially addresses requirement
+- **30-49**: Skill tangentially related
+- **0-29**: Minimal or no relevance
+
+### Completeness Score
+- **90-100**: Skill fully addresses all aspects of requirement
+- **70-89**: Skill addresses most aspects, minor gaps
+- **50-69**: Skill addresses core need, notable gaps
+- **Below 50**: Significant portions unaddressed
+
+### Specificity Score
+- **90-100**: Skill specifically designed for this exact use case
+- **70-89**: Skill well-suited for use case category
+- **50-69**: General-purpose skill applicable to use case
+- **Below 50**: Very general skill with broad applicability
+
+### Confidence Calculation
+
+```
+confidence = (relevance * 0.5) + (completeness * 0.3) + (specificity * 0.2)
+```
+
+**Minimum threshold: 60%** - Skills below this should not be recommended.
+
+## Semantic Matching Guidelines
+
+Match requirements to skills beyond simple keyword matching:
+
+### 1. Synonym Recognition
+Match conceptually equivalent terms:
+- "authentication" ↔ "login", "session management", "user verification"
+- "database" ↔ "data persistence", "storage", specific ORMs
+- "analyze" ↔ "review", "examine", "inspect", "assess"
+- "generate" ↔ "create", "produce", "synthesize", "build"
+
+### 2. Hierarchical Matching
+Understand skill scope and specificity:
+- General skill may satisfy specific requirement (e.g., "api-client" for "REST calls")
+- Prefer specific skill over general when available (e.g., "stripe-integration" over "payment-api")
+
+### 3. Intent Extraction
+Focus on what user wants to accomplish, not just keywords:
+- "I need to send emails" → match email/notification skills
+- "Process video content" → match media-reviewer, not just skills with "video" in name
+- "Build a report from data" → match assembly/documentation skills
+
+## Edge Cases
+
+| Scenario | Handling |
+|----------|----------|
+| No matches above 60% threshold | Return empty `recommendations[]` with `gaps` listing unmet needs |
+| Multiple skills with identical scores | Prefer more specific skill (higher specificity score) |
+| Ambiguous user requirements | Set `clarificationNeeded: true` with targeted questions |
+| Skill matches multiple requirements | Include once with highest-scoring requirement as primary |
+| Installed vs available skills | Prefer installed skills when scores are within 10% |
 
 ## Mission Writing Guidelines
 

@@ -17,12 +17,12 @@ import {
   readFile,
   realpath,
   rm,
-  stat,
   writeFile,
 } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { pathExists } from "../utils/fs";
 
 /**
  * Marketplace plugin entry
@@ -43,18 +43,6 @@ type Marketplace = {
   description: string;
   plugins: MarketplacePlugin[];
 };
-
-/**
- * Check if a path exists
- */
-async function pathExists(path: string): Promise<boolean> {
-  try {
-    await stat(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Compute SHA256 hash of a file
@@ -90,10 +78,14 @@ async function validateExtractedPaths(baseDir: string): Promise<void> {
 }
 
 /**
- * Get the looplia plugin path (~/.looplia)
+ * Get the looplia plugin path
+ *
+ * Priority:
+ * 1. LOOPLIA_HOME env var (for testing/custom installations)
+ * 2. Default: ~/.looplia
  */
 export function getLoopliaPluginPath(): string {
-  return join(homedir(), ".looplia");
+  return process.env.LOOPLIA_HOME ?? join(homedir(), ".looplia");
 }
 
 /**
@@ -254,6 +246,22 @@ export async function copyPlugins(
     JSON.stringify(createDefaultProfile(), null, 2),
     "utf-8"
   );
+
+  // Download default skill marketplaces (e.g., Anthropic skills)
+  // This clones repos to plugins/ and generates registry/sources.json
+  const { installDefaultSources } = await import("./skill-installer");
+  const installResults = await installDefaultSources();
+  for (const result of installResults) {
+    if (result.status === "failed") {
+      console.warn(
+        `Warning: Failed to download ${result.skill}: ${result.error}`
+      );
+    }
+  }
+
+  // Compile skill catalog for query-executor lookups
+  const { compileRegistry } = await import("../registry/compiler");
+  await compileRegistry();
 }
 
 /**
@@ -393,7 +401,9 @@ export async function getProdPluginPaths(): Promise<
   Array<{ type: "local"; path: string }>
 > {
   const loopliaPath = getLoopliaPluginPath();
+  const results: Array<{ type: "local"; path: string }> = [];
 
+  // Scan root level (first-party plugins: looplia-core, looplia-writer)
   try {
     const entries = await readdir(loopliaPath, { withFileTypes: true });
     const pluginDirs = entries
@@ -402,29 +412,53 @@ export async function getProdPluginPaths(): Promise<
           e.isDirectory() &&
           !e.name.startsWith(".") &&
           e.name !== "sandbox" &&
-          e.name !== "workflows"
+          e.name !== "workflows" &&
+          e.name !== "plugins" &&
+          e.name !== "registry"
       )
       .map((e) => e.name);
 
-    return pluginDirs.map((name) => ({
-      type: "local" as const,
-      path: join(loopliaPath, name),
-    }));
+    for (const name of pluginDirs) {
+      results.push({ type: "local", path: join(loopliaPath, name) });
+    }
   } catch {
-    return [];
+    // Ignore errors reading root
   }
+
+  // Scan plugins/ directory (third-party plugins from marketplaces)
+  const pluginsDir = join(loopliaPath, "plugins");
+  try {
+    const entries = await readdir(pluginsDir, { withFileTypes: true });
+    const thirdPartyDirs = entries
+      .filter((e) => e.isDirectory() && !e.name.startsWith("."))
+      .map((e) => e.name);
+
+    for (const name of thirdPartyDirs) {
+      results.push({ type: "local", path: join(pluginsDir, name) });
+    }
+  } catch {
+    // plugins/ directory may not exist yet
+  }
+
+  return results;
 }
 
 /**
  * Get plugin paths based on current mode
  *
- * - LOOPLIA_DEV=true: Use source plugins directly (development)
- *   - LOOPLIA_DEV_ROOT specifies repo root (defaults to cwd)
- * - Otherwise: Scan ~/.looplia for installed plugins (production)
+ * Priority:
+ * 1. LOOPLIA_HOME env var: Scan custom path (for testing/custom installations)
+ * 2. LOOPLIA_DEV=true: Use source plugins directly (development)
+ *    - LOOPLIA_DEV_ROOT specifies repo root (defaults to cwd)
+ * 3. Default: Scan ~/.looplia for installed plugins (production)
  */
 export async function getPluginPaths(): Promise<
   Array<{ type: "local"; path: string }>
 > {
+  // LOOPLIA_HOME takes precedence (for testing/custom installations)
+  if (process.env.LOOPLIA_HOME) {
+    return await getProdPluginPaths();
+  }
   if (process.env.LOOPLIA_DEV === "true") {
     const devRoot = process.env.LOOPLIA_DEV_ROOT ?? process.cwd();
     return getDevPluginPaths(devRoot);
@@ -438,3 +472,12 @@ export async function getPluginPaths(): Promise<
 export function isDevMode(): boolean {
   return process.env.LOOPLIA_DEV === "true";
 }
+
+// v0.7.0: Re-export selective plugin loading functions
+export {
+  CORE_SKILLS,
+  getPluginSkills,
+  getSelectivePluginPaths,
+  installThirdPartyPlugin,
+  isCoreSkill,
+} from "./skill-installer";

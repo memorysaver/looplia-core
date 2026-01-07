@@ -8,9 +8,10 @@
  * It will be removed in a future version.
  */
 
-import { cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isAbsolute, join, normalize, resolve } from "node:path";
+import { pathExists } from "../utils/fs";
 
 /**
  * Options for workspace initialization
@@ -53,18 +54,6 @@ export function expandPath(path: string): string {
 
   // For relative paths, resolve against cwd and normalize
   return normalize(resolve(path));
-}
-
-/**
- * Check if a path exists
- */
-async function pathExists(path: string): Promise<boolean> {
-  try {
-    await stat(path);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 /**

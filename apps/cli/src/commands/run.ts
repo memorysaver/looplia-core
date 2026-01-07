@@ -1,12 +1,13 @@
 /**
- * Run Command (v0.6.3) - Thin Wrapper
+ * Run Command (v0.7.0) - Thin Wrapper
  *
  * Execute a workflow by injecting /run command into the agent.
  * All workflow logic is in the workflow-executor skill.
  *
+ * v0.7.0: JIT skill installation and skills extraction for logging
  * v0.6.3: Named inputs with --input name=value syntax
  *
- * @see docs/DESIGN-0.6.3.md
+ * @see docs/DESIGN-0.7.0.md
  * @see plugins/looplia-core/skills/workflow-executor/SKILL.md
  */
 
@@ -22,10 +23,16 @@ import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
 
 import {
+  extractWorkflowSkills,
   isInputlessWorkflow,
+  type ParsedWorkflow,
   parseWorkflow,
   type StreamingEvent,
 } from "@looplia-core/core";
+import {
+  ensureWorkflowSkills,
+  loadCompiledRegistry,
+} from "@looplia-core/provider";
 import {
   createClaudeAgentExecutor,
   initializeCommandEnvironment,
@@ -486,31 +493,33 @@ function buildRunPrompt(workflowId: string, sandboxId: string): string {
 }
 
 /**
- * Check if a workflow supports input-less execution (v0.6.3)
- * Parses the workflow definition and checks if it uses input-less capable skills.
+ * Parse workflow file and return metadata (v0.7.0)
+ * Returns workflow info including input-less capability and required skills.
  *
  * @param workspace - Workspace path (~/.looplia)
  * @param workflowId - Workflow ID (e.g., "hn-reporter")
- * @returns true if workflow can run without inputs, false otherwise
+ * @returns Workflow metadata or null if parse fails
  */
-function checkWorkflowInputless(
+function parseWorkflowFile(
   workspace: string,
   workflowId: string
-): boolean {
+): { parsed: ParsedWorkflow; isInputless: boolean; skills: string[] } | null {
   const workflowPath = join(workspace, "workflows", `${workflowId}.md`);
 
   if (!existsSync(workflowPath)) {
     // Workflow doesn't exist - let it fail later with proper error
-    return false;
+    return null;
   }
 
   try {
     const content = readFileSync(workflowPath, "utf-8");
     const parsed = parseWorkflow(content);
-    return isInputlessWorkflow(parsed.definition);
+    const isInputless = isInputlessWorkflow(parsed.definition);
+    const skills = extractWorkflowSkills(parsed);
+    return { parsed, isInputless, skills };
   } catch {
     // Parse error - let it fail later with proper error
-    return false;
+    return null;
   }
 }
 
@@ -532,11 +541,13 @@ function executeMock(args: RunArgs): WorkflowResult {
 
 /**
  * Execute with streaming UI
+ * v0.7.0: Added requiredSkills for selective plugin loading
  */
 async function executeStreaming(
   prompt: string,
   workspace: string,
-  workflowId: string
+  workflowId: string,
+  requiredSkills?: string[]
 ): Promise<WorkflowResult> {
   const contentId = crypto.randomUUID();
   const executor = createClaudeAgentExecutor({ workspace });
@@ -544,6 +555,7 @@ async function executeStreaming(
   const generator = executor.executePromptStreaming(prompt, {
     workspace,
     contentId,
+    requiredSkills,
   });
 
   // Format workflow name for display (e.g., "writing-kit" -> "Writing Kit")
@@ -581,11 +593,13 @@ async function executeStreaming(
 
 /**
  * Execute in batch mode (non-streaming)
+ * v0.7.0: Added requiredSkills for selective plugin loading
  */
 async function executeBatch(
   prompt: string,
   workspace: string,
-  workflowId: string
+  workflowId: string,
+  requiredSkills?: string[]
 ): Promise<WorkflowResult> {
   console.error("⏳ Processing...");
 
@@ -594,6 +608,7 @@ async function executeBatch(
   const result = await executor.executePrompt(prompt, {
     workspace,
     contentId,
+    requiredSkills,
   });
 
   if (result.success && result.data) {
@@ -663,23 +678,34 @@ function resolveSandboxId(
 }
 
 /**
+ * Options for workflow execution
+ */
+type ExecuteWorkflowOptions = {
+  prompt: string;
+  workspace: string;
+  workflowId: string;
+  parsed: RunArgs;
+  requiredSkills?: string[];
+};
+
+/**
  * Execute workflow based on mode
+ * v0.7.0: Added requiredSkills for selective plugin loading
  */
 function executeWorkflow(
-  prompt: string,
-  workspace: string,
-  workflowId: string,
-  parsed: RunArgs
+  options: ExecuteWorkflowOptions
 ): Promise<WorkflowResult> {
+  const { prompt, workspace, workflowId, parsed, requiredSkills } = options;
+
   if (parsed.mock) {
     return Promise.resolve(executeMock(parsed));
   }
 
   if (isInteractive() && !parsed.noStreaming) {
-    return executeStreaming(prompt, workspace, workflowId);
+    return executeStreaming(prompt, workspace, workflowId, requiredSkills);
   }
 
-  return executeBatch(prompt, workspace, workflowId);
+  return executeBatch(prompt, workspace, workflowId, requiredSkills);
 }
 
 /**
@@ -701,7 +727,45 @@ function renderResult(result: WorkflowResult): void {
 }
 
 /**
- * Main entry point for run command (v0.6.3 thin wrapper)
+ * Handle JIT skill installation (v0.7.0)
+ * Returns false if installation fails and should abort
+ */
+async function handleJitInstallation(
+  workflowInfo: ReturnType<typeof parseWorkflowFile>
+): Promise<boolean> {
+  if (!workflowInfo) {
+    return true;
+  }
+
+  try {
+    const registry = await loadCompiledRegistry();
+    const ensureResult = await ensureWorkflowSkills(
+      workflowInfo.parsed,
+      registry
+    );
+
+    if (!ensureResult.ready) {
+      console.error(
+        `Failed to install required skills: ${ensureResult.failed.join(", ")}`
+      );
+      console.error(
+        'Run "looplia skill list --available" to see available skills.'
+      );
+      return false;
+    }
+
+    for (const installed of ensureResult.installed) {
+      console.error(`Installed skill: ${installed.skill}`);
+    }
+    return true;
+  } catch {
+    // Registry not available - continue with existing plugins
+    return true;
+  }
+}
+
+/**
+ * Main entry point for run command (v0.7.0 thin wrapper)
  */
 export async function runRunCommand(args: string[]): Promise<void> {
   const parsed = parseArgs(args);
@@ -721,26 +785,34 @@ export async function runRunCommand(args: string[]): Promise<void> {
     // 1. Ensure workspace (needed to check workflow definition)
     const workspace = ensureWorkspace(parsed.mock);
 
-    // 2. Resolve or create sandbox (validates inputs before API key check)
-    // v0.6.3: Check if workflow supports input-less execution
-    const allowInputless = checkWorkflowInputless(workspace, parsed.workflowId);
+    // 2. Parse workflow to get metadata (v0.7.0)
+    const workflowInfo = parseWorkflowFile(workspace, parsed.workflowId);
+    const allowInputless = workflowInfo?.isInputless ?? false;
+
+    // 3. Resolve or create sandbox (validates inputs before API key check)
     const sandboxId = resolveSandboxId(workspace, parsed, allowInputless);
 
-    // 3. Load settings, inject env vars, validate API key (v0.6.10)
+    // 4. v0.7.0: JIT skill installation
+    if (!(parsed.mock || (await handleJitInstallation(workflowInfo)))) {
+      process.exit(1);
+    }
+
+    // 5. Load settings, inject env vars, validate API key (v0.6.10)
     await initializeCommandEnvironment({ mock: parsed.mock });
 
-    // 4. Build /run prompt with sandbox ID
+    // 6. Build /run prompt with sandbox ID
     const prompt = buildRunPrompt(parsed.workflowId, sandboxId);
 
-    // 5. Execute
-    const result = await executeWorkflow(
+    // 7. Execute with selective plugin loading (v0.7.0)
+    const result = await executeWorkflow({
       prompt,
       workspace,
-      parsed.workflowId,
-      parsed
-    );
+      workflowId: parsed.workflowId,
+      parsed,
+      requiredSkills: workflowInfo?.skills,
+    });
 
-    // 6. Render result
+    // 8. Render result
     renderResult(result);
 
     if (result.status !== "success") {

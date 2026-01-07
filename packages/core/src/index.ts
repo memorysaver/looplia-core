@@ -36,6 +36,19 @@ export type {
 } from "./domain/content";
 export type { ProviderError, ProviderResult } from "./domain/errors";
 export { err, ok } from "./domain/errors";
+// Registry Types (v0.7.0)
+export type {
+  CompiledRegistry,
+  CompiledSkill,
+  EnsureSkillsResult,
+  InstallResult,
+  RegistrySkillItem,
+  RegistrySource,
+  RemoteRegistryManifest,
+  SkillCatalog,
+  SkillCategory,
+  SkillFile,
+} from "./domain/registry";
 export type { SessionManifest } from "./domain/session";
 export type {
   UserProfile,
@@ -55,6 +68,7 @@ export type {
 } from "./domain/workflow";
 // Workflow Parser (v0.6.0)
 export {
+  extractWorkflowSkills,
   generateValidationManifest,
   getExecutionOrder,
   getFinalStep,

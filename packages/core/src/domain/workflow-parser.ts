@@ -1,12 +1,13 @@
 /**
- * Workflow Parser (v0.6.3)
+ * Workflow Parser (v0.7.0)
  *
  * Parses workflow.md files with YAML frontmatter + markdown body.
+ * v0.7.0: Skills declaration support with `skills:` field for selective loading
  * v0.6.3: Named inputs support with `inputs:` declaration
  * v0.6.1: Skills-first format with `skill:` + `mission:` fields.
  * v0.6.0: Steps-based format with `run: agents/{name}` (deprecated).
  *
- * @see docs/DESIGN-0.6.3.md
+ * @see docs/DESIGN-0.7.0.md
  */
 
 import { isValidRunFormat } from "./agent-utils";
@@ -83,11 +84,12 @@ type PartialWorkflowInput = {
   type?: "file" | "json";
 };
 
-/** State for YAML parser (v0.6.3 with inputs support) */
+/** State for YAML parser (v0.7.0 with skills support) */
 type YamlParserState = {
   result: Record<string, unknown>;
   steps: WorkflowStep[];
   inputs: PartialWorkflowInput[];
+  skills: string[];
   currentKey: string;
   currentStep: Partial<WorkflowStep> | null;
   currentInput: PartialWorkflowInput | null;
@@ -105,6 +107,8 @@ function processYamlLine(state: YamlParserState, line: string): void {
 
   if (indent === 0) {
     processTopLevel(state, trimmed);
+  } else if (indent === 2 && state.currentKey === "skills") {
+    processSkillItem(state, trimmed);
   } else if (indent === 2 && state.currentKey === "inputs") {
     processInputItem(state, trimmed);
   } else if (indent === 2 && state.currentKey === "steps") {
@@ -115,6 +119,16 @@ function processYamlLine(state: YamlParserState, line: string): void {
     processStepProperty(state, trimmed);
   } else if (indent === 6 && state.currentValidate) {
     processValidateProperty(state, trimmed);
+  }
+}
+
+/** Process skill item (indent 2, starts with - skillname) */
+function processSkillItem(state: YamlParserState, trimmed: string): void {
+  if (trimmed.startsWith("- ")) {
+    const skillName = trimmed.slice(2).trim();
+    if (skillName) {
+      state.skills.push(skillName);
+    }
   }
 }
 
@@ -137,7 +151,12 @@ function processTopLevel(state: YamlParserState, trimmed: string): void {
     return;
   }
   state.currentKey = kv.key;
-  if (kv.key !== "steps" && kv.key !== "inputs" && kv.value) {
+  if (
+    kv.key !== "steps" &&
+    kv.key !== "inputs" &&
+    kv.key !== "skills" &&
+    kv.value
+  ) {
     state.result[kv.key] = kv.value;
   }
   state.currentValidate = null;
@@ -341,6 +360,7 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
     result: {},
     steps: [],
     inputs: [],
+    skills: [],
     currentKey: "",
     currentStep: null,
     currentInput: null,
@@ -359,6 +379,11 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
   // Save final step if exists
   if (state.currentStep?.id) {
     state.steps.push(state.currentStep as WorkflowStep);
+  }
+
+  // v0.7.0: Include skills if declared
+  if (state.skills.length > 0) {
+    state.result.skills = state.skills;
   }
 
   if (state.inputs.length > 0) {
@@ -478,7 +503,7 @@ function validateStep(
 }
 
 /**
- * Parse a workflow.md file into structured data (v0.6.3)
+ * Parse a workflow.md file into structured data (v0.7.0)
  *
  * @param content - Full content of the workflow.md file
  * @returns ParsedWorkflow with definition and instructions
@@ -506,6 +531,11 @@ export function parseWorkflow(content: string): ParsedWorkflow {
     ? (frontmatter.inputs as PartialWorkflowInput[])
     : [];
 
+  // Parse workflow skills (v0.7.0)
+  const workflowSkills = Array.isArray(frontmatter.skills)
+    ? (frontmatter.skills as string[])
+    : [];
+
   // Validate each step with workflow inputs context
   for (const step of frontmatter.steps as WorkflowStep[]) {
     validateStep(step, workflowInputs);
@@ -526,6 +556,7 @@ export function parseWorkflow(content: string): ParsedWorkflow {
       name: frontmatter.name,
       version: frontmatter.version as string | undefined,
       description: frontmatter.description,
+      skills: workflowSkills.length > 0 ? workflowSkills : undefined,
       inputs: inputs.length > 0 ? inputs : undefined,
       steps: frontmatter.steps as WorkflowStep[],
     },
@@ -660,4 +691,29 @@ export function isInputlessWorkflow(definition: WorkflowDefinition): boolean {
   return firstSteps.every(
     (step) => step.skill && INPUTLESS_CAPABLE_SKILLS.includes(step.skill)
   );
+}
+
+/**
+ * Extract skills from workflow definition (v0.7.0)
+ *
+ * Uses explicit declaration if available, otherwise derives from steps.
+ * This is used for selective plugin loading at runtime.
+ *
+ * @param workflow - Parsed workflow
+ * @returns Array of skill names required by the workflow
+ */
+export function extractWorkflowSkills(workflow: ParsedWorkflow): string[] {
+  // Explicit declaration takes priority (v0.7.0)
+  if (workflow.definition.skills && workflow.definition.skills.length > 0) {
+    return workflow.definition.skills;
+  }
+
+  // Fallback: derive from steps (backward compatibility)
+  const skills = new Set<string>();
+  for (const step of workflow.definition.steps) {
+    if (step.skill) {
+      skills.add(step.skill);
+    }
+  }
+  return [...skills];
 }
