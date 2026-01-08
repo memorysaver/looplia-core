@@ -631,12 +631,12 @@ export async function runBuildCommand(args: string[]): Promise<void> {
     // 1. Ensure workspace
     const workspace = ensureWorkspace(parsed.mock);
 
-    // 2. v0.7.0: Sync registry to ensure freshest skill catalog
+    // 2. v0.7.1: Compile local skill catalog (no remote fetching)
     if (!parsed.mock) {
       try {
-        await compileRegistry();
+        await compileRegistry({ localOnly: true });
       } catch {
-        // Registry sync failure is non-fatal - continue with existing cache
+        // Registry compilation failure is non-fatal - continue with existing cache
       }
     }
 

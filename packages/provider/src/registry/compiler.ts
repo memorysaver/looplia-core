@@ -1,13 +1,16 @@
 /**
- * Registry Compiler (v0.7.0)
+ * Registry Compiler (v0.7.1)
  *
  * Compiles skill catalog from multiple sources into a unified local cache.
- * - Fetches remote registries (official + third-party + marketplace)
- * - Scans local plugins for installed skills
+ * - Scans local plugins for installed skills (always)
+ * - Fetches remote registries only when explicitly requested (localOnly: false)
  * - Merges and deduplicates entries
  * - Writes skill-catalog.json for fast lookup
  *
- * @see docs/DESIGN-0.7.0.md
+ * v0.7.1 Change: Build command uses localOnly=true by default (no network).
+ * Remote fetching is explicit via `looplia registry sync`.
+ *
+ * @see docs/DESIGN-0.7.1.md
  */
 
 import { exec } from "node:child_process";
@@ -813,13 +816,30 @@ function buildRegistrySummary(skills: CompiledSkill[]): {
 }
 
 /**
+ * Options for compileRegistry
+ */
+export type CompileRegistryOptions = {
+  /** Whether to show progress indicators (default: false) */
+  showProgress?: boolean;
+  /** Only scan local plugins, skip remote fetching (default: true)
+   *
+   * - `true`: Fast local-only compilation (used by `looplia build`)
+   * - `false`: Full compilation with remote registry fetch (used by `looplia registry sync`)
+   */
+  localOnly?: boolean;
+};
+
+/**
  * Compile registry from all sources
  *
- * @param showProgress - Whether to show progress indicators (default: false)
+ * @param options - Compilation options
+ * @param options.showProgress - Whether to show progress indicators (default: false)
+ * @param options.localOnly - Only scan local plugins, skip remote fetching (default: true)
  */
 export async function compileRegistry(
-  showProgress = false
+  options?: CompileRegistryOptions
 ): Promise<CompiledRegistry> {
+  const { showProgress = false, localOnly = true } = options ?? {};
   const progress = showProgress ? createProgress() : null;
   const loopliaPath = getLoopliaHome();
   const sources = await loadSources();
@@ -840,19 +860,22 @@ export async function compileRegistry(
     await processLocalSource(source, seenSkills, allSkills, progress);
   }
 
-  // Fetch remote registries (sorted by priority, higher priority wins)
-  const remoteSources = sources
-    .filter((s) => s.enabled && s.type !== "local")
-    .sort((a, b) => b.priority - a.priority);
+  // v0.7.1: Only fetch remote registries when explicitly requested
+  if (!localOnly) {
+    // Fetch remote registries (sorted by priority, higher priority wins)
+    const remoteSources = sources
+      .filter((s) => s.enabled && s.type !== "local")
+      .sort((a, b) => b.priority - a.priority);
 
-  for (const source of remoteSources) {
-    await processRemoteSource({
-      source,
-      seenSkills,
-      allSkills,
-      installedSkillsMap,
-      progress,
-    });
+    for (const source of remoteSources) {
+      await processRemoteSource({
+        source,
+        seenSkills,
+        allSkills,
+        installedSkillsMap,
+        progress,
+      });
+    }
   }
 
   // Build summary and compiled registry

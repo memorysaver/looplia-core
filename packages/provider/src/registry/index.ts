@@ -1,11 +1,15 @@
 /**
- * Registry Module (v0.7.0)
+ * Registry Module (v0.7.1)
  *
  * Skill Registry System for discovery and installation.
  *
- * @see docs/DESIGN-0.7.0.md
+ * v0.7.1 Change: compileRegistry() now accepts localOnly option.
+ * Build command uses localOnly=true (no remote fetching).
+ *
+ * @see docs/DESIGN-0.7.1.md
  */
 
+export type { CompileRegistryOptions } from "./compiler";
 export {
   addSource,
   compileRegistry,
