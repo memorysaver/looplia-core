@@ -16,9 +16,6 @@
 import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-/** Schema URL for registry manifest */
-const REGISTRY_SCHEMA_URL = "https://looplia.com/schema/registry.json";
-
 /** Registry homepage */
 const REGISTRY_HOMEPAGE = "https://github.com/memorysaver/looplia-core";
 
@@ -369,8 +366,7 @@ async function buildRegistry(
   }
 
   return {
-    $schema: REGISTRY_SCHEMA_URL,
-    name: "looplia-official",
+    name: "looplia",
     homepage: REGISTRY_HOMEPAGE,
     version,
     updatedAt: new Date().toISOString(),

@@ -32,8 +32,31 @@
 
 1. **No Auto-Fetch During Build**: `looplia build` only scans local plugins
 2. **Explicit Registry Sync**: Remote fetching via `looplia registry sync` only
-3. **Bundled Plugins**: looplia-core and looplia-writer bundled with CLI
-4. **Standalone CLI Bundle**: All dependencies bundled for `bun link` support
+3. **No Official Registry**: Removed centralized registry.json from GitHub releases
+4. **Bundled Plugins**: looplia-core and looplia-writer bundled with CLI
+5. **Standalone CLI Bundle**: All dependencies bundled for `bun link` support
+
+### Why Remove Official Registry?
+
+The v0.7.0 design included an "official" registry source that fetched from:
+```
+https://github.com/memorysaver/looplia-core/releases/latest/download/registry.json
+```
+
+This caused problems:
+- The file doesn't exist (404 errors)
+- Maintaining a centralized registry adds complexity
+- Third-party sources (via `looplia registry add`) are sufficient
+
+**New approach**: Predefined third-party sources are included by default:
+- `github:anthropics/skills` - Official Anthropic skills
+- `github:ComposioHQ/awesome-claude-skills` - Community skills
+
+Users can add more sources:
+```bash
+looplia registry add github.com/your-org/custom-skills
+looplia registry sync
+```
 
 ### Key Design Decisions
 

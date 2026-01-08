@@ -92,8 +92,8 @@ export type RegistrySkillItem = {
  * Similar to shadcn/ui's registry.json
  */
 export type RemoteRegistryManifest = {
-  /** Schema version for compatibility checking */
-  $schema: string; // "https://looplia.com/schema/registry.json"
+  /** Schema version for compatibility checking (optional) */
+  $schema?: string;
 
   /** Registry name identifier */
   name: string; // "looplia-official"

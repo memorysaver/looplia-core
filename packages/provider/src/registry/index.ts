@@ -14,6 +14,7 @@ export {
   addSource,
   compileRegistry,
   createEmptyManifest,
+  DEFAULT_MARKETPLACE_SOURCES,
   getCompiledRegistryPath,
   getRegistryPath,
   getSkillCatalogPath,

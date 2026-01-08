@@ -32,15 +32,26 @@ import type {
 import { pathExists } from "../utils/fs";
 import { createProgress } from "./progress";
 
-/** Official registry URL */
-const OFFICIAL_REGISTRY_URL =
-  "https://github.com/memorysaver/looplia-core/releases/latest/download/registry.json";
-
-/** Default schema URL */
-const REGISTRY_SCHEMA_URL = "https://looplia.com/schema/registry.json";
-
 /** Registry format version */
 const REGISTRY_VERSION = "1.0.0";
+
+/**
+ * Default skill marketplace sources (v0.7.1)
+ * These are pre-populated in sources.json during registry init
+ */
+export const DEFAULT_MARKETPLACE_SOURCES = [
+  {
+    name: "anthropic-skills",
+    url: "https://github.com/anthropics/skills",
+    description:
+      "Official Anthropic skills - xlsx, pdf, pptx, docx, frontend-design, and more",
+  },
+  {
+    name: "awesome-claude-skills",
+    url: "https://github.com/ComposioHQ/awesome-claude-skills",
+    description: "Community-curated Claude skills collection by ComposioHQ",
+  },
+] as const;
 
 // Top-level regex patterns
 const PROTOCOL_REGEX = /^https?:\/\//;
@@ -105,18 +116,19 @@ export async function initializeRegistry(force = false): Promise<void> {
   await mkdir(registryPath, { recursive: true });
   await mkdir(join(registryPath, "cache"), { recursive: true });
 
-  // Create default sources.json if it doesn't exist or force
+  // Create sources.json with predefined third-party sources if it doesn't exist or force
+  // v0.7.1: Pre-populate with known skill marketplaces from DEFAULT_MARKETPLACE_SOURCES
   if (force || !(await pathExists(sourcesPath))) {
-    const defaultSources: RegistrySource[] = [
-      {
-        id: "official",
-        type: "official",
-        url: OFFICIAL_REGISTRY_URL,
+    const defaultSources: RegistrySource[] = DEFAULT_MARKETPLACE_SOURCES.map(
+      (source, index) => ({
+        id: `github:${source.url.replace("https://github.com/", "")}`,
+        type: "github" as const,
+        url: source.url,
         enabled: true,
-        priority: 100,
+        priority: 90 - index * 10, // First source gets highest priority
         addedAt: new Date().toISOString(),
-      },
-    ];
+      })
+    );
     await writeFile(sourcesPath, JSON.stringify(defaultSources, null, 2));
   }
 }
@@ -263,7 +275,6 @@ async function tryFetchMarketplace(
     }
 
     return {
-      $schema: REGISTRY_SCHEMA_URL,
       name: marketplace.name,
       homepage: `https://github.com/${repoPath}`,
       version: marketplace.version ?? "1.0.0",
@@ -303,27 +314,7 @@ async function tryFetchRegistryJson(
 async function fetchRemoteRegistry(
   source: RegistrySource
 ): Promise<FetchResult | null> {
-  // For official registry, fetch directly
-  if (source.type === "official") {
-    try {
-      const response = await fetch(source.url);
-      if (!response.ok) {
-        console.warn(
-          `Failed to fetch registry from ${source.url}: ${response.status}`
-        );
-        return null;
-      }
-      return {
-        manifest: (await response.json()) as RemoteRegistryManifest,
-        format: "registry",
-      };
-    } catch (error) {
-      console.warn(`Error fetching registry from ${source.url}:`, error);
-      return null;
-    }
-  }
-
-  // For GitHub sources, auto-detect format
+  // Auto-detect format from GitHub URL
   const repoPath = source.url
     .replace(PROTOCOL_REGEX, "")
     .replace("github.com/", "")
@@ -766,13 +757,10 @@ async function processRemoteSource(
       model: item.model,
       inputless: item.inputless,
       source: source.id,
-      sourceType: source.type === "official" ? "builtin" : "thirdparty",
+      sourceType: "thirdparty",
       installed: installed !== undefined,
       installedPath: installed?.installedPath,
-      gitUrl:
-        format === "marketplace" || source.type === "github"
-          ? item.downloadUrl
-          : undefined,
+      gitUrl: item.downloadUrl,
       skillPath: item.skillPath, // Set by marketplace format, undefined for registry.json
       checksum: item.checksum,
       dependencies: item.registryDependencies,
@@ -902,10 +890,9 @@ export async function compileRegistry(
  */
 export function createEmptyManifest(): RemoteRegistryManifest {
   return {
-    $schema: REGISTRY_SCHEMA_URL,
-    name: "looplia-official",
+    name: "looplia",
     homepage: "https://github.com/memorysaver/looplia-core",
-    version: "0.7.0",
+    version: "0.7.1",
     updatedAt: new Date().toISOString(),
     items: [],
   };

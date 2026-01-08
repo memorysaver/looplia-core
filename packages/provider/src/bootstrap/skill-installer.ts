@@ -1,12 +1,12 @@
 /**
- * Skill Installer (v0.7.0)
+ * Skill Installer (v0.7.1)
  *
  * Provides selective plugin loading based on workflow skill requirements.
  * - Core skills are always loaded
  * - Workflow skills are loaded on demand
  * - Third-party skills are installed from git
  *
- * @see docs/DESIGN-0.7.0.md
+ * @see docs/DESIGN-0.7.1.md
  */
 
 import { exec } from "node:child_process";
@@ -15,26 +15,9 @@ import { homedir, tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { promisify } from "node:util";
 import type { InstallResult } from "@looplia-core/core";
+import { DEFAULT_MARKETPLACE_SOURCES } from "../registry/compiler";
 import { isValidGitUrl, pathExists } from "../utils/fs";
 import { getPluginPaths } from "./index";
-
-/**
- * Default skill marketplace sources to install during looplia init
- * Embedded directly to avoid filesystem path resolution issues in production builds
- */
-const DEFAULT_SOURCES = [
-  {
-    name: "anthropic-skills",
-    url: "https://github.com/anthropics/skills",
-    description:
-      "Official Anthropic skills - xlsx, pdf, pptx, docx, frontend-design, and more",
-  },
-  {
-    name: "awesome-claude-skills",
-    url: "https://github.com/ComposioHQ/awesome-claude-skills",
-    description: "Community-curated Claude skills collection by ComposioHQ",
-  },
-] as const;
 
 const execAsync = promisify(exec);
 
@@ -352,7 +335,7 @@ async function installMarketplaceSource(
 /**
  * Install all default marketplace sources during looplia init
  *
- * Uses embedded DEFAULT_SOURCES config and:
+ * Uses embedded DEFAULT_MARKETPLACE_SOURCES config and:
  * 1. Clones repos to temp, splits by marketplace.json plugins
  * 2. Creates separate plugin folders for selective loading
  * 3. Generates registry/sources.json entries
@@ -384,7 +367,7 @@ export async function installDefaultSources(): Promise<InstallResult[]> {
   };
 
   // Install all sources in parallel for faster initialization
-  const installPromises = DEFAULT_SOURCES.map(
+  const installPromises = DEFAULT_MARKETPLACE_SOURCES.map(
     async (source): Promise<SourceInstallResult> => {
       // Clone to temp directory first to detect structure
       const tempDir = join(tmpdir(), `looplia-${source.name}-${Date.now()}`);
