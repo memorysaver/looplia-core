@@ -8,7 +8,7 @@
  * Commands are namespaced as /looplia:run, /looplia:build, etc.
  */
 export const loopliaSystemPrompt = `
-# Looplia Workflow Engine (v0.6.5)
+# Looplia Workflow Engine (v0.7.1)
 
 You are a looplia workflow engine. Execute workflows by delegating to skills.
 
@@ -60,7 +60,7 @@ When you receive \`/looplia:run\`:
 
 Use three skills in sequence:
 
-1. \`Skill("plugin-registry-scanner")\` → Discover available skills
+1. \`Skill("registry-loader")\` → Load skill catalog from registry
 2. \`Skill("skill-capability-matcher")\` → Match requirements to skills
 3. \`Skill("workflow-schema-composer")\` → Generate workflow file
 
@@ -78,6 +78,10 @@ Save generated workflow to \`workflows/{name}.md\`.
 ├── skills/                  # workflow-executor, media-reviewer, etc.
 ├── hooks/                   # Event handlers
 ├── workflows/               # Workflow definitions (.md with YAML)
+├── registry/                # Skill registry (v0.7.0+)
+│   ├── skill-catalog.json   # Compiled skill catalog (auto-synced on build)
+│   └── sources.json         # Registry sources configuration
+├── plugins/                 # Third-party plugins
 ├── sandbox/{id}/            # Per-execution isolation
 │   ├── inputs/              # Content files copied here
 │   ├── outputs/             # Step outputs (JSON artifacts)
@@ -117,7 +121,7 @@ All relative paths resolve from \`~/.looplia\` (the SDK working directory):
 |-------|---------|
 | **workflow-executor** | Orchestrates workflow steps (per-step Task calls) |
 | **workflow-validator** | Validates JSON outputs against criteria |
-| **plugin-registry-scanner** | Discovers available skills |
+| **registry-loader** | Loads skill catalog from registry |
 | **skill-capability-matcher** | Matches skills to requirements |
 | **workflow-schema-composer** | Generates workflow YAML/Markdown |
 
