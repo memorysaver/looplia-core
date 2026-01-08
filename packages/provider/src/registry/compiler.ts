@@ -51,6 +51,11 @@ const REGISTRY_VERSION = "1.0.0";
  */
 export const DEFAULT_MARKETPLACE_SOURCES = [
   {
+    name: "looplia-skills",
+    url: "https://github.com/memorysaver/looplia-skills",
+    description: "Looplia curated skills collection",
+  },
+  {
     name: "anthropic-skills",
     url: "https://github.com/anthropics/skills",
     description:

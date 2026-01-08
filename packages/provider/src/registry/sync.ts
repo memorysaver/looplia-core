@@ -519,7 +519,9 @@ export async function syncSource(
     };
   }
 
-  const tempDir = join(tmpdir(), `looplia-sync-${Date.now()}`);
+  // Use source id in temp dir name to avoid race conditions when syncing in parallel
+  const safeSourceId = source.id.replace(/[^a-zA-Z0-9-]/g, "-");
+  const tempDir = join(tmpdir(), `looplia-sync-${safeSourceId}-${Date.now()}`);
 
   try {
     // Clone repository
