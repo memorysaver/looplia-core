@@ -1,5 +1,5 @@
 /**
- * Bootstrap Module
+ * Bootstrap Module (v0.7.1)
  *
  * Handles plugin installation for different modes:
  * - NPM Bundle: Copy from npm package to ~/.looplia
@@ -7,6 +7,9 @@
  * - Development: Uses ./plugins directly (no copy needed)
  *
  * Uses marketplace.json for dynamic plugin discovery.
+ * v0.7.1: Uses unified syncRegistrySources() for default marketplace installation.
+ *
+ * @see docs/DESIGN-0.7.1.md section 7.6
  */
 
 import { createHash } from "node:crypto";
@@ -247,20 +250,24 @@ export async function copyPlugins(
     "utf-8"
   );
 
-  // Download default skill marketplaces (e.g., Anthropic skills)
-  // This clones repos to plugins/ and generates registry/sources.json
-  const { installDefaultSources } = await import("./skill-installer");
-  const installResults = await installDefaultSources();
-  for (const result of installResults) {
+  // v0.7.1: Initialize registry with default sources (creates sources.json)
+  const { initializeRegistry, compileRegistry } = await import(
+    "../registry/compiler"
+  );
+  await initializeRegistry();
+
+  // v0.7.1: Sync sources using unified flow (downloads from sources.json)
+  const { syncRegistrySources } = await import("../registry/sync");
+  const syncResults = await syncRegistrySources({ showProgress: true });
+  for (const result of syncResults) {
     if (result.status === "failed") {
       console.warn(
-        `Warning: Failed to download ${result.skill}: ${result.error}`
+        `Warning: Failed to sync ${result.source.id}: ${result.error}`
       );
     }
   }
 
   // Compile skill catalog for query-executor lookups
-  const { compileRegistry } = await import("../registry/compiler");
   await compileRegistry();
 }
 

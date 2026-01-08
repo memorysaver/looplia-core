@@ -13,6 +13,7 @@
 export type ProgressIndicator = {
   start: (message: string) => void;
   succeed: (message?: string) => void;
+  warn: (message?: string) => void;
   fail: (message?: string) => void;
   update: (message: string) => void;
   stop: () => void;
@@ -39,6 +40,16 @@ export function createProgress(): ProgressIndicator {
       // Clear the line and write success
       process.stdout.write("\r\x1b[K"); // Clear line
       console.log(`✓ ${message ?? currentMessage}`);
+      isActive = false;
+    },
+
+    warn(message?: string) {
+      if (!isActive) {
+        return;
+      }
+      // Clear the line and write warning
+      process.stdout.write("\r\x1b[K"); // Clear line
+      console.log(`⚠ ${message ?? currentMessage}`);
       isActive = false;
     },
 

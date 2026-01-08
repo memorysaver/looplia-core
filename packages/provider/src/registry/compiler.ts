@@ -31,6 +31,16 @@ import type {
 } from "@looplia-core/core";
 import { pathExists } from "../utils/fs";
 import { createProgress } from "./progress";
+import {
+  FRONTMATTER_REGEX,
+  formatTitle,
+  inferCapabilities,
+  inferCategory,
+  LEADING_DOT_SLASH_REGEX,
+  PROTOCOL_REGEX,
+  parseYamlFrontmatter,
+  TRAILING_SLASH_REGEX,
+} from "./utils";
 
 /** Registry format version */
 const REGISTRY_VERSION = "1.0.0";
@@ -51,23 +61,6 @@ export const DEFAULT_MARKETPLACE_SOURCES = [
     url: "https://github.com/ComposioHQ/awesome-claude-skills",
     description: "Community-curated Claude skills collection by ComposioHQ",
   },
-] as const;
-
-// Top-level regex patterns
-const PROTOCOL_REGEX = /^https?:\/\//;
-const TRAILING_SLASH_REGEX = /\/$/;
-const LEADING_DOT_SLASH_REGEX = /^\.\//;
-const FRONTMATTER_REGEX = /^---\n([\s\S]*?)\n---/;
-
-// Capability inference patterns
-const CAPABILITY_PATTERNS = [
-  { pattern: /media|video|audio|image/, capability: "media-processing" },
-  { pattern: /content|text|document/, capability: "content-analysis" },
-  { pattern: /json|schema|structured/, capability: "structured-output" },
-  { pattern: /workflow|orchestrat/, capability: "workflow-management" },
-  { pattern: /search|find|discover/, capability: "search" },
-  { pattern: /generat|creat|produc/, capability: "generation" },
-  { pattern: /valid|check|verify/, capability: "validation" },
 ] as const;
 
 /**
@@ -339,57 +332,6 @@ async function fetchRemoteRegistry(
 }
 
 /**
- * Parse YAML frontmatter into a key-value map
- * Handles multiline values with YAML literal block scalar (|)
- */
-function parseYamlFrontmatter(frontmatter: string): Record<string, string> {
-  const lines = frontmatter.split("\n");
-  const metadata: Record<string, string> = {};
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line === undefined) {
-      continue;
-    }
-    const colonIndex = line.indexOf(":");
-    if (colonIndex <= 0) {
-      continue;
-    }
-
-    const key = line.slice(0, colonIndex).trim();
-    let value = line.slice(colonIndex + 1).trim();
-
-    // Handle multi-line values with YAML literal block scalar (|)
-    if (value === "|") {
-      value = parseMultilineValue(lines, i + 1);
-    }
-
-    metadata[key] = value;
-  }
-
-  return metadata;
-}
-
-/**
- * Extract multiline value from indented lines
- */
-function parseMultilineValue(lines: string[], startIndex: number): string {
-  const multilineLines: string[] = [];
-  for (let j = startIndex; j < lines.length; j++) {
-    const nextLine = lines[j];
-    if (nextLine === undefined) {
-      break;
-    }
-    if (nextLine.startsWith("  ")) {
-      multilineLines.push(nextLine.trim());
-    } else if (nextLine.trim() !== "") {
-      break;
-    }
-  }
-  return multilineLines.join(" ");
-}
-
-/**
  * Build CompiledSkill from parsed metadata
  */
 function buildSkillFromMetadata(
@@ -438,76 +380,6 @@ async function parseSkillMetadata(
   } catch {
     return null;
   }
-}
-
-/**
- * Infer skill category from name and description
- */
-function inferCategory(name: string, description: string): SkillCategory {
-  const text = `${name} ${description}`.toLowerCase();
-
-  if (
-    text.includes("review") ||
-    text.includes("analyze") ||
-    text.includes("scan")
-  ) {
-    return "analysis";
-  }
-  if (
-    text.includes("generate") ||
-    text.includes("synthesis") ||
-    text.includes("create")
-  ) {
-    return "generation";
-  }
-  if (
-    text.includes("assemble") ||
-    text.includes("document") ||
-    text.includes("compile")
-  ) {
-    return "assembly";
-  }
-  if (text.includes("validate") || text.includes("check")) {
-    return "validation";
-  }
-  if (text.includes("search") || text.includes("find")) {
-    return "search";
-  }
-  if (
-    text.includes("workflow") ||
-    text.includes("execute") ||
-    text.includes("orchestrat")
-  ) {
-    return "orchestration";
-  }
-
-  return "utility";
-}
-
-/**
- * Infer capabilities from description
- */
-function inferCapabilities(description: string): string[] {
-  const capabilities: string[] = [];
-  const text = description.toLowerCase();
-
-  for (const { pattern, capability } of CAPABILITY_PATTERNS) {
-    if (pattern.test(text)) {
-      capabilities.push(capability);
-    }
-  }
-
-  return capabilities;
-}
-
-/**
- * Format skill name as title
- */
-function formatTitle(name: string): string {
-  return name
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
 }
 
 /**
