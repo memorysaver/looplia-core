@@ -17,6 +17,7 @@
 5. [CLI Development Setup](#5-cli-development-setup)
 6. [File Changes Summary](#6-file-changes-summary)
 7. [Single Registry Loop Architecture](#7-single-registry-loop-architecture)
+8. [Workflow Builder UI Progress & AskUserQuestion Integration](#8-workflow-builder-ui-progress--askuserquestion-integration)
 
 ---
 
@@ -37,6 +38,7 @@
 4. **Bundled Plugins**: looplia-core and looplia-writer bundled with CLI
 5. **Standalone CLI Bundle**: All dependencies bundled for `bun link` support
 6. **Single Registry Loop**: Unified `sources.json → sync → compile` flow (see Section 7)
+7. **Workflow Builder UI Progress**: AgentTree in analyze phase, AskUserQuestion integration (see Section 8)
 
 ### Why Remove Official Registry?
 
@@ -68,6 +70,9 @@ looplia registry sync
 | **Remote Fetching** | Implicit | Explicit | User controls when to fetch |
 | **CLI Runtime** | Node.js | Bun | Required for bundled dependencies |
 | **Dependency Bundling** | Partial | Full | Enable `bun link` for development |
+| **Build Analyze UI** | Spinner only | StreamingQueryUI + AgentTree | Real-time progress visibility |
+| **User Questions** | Custom JSON parsing | SDK AskUserQuestion tool | Native SDK integration |
+| **Executor Separation** | Single executor | `run` vs `build` executors | Interactive vs autonomous modes |
 
 ---
 
@@ -808,3 +813,599 @@ bun test
 | Consistency | Different behavior paths | Unified behavior |
 | Testing | Test 2 flows separately | Test 1 flow |
 | New source types | Add to 2 places | Add to 1 place |
+
+---
+
+## 8. Workflow Builder UI Progress & AskUserQuestion Integration
+
+### 8.1 Problem Statement
+
+The current `looplia build` command has UI/UX issues:
+
+#### Analyze Phase Has No Progress Visibility
+
+```
+$ looplia build
+What should this workflow do? > analyze youtube videos
+⣾ Analyzing your requirements...    ← Only spinner, no details!
+  Generating clarifying questions...
+```
+
+Users can't see:
+- Which skills are being invoked
+- What tools are being used
+- How far along the analysis is
+
+The `StreamingQueryUI` component with `AgentTree` exists and works well in the **generating** phase, but is not used during **analyzing**.
+
+#### Two Disconnected Question Systems
+
+| System | Source | Usage |
+|--------|--------|-------|
+| `AskUserQuestionInput` | Claude Agent SDK tool | Available for agents to ask users questions during execution |
+| Custom Wizard Questions | `skill-analyzer.ts` + `SectionView` | Looplia's own clarification UI |
+
+The wizard generates questions by asking Claude to return structured JSON, then renders them with custom React components. **The Agent SDK's `AskUserQuestion` tool is never invoked.**
+
+#### bypassPermissions Prevents AskUserQuestion
+
+Current executor uses:
+```typescript
+permissionMode: "bypassPermissions",
+allowDangerouslySkipPermissions: true,
+```
+
+This completely bypasses the SDK's permission system, which means:
+- `AskUserQuestion` tool calls execute but **no user interaction happens**
+- The SDK expects its permission system to populate the `answers` field
+- With bypass mode, answers are never collected
+
+### 8.2 Solution: Executor Separation + AskUserQuestion Integration
+
+#### Architecture Overview
+
+```
+Current Flow:
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ Description │ --> │  Analyzing  │ --> │ Clarifying  │
+│  (TextInput)│     │  (Spinner)  │     │ (Custom UI) │
+└─────────────┘     └─────────────┘     └─────────────┘
+                          │                    │
+                    No AgentTree         Custom questions
+                    No streaming         from JSON parsing
+                    bypassPermissions    No SDK integration
+
+Proposed Flow:
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ Description │ --> │  Analyzing  │ --> │ Clarifying  │
+│  (TextInput)│     │ (AgentTree) │     │(SDK-driven) │
+└─────────────┘     └─────────────┘     └─────────────┘
+                          │                    │
+                    StreamingQueryUI     AskUserQuestion
+                    Real-time progress   via canUseTool
+```
+
+#### Executor Separation
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    query-executor.ts                     │
+│  (base executor - bypassPermissions for `run` command)  │
+│  - No AskUserQuestion                                    │
+│  - Autonomous execution                                  │
+└─────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│              interactive-query-executor.ts               │
+│  (extends base - canUseTool for `build` command)        │
+│  - AskUserQuestion handling via callback                │
+│  - Auto-approve all other tools                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+| Command | Executor | Permission Mode | AskUserQuestion |
+|---------|----------|-----------------|-----------------|
+| `run` | `query-executor.ts` | `bypassPermissions` | ❌ Not available |
+| `build` | `interactive-query-executor.ts` | `default` + `canUseTool` | ✅ Supported |
+
+### 8.3 SDK AskUserQuestion Tool
+
+From the Claude Agent SDK:
+
+```typescript
+interface AskUserQuestionInput {
+  /**
+   * Questions to ask the user (1-4 questions)
+   */
+  questions: Array<{
+    question: string;     // Full question text
+    header: string;       // Short label (max 12 chars)
+    options: Array<{
+      label: string;      // Option display (1-5 words)
+      description: string; // Option explanation
+    }>;
+    multiSelect: boolean;
+  }>;
+  /**
+   * User answers populated by the permission system.
+   * Maps question text to selected option label(s).
+   */
+  answers?: Record<string, string>;
+}
+```
+
+The SDK's permission system handles collecting answers. We need to:
+1. Use `canUseTool` callback to intercept `AskUserQuestion` tool calls
+2. Display our custom UI
+3. Return answers in the expected format
+
+### 8.4 Implementation Details
+
+#### Phase 1: Create Interactive Query Executor
+
+**File:** `packages/provider/src/claude-agent-sdk/streaming/interactive-query-executor.ts` (NEW)
+
+```typescript
+/**
+ * Interactive Query Executor (v0.7.1)
+ *
+ * Used by `build` command for interactive workflow building.
+ * Supports AskUserQuestion via canUseTool callback.
+ *
+ * For autonomous execution (`run` command), use query-executor.ts instead.
+ */
+
+import { query } from "@anthropic-ai/claude-agent-sdk";
+import type { ClaudeAgentConfig } from "../config";
+import type { AgenticQueryResult } from "../utils/shared";
+import type { StreamingEvent } from "./types";
+
+// Question callback type
+export type QuestionCallback = (
+  questions: Array<{
+    question: string;
+    header: string;
+    options: Array<{ label: string; description: string }>;
+    multiSelect: boolean;
+  }>
+) => Promise<Record<string, string>>;
+
+/**
+ * Execute interactive query with AskUserQuestion support
+ */
+export async function* executeInteractiveQueryStreaming<T>(
+  prompt: string,
+  jsonSchema: Record<string, unknown>,
+  config: ClaudeAgentConfig,
+  questionCallback?: QuestionCallback
+): AsyncGenerator<StreamingEvent, AgenticQueryResult<T>> {
+  // ... initialization same as query-executor.ts
+
+  const result = query({
+    prompt,
+    options: {
+      model: mainModel,
+      cwd: loopliaHome,
+
+      // KEY DIFFERENCE: Use default permission mode with custom handler
+      permissionMode: "default",
+      allowDangerouslySkipPermissions: true,
+
+      // Custom permission handler for AskUserQuestion
+      canUseTool: async (toolName, input) => {
+        // Handle AskUserQuestion specially
+        if (toolName === "AskUserQuestion") {
+          if (questionCallback && input.questions) {
+            try {
+              const answers = await questionCallback(input.questions);
+              return {
+                behavior: "allow",
+                updatedInput: { ...input, answers },
+              };
+            } catch (error) {
+              return {
+                behavior: "deny",
+                message: "User cancelled question input",
+              };
+            }
+          }
+          return {
+            behavior: "deny",
+            message: "Question handler not available",
+          };
+        }
+
+        // All other tools: auto-approve (equivalent to bypass)
+        return { behavior: "allow", updatedInput: input };
+      },
+
+      // Include AskUserQuestion in allowed tools
+      allowedTools: [
+        "Read",
+        "Write",
+        "Glob",
+        "Task",
+        "Skill",
+        "WebSearch",
+        "WebFetch",
+        "AskUserQuestion",  // Only in interactive mode
+      ],
+
+      outputFormat: { type: "json_schema", schema: jsonSchema },
+      plugins: pluginPaths,
+    },
+  });
+
+  // ... event processing same as query-executor.ts
+}
+```
+
+#### Phase 2: Keep query-executor.ts Unchanged
+
+**File:** `packages/provider/src/claude-agent-sdk/streaming/query-executor.ts`
+
+No changes - keeps `bypassPermissions` for `run` command:
+
+```typescript
+// Existing code stays the same
+permissionMode: "bypassPermissions",
+allowDangerouslySkipPermissions: true,
+allowedTools: [
+  "Read",
+  "Write",
+  "Glob",
+  "Task",
+  "Skill",
+  "WebSearch",
+  "WebFetch",
+  // NO AskUserQuestion - autonomous execution
+],
+```
+
+#### Phase 3: Create Question Input Component
+
+**File:** `apps/cli/src/components/ask-user-question-panel.tsx` (NEW)
+
+```typescript
+import { Box, Text, useInput } from "ink";
+import { useState, useCallback } from "react";
+import { SelectInput, MultiSelectInput } from "./inputs";
+import { BoxedArea } from "./boxed-area";
+
+type Question = {
+  question: string;
+  header: string;
+  options: Array<{ label: string; description: string }>;
+  multiSelect: boolean;
+};
+
+type Props = {
+  questions: Question[];
+  onComplete: (answers: Record<string, string>) => void;
+  onCancel: () => void;
+};
+
+export function AskUserQuestionPanel({ questions, onComplete, onCancel }: Props) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+
+  const currentQuestion = questions[currentIndex];
+
+  useInput((input, key) => {
+    if (key.escape) {
+      onCancel();
+    }
+  });
+
+  const handleAnswer = useCallback((value: string | string[]) => {
+    const answer = Array.isArray(value) ? value.join(", ") : value;
+    const newAnswers = { ...answers, [currentQuestion.question]: answer };
+
+    if (currentIndex < questions.length - 1) {
+      setAnswers(newAnswers);
+      setCurrentIndex(currentIndex + 1);
+    } else {
+      onComplete(newAnswers);
+    }
+  }, [currentIndex, answers, currentQuestion, questions.length, onComplete]);
+
+  const options = currentQuestion.options.map((opt, i) => ({
+    id: String(i),
+    label: opt.label,
+  }));
+
+  return (
+    <BoxedArea borderColor="yellow" title={currentQuestion.header}>
+      <Box flexDirection="column">
+        <Text bold>{currentQuestion.question}</Text>
+        <Box marginTop={1}>
+          {currentQuestion.multiSelect ? (
+            <MultiSelectInput
+              options={options}
+              onSubmit={(selected) => handleAnswer(selected.map(s => s.label))}
+              isActive={true}
+            />
+          ) : (
+            <SelectInput
+              options={options}
+              onSelect={(selected) => handleAnswer(selected.label)}
+              isActive={true}
+            />
+          )}
+        </Box>
+        <Text dimColor>
+          Question {currentIndex + 1} of {questions.length} | [Esc] Cancel
+        </Text>
+      </Box>
+    </BoxedArea>
+  );
+}
+```
+
+#### Phase 4: Create AnalyzingPanel Component
+
+**File:** `apps/cli/src/components/wizard/analyzing-panel.tsx` (NEW)
+
+Replace spinner with StreamingQueryUI for analyze phase:
+
+```typescript
+import type { StreamingEvent } from "@looplia-core/core";
+import { useState, useCallback } from "react";
+import { StreamingQueryUI } from "../streaming-query-ui";
+import { AskUserQuestionPanel } from "../ask-user-question-panel";
+import type { ClarificationResult } from "./types";
+import { analyzeDescriptionStreaming } from "./skill-analyzer";
+
+type Question = {
+  question: string;
+  header: string;
+  options: Array<{ label: string; description: string }>;
+  multiSelect: boolean;
+};
+
+type Props = {
+  description: string;
+  workspace: string;
+  onComplete: (result: ClarificationResult) => void;
+  onError: (error: Error) => void;
+};
+
+export function AnalyzingPanel({
+  description,
+  workspace,
+  onComplete,
+  onError,
+}: Props) {
+  const [pendingQuestion, setPendingQuestion] = useState<{
+    questions: Question[];
+    resolve: (answers: Record<string, string>) => void;
+    reject: (error: Error) => void;
+  } | null>(null);
+
+  const questionCallback = useCallback(async (questions: Question[]) => {
+    return new Promise<Record<string, string>>((resolve, reject) => {
+      setPendingQuestion({ questions, resolve, reject });
+    });
+  }, []);
+
+  const createStreamGenerator = useCallback(() => {
+    return analyzeDescriptionStreaming(description, workspace, questionCallback);
+  }, [description, workspace, questionCallback]);
+
+  if (pendingQuestion) {
+    return (
+      <AskUserQuestionPanel
+        questions={pendingQuestion.questions}
+        onComplete={(answers) => {
+          pendingQuestion.resolve(answers);
+          setPendingQuestion(null);
+        }}
+        onCancel={() => {
+          pendingQuestion.reject(new Error("User cancelled"));
+          setPendingQuestion(null);
+        }}
+      />
+    );
+  }
+
+  return (
+    <StreamingQueryUI<ClarificationResult>
+      title="Analyzing Requirements"
+      subtitle="Scanning skills and generating questions..."
+      streamGenerator={createStreamGenerator}
+      onComplete={onComplete}
+      onError={onError}
+      workspacePath={workspace}
+    />
+  );
+}
+```
+
+#### Phase 5: Update skill-analyzer for Interactive Streaming
+
+**File:** `apps/cli/src/components/wizard/skill-analyzer.ts`
+
+```typescript
+import type { StreamingEvent } from "@looplia-core/core";
+import {
+  executeInteractiveQueryStreaming,
+  type QuestionCallback
+} from "@looplia-core/provider/claude-agent-sdk";
+
+/**
+ * Streaming version of analyzeDescription (interactive mode)
+ * Uses interactive executor with AskUserQuestion support
+ */
+export async function* analyzeDescriptionStreaming(
+  description: string,
+  workspace: string,
+  questionCallback?: QuestionCallback
+): AsyncGenerator<StreamingEvent, ClarificationResult> {
+  const prompt = buildAnalysisPrompt(description);
+
+  const generator = executeInteractiveQueryStreaming<WorkflowResult>(
+    prompt,
+    ANALYSIS_RESULT_SCHEMA,
+    { workspace },
+    questionCallback
+  );
+
+  let finalData: unknown;
+
+  for await (const event of generator) {
+    yield event;
+  }
+
+  const result = await generator.return(undefined);
+  if (result.value?.success && result.value?.data) {
+    finalData = result.value.data;
+  }
+
+  return parseClarificationResult(finalData);
+}
+
+// Keep non-streaming version for backward compatibility
+export async function analyzeDescription(
+  description: string,
+  workspace: string
+): Promise<ClarificationResult> {
+  // ... existing implementation unchanged
+}
+```
+
+#### Phase 6: Update Wizard to Use AnalyzingPanel
+
+**File:** `apps/cli/src/components/wizard/wizard.tsx`
+
+```typescript
+import { AnalyzingPanel } from "./analyzing-panel";
+
+// In renderPhase function:
+case "analyzing":
+  return (
+    <AnalyzingPanel
+      description={state.description}
+      workspace={workspace}
+      onComplete={(result) => {
+        logger.logAnalysisResult({
+          sections: result.clarifications.sections,
+          recommendations: result.recommendations,
+        });
+        setState((s) => ({
+          ...s,
+          phase: "clarifying",
+          sections: result.clarifications.sections,
+          recommendations: result.recommendations,
+          workflow: result.previewWorkflow || null,
+          currentSectionIndex: 0,
+        }));
+      }}
+      onError={(error) => {
+        logger.logAnalysisResult({ error: error.message });
+        setState((s) => ({
+          ...s,
+          phase: "error",
+          error,
+        }));
+      }}
+    />
+  );
+```
+
+### 8.5 Question Callback Flow
+
+```
+┌─────────────────┐
+│ InteractiveExec │
+│   canUseTool    │──▶ AskUserQuestion detected
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ questionCallback│──▶ Called with questions
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ setPendingQ     │──▶ React state update
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ AskUserQuestion │──▶ User sees questions
+│     Panel       │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ resolve(answers)│──▶ Answers returned to executor
+└─────────────────┘
+```
+
+### 8.6 Files to Modify/Create
+
+| File | Action | Description |
+|------|--------|-------------|
+| `packages/provider/.../interactive-query-executor.ts` | **Create** | Interactive executor with canUseTool |
+| `packages/provider/.../query-executor.ts` | **Unchanged** | Keep bypassPermissions for `run` |
+| `packages/provider/.../types.ts` | Modify | Add AskUserQuestionEvent type |
+| `apps/cli/src/components/ask-user-question-panel.tsx` | **Create** | Question input component |
+| `apps/cli/src/components/wizard/analyzing-panel.tsx` | **Create** | Streaming analyze panel |
+| `apps/cli/src/components/wizard/skill-analyzer.ts` | Modify | Add streaming variant |
+| `apps/cli/src/components/wizard/wizard.tsx` | Modify | Use AnalyzingPanel |
+| `apps/cli/src/components/wizard/generating-panel.tsx` | Modify | Add question handling |
+| `apps/cli/src/commands/build.ts` | Modify | Add executeInteractiveStreamingBatch |
+
+### 8.7 Key Design Decisions
+
+#### Why canUseTool Instead of Custom Events?
+
+1. **SDK-native pattern**: AskUserQuestion is designed to work with permission system
+2. **Answers populated correctly**: SDK expects answers in the input object
+3. **Blocking behavior**: canUseTool naturally pauses execution until answers received
+4. **Type safety**: Uses SDK's built-in types
+
+#### Why Separate Executors?
+
+1. **Clear separation of concerns**: Interactive vs autonomous execution
+2. **No risk to `run` command**: Existing behavior completely unchanged
+3. **Type safety**: Different allowed tools per executor
+4. **Testability**: Each executor can be tested independently
+
+#### Why Keep bypassPermissions for Run?
+
+1. **Performance**: No permission check overhead for normal tools
+2. **Backward compatible**: Existing behavior unchanged
+3. **Autonomous execution**: Workflow execution should run without prompts
+
+### 8.8 Verification Steps
+
+```bash
+# 1. Run Command (unchanged)
+looplia run my-workflow
+# Should work exactly as before
+# No AskUserQuestion prompts
+
+# 2. Build Command - Analyze Progress
+looplia build
+# Enter: "analyze youtube videos"
+# Should see AgentTree with skill invocations
+
+# 3. Build Command - AskUserQuestion
+looplia build
+# If agent uses AskUserQuestion, should see question panel
+# Answers collected and returned to agent
+
+# 4. Full Workflow Test
+looplia build --name test-workflow
+# Complete full wizard flow
+# Verify workflow is created correctly
+```
+
+### 8.9 Risk Mitigation
+
+- **Backward Compatibility**: `query-executor.ts` unchanged - `run` command unaffected
+- **Error Handling**: Graceful fallback if question callback not provided
+- **Timeout**: Consider adding timeout for question input (prevent infinite wait)
+- **Testing**: Test both `run` and `build` commands independently

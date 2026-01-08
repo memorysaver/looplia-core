@@ -379,6 +379,57 @@ export function executeStreamingBatch(
 }
 
 /**
+ * QuestionCallback type for interactive streaming
+ */
+export type QuestionCallback = (
+  questions: Array<{
+    question: string;
+    header: string;
+    options: Array<{ label: string; description: string }>;
+    multiSelect: boolean;
+  }>
+) => Promise<Record<string, string>>;
+
+/**
+ * Interactive streaming batch executor for wizard use (v0.7.1).
+ * Supports AskUserQuestion tool via questionCallback.
+ * Returns an async generator that yields StreamingEvents.
+ */
+export async function* executeInteractiveStreamingBatch(
+  prompt: string,
+  workspace: string,
+  questionCallback?: QuestionCallback
+): AsyncGenerator<StreamingEvent> {
+  // Dynamically import interactive executor to avoid circular dependencies
+  const { executeInteractiveQueryStreaming } = await import(
+    "@looplia-core/provider/claude-agent-sdk"
+  );
+
+  // Use a simple schema that allows any JSON result
+  const schema = {
+    type: "object",
+    properties: {
+      status: { type: "string" },
+      workflowPath: { type: "string" },
+      workflowName: { type: "string" },
+      stepsCount: { type: "number" },
+      error: { type: "string" },
+    },
+  };
+
+  const generator = executeInteractiveQueryStreaming<BuildResult>(
+    prompt,
+    schema as Record<string, unknown>,
+    { workspace },
+    questionCallback
+  );
+
+  for await (const event of generator) {
+    yield event;
+  }
+}
+
+/**
  * Section type for answer serialization
  */
 type SectionForContext = {

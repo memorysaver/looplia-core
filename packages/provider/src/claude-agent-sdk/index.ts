@@ -64,8 +64,12 @@ export type {
 } from "./streaming";
 export {
   type AgenticQueryResult,
+  type AskUserQuestion,
   executeAgenticQueryStreaming,
+  // Interactive executor for build command (v0.7.1)
+  executeInteractiveQueryStreaming,
   extractContentIdFromPrompt,
+  type QuestionCallback,
 } from "./streaming";
 // Re-export schemas for reference (v0.6.2: inline schemas, not TypeScript types)
 export { WRITING_KIT_OUTPUT_SCHEMA } from "./utils/schema-converter";

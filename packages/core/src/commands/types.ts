@@ -23,7 +23,8 @@ export type StreamingEvent =
   | ProgressEvent
   | UsageEvent
   | ErrorEvent
-  | CompleteEvent;
+  | CompleteEvent
+  | AskUserQuestionEvent;
 
 export type PromptEvent = {
   type: "prompt";
@@ -129,6 +130,25 @@ export type CompleteEvent<T = unknown> = {
     numTurns: number;
   };
   sessionId: string;
+  timestamp: number;
+};
+
+/**
+ * AskUserQuestion tool invocation - for interactive mode (v0.7.1)
+ * Emitted when the agent needs user input via AskUserQuestion tool
+ */
+export type AskUserQuestionEvent = {
+  type: "ask_user_question";
+  toolUseId: string;
+  questions: Array<{
+    question: string;
+    header: string;
+    options: Array<{
+      label: string;
+      description: string;
+    }>;
+    multiSelect: boolean;
+  }>;
   timestamp: number;
 };
 

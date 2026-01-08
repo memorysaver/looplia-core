@@ -11,6 +11,12 @@
  * - query-executor.ts: Orchestrates streaming queries
  */
 
+// Interactive executor for build command (v0.7.1)
+export {
+  type AskUserQuestion,
+  executeInteractiveQueryStreaming,
+  type QuestionCallback,
+} from "./interactive-query-executor";
 export { ProgressTracker } from "./progress-tracker";
 export {
   type AgenticQueryResult,
