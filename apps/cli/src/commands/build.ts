@@ -55,6 +55,15 @@ export type BuildResult = {
 };
 
 /**
+ * Streaming result type for generator return values
+ */
+type StreamingResult = {
+  success: boolean;
+  data?: BuildResult;
+  error?: { message: string };
+};
+
+/**
  * Executor interface for dependency injection in tests
  */
 export type BuildExecutor = {
@@ -383,12 +392,12 @@ export async function executeBatch(
 /**
  * Streaming batch executor for wizard use.
  * v0.7.1: Creates sandbox for logging consistency with run command
- * Returns an async generator that yields StreamingEvents.
+ * Returns an async generator that yields StreamingEvents and final result.
  */
 export async function* executeStreamingBatch(
   prompt: string,
   workspace: string
-): AsyncGenerator<StreamingEvent> {
+): AsyncGenerator<StreamingEvent, StreamingResult> {
   // v0.7.1: Create sandbox for build session (same pattern as run command)
   const { createSandboxDirectories, generateSandboxId } = await import(
     "../utils/sandbox.js"
@@ -405,9 +414,20 @@ export async function* executeStreamingBatch(
     contentId: sandboxId,
   });
 
-  for await (const event of generator) {
-    yield event;
+  // Properly capture return value using manual iteration
+  let iterResult = await generator.next();
+  while (!iterResult.done) {
+    yield iterResult.value;
+    iterResult = await generator.next();
   }
+
+  // Map executor result to StreamingResult
+  const executorResult = iterResult.value;
+  return {
+    success: executorResult.success,
+    data: executorResult.data as BuildResult | undefined,
+    error: executorResult.error,
+  };
 }
 
 /**
@@ -426,13 +446,13 @@ export type QuestionCallback = (
  * Interactive streaming batch executor for wizard use (v0.7.1).
  * Supports AskUserQuestion tool via questionCallback.
  * v0.7.1: Creates sandbox for logging consistency with run command
- * Returns an async generator that yields StreamingEvents.
+ * Returns an async generator that yields StreamingEvents and final result.
  */
 export async function* executeInteractiveStreamingBatch(
   prompt: string,
   workspace: string,
   questionCallback?: QuestionCallback
-): AsyncGenerator<StreamingEvent> {
+): AsyncGenerator<StreamingEvent, StreamingResult> {
   // v0.7.1: Create sandbox for build session (same pattern as run command)
   const { createSandboxDirectories, generateSandboxId } = await import(
     "../utils/sandbox.js"
@@ -467,9 +487,25 @@ export async function* executeInteractiveStreamingBatch(
     questionCallback
   );
 
-  for await (const event of generator) {
-    yield event;
+  // Properly capture return value using manual iteration
+  let iterResult = await generator.next();
+  while (!iterResult.done) {
+    yield iterResult.value;
+    iterResult = await generator.next();
   }
+
+  // Map executor result to StreamingResult
+  const executorResult = iterResult.value;
+  if (executorResult.success) {
+    return {
+      success: true,
+      data: executorResult.data,
+    };
+  }
+  return {
+    success: false,
+    error: { message: executorResult.error?.message ?? "Unknown error" },
+  };
 }
 
 /**
