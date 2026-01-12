@@ -11,7 +11,6 @@
  * @see plugins/looplia-core/skills/workflow-executor/SKILL.md
  */
 
-import { randomBytes } from "node:crypto";
 import {
   copyFileSync,
   existsSync,
@@ -21,7 +20,6 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
-
 import {
   extractWorkflowSkills,
   isInputlessWorkflow,
@@ -40,40 +38,22 @@ import {
 } from "@looplia-core/provider/claude-agent-sdk";
 import { renderStreamingQuery } from "../components";
 import { COMMANDS } from "../constants.js";
+import {
+  createSandboxDirectories,
+  generateSandboxId,
+} from "../utils/sandbox.js";
 import { isInteractive } from "../utils/terminal";
 
 /** Run command prefix from constants */
 const RUN_COMMAND = COMMANDS.RUN;
 
 /**
- * Generate a random 4-character hex suffix for sandbox IDs
- * Uses crypto.randomBytes for secure random generation
- */
-function generateRandomSuffix(): string {
-  return randomBytes(2).toString("hex");
-}
-
-/**
- * Generate a slug from filename for sandbox ID
- */
-function generateSlugFromFile(filePath: string): string {
-  const filename = basename(filePath, ".md");
-  return filename
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .substring(0, 30);
-}
-
-/**
  * Generate sandbox ID from file path
- * Format: {slug}-{YYYY-MM-DD}-{random4chars}
+ * Delegates to shared utility with filename slug
  */
-function generateSandboxId(filePath: string): string {
-  const slug = generateSlugFromFile(filePath);
-  const date = new Date().toISOString().split("T")[0];
-  const suffix = generateRandomSuffix();
-  return `${slug}-${date}-${suffix}`;
+function generateSandboxIdFromFile(filePath: string): string {
+  const filename = basename(filePath, ".md");
+  return generateSandboxId(filename);
 }
 
 /** Standard filename for content input in sandbox */
@@ -131,14 +111,11 @@ function createSandbox(
   filePath: string,
   workflowId: string
 ): string {
-  const sandboxId = generateSandboxId(filePath);
-  const sandboxDir = join(workspace, "sandbox", sandboxId);
+  const sandboxId = generateSandboxIdFromFile(filePath);
 
   try {
-    // Create sandbox folder structure
-    mkdirSync(join(sandboxDir, "inputs"), { recursive: true });
-    mkdirSync(join(sandboxDir, "outputs"), { recursive: true });
-    mkdirSync(join(sandboxDir, "logs"), { recursive: true });
+    // Create sandbox folder structure using shared utility
+    const sandboxDir = createSandboxDirectories(workspace, sandboxId);
 
     // Copy content file to inputs/content.md
     const absolutePath = resolve(filePath);
@@ -159,18 +136,11 @@ function createSandbox(
 
 /**
  * Generate sandbox ID from workflow ID (for input-less workflows)
- * Format: {workflow-slug}-{YYYY-MM-DD}-{random4chars}
+ * Delegates to shared utility
  * @internal Exported for testing
  */
 export function generateInputlessSandboxId(workflowId: string): string {
-  const slug = workflowId
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .substring(0, 30);
-  const date = new Date().toISOString().split("T")[0];
-  const suffix = generateRandomSuffix();
-  return `${slug}-${date}-${suffix}`;
+  return generateSandboxId(workflowId);
 }
 
 /**
@@ -185,13 +155,10 @@ function createSandboxWithInputs(
 ): string {
   // Always use workflow ID for consistent sandbox naming
   const sandboxId = generateInputlessSandboxId(workflowId);
-  const sandboxDir = join(workspace, "sandbox", sandboxId);
 
   try {
-    // Create sandbox folder structure
-    mkdirSync(join(sandboxDir, "inputs"), { recursive: true });
-    mkdirSync(join(sandboxDir, "outputs"), { recursive: true });
-    mkdirSync(join(sandboxDir, "logs"), { recursive: true });
+    // Create sandbox folder structure using shared utility
+    const sandboxDir = createSandboxDirectories(workspace, sandboxId);
 
     // Write each input to inputs/{name}.md or inputs/{name}.json
     for (const [name, parsedInput] of Object.entries(inputs)) {
@@ -227,13 +194,10 @@ function createSandboxWithInputs(
  */
 function createInputlessSandbox(workspace: string, workflowId: string): string {
   const sandboxId = generateInputlessSandboxId(workflowId);
-  const sandboxDir = join(workspace, "sandbox", sandboxId);
 
   try {
-    mkdirSync(join(sandboxDir, "inputs"), { recursive: true });
-    mkdirSync(join(sandboxDir, "outputs"), { recursive: true });
-    mkdirSync(join(sandboxDir, "logs"), { recursive: true });
-
+    // Create sandbox folder structure using shared utility
+    const sandboxDir = createSandboxDirectories(workspace, sandboxId);
     createInitialValidationJson(sandboxDir, sandboxId, workflowId);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

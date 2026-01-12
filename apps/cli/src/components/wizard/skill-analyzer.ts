@@ -517,6 +517,7 @@ type StreamingResult = {
  * Streaming version of analyzeDescription (v0.7.1)
  *
  * Uses the interactive executor with AskUserQuestion support.
+ * v0.7.1: Creates sandbox for logging consistency with run command
  * Yields StreamingEvent objects for real-time progress display.
  *
  * @param description - User's workflow description
@@ -528,12 +529,20 @@ export async function* analyzeDescriptionStreaming(
   workspace: string,
   questionCallback?: QuestionCallback
 ): AsyncGenerator<StreamingEvent, StreamingResult> {
+  // v0.7.1: Create sandbox for build session (same pattern as run command)
+  const { createSandboxDirectories, generateSandboxId } = await import(
+    "../../utils/sandbox.js"
+  );
+  const sandboxId = generateSandboxId("build");
+  createSandboxDirectories(workspace, sandboxId);
+
   // Dynamically import to avoid circular dependencies
   const { executeInteractiveQueryStreaming } = await import(
     "@looplia-core/provider/claude-agent-sdk"
   );
 
-  const prompt = buildAnalysisPrompt(description);
+  // Append sandbox-id to prompt so logger can extract it
+  const prompt = `${buildAnalysisPrompt(description)} --sandbox-id ${sandboxId}`;
 
   const generator = executeInteractiveQueryStreaming<ParsedResponse>(
     prompt,

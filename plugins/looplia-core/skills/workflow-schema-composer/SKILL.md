@@ -12,7 +12,7 @@ description: |
 
   v0.7.0: Generates explicit `skills:` declaration for selective plugin loading.
   v0.6.3: Supports input-less workflows using input-less capable skills (e.g., search).
-model: claude-haiku-4-5-20251001
+model: haiku
 ---
 
 # Workflow Schema Composer

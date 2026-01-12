@@ -287,6 +287,7 @@ function executeMock(args: BuildArgs): BuildResult {
 /**
  * Execute with streaming UI (legacy).
  * Wraps streaming execution with error handling and proper session tracking.
+ * v0.7.1: Creates sandbox for logging consistency with run command
  * @deprecated Use executeWizard for interactive builds (v0.6.4+)
  */
 export async function executeStreamingLegacy(
@@ -294,12 +295,20 @@ export async function executeStreamingLegacy(
   workspace: string
 ): Promise<BuildResult> {
   try {
-    const contentId = crypto.randomUUID();
-    const executor = createClaudeAgentExecutor({ workspace });
+    // v0.7.1: Create sandbox for build session (same pattern as run command)
+    const { createSandboxDirectories, generateSandboxId } = await import(
+      "../utils/sandbox.js"
+    );
+    const sandboxId = generateSandboxId("build");
+    createSandboxDirectories(workspace, sandboxId);
 
-    const generator = executor.executePromptStreaming(prompt, {
+    // Append sandbox-id to prompt so logger can extract it
+    const promptWithSandbox = `${prompt} --sandbox-id ${sandboxId}`;
+
+    const executor = createClaudeAgentExecutor({ workspace });
+    const generator = executor.executePromptStreaming(promptWithSandbox, {
       workspace,
-      contentId,
+      contentId: sandboxId,
     });
 
     const { result, error } = await renderStreamingQuery<BuildResult>({
@@ -335,6 +344,7 @@ export async function executeStreamingLegacy(
 
 /**
  * Execute in batch mode (non-streaming)
+ * v0.7.1: Creates sandbox for logging consistency with run command
  * @param executor Optional executor for dependency injection (testing)
  */
 export async function executeBatch(
@@ -344,11 +354,20 @@ export async function executeBatch(
 ): Promise<BuildResult> {
   console.error("⏳ Building workflow...");
 
-  const contentId = crypto.randomUUID();
+  // v0.7.1: Create sandbox for build session (same pattern as run command)
+  const { createSandboxDirectories, generateSandboxId } = await import(
+    "../utils/sandbox.js"
+  );
+  const sandboxId = generateSandboxId("build");
+  createSandboxDirectories(workspace, sandboxId);
+
+  // Append sandbox-id to prompt so logger can extract it
+  const promptWithSandbox = `${prompt} --sandbox-id ${sandboxId}`;
+
   const exec = executor ?? createClaudeAgentExecutor({ workspace });
-  const result = await exec.executePrompt(prompt, {
+  const result = await exec.executePrompt(promptWithSandbox, {
     workspace,
-    contentId,
+    contentId: sandboxId,
   });
 
   if (result.success && result.data) {
@@ -363,19 +382,32 @@ export async function executeBatch(
 
 /**
  * Streaming batch executor for wizard use.
+ * v0.7.1: Creates sandbox for logging consistency with run command
  * Returns an async generator that yields StreamingEvents.
  */
-export function executeStreamingBatch(
+export async function* executeStreamingBatch(
   prompt: string,
   workspace: string
 ): AsyncGenerator<StreamingEvent> {
-  const contentId = crypto.randomUUID();
-  const executor = createClaudeAgentExecutor({ workspace });
+  // v0.7.1: Create sandbox for build session (same pattern as run command)
+  const { createSandboxDirectories, generateSandboxId } = await import(
+    "../utils/sandbox.js"
+  );
+  const sandboxId = generateSandboxId("build");
+  createSandboxDirectories(workspace, sandboxId);
 
-  return executor.executePromptStreaming(prompt, {
+  // Append sandbox-id to prompt so logger can extract it
+  const promptWithSandbox = `${prompt} --sandbox-id ${sandboxId}`;
+
+  const executor = createClaudeAgentExecutor({ workspace });
+  const generator = executor.executePromptStreaming(promptWithSandbox, {
     workspace,
-    contentId,
+    contentId: sandboxId,
   });
+
+  for await (const event of generator) {
+    yield event;
+  }
 }
 
 /**
@@ -393,6 +425,7 @@ export type QuestionCallback = (
 /**
  * Interactive streaming batch executor for wizard use (v0.7.1).
  * Supports AskUserQuestion tool via questionCallback.
+ * v0.7.1: Creates sandbox for logging consistency with run command
  * Returns an async generator that yields StreamingEvents.
  */
 export async function* executeInteractiveStreamingBatch(
@@ -400,6 +433,16 @@ export async function* executeInteractiveStreamingBatch(
   workspace: string,
   questionCallback?: QuestionCallback
 ): AsyncGenerator<StreamingEvent> {
+  // v0.7.1: Create sandbox for build session (same pattern as run command)
+  const { createSandboxDirectories, generateSandboxId } = await import(
+    "../utils/sandbox.js"
+  );
+  const sandboxId = generateSandboxId("build");
+  createSandboxDirectories(workspace, sandboxId);
+
+  // Append sandbox-id to prompt so logger can extract it
+  const promptWithSandbox = `${prompt} --sandbox-id ${sandboxId}`;
+
   // Dynamically import interactive executor to avoid circular dependencies
   const { executeInteractiveQueryStreaming } = await import(
     "@looplia-core/provider/claude-agent-sdk"
@@ -418,7 +461,7 @@ export async function* executeInteractiveStreamingBatch(
   };
 
   const generator = executeInteractiveQueryStreaming<BuildResult>(
-    prompt,
+    promptWithSandbox,
     schema as Record<string, unknown>,
     { workspace },
     questionCallback

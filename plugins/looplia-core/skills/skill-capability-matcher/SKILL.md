@@ -13,7 +13,7 @@ description: |
   Second step in looplia workflow building pipeline: takes user requirements and skill registry,
   recommends skill sequences with missions. Designs one workflow step → one skill-executor
   → multiple skills orchestration pattern.
-model: claude-haiku-4-5-20251001
+model: haiku
 ---
 
 # Skill Capability Matcher
