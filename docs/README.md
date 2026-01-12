@@ -1,6 +1,6 @@
 # Looplia-Core Documentation
 
-> **Version:** 0.7.0
+> **Version:** 0.7.1
 > **Last Updated:** January 2026
 
 This directory contains the core documentation for Looplia-Core, a Claude Agent SDK-based agentic workflow platform.
@@ -40,6 +40,46 @@ These are the current, authoritative documents for the v0.7.0 architecture:
 |----------|---------|
 | [AGENTIC_CONCEPT-0.5.md](./archive/AGENTIC_CONCEPT-0.5.md) | Agent system design: Two-plugin model (historical) |
 | [TEST_PLAN-0.6.md](./archive/TEST_PLAN-0.6.md) | Test architecture with real API testing (historical) |
+
+---
+
+## What's New in v0.7.1
+
+### Build Command Sandbox Support
+
+v0.7.1 adds sandbox support for the build command:
+
+| Feature | Description |
+|---------|-------------|
+| **Build Sandbox** | Sandbox created at `~/.looplia/sandbox/build-*/` |
+| **Logging** | Logs stored in `logs/` subdirectory |
+| **Debugging** | Enables debugging of workflow generation |
+
+### Unified Sandbox Utilities
+
+Shared utility functions for sandbox management:
+
+```typescript
+import { generateSandboxId, createSandboxDirectories } from "../utils/sandbox.js";
+
+// Generate ID: build-2026-01-12-a1b2
+const sandboxId = generateSandboxId("build");
+
+// Create directories: inputs/, outputs/, logs/
+const sandboxDir = createSandboxDirectories(workspace, sandboxId);
+```
+
+### ZenMux Skill Compatibility
+
+Skill frontmatter now uses simplified model names for better proxy compatibility:
+
+| Before (v0.7.0) | After (v0.7.1) |
+|-----------------|----------------|
+| `model: claude-haiku-4-5-20251001` | `model: haiku` |
+
+**Benefit:** Enables ZenMux preset model mapping (`haiku` → `z-ai/glm-4.7`).
+
+See [CHANGELOG.md](../CHANGELOG.md) for full v0.7.1 release notes.
 
 ---
 
@@ -607,7 +647,7 @@ Previous versions are preserved in `/docs/archive/` for reference:
 ```
 
 **Version Progression:**
-- v0.6.0 → v0.6.1 → v0.6.2 → v0.6.3 → v0.6.4 → v0.6.5 → v0.6.6 → v0.6.7 → v0.6.8 → v0.6.9 → v0.6.10 → **v0.7.0** (current)
+- v0.6.0 → v0.6.1 → v0.6.2 → v0.6.3 → v0.6.4 → v0.6.5 → v0.6.6 → v0.6.7 → v0.6.8 → v0.6.9 → v0.6.10 → v0.7.0 → **v0.7.1** (current)
 
 **Key Documents:**
 - **DESIGN-0.7.0.md** documents skill registry system (marketplace, selective loading)
@@ -915,4 +955,4 @@ Steps complete when `validation.json` shows `validated: true`:
 
 ---
 
-*This README provides navigation for Looplia-Core v0.6.10 documentation.*
+*This README provides navigation for Looplia-Core v0.7.1 documentation.*

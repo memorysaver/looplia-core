@@ -5,6 +5,37 @@ All notable changes to Looplia-Core will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-01-12
+
+### Added
+
+- **Build Command Sandbox Support** - Build command now creates sandbox with logs
+  - Sandbox directory: `~/.looplia/sandbox/build-YYYY-MM-DD-XXXX/`
+  - Logs stored in `logs/` subdirectory
+  - Enables debugging of workflow generation process
+
+- **ZenMux Build E2E Test** - New `test-build-zenmux` job in Docker E2E workflow
+  - Tests build command with ZenMux GLM-4.7 preset
+  - Validates skill model mapping works correctly
+
+### Changed
+
+- **Unified Sandbox Utilities** - Shared sandbox functions in `utils/sandbox.ts`
+  - `generateSandboxId()` - Consistent ID generation across commands
+  - `createSandboxDirectories()` - Standard directory structure creation
+  - Reduced code duplication between `run` and `build` commands
+
+- **Skill Model Mapping** - Skill frontmatter uses simplified model names
+  - Changed from `claude-haiku-4-5-20251001` to `haiku`
+  - Enables ZenMux preset model mapping (`haiku` → `z-ai/glm-4.7`)
+  - Updated skills: registry-loader, workflow-schema-composer, search, skill-capability-matcher
+
+### Fixed
+
+- **ZenMux Model Mapping** - Skills now work correctly with ZenMux presets
+  - Previously: Skills with full model names caused 404 errors with ZenMux
+  - Now: Simplified model names map correctly via preset configuration
+
 ## [0.7.0] - 2026-01-04
 
 ### Added
@@ -767,7 +798,8 @@ The following were considered but **intentionally deferred** to v0.6+:
 
 ---
 
-[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/memorysaver/looplia-core/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/memorysaver/looplia-core/compare/v0.6.10...v0.7.0
 [0.6.10]: https://github.com/memorysaver/looplia-core/compare/v0.6.9...v0.6.10
 [0.6.9]: https://github.com/memorysaver/looplia-core/compare/v0.6.8...v0.6.9

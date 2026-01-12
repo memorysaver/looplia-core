@@ -1,9 +1,12 @@
 /**
- * Registry Command (v0.7.0)
+ * Registry Command (v0.7.1)
  *
  * Manage skill registry sources and synchronization.
  *
- * @see docs/DESIGN-0.7.0.md
+ * v0.7.1 Change: Remote fetching is explicit via `looplia registry sync`.
+ * Build command no longer auto-fetches remote sources.
+ *
+ * @see docs/DESIGN-0.7.1.md
  */
 
 import {
@@ -55,7 +58,8 @@ async function registryInit(force: boolean): Promise<void> {
   console.log(`Registry initialized at ${getRegistryPath()}`);
   console.log("Running initial sync...");
 
-  const registry = await compileRegistry();
+  // v0.7.1: Explicit remote fetch for init
+  const registry = await compileRegistry({ localOnly: false });
 
   console.log(
     `Synced ${registry.summary.totalSkills} skills from ${registry.sources.length} source(s)`
@@ -82,7 +86,8 @@ async function registryAdd(url: string): Promise<void> {
     console.log(`Added source: ${source.id}`);
     console.log("Running sync to fetch skills (auto-detecting format)...");
 
-    const registry = await compileRegistry();
+    // v0.7.1: Explicit remote fetch for add
+    const registry = await compileRegistry({ localOnly: false });
     console.log(
       `Synced ${registry.summary.totalSkills} skills from ${registry.sources.length} source(s)`
     );
@@ -96,7 +101,11 @@ async function registryAdd(url: string): Promise<void> {
 async function registrySync(): Promise<void> {
   console.log("Syncing registry from all sources...");
 
-  const registry = await compileRegistry();
+  // v0.7.1: Explicit remote fetch for sync
+  const registry = await compileRegistry({
+    localOnly: false,
+    showProgress: true,
+  });
 
   console.log("\nRegistry compiled successfully!");
   console.log(`  Total skills: ${registry.summary.totalSkills}`);
@@ -171,7 +180,8 @@ async function registryRemove(sourceId: string): Promise<void> {
   console.log(`Removed source: ${sourceId}`);
   console.log("Running sync to update registry...");
 
-  const registry = await compileRegistry();
+  // v0.7.1: Explicit remote fetch for remove
+  const registry = await compileRegistry({ localOnly: false });
   console.log(
     `Registry now has ${registry.summary.totalSkills} skills from ${registry.sources.length} source(s)`
   );

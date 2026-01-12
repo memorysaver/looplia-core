@@ -14,11 +14,11 @@ import { createBuildLogger } from "../../utils/agent-logger.js";
 import { BoxedArea } from "../boxed-area.js";
 import { TextInput } from "../inputs/index.js";
 import { Spinner } from "../spinner.js";
+import { AnalyzingPanel } from "./analyzing-panel.js";
 import { GeneratingPanel } from "./generating-panel.js";
 import { buildPreview } from "./preview-builder.js";
 import { ReviewPanel } from "./review-panel.js";
 import { SectionView } from "./section-view.js";
-import { analyzeDescription } from "./skill-analyzer.js";
 import { TabBar } from "./tab-bar.js";
 import type {
   Answers,
@@ -258,25 +258,20 @@ export function BuildWizard({
     setState((s) => ({ ...s, phase: "generating" }));
   }, []);
 
-  // Analyzing phase - generate clarifying questions
+  // Analyzing phase - mock mode only (non-mock uses streaming AnalyzingPanel)
   useEffect(() => {
-    if (state.phase !== "analyzing") {
+    if (state.phase !== "analyzing" || !mock) {
       return;
     }
 
-    const analyze = async () => {
+    const analyze = () => {
       logger.logAnalysisStart(state.description);
 
       try {
-        let result: ClarificationResult;
-
-        if (mock) {
-          // Use mock data for testing without API
-          result = generateMockClarifications(state.description);
-        } else {
-          // Call skill-capability-matcher via executor for dynamic questions
-          result = await analyzeDescription(state.description, workspace);
-        }
+        // Use mock data for testing without API
+        const result: ClarificationResult = generateMockClarifications(
+          state.description
+        );
 
         logger.logAnalysisResult({
           sections: result.clarifications.sections,
@@ -288,7 +283,7 @@ export function BuildWizard({
           phase: "clarifying",
           sections: result.clarifications.sections,
           recommendations: result.recommendations,
-          workflow: result.previewWorkflow || null, // Use agent-generated preview!
+          workflow: result.previewWorkflow || null,
           currentSectionIndex: 0,
         }));
       } catch (error) {
@@ -305,7 +300,7 @@ export function BuildWizard({
     };
 
     analyze();
-  }, [state.phase, state.description, mock, workspace, logger]);
+  }, [state.phase, state.description, mock, logger]);
 
   // Generating phase - mock mode only (non-mock uses streaming panel)
   useEffect(() => {
@@ -417,6 +412,46 @@ export function BuildWizard({
     workflowName,
     state.sections
   );
+
+  // Render streaming AnalyzingPanel for non-mock analyzing phase (v0.7.1)
+  if (state.phase === "analyzing" && !mock) {
+    logger.logAnalysisStart(state.description);
+
+    const handleAnalysisComplete = (result: ClarificationResult) => {
+      logger.logAnalysisResult({
+        sections: result.clarifications.sections,
+        recommendations: result.recommendations,
+      });
+
+      setState((s) => ({
+        ...s,
+        phase: "clarifying",
+        sections: result.clarifications.sections,
+        recommendations: result.recommendations,
+        workflow: result.previewWorkflow || null,
+        currentSectionIndex: 0,
+      }));
+    };
+
+    const handleAnalysisError = (error: Error) => {
+      logger.logAnalysisResult({ error: error.message });
+
+      setState((s) => ({
+        ...s,
+        phase: "error",
+        error,
+      }));
+    };
+
+    return (
+      <AnalyzingPanel
+        description={state.description}
+        onComplete={handleAnalysisComplete}
+        onError={handleAnalysisError}
+        workspace={workspace}
+      />
+    );
+  }
 
   // Render streaming GeneratingPanel for non-mock generating phase
   if (state.phase === "generating" && !mock) {

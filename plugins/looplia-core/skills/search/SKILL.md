@@ -16,7 +16,7 @@ description: |
   - future: Pluggable providers (jina.ai, firecrawl, exa.ai)
 
   This is an input-less skill - it executes search missions autonomously.
-model: claude-haiku-4-5-20251001
+model: haiku
 tools:
   - Glob
   - Grep

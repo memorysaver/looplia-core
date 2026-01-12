@@ -22,9 +22,11 @@ import {
   renderResult,
 } from "../../src/commands/build";
 
-// UUID v4 pattern for contentId validation
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+// Sandbox ID pattern for contentId validation (v0.7.1: build-YYYY-MM-DD-XXXX)
+const SANDBOX_ID_PATTERN = /^build-\d{4}-\d{2}-\d{2}-[a-f0-9]{4}$/;
+// Pattern for --sandbox-id suffix in prompt
+const SANDBOX_ID_SUFFIX_PATTERN =
+  /--sandbox-id build-\d{4}-\d{2}-\d{2}-[a-f0-9]{4}$/;
 
 describe("build command integration", () => {
   let testDir: string;
@@ -139,7 +141,8 @@ describe("build command integration", () => {
 
       expect(capturedOptions).toBeDefined();
       expect(capturedOptions?.workspace).toBe(testDir);
-      expect(capturedOptions?.contentId).toMatch(UUID_PATTERN);
+      // v0.7.1: contentId is now sandbox ID format
+      expect(capturedOptions?.contentId).toMatch(SANDBOX_ID_PATTERN);
     });
 
     it("should pass correct prompt to executor", async () => {
@@ -161,7 +164,9 @@ describe("build command integration", () => {
         mockExecutor
       );
 
-      expect(capturedPrompt).toBe("/looplia:build summarize articles");
+      // v0.7.1: prompt now includes --sandbox-id suffix
+      expect(capturedPrompt).toContain("/looplia:build summarize articles");
+      expect(capturedPrompt).toMatch(SANDBOX_ID_SUFFIX_PATTERN);
     });
   });
 
@@ -189,7 +194,8 @@ describe("build command integration", () => {
       const builtPrompt = buildPrompt(args);
       const result = await executeBatch(builtPrompt, testDir, mockExecutor);
 
-      expect(capturedPrompt).toBe("/looplia:build summarize articles");
+      // v0.7.1: prompt now includes --sandbox-id suffix
+      expect(capturedPrompt).toContain("/looplia:build summarize articles");
       expect(result.workflowName).toBe("article-summary");
     });
 
@@ -219,7 +225,8 @@ describe("build command integration", () => {
       // Newlines should be stripped
       expect(capturedPrompt).not.toContain("\n");
       expect(capturedPrompt).not.toContain("\r");
-      expect(capturedPrompt).toBe(
+      // v0.7.1: prompt now includes --sandbox-id suffix
+      expect(capturedPrompt).toContain(
         "/looplia:build test <script>alert('xss')</script> injection"
       );
     });
@@ -302,13 +309,14 @@ describe("build command integration", () => {
 
       const mockExecutor: BuildExecutor = {
         executePrompt: (inputPrompt, options) => {
-          // Verify prompt format
-          expect(inputPrompt).toBe(
+          // v0.7.1: prompt now includes --sandbox-id suffix
+          expect(inputPrompt).toContain(
             "/looplia:build analyze videos and extract themes"
           );
           // Verify options
           expect(options.workspace).toBe(testDir);
           expect(options.contentId).toBeDefined();
+          expect(options.contentId).toMatch(SANDBOX_ID_PATTERN);
 
           return Promise.resolve({ success: true, data: mockResult });
         },

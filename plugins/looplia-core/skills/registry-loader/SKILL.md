@@ -9,7 +9,7 @@ description: |
   v0.7.0: Replaces plugin-registry-scanner with skill catalog for faster access.
   Auto-syncs from all sources on every build to ensure freshest skill catalog.
 tools: Read
-model: claude-haiku-4-5-20251001
+model: haiku
 ---
 
 # Registry Loader

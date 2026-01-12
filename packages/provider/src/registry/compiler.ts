@@ -1,13 +1,16 @@
 /**
- * Registry Compiler (v0.7.0)
+ * Registry Compiler (v0.7.1)
  *
  * Compiles skill catalog from multiple sources into a unified local cache.
- * - Fetches remote registries (official + third-party + marketplace)
- * - Scans local plugins for installed skills
+ * - Scans local plugins for installed skills (always)
+ * - Fetches remote registries only when explicitly requested (localOnly: false)
  * - Merges and deduplicates entries
  * - Writes skill-catalog.json for fast lookup
  *
- * @see docs/DESIGN-0.7.0.md
+ * v0.7.1 Change: Build command uses localOnly=true by default (no network).
+ * Remote fetching is explicit via `looplia registry sync`.
+ *
+ * @see docs/DESIGN-0.7.1.md
  */
 
 import { exec } from "node:child_process";
@@ -28,32 +31,41 @@ import type {
 } from "@looplia-core/core";
 import { pathExists } from "../utils/fs";
 import { createProgress } from "./progress";
-
-/** Official registry URL */
-const OFFICIAL_REGISTRY_URL =
-  "https://github.com/memorysaver/looplia-core/releases/latest/download/registry.json";
-
-/** Default schema URL */
-const REGISTRY_SCHEMA_URL = "https://looplia.com/schema/registry.json";
+import {
+  FRONTMATTER_REGEX,
+  formatTitle,
+  inferCapabilities,
+  inferCategory,
+  LEADING_DOT_SLASH_REGEX,
+  PROTOCOL_REGEX,
+  parseYamlFrontmatter,
+  TRAILING_SLASH_REGEX,
+} from "./utils";
 
 /** Registry format version */
 const REGISTRY_VERSION = "1.0.0";
 
-// Top-level regex patterns
-const PROTOCOL_REGEX = /^https?:\/\//;
-const TRAILING_SLASH_REGEX = /\/$/;
-const LEADING_DOT_SLASH_REGEX = /^\.\//;
-const FRONTMATTER_REGEX = /^---\n([\s\S]*?)\n---/;
-
-// Capability inference patterns
-const CAPABILITY_PATTERNS = [
-  { pattern: /media|video|audio|image/, capability: "media-processing" },
-  { pattern: /content|text|document/, capability: "content-analysis" },
-  { pattern: /json|schema|structured/, capability: "structured-output" },
-  { pattern: /workflow|orchestrat/, capability: "workflow-management" },
-  { pattern: /search|find|discover/, capability: "search" },
-  { pattern: /generat|creat|produc/, capability: "generation" },
-  { pattern: /valid|check|verify/, capability: "validation" },
+/**
+ * Default skill marketplace sources (v0.7.1)
+ * These are pre-populated in sources.json during registry init
+ */
+export const DEFAULT_MARKETPLACE_SOURCES = [
+  {
+    name: "looplia-skills",
+    url: "https://github.com/memorysaver/looplia-skills",
+    description: "Looplia curated skills collection",
+  },
+  {
+    name: "anthropic-skills",
+    url: "https://github.com/anthropics/skills",
+    description:
+      "Official Anthropic skills - xlsx, pdf, pptx, docx, frontend-design, and more",
+  },
+  {
+    name: "awesome-claude-skills",
+    url: "https://github.com/ComposioHQ/awesome-claude-skills",
+    description: "Community-curated Claude skills collection by ComposioHQ",
+  },
 ] as const;
 
 /**
@@ -102,18 +114,19 @@ export async function initializeRegistry(force = false): Promise<void> {
   await mkdir(registryPath, { recursive: true });
   await mkdir(join(registryPath, "cache"), { recursive: true });
 
-  // Create default sources.json if it doesn't exist or force
+  // Create sources.json with predefined third-party sources if it doesn't exist or force
+  // v0.7.1: Pre-populate with known skill marketplaces from DEFAULT_MARKETPLACE_SOURCES
   if (force || !(await pathExists(sourcesPath))) {
-    const defaultSources: RegistrySource[] = [
-      {
-        id: "official",
-        type: "official",
-        url: OFFICIAL_REGISTRY_URL,
+    const defaultSources: RegistrySource[] = DEFAULT_MARKETPLACE_SOURCES.map(
+      (source, index) => ({
+        id: `github:${source.url.replace("https://github.com/", "")}`,
+        type: "github" as const,
+        url: source.url,
         enabled: true,
-        priority: 100,
+        priority: 90 - index * 10, // First source gets highest priority
         addedAt: new Date().toISOString(),
-      },
-    ];
+      })
+    );
     await writeFile(sourcesPath, JSON.stringify(defaultSources, null, 2));
   }
 }
@@ -260,7 +273,6 @@ async function tryFetchMarketplace(
     }
 
     return {
-      $schema: REGISTRY_SCHEMA_URL,
       name: marketplace.name,
       homepage: `https://github.com/${repoPath}`,
       version: marketplace.version ?? "1.0.0",
@@ -300,27 +312,7 @@ async function tryFetchRegistryJson(
 async function fetchRemoteRegistry(
   source: RegistrySource
 ): Promise<FetchResult | null> {
-  // For official registry, fetch directly
-  if (source.type === "official") {
-    try {
-      const response = await fetch(source.url);
-      if (!response.ok) {
-        console.warn(
-          `Failed to fetch registry from ${source.url}: ${response.status}`
-        );
-        return null;
-      }
-      return {
-        manifest: (await response.json()) as RemoteRegistryManifest,
-        format: "registry",
-      };
-    } catch (error) {
-      console.warn(`Error fetching registry from ${source.url}:`, error);
-      return null;
-    }
-  }
-
-  // For GitHub sources, auto-detect format
+  // Auto-detect format from GitHub URL
   const repoPath = source.url
     .replace(PROTOCOL_REGEX, "")
     .replace("github.com/", "")
@@ -342,57 +334,6 @@ async function fetchRemoteRegistry(
     `No registry found for ${source.url} (tried marketplace.json and registry.json)`
   );
   return null;
-}
-
-/**
- * Parse YAML frontmatter into a key-value map
- * Handles multiline values with YAML literal block scalar (|)
- */
-function parseYamlFrontmatter(frontmatter: string): Record<string, string> {
-  const lines = frontmatter.split("\n");
-  const metadata: Record<string, string> = {};
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line === undefined) {
-      continue;
-    }
-    const colonIndex = line.indexOf(":");
-    if (colonIndex <= 0) {
-      continue;
-    }
-
-    const key = line.slice(0, colonIndex).trim();
-    let value = line.slice(colonIndex + 1).trim();
-
-    // Handle multi-line values with YAML literal block scalar (|)
-    if (value === "|") {
-      value = parseMultilineValue(lines, i + 1);
-    }
-
-    metadata[key] = value;
-  }
-
-  return metadata;
-}
-
-/**
- * Extract multiline value from indented lines
- */
-function parseMultilineValue(lines: string[], startIndex: number): string {
-  const multilineLines: string[] = [];
-  for (let j = startIndex; j < lines.length; j++) {
-    const nextLine = lines[j];
-    if (nextLine === undefined) {
-      break;
-    }
-    if (nextLine.startsWith("  ")) {
-      multilineLines.push(nextLine.trim());
-    } else if (nextLine.trim() !== "") {
-      break;
-    }
-  }
-  return multilineLines.join(" ");
 }
 
 /**
@@ -444,76 +385,6 @@ async function parseSkillMetadata(
   } catch {
     return null;
   }
-}
-
-/**
- * Infer skill category from name and description
- */
-function inferCategory(name: string, description: string): SkillCategory {
-  const text = `${name} ${description}`.toLowerCase();
-
-  if (
-    text.includes("review") ||
-    text.includes("analyze") ||
-    text.includes("scan")
-  ) {
-    return "analysis";
-  }
-  if (
-    text.includes("generate") ||
-    text.includes("synthesis") ||
-    text.includes("create")
-  ) {
-    return "generation";
-  }
-  if (
-    text.includes("assemble") ||
-    text.includes("document") ||
-    text.includes("compile")
-  ) {
-    return "assembly";
-  }
-  if (text.includes("validate") || text.includes("check")) {
-    return "validation";
-  }
-  if (text.includes("search") || text.includes("find")) {
-    return "search";
-  }
-  if (
-    text.includes("workflow") ||
-    text.includes("execute") ||
-    text.includes("orchestrat")
-  ) {
-    return "orchestration";
-  }
-
-  return "utility";
-}
-
-/**
- * Infer capabilities from description
- */
-function inferCapabilities(description: string): string[] {
-  const capabilities: string[] = [];
-  const text = description.toLowerCase();
-
-  for (const { pattern, capability } of CAPABILITY_PATTERNS) {
-    if (pattern.test(text)) {
-      capabilities.push(capability);
-    }
-  }
-
-  return capabilities;
-}
-
-/**
- * Format skill name as title
- */
-function formatTitle(name: string): string {
-  return name
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
 }
 
 /**
@@ -763,13 +634,10 @@ async function processRemoteSource(
       model: item.model,
       inputless: item.inputless,
       source: source.id,
-      sourceType: source.type === "official" ? "builtin" : "thirdparty",
+      sourceType: "thirdparty",
       installed: installed !== undefined,
       installedPath: installed?.installedPath,
-      gitUrl:
-        format === "marketplace" || source.type === "github"
-          ? item.downloadUrl
-          : undefined,
+      gitUrl: item.downloadUrl,
       skillPath: item.skillPath, // Set by marketplace format, undefined for registry.json
       checksum: item.checksum,
       dependencies: item.registryDependencies,
@@ -813,13 +681,30 @@ function buildRegistrySummary(skills: CompiledSkill[]): {
 }
 
 /**
+ * Options for compileRegistry
+ */
+export type CompileRegistryOptions = {
+  /** Whether to show progress indicators (default: false) */
+  showProgress?: boolean;
+  /** Only scan local plugins, skip remote fetching (default: true)
+   *
+   * - `true`: Fast local-only compilation (used by `looplia build`)
+   * - `false`: Full compilation with remote registry fetch (used by `looplia registry sync`)
+   */
+  localOnly?: boolean;
+};
+
+/**
  * Compile registry from all sources
  *
- * @param showProgress - Whether to show progress indicators (default: false)
+ * @param options - Compilation options
+ * @param options.showProgress - Whether to show progress indicators (default: false)
+ * @param options.localOnly - Only scan local plugins, skip remote fetching (default: true)
  */
 export async function compileRegistry(
-  showProgress = false
+  options?: CompileRegistryOptions
 ): Promise<CompiledRegistry> {
+  const { showProgress = false, localOnly = true } = options ?? {};
   const progress = showProgress ? createProgress() : null;
   const loopliaPath = getLoopliaHome();
   const sources = await loadSources();
@@ -840,19 +725,22 @@ export async function compileRegistry(
     await processLocalSource(source, seenSkills, allSkills, progress);
   }
 
-  // Fetch remote registries (sorted by priority, higher priority wins)
-  const remoteSources = sources
-    .filter((s) => s.enabled && s.type !== "local")
-    .sort((a, b) => b.priority - a.priority);
+  // v0.7.1: Only fetch remote registries when explicitly requested
+  if (!localOnly) {
+    // Fetch remote registries (sorted by priority, higher priority wins)
+    const remoteSources = sources
+      .filter((s) => s.enabled && s.type !== "local")
+      .sort((a, b) => b.priority - a.priority);
 
-  for (const source of remoteSources) {
-    await processRemoteSource({
-      source,
-      seenSkills,
-      allSkills,
-      installedSkillsMap,
-      progress,
-    });
+    for (const source of remoteSources) {
+      await processRemoteSource({
+        source,
+        seenSkills,
+        allSkills,
+        installedSkillsMap,
+        progress,
+      });
+    }
   }
 
   // Build summary and compiled registry
@@ -879,10 +767,9 @@ export async function compileRegistry(
  */
 export function createEmptyManifest(): RemoteRegistryManifest {
   return {
-    $schema: REGISTRY_SCHEMA_URL,
-    name: "looplia-official",
+    name: "looplia",
     homepage: "https://github.com/memorysaver/looplia-core",
-    version: "0.7.0",
+    version: "0.7.1",
     updatedAt: new Date().toISOString(),
     items: [],
   };

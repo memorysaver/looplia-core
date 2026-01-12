@@ -1,10 +1,12 @@
 /**
- * Default Sources Installation Tests (v0.7.0)
+ * Default Sources Installation Tests (v0.7.1)
  *
- * Tests for the new skill marketplace installation during looplia init:
- * - installDefaultSources() - Reads config, clones repos, generates sources.json
+ * Tests for the skill marketplace installation during looplia init:
+ * - syncRegistrySources() - Downloads sources, splits marketplaces, generates plugins
  * - getProdPluginPaths() - Scans both root AND plugins/ directories
  * - Workspace structure validation
+ *
+ * v0.7.1: Uses unified syncRegistrySources() from registry/sync.ts
  *
  * Uses LOOPLIA_HOME env var to redirect to temp workspace for testing.
  */
@@ -12,14 +14,37 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import type { InstallResult } from "@looplia-core/core";
 import { getProdPluginPaths } from "../../src/bootstrap/index";
-import { installDefaultSources } from "../../src/bootstrap/skill-installer";
+import { initializeRegistry } from "../../src/registry/compiler";
+import { syncRegistrySources } from "../../src/registry/sync";
 import { pathExists } from "../../src/utils/fs";
 import {
   createLoopliaWorkspace,
   createMockPluginInWorkspace,
   type LoopliaTestWorkspace,
 } from "../claude-agent-sdk/fixtures/test-data";
+
+/**
+ * v0.7.1: Helper that mimics the old installDefaultSources() behavior
+ * for backward compatibility with existing tests.
+ * Combines initializeRegistry() + syncRegistrySources().
+ */
+async function installDefaultSources(): Promise<InstallResult[]> {
+  // Initialize registry (creates sources.json)
+  await initializeRegistry();
+
+  // Sync all sources
+  const syncResults = await syncRegistrySources();
+
+  // Flatten plugins from all sync results
+  const installResults: InstallResult[] = [];
+  for (const result of syncResults) {
+    installResults.push(...result.plugins);
+  }
+
+  return installResults;
+}
 
 /**
  * Create mock third-party plugin in plugins/ subdirectory
@@ -165,49 +190,71 @@ describe("bootstrap/default-sources", () => {
       await workspace.cleanup();
     });
 
-    it("should create plugins/ directory if not exists", async () => {
-      const pluginsDir = join(workspace.path, "plugins");
+    it(
+      "should create plugins/ directory if not exists",
+      async () => {
+        const pluginsDir = join(workspace.path, "plugins");
 
-      // Verify plugins/ doesn't exist yet
-      expect(await pathExists(pluginsDir)).toBe(false);
+        // Verify plugins/ doesn't exist yet
+        expect(await pathExists(pluginsDir)).toBe(false);
 
-      // Call installDefaultSources (will fail git clone, but should create dir)
-      await installDefaultSources();
+        // Call installDefaultSources (will fail git clone, but should create dir)
+        await installDefaultSources();
 
-      // plugins/ should now exist
-      expect(await pathExists(pluginsDir)).toBe(true);
-    });
+        // plugins/ should now exist
+        expect(await pathExists(pluginsDir)).toBe(true);
+      },
+      { timeout: 60_000 }
+    );
 
-    it("should create registry/ directory if not exists", async () => {
-      const registryDir = join(workspace.path, "registry");
+    it(
+      "should create registry/ directory if not exists",
+      async () => {
+        const registryDir = join(workspace.path, "registry");
 
-      // Note: createLoopliaWorkspace already creates registry/
-      // But installDefaultSources should ensure it exists
-      await installDefaultSources();
+        // Note: createLoopliaWorkspace already creates registry/
+        // But installDefaultSources should ensure it exists
+        await installDefaultSources();
 
-      expect(await pathExists(registryDir)).toBe(true);
-    });
+        expect(await pathExists(registryDir)).toBe(true);
+      },
+      { timeout: 60_000 }
+    );
 
-    it("should return InstallResult[] with status", async () => {
-      const results = await installDefaultSources();
+    it(
+      "should return InstallResult[] with status",
+      async () => {
+        const results = await installDefaultSources();
 
-      expect(Array.isArray(results)).toBe(true);
-      // Each result should have skill and status
-      for (const result of results) {
-        expect(result).toHaveProperty("skill");
-        expect(result).toHaveProperty("status");
-        expect(["installed", "updated", "failed"]).toContain(result.status);
-      }
-    });
+        expect(Array.isArray(results)).toBe(true);
+        // Each result should have skill and status
+        for (const result of results) {
+          expect(result).toHaveProperty("skill");
+          expect(result).toHaveProperty("status");
+          // v0.7.1: also includes "already_installed"
+          expect([
+            "installed",
+            "updated",
+            "failed",
+            "already_installed",
+          ]).toContain(result.status);
+        }
+      },
+      { timeout: 60_000 }
+    );
 
-    it("should handle git clone failure gracefully", async () => {
-      // installDefaultSources tries to clone from GitHub
-      // If offline or network fails, should not throw
-      const results = await installDefaultSources();
+    it(
+      "should handle git clone failure gracefully",
+      async () => {
+        // installDefaultSources tries to clone from GitHub
+        // If offline or network fails, should not throw
+        const results = await installDefaultSources();
 
-      // Should return results (possibly with failed status)
-      expect(Array.isArray(results)).toBe(true);
-    });
+        // Should return results (possibly with failed status)
+        expect(Array.isArray(results)).toBe(true);
+      },
+      { timeout: 60_000 }
+    );
   });
 
   describe("workspace structure validation", () => {
@@ -225,34 +272,46 @@ describe("bootstrap/default-sources", () => {
       await workspace.cleanup();
     });
 
-    it("should have registry/ directory after installDefaultSources", async () => {
-      await installDefaultSources();
+    it(
+      "should have registry/ directory after installDefaultSources",
+      async () => {
+        await installDefaultSources();
 
-      const registryDir = join(workspace.path, "registry");
-      expect(await pathExists(registryDir)).toBe(true);
-    });
+        const registryDir = join(workspace.path, "registry");
+        expect(await pathExists(registryDir)).toBe(true);
+      },
+      { timeout: 60_000 }
+    );
 
-    it("should have plugins/ directory after installDefaultSources", async () => {
-      await installDefaultSources();
+    it(
+      "should have plugins/ directory after installDefaultSources",
+      async () => {
+        await installDefaultSources();
 
-      const pluginsDir = join(workspace.path, "plugins");
-      expect(await pathExists(pluginsDir)).toBe(true);
-    });
+        const pluginsDir = join(workspace.path, "plugins");
+        expect(await pathExists(pluginsDir)).toBe(true);
+      },
+      { timeout: 60_000 }
+    );
 
-    it("should respect LOOPLIA_HOME environment variable", async () => {
-      // Set a custom LOOPLIA_HOME
-      const customPath = workspace.path;
-      process.env.LOOPLIA_HOME = customPath;
+    it(
+      "should respect LOOPLIA_HOME environment variable",
+      async () => {
+        // Set a custom LOOPLIA_HOME
+        const customPath = workspace.path;
+        process.env.LOOPLIA_HOME = customPath;
 
-      await installDefaultSources();
+        await installDefaultSources();
 
-      // Directories should be created in custom path, not ~/.looplia
-      const pluginsDir = join(customPath, "plugins");
-      const registryDir = join(customPath, "registry");
+        // Directories should be created in custom path, not ~/.looplia
+        const pluginsDir = join(customPath, "plugins");
+        const registryDir = join(customPath, "registry");
 
-      expect(await pathExists(pluginsDir)).toBe(true);
-      expect(await pathExists(registryDir)).toBe(true);
-    });
+        expect(await pathExists(pluginsDir)).toBe(true);
+        expect(await pathExists(registryDir)).toBe(true);
+      },
+      { timeout: 60_000 }
+    );
   });
 
   // Real integration tests that actually clone from GitHub
@@ -348,9 +407,9 @@ describe("bootstrap/default-sources", () => {
           expect(Array.isArray(sources)).toBe(true);
           expect(sources.length).toBeGreaterThan(0);
 
-          // Should have anthropic-skills entry
+          // Should have anthropic-skills entry (v0.7.1: id format is "github:anthropics/skills")
           const anthropicEntry = sources.find((s: { id: string }) =>
-            s.id.includes("anthropic-skills")
+            s.id.includes("anthropics/skills")
           );
           expect(anthropicEntry).toBeDefined();
           expect(anthropicEntry.url).toContain("github.com/anthropics/skills");

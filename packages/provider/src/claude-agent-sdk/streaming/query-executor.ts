@@ -12,20 +12,20 @@ import {
   getSelectivePluginPaths,
 } from "../../bootstrap";
 import { findClaudeCodePath } from "../claude-code-path";
-import type { ClaudeAgentConfig, ProviderUsage } from "../config";
+import type { ClaudeAgentConfig } from "../config";
 import { resolveConfig } from "../config";
 import { createQueryLogger } from "../logger";
-import {
-  DEFAULT_SETTINGS,
-  injectLoopliaSettingsEnv,
-  readLoopliaSettings,
-} from "../model-provider";
 import { mapException } from "../utils/error-mapper";
 import type { AgenticQueryResult } from "../utils/shared";
 import {
   extractContentIdFromPrompt,
   getOrInitWorkspace,
 } from "../utils/shared";
+import {
+  getMainModel,
+  initializeAndValidateApiKey,
+  processEvent,
+} from "./executor-common";
 import { loopliaSystemPrompt } from "./prompts/looplia-system";
 
 // Re-export for backward compatibility - intentional to maintain API surface
@@ -41,108 +41,7 @@ import {
   type TransformContext,
   transformSdkMessage,
 } from "./transformer";
-import type { CompleteEvent, StreamingEvent } from "./types";
-
-/**
- * Build final result from complete event
- */
-function buildFinalResult<T>(
-  event: CompleteEvent<T>,
-  sessionId: string
-): AgenticQueryResult<T> {
-  const usage: ProviderUsage = {
-    inputTokens: event.usage.inputTokens,
-    outputTokens: event.usage.outputTokens,
-    totalCostUsd: event.usage.totalCostUsd,
-  };
-
-  if (event.subtype === "success") {
-    return {
-      success: true,
-      data: event.result,
-      usage,
-      sessionId,
-    };
-  }
-
-  return {
-    success: false,
-    error: {
-      type: "unknown",
-      message: `Agent execution ended with: ${event.subtype}`,
-    },
-    usage,
-    sessionId,
-  };
-}
-
-/**
- * Get API key from config or environment
- * ZenMux and other providers use ANTHROPIC_API_KEY (same as Anthropic SDK)
- */
-function getApiKey(config?: ClaudeAgentConfig): string | undefined {
-  return (
-    config?.apiKey ??
-    process.env.ANTHROPIC_API_KEY ??
-    process.env.CLAUDE_CODE_OAUTH_TOKEN
-  );
-}
-
-/**
- * Initialize settings and validate API key
- * v0.6.9: Simplified - removed provider detection (unified subagent strategy)
- */
-async function initializeAndValidateApiKey(
-  config?: ClaudeAgentConfig
-): Promise<string> {
-  // v0.6.6: Load and inject looplia settings BEFORE API key check
-  const settings = await readLoopliaSettings();
-  if (settings) {
-    injectLoopliaSettingsEnv(settings);
-  }
-
-  // Check API key AFTER settings injection
-  const apiKey = getApiKey(config);
-  if (!apiKey) {
-    throw new Error(
-      "API key is required. Set ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN environment variable"
-    );
-  }
-
-  return apiKey;
-}
-
-/**
- * Get configured main agent model from environment
- * v0.6.9: Simplified - executor model removed (using built-in general-purpose)
- */
-function getMainModel(): string {
-  return process.env.LOOPLIA_AGENT_MODEL_MAIN ?? DEFAULT_SETTINGS.agents.main;
-}
-
-/**
- * Process a single streaming event - handle progress and capture result
- */
-function* processEvent<T>(
-  event: StreamingEvent,
-  progressTracker: ProgressTracker,
-  context: TransformContext
-): Generator<StreamingEvent, AgenticQueryResult<T> | undefined> {
-  // Check for progress update on skill invocations
-  if (event.type === "tool_start" && event.tool === "Skill") {
-    const progressEvent = progressTracker.onToolStart(event.tool, event.input);
-    if (progressEvent) {
-      yield progressEvent;
-    }
-  }
-
-  yield event;
-
-  // Capture and return final result if complete
-  if (event.type === "complete") {
-    return buildFinalResult(event as CompleteEvent<T>, context.sessionId);
-  }
-}
+import type { StreamingEvent } from "./types";
 
 /**
  * Execute agentic query with streaming events

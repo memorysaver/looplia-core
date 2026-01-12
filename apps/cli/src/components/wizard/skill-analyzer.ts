@@ -3,8 +3,14 @@
  *
  * Calls skill-capability-matcher via the executor to analyze
  * workflow descriptions and generate dynamic clarification questions.
+ *
+ * v0.7.1: Added streaming variant using interactive executor
  */
 
+import type {
+  QuestionCallback,
+  StreamingEvent,
+} from "@looplia-core/provider/claude-agent-sdk";
 import { createClaudeAgentExecutor } from "@looplia-core/provider/claude-agent-sdk";
 import type {
   ClarificationResult,
@@ -13,6 +19,9 @@ import type {
   Recommendation,
   Section,
 } from "./types.js";
+
+// Re-export QuestionCallback for convenience
+export type { QuestionCallback } from "@looplia-core/provider/claude-agent-sdk";
 
 /** Regex for splitting words in getShortLabel - defined at module level for performance */
 const WORD_SPLIT_REGEX = /\s+/;
@@ -402,4 +411,178 @@ function extractJsonFromResponse(data: unknown): Record<string, unknown> {
   }
 
   throw new Error("Unexpected response format from skill-capability-matcher");
+}
+
+/**
+ * JSON schema for analysis result
+ */
+const ANALYSIS_RESULT_SCHEMA = {
+  type: "object",
+  properties: {
+    requirements: {
+      type: "object",
+      properties: {
+        inputType: { type: "string" },
+        goals: { type: "array", items: { type: "string" } },
+        outputFormat: { type: "string" },
+      },
+    },
+    recommendations: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          goalId: { type: "string" },
+          skill: { type: "string" },
+          stepId: { type: "string" },
+          matchScore: { type: "number" },
+          rationale: { type: "string" },
+        },
+        required: ["goalId", "skill", "stepId"],
+      },
+    },
+    clarificationNeeded: { type: "boolean" },
+    clarifications: {
+      type: "object",
+      properties: {
+        sections: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              title: { type: "string" },
+              completed: { type: "boolean" },
+              questions: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string" },
+                    text: { type: "string" },
+                    type: { type: "string" },
+                    options: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          id: { type: "string" },
+                          label: { type: "string" },
+                          inferred: { type: "boolean" },
+                        },
+                      },
+                    },
+                    reason: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    previewWorkflow: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        steps: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              skill: { type: "string" },
+              mission: { type: "string" },
+              needs: { type: "array", items: { type: "string" } },
+              input: { type: "string" },
+              output: { type: "string" },
+            },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+/**
+ * Streaming result type matching StreamingQueryUI expectations
+ */
+type StreamingResult = {
+  success: boolean;
+  data?: ClarificationResult;
+  error?: { message: string };
+};
+
+/**
+ * Streaming version of analyzeDescription (v0.7.1)
+ *
+ * Uses the interactive executor with AskUserQuestion support.
+ * v0.7.1: Creates sandbox for logging consistency with run command
+ * Yields StreamingEvent objects for real-time progress display.
+ *
+ * @param description - User's workflow description
+ * @param workspace - Workspace path
+ * @param questionCallback - Optional callback to handle AskUserQuestion tool calls
+ */
+export async function* analyzeDescriptionStreaming(
+  description: string,
+  workspace: string,
+  questionCallback?: QuestionCallback
+): AsyncGenerator<StreamingEvent, StreamingResult> {
+  // v0.7.1: Create sandbox for build session (same pattern as run command)
+  const { createSandboxDirectories, generateSandboxId } = await import(
+    "../../utils/sandbox.js"
+  );
+  const sandboxId = generateSandboxId("build");
+  createSandboxDirectories(workspace, sandboxId);
+
+  // Dynamically import to avoid circular dependencies
+  const { executeInteractiveQueryStreaming } = await import(
+    "@looplia-core/provider/claude-agent-sdk"
+  );
+
+  // Append sandbox-id to prompt so logger can extract it
+  const prompt = `${buildAnalysisPrompt(description)} --sandbox-id ${sandboxId}`;
+
+  const generator = executeInteractiveQueryStreaming<ParsedResponse>(
+    prompt,
+    ANALYSIS_RESULT_SCHEMA as Record<string, unknown>,
+    { workspace },
+    questionCallback
+  );
+
+  let finalData: ParsedResponse | undefined;
+
+  for await (const event of generator) {
+    yield event;
+
+    // Capture result from complete event
+    if (event.type === "complete" && event.subtype === "success") {
+      finalData = event.result as ParsedResponse;
+    }
+  }
+
+  // Parse and return final result
+  if (finalData) {
+    try {
+      const clarificationResult = parseClarificationResult(finalData);
+      return {
+        success: true,
+        data: clarificationResult,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          message:
+            error instanceof Error ? error.message : "Failed to parse result",
+        },
+      };
+    }
+  }
+
+  return {
+    success: false,
+    error: { message: "No result received from analysis" },
+  };
 }

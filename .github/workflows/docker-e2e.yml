@@ -447,6 +447,23 @@ jobs:
           echo "=== Build Test Workspace Structure ==="
           find build-test-workspace -type f 2>/dev/null | head -50 || echo "No files found"
           echo ""
+          echo "=== Sandbox directories (v0.7.1) ==="
+          find build-test-workspace/sandbox -maxdepth 2 -type d 2>/dev/null || echo "No sandbox"
+          SANDBOX_DIR=$(find build-test-workspace/sandbox -maxdepth 1 -type d -name 'build-*' 2>/dev/null | head -1)
+          if [ -n "$SANDBOX_DIR" ]; then
+            echo ""
+            echo "=== Build sandbox contents ==="
+            ls -la "$SANDBOX_DIR" 2>/dev/null || true
+            echo ""
+            echo "=== Build logs (last 100 lines) ==="
+            LOG_FILE=$(ls "$SANDBOX_DIR/logs/"*.log 2>/dev/null | head -1)
+            if [ -n "$LOG_FILE" ]; then
+              tail -100 "$LOG_FILE"
+            else
+              echo "No log files found"
+            fi
+          fi
+          echo ""
           echo "=== Workflows directory ==="
           ls -la build-test-workspace/workflows/ 2>/dev/null || echo "No workflows directory"
           echo ""
@@ -534,12 +551,185 @@ jobs:
             fi
           done
 
+      - name: Validate build sandbox created (v0.7.1)
+        run: |
+          echo "Checking build sandbox was created..."
+          SANDBOX_DIR=$(find build-test-workspace/sandbox -maxdepth 1 -type d -name 'build-*' 2>/dev/null | head -1)
+          [ -n "$SANDBOX_DIR" ] || (echo "ERROR: No build sandbox directory found" && exit 1)
+          echo "Build sandbox: $SANDBOX_DIR"
+
+          # Check logs directory exists
+          [ -d "$SANDBOX_DIR/logs" ] || (echo "ERROR: logs directory not found" && exit 1)
+          echo "✓ logs/ directory exists"
+
+          # Check for log files (optional - may not exist if build was very fast)
+          LOG_COUNT=$(ls "$SANDBOX_DIR/logs/"*.log 2>/dev/null | wc -l | tr -d ' ')
+          echo "Log files found: $LOG_COUNT"
+
       - name: Upload build test artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results-build
           path: build-test-workspace/
+          retention-days: 7
+
+  # Test: Build command with ZenMux GLM-4.7 preset
+  test-build-zenmux:
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker image
+        run: gunzip -c looplia-image.tar.gz | docker load
+
+      - name: Create test workspace
+        run: mkdir -p zenmux-build-test-workspace
+
+      - name: Run build command (ZenMux GLM-4.7)
+        env:
+          ZENMUX_API_KEY: ${{ secrets.ZENMUX_API_KEY }}
+        run: |
+          # Override entrypoint to run: init → config preset → build
+          CONTAINER_ID=$(docker create \
+            --entrypoint /bin/sh \
+            -e ZENMUX_API_KEY="$ZENMUX_API_KEY" \
+            $IMAGE_NAME \
+            -c "bun run /app/apps/cli/dist/cli.js init --yes && \
+                bun run /app/apps/cli/dist/cli.js config provider preset ZENMUX_ZAI_GLM47 && \
+                bun run /app/apps/cli/dist/cli.js build 'summarize articles and extract key points' \
+                --name article-summary --no-interactive")
+
+          # Run container and capture exit code
+          docker start -a "$CONTAINER_ID" || EXIT_CODE=$?
+
+          # Copy workspace for validation
+          docker cp "$CONTAINER_ID:/home/looplia/.looplia/." zenmux-build-test-workspace/ || true
+          docker rm "$CONTAINER_ID"
+
+          # Exit with original code
+          exit ${EXIT_CODE:-0}
+
+      - name: Debug - List workspace contents
+        if: always()
+        run: |
+          echo "=== ZenMux Build Test Workspace Structure ==="
+          find zenmux-build-test-workspace -type f 2>/dev/null | head -50 || echo "No files found"
+          echo ""
+          echo "=== Provider config ==="
+          cat zenmux-build-test-workspace/looplia.setting.json 2>/dev/null || echo "No looplia.setting.json"
+          echo ""
+          echo "=== Sandbox directories (v0.7.1) ==="
+          find zenmux-build-test-workspace/sandbox -maxdepth 2 -type d 2>/dev/null || echo "No sandbox"
+          SANDBOX_DIR=$(find zenmux-build-test-workspace/sandbox -maxdepth 1 -type d -name 'build-*' 2>/dev/null | head -1)
+          if [ -n "$SANDBOX_DIR" ]; then
+            echo ""
+            echo "=== Build sandbox contents ==="
+            ls -la "$SANDBOX_DIR" 2>/dev/null || true
+            echo ""
+            echo "=== Build logs (last 100 lines) ==="
+            LOG_FILE=$(ls "$SANDBOX_DIR/logs/"*.log 2>/dev/null | head -1)
+            if [ -n "$LOG_FILE" ]; then
+              tail -100 "$LOG_FILE"
+            else
+              echo "No log files found"
+            fi
+          fi
+          echo ""
+          echo "=== Workflows directory ==="
+          ls -la zenmux-build-test-workspace/workflows/ 2>/dev/null || echo "No workflows directory"
+          echo ""
+          echo "=== Generated workflow content ==="
+          cat zenmux-build-test-workspace/workflows/article-summary.md 2>/dev/null || echo "No article-summary.md"
+
+      - name: Validate workflow file created
+        run: |
+          WORKFLOW_FILE="zenmux-build-test-workspace/workflows/article-summary.md"
+
+          # Check file exists
+          [ -f "$WORKFLOW_FILE" ] || (echo "ERROR: Workflow file not created" && exit 1)
+          echo "✓ Workflow file exists: $WORKFLOW_FILE"
+
+          # Check file is not empty
+          [ -s "$WORKFLOW_FILE" ] || (echo "ERROR: Workflow file is empty" && exit 1)
+          echo "✓ Workflow file has content"
+
+      - name: Validate YAML frontmatter schema
+        run: |
+          WORKFLOW_FILE="zenmux-build-test-workspace/workflows/article-summary.md"
+
+          # Extract ONLY the first YAML frontmatter (lines between first --- and second ---)
+          sed -n '2,/^---$/{ /^---$/!p }' "$WORKFLOW_FILE" > frontmatter.yaml
+          echo "=== Frontmatter YAML ==="
+          cat frontmatter.yaml
+
+          # Validate required top-level fields
+          yq -e '.name' frontmatter.yaml > /dev/null || (echo "ERROR: missing 'name' field" && exit 1)
+          echo "✓ Has 'name' field"
+
+          yq -e '.steps' frontmatter.yaml > /dev/null || (echo "ERROR: missing 'steps' array" && exit 1)
+          echo "✓ Has 'steps' array"
+
+          STEPS_COUNT=$(yq -r '.steps | length' frontmatter.yaml)
+          echo "✓ Found $STEPS_COUNT steps"
+          [ "$STEPS_COUNT" -ge 1 ] || (echo "ERROR: No steps defined" && exit 1)
+
+      - name: Validate v0.6.1 skill syntax
+        run: |
+          WORKFLOW_FILE="zenmux-build-test-workspace/workflows/article-summary.md"
+          sed -n '2,/^---$/{ /^---$/!p }' "$WORKFLOW_FILE" > frontmatter.yaml
+
+          echo "=== Checking v0.6.1 skill syntax ==="
+
+          # Each step should have 'skill:' field
+          SKILL_COUNT=$(yq '[.steps[].skill | select(. != null)] | length' frontmatter.yaml)
+          STEP_COUNT=$(yq '.steps | length' frontmatter.yaml)
+
+          echo "Steps with 'skill:' field: $SKILL_COUNT / $STEP_COUNT"
+          [ "$SKILL_COUNT" -eq "$STEP_COUNT" ] || (echo "ERROR: Not all steps have 'skill:' field" && exit 1)
+          echo "✓ All steps have 'skill:' field"
+
+          # Each step should have 'mission:' field
+          MISSION_COUNT=$(yq '[.steps[].mission | select(. != null)] | length' frontmatter.yaml)
+          echo "Steps with 'mission:' field: $MISSION_COUNT / $STEP_COUNT"
+          [ "$MISSION_COUNT" -eq "$STEP_COUNT" ] || (echo "ERROR: Not all steps have 'mission:' field" && exit 1)
+          echo "✓ All steps have 'mission:' field"
+
+          # No step should have legacy 'run:' field
+          RUN_COUNT=$(yq '[.steps[].run | select(. != null)] | length' frontmatter.yaml)
+          [ "$RUN_COUNT" -eq 0 ] || (echo "ERROR: Found legacy 'run:' syntax in $RUN_COUNT steps" && exit 1)
+          echo "✓ No legacy 'run:' syntax found"
+
+      - name: Validate build sandbox created (v0.7.1)
+        run: |
+          echo "Checking build sandbox was created..."
+          SANDBOX_DIR=$(find zenmux-build-test-workspace/sandbox -maxdepth 1 -type d -name 'build-*' 2>/dev/null | head -1)
+          [ -n "$SANDBOX_DIR" ] || (echo "ERROR: No build sandbox directory found" && exit 1)
+          echo "Build sandbox: $SANDBOX_DIR"
+
+          # Check logs directory exists
+          [ -d "$SANDBOX_DIR/logs" ] || (echo "ERROR: logs directory not found" && exit 1)
+          echo "✓ logs/ directory exists"
+
+          # Check for log files
+          LOG_COUNT=$(ls "$SANDBOX_DIR/logs/"*.log 2>/dev/null | wc -l | tr -d ' ')
+          echo "Log files found: $LOG_COUNT"
+
+      - name: Upload build test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-build-zenmux
+          path: zenmux-build-test-workspace/
           retention-days: 7
 
   # Commented out for now - focus on markdown test first

@@ -1,14 +1,17 @@
 /**
- * Generating Panel Component
+ * Generating Panel Component (v0.7.1)
  *
  * Displays the tree-based streaming TUI during workflow generation.
  * Wraps StreamingQueryUI for use within the build wizard.
+ * Supports AskUserQuestion tool for interactive clarification.
  */
 
 import type { StreamingEvent } from "@looplia-core/core";
+import { useCallback, useState } from "react";
 import type { BuildResult } from "../../commands/build.js";
-import { executeStreamingBatch } from "../../commands/build.js";
+import { executeInteractiveStreamingBatch } from "../../commands/build.js";
 import type { AgentLogger } from "../../utils/agent-logger.js";
+import { AskUserQuestionPanel } from "../ask-user-question-panel.js";
 import { StreamingQueryUI } from "../streaming-query-ui.js";
 
 type StreamingResult = {
@@ -98,8 +101,28 @@ function createLoggingWrapper(
 }
 
 /**
+ * State for pending AskUserQuestion
+ */
+type PendingQuestion = {
+  questions: SDKQuestion[];
+  resolve: (answers: Record<string, string>) => void;
+  reject: (error: Error) => void;
+};
+
+/**
+ * SDK Question type matching AskUserQuestion tool
+ */
+type SDKQuestion = {
+  question: string;
+  header: string;
+  options: Array<{ label: string; description: string }>;
+  multiSelect: boolean;
+};
+
+/**
  * GeneratingPanel renders the streaming TUI during workflow generation.
  * Uses the same tree-based display as the `run` command.
+ * Supports AskUserQuestion tool for interactive clarification (v0.7.1).
  */
 export function GeneratingPanel({
   workflowName,
@@ -109,9 +132,29 @@ export function GeneratingPanel({
   onError,
   logger,
 }: Props) {
-  // Create stream generator that wraps executeStreamingBatch
-  const createStreamGenerator = () => {
-    const generator = executeStreamingBatch(enrichedPrompt, workspace);
+  // State for AskUserQuestion handling
+  const [pendingQuestion, setPendingQuestion] =
+    useState<PendingQuestion | null>(null);
+
+  /**
+   * Question callback passed to the interactive executor.
+   * Returns a Promise that resolves when user answers the questions.
+   */
+  const questionCallback = useCallback(
+    async (questions: SDKQuestion[]): Promise<Record<string, string>> =>
+      new Promise((resolve, reject) => {
+        setPendingQuestion({ questions, resolve, reject });
+      }),
+    []
+  );
+
+  // Create stream generator that wraps executeInteractiveStreamingBatch
+  const createStreamGenerator = useCallback(() => {
+    const generator = executeInteractiveStreamingBatch(
+      enrichedPrompt,
+      workspace,
+      questionCallback
+    );
 
     // Wrap with logging if logger provided
     const wrappedGenerator = createLoggingWrapper(
@@ -120,19 +163,59 @@ export function GeneratingPanel({
     );
 
     return wrappedGenerator;
-  };
+  }, [enrichedPrompt, workspace, questionCallback, logger]);
 
   // Handle completion - extract BuildResult from StreamingResult
-  const handleComplete = (result: BuildResult) => {
-    logger?.logComplete(result as unknown as Record<string, unknown>);
-    onComplete(result);
-  };
+  const handleComplete = useCallback(
+    (result: BuildResult) => {
+      logger?.logComplete(result as unknown as Record<string, unknown>);
+      onComplete(result);
+    },
+    [logger, onComplete]
+  );
 
   // Handle error
-  const handleError = (error: Error) => {
-    logger?.logError(error);
-    onError(error);
-  };
+  const handleError = useCallback(
+    (error: Error) => {
+      logger?.logError(error);
+      onError(error);
+    },
+    [logger, onError]
+  );
+
+  /**
+   * Handle user completing the questions
+   */
+  const handleQuestionComplete = useCallback(
+    (answers: Record<string, string>) => {
+      if (pendingQuestion) {
+        pendingQuestion.resolve(answers);
+        setPendingQuestion(null);
+      }
+    },
+    [pendingQuestion]
+  );
+
+  /**
+   * Handle user canceling the questions
+   */
+  const handleQuestionCancel = useCallback(() => {
+    if (pendingQuestion) {
+      pendingQuestion.reject(new Error("User cancelled"));
+      setPendingQuestion(null);
+    }
+  }, [pendingQuestion]);
+
+  // Show question panel when AskUserQuestion is invoked
+  if (pendingQuestion) {
+    return (
+      <AskUserQuestionPanel
+        onCancel={handleQuestionCancel}
+        onComplete={handleQuestionComplete}
+        questions={pendingQuestion.questions}
+      />
+    );
+  }
 
   return (
     <StreamingQueryUI<BuildResult>

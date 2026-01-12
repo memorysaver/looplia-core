@@ -8,6 +8,9 @@ WORKDIR /app
 RUN addgroup -g 1001 -S looplia && \
     adduser -S looplia -u 1001 -G looplia
 
+# Install git for marketplace sync (v0.7.1)
+RUN apk add --no-cache git
+
 # Copy pre-built artifacts with docker-specific package.json
 COPY packages/core/dist ./packages/core/dist
 COPY packages/core/docker.package.json ./packages/core/package.json

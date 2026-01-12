@@ -21,8 +21,8 @@ export type {
 export { ensureWorkspace } from "./claude-agent-sdk/index";
 // Re-export streaming types
 export type { StreamingEvent } from "./claude-agent-sdk/streaming/types";
-export type { RemoveResult } from "./registry/index";
-// Re-export registry module (v0.7.0)
+export type { RemoveResult, SyncOptions, SyncResult } from "./registry/index";
+// Re-export registry module (v0.7.1)
 export {
   addSource,
   CORE_SKILLS,
@@ -38,7 +38,6 @@ export {
   getSkillsBySource,
   getSourcesPath,
   initializeRegistry,
-  installMarketplaceSkill,
   installSkill,
   installSkillFromUrl,
   isCoreSkill,
@@ -47,5 +46,7 @@ export {
   removeSkill,
   removeSource,
   saveSources,
+  syncRegistrySources,
+  syncSource,
   updateSkill,
 } from "./registry/index";

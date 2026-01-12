@@ -1,0 +1,151 @@
+---
+title: Sandbox Architecture
+description: Isolated execution environments for workflows.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+Looplia creates isolated sandbox directories for each workflow execution. This architecture ensures clean separation between runs and enables debugging, resumption, and auditing.
+
+## Directory Structure
+
+Each sandbox contains:
+
+```
+~/.looplia/sandbox/{sandbox-id}/
+├── inputs/          # Input files (run command only)
+│   └── content.md   # Copied from --file
+├── outputs/         # Generated artifacts
+│   ├── summary.json
+│   ├── ideas.json
+│   └── writing-kit.json
+├── logs/            # Execution logs
+│   └── query-*.log
+└── validation.json  # Step completion tracking
+```
+
+## Sandbox ID Formats
+
+Different commands use different sandbox ID formats:
+
+| Command | Format | Example |
+|---------|--------|---------|
+| `run` | `{slug}-{YYYY-MM-DD}-{random}` | `article-2026-01-12-xk7m` |
+| `build` | `build-{YYYY-MM-DD}-{random}` | `build-2026-01-12-a1b2` |
+
+The random suffix is a 4-character hex string for uniqueness.
+
+## Working with Sandboxes
+
+### Creating a New Sandbox
+
+A new sandbox is automatically created when you run a workflow:
+
+```bash
+# Creates sandbox like: my-article-2026-01-12-ab3f
+looplia run writing-kit --file ./my-article.md
+```
+
+### Resuming from Existing Sandbox
+
+Use `--sandbox-id` to continue from an existing sandbox:
+
+```bash
+# Resume the previous run
+looplia run writing-kit --sandbox-id my-article-2026-01-12-ab3f
+```
+
+<Aside type="tip">
+Resuming is useful when a workflow was interrupted or when you want to retry failed steps.
+</Aside>
+
+### Finding Your Sandbox
+
+List sandbox directories with:
+
+```bash
+# List all sandboxes
+ls ~/.looplia/sandbox/
+
+# Find most recent sandbox
+ls -t ~/.looplia/sandbox/ | head -1
+```
+
+## Validation Tracking
+
+Each sandbox contains a `validation.json` file that tracks step completion:
+
+```json
+{
+  "workflow": "writing-kit",
+  "version": "1.2.0",
+  "sandboxId": "article-2026-01-12-xk7m",
+  "steps": {
+    "summary": {
+      "output": "outputs/summary.json",
+      "validated": true
+    },
+    "ideas": {
+      "output": "outputs/ideas.json",
+      "validated": true
+    },
+    "writing-kit": {
+      "output": "outputs/writing-kit.json",
+      "validated": false
+    }
+  }
+}
+```
+
+Steps with `validated: true` are skipped when resuming a workflow.
+
+## Build Command Sandbox
+
+The `build` command (v0.7.1+) also creates sandboxes for logging:
+
+```
+~/.looplia/sandbox/build-2026-01-12-a1b2/
+├── logs/
+│   └── query-*.log
+└── outputs/
+```
+
+View build logs for debugging:
+
+```bash
+# Watch build logs in real-time
+tail -f ~/.looplia/sandbox/build-*/logs/*.log
+```
+
+## Shared Sandbox Utilities
+
+Looplia uses shared utility functions for consistent sandbox management:
+
+| Function | Purpose |
+|----------|---------|
+| `generateSandboxId(slug)` | Create ID with format `{slug}-{date}-{random}` |
+| `createSandboxDirectories(workspace, sandboxId)` | Create standard directory structure |
+
+These utilities ensure consistent behavior across all commands.
+
+## Cleanup
+
+Sandboxes persist after execution for debugging and auditing. Clean up old sandboxes manually:
+
+```bash
+# Remove specific sandbox
+rm -rf ~/.looplia/sandbox/my-article-2026-01-12-ab3f
+
+# Remove all sandboxes older than 7 days
+find ~/.looplia/sandbox -maxdepth 1 -type d -mtime +7 -exec rm -rf {} \;
+```
+
+<Aside type="caution">
+Deleting a sandbox removes all outputs, logs, and validation state. Make sure to save any important artifacts first.
+</Aside>
+
+## See Also
+
+- [looplia run](/cli/run/) — Execute workflows with sandboxes
+- [looplia build](/cli/build/) — Create workflows with build sandboxes
+- [Environment Variables](/reference/environment-variables/) — Configure Looplia behavior

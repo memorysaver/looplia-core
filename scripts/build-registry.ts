@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Build Registry Script (v0.7.0)
+ * Build Registry Script (v0.7.1)
  *
  * Generates registry.json for GitHub releases.
  * Scans local plugins for skills and outputs a registry manifest.
@@ -8,46 +8,29 @@
  * Usage:
  *   bun scripts/build-registry.ts
  *   bun scripts/build-registry.ts --output dist/registry.json
- *   bun scripts/build-registry.ts --version 0.7.0
+ *   bun scripts/build-registry.ts --version 0.7.1
  *
- * @see docs/DESIGN-0.7.0.md
+ * @see docs/DESIGN-0.7.1.md
  */
 
 import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-
-/** Schema URL for registry manifest */
-const REGISTRY_SCHEMA_URL = "https://looplia.com/schema/registry.json";
+// Import types from core
+import type { SkillCategory } from "../packages/core/src/domain/registry";
+// Import shared utilities from registry module (v0.7.1)
+import {
+  FRONTMATTER_REGEX,
+  formatTitle,
+  inferCapabilities,
+  inferCategory,
+  parseYamlFrontmatter,
+} from "../packages/provider/src/registry/utils";
 
 /** Registry homepage */
 const REGISTRY_HOMEPAGE = "https://github.com/memorysaver/looplia-core";
 
 /** Plugins directory relative to project root */
 const PLUGINS_DIR = "plugins";
-
-// Top-level regex patterns
-const FRONTMATTER_REGEX = /^---\n([\s\S]*?)\n---/;
-
-// Capability inference patterns
-const CAPABILITY_PATTERNS = [
-  { pattern: /media|video|audio|image/, capability: "media-processing" },
-  { pattern: /content|text|document/, capability: "content-analysis" },
-  { pattern: /json|schema|structured/, capability: "structured-output" },
-  { pattern: /workflow|orchestrat/, capability: "workflow-management" },
-  { pattern: /search|find|discover/, capability: "search" },
-  { pattern: /generat|creat|produc/, capability: "generation" },
-  { pattern: /valid|check|verify/, capability: "validation" },
-] as const;
-
-/** Skill categories */
-type SkillCategory =
-  | "analysis"
-  | "generation"
-  | "assembly"
-  | "validation"
-  | "search"
-  | "orchestration"
-  | "utility";
 
 /** Skill file metadata */
 type SkillFile = {
@@ -92,109 +75,6 @@ async function pathExists(path: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-/** Format title from skill name */
-function formatTitle(name: string): string {
-  return name
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
-/** Infer category from skill name and description */
-function inferCategory(name: string, description: string): SkillCategory {
-  const text = `${name} ${description}`.toLowerCase();
-
-  if (
-    text.includes("review") ||
-    text.includes("analyze") ||
-    text.includes("scan")
-  ) {
-    return "analysis";
-  }
-  if (
-    text.includes("generate") ||
-    text.includes("synthesis") ||
-    text.includes("create")
-  ) {
-    return "generation";
-  }
-  if (
-    text.includes("assemble") ||
-    text.includes("document") ||
-    text.includes("compile")
-  ) {
-    return "assembly";
-  }
-  if (text.includes("validate") || text.includes("check")) {
-    return "validation";
-  }
-  if (text.includes("search") || text.includes("find")) {
-    return "search";
-  }
-  if (
-    text.includes("workflow") ||
-    text.includes("execute") ||
-    text.includes("orchestrat")
-  ) {
-    return "orchestration";
-  }
-
-  return "utility";
-}
-
-/** Infer capabilities from description */
-function inferCapabilities(description: string): string[] {
-  const capabilities: string[] = [];
-  const text = description.toLowerCase();
-
-  for (const { pattern, capability } of CAPABILITY_PATTERNS) {
-    if (pattern.test(text)) {
-      capabilities.push(capability);
-    }
-  }
-
-  return capabilities;
-}
-
-/** Parse multiline YAML value */
-function parseMultilineValue(lines: string[], startIndex: number): string {
-  const multiLines: string[] = [];
-  for (let i = startIndex; i < lines.length; i++) {
-    const line = lines[i];
-    if (line.startsWith("  ")) {
-      multiLines.push(line.trim());
-    } else {
-      break;
-    }
-  }
-  return multiLines.join(" ");
-}
-
-/** Parse YAML frontmatter into metadata */
-function parseYamlFrontmatter(frontmatter: string): Record<string, string> {
-  const lines = frontmatter.split("\n");
-  const metadata: Record<string, string> = {};
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const colonIndex = line.indexOf(":");
-    if (colonIndex <= 0) {
-      continue;
-    }
-
-    const key = line.slice(0, colonIndex).trim();
-    let value = line.slice(colonIndex + 1).trim();
-
-    if (value === "|") {
-      value = parseMultilineValue(lines, i + 1);
-    }
-
-    metadata[key] = value;
-  }
-
-  return metadata;
 }
 
 /** Parse SKILL.md frontmatter */
@@ -369,8 +249,7 @@ async function buildRegistry(
   }
 
   return {
-    $schema: REGISTRY_SCHEMA_URL,
-    name: "looplia-official",
+    name: "looplia",
     homepage: REGISTRY_HOMEPAGE,
     version,
     updatedAt: new Date().toISOString(),

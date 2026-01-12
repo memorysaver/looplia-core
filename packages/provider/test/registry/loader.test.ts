@@ -1,11 +1,10 @@
 import { describe, expect, it } from "bun:test";
+import { CORE_SKILLS, isCoreSkill } from "../../src/registry";
 import {
-  CORE_SKILLS,
   findSkill,
   getAvailableSkills,
   getInstalledSkills,
   getSkillsByCategory,
-  isCoreSkill,
   loadCompiledRegistry,
 } from "../../src/registry/loader";
 

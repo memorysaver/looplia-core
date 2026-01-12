@@ -15,6 +15,7 @@ export {
 // Types
 export type {
   AgentExecutor,
+  AskUserQuestionEvent,
   CommandDefinition,
   CommandResult,
   CompleteEvent,

@@ -77,7 +77,7 @@ describe("registry/compiler", () => {
       expect(entries).toContain("sources.json");
     });
 
-    it("should create default sources.json with official registry", async () => {
+    it("should create default sources.json with predefined github sources", async () => {
       await initializeRegistry(true); // Force recreate
 
       const registryPath = getRegistryPath();
@@ -85,10 +85,15 @@ describe("registry/compiler", () => {
       const content = await readFile(sourcesFile, "utf-8");
       const sources = JSON.parse(content);
 
-      expect(sources.length).toBeGreaterThan(0);
-      expect(sources[0].id).toBe("official");
-      expect(sources[0].type).toBe("official");
+      // v0.7.1: Predefined github sources (looplia, anthropic, ComposioHQ)
+      expect(sources.length).toBe(3);
+      expect(sources[0].id).toBe("github:memorysaver/looplia-skills");
+      expect(sources[0].type).toBe("github");
       expect(sources[0].enabled).toBe(true);
+      expect(sources[1].id).toBe("github:anthropics/skills");
+      expect(sources[1].type).toBe("github");
+      expect(sources[2].id).toBe("github:ComposioHQ/awesome-claude-skills");
+      expect(sources[2].type).toBe("github");
     });
   });
 

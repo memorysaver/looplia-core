@@ -31,7 +31,8 @@ export function execCLI(args: string[]): Promise<{
     const cliPath = join(CLI_ROOT, "dist", "cli.js");
 
     // Run from project root so getPluginPath() finds plugins/looplia-writer
-    const child = spawn("node", [cliPath, ...args], {
+    // Use bun instead of node - the bundle requires bun runtime
+    const child = spawn("bun", [cliPath, ...args], {
       cwd: PROJECT_ROOT,
       env: process.env,
     });

@@ -55,6 +55,15 @@ export type BuildResult = {
 };
 
 /**
+ * Streaming result type for generator return values
+ */
+type StreamingResult = {
+  success: boolean;
+  data?: BuildResult;
+  error?: { message: string };
+};
+
+/**
  * Executor interface for dependency injection in tests
  */
 export type BuildExecutor = {
@@ -287,6 +296,7 @@ function executeMock(args: BuildArgs): BuildResult {
 /**
  * Execute with streaming UI (legacy).
  * Wraps streaming execution with error handling and proper session tracking.
+ * v0.7.1: Creates sandbox for logging consistency with run command
  * @deprecated Use executeWizard for interactive builds (v0.6.4+)
  */
 export async function executeStreamingLegacy(
@@ -294,12 +304,20 @@ export async function executeStreamingLegacy(
   workspace: string
 ): Promise<BuildResult> {
   try {
-    const contentId = crypto.randomUUID();
-    const executor = createClaudeAgentExecutor({ workspace });
+    // v0.7.1: Create sandbox for build session (same pattern as run command)
+    const { createSandboxDirectories, generateSandboxId } = await import(
+      "../utils/sandbox.js"
+    );
+    const sandboxId = generateSandboxId("build");
+    createSandboxDirectories(workspace, sandboxId);
 
-    const generator = executor.executePromptStreaming(prompt, {
+    // Append sandbox-id to prompt so logger can extract it
+    const promptWithSandbox = `${prompt} --sandbox-id ${sandboxId}`;
+
+    const executor = createClaudeAgentExecutor({ workspace });
+    const generator = executor.executePromptStreaming(promptWithSandbox, {
       workspace,
-      contentId,
+      contentId: sandboxId,
     });
 
     const { result, error } = await renderStreamingQuery<BuildResult>({
@@ -335,6 +353,7 @@ export async function executeStreamingLegacy(
 
 /**
  * Execute in batch mode (non-streaming)
+ * v0.7.1: Creates sandbox for logging consistency with run command
  * @param executor Optional executor for dependency injection (testing)
  */
 export async function executeBatch(
@@ -344,11 +363,20 @@ export async function executeBatch(
 ): Promise<BuildResult> {
   console.error("⏳ Building workflow...");
 
-  const contentId = crypto.randomUUID();
+  // v0.7.1: Create sandbox for build session (same pattern as run command)
+  const { createSandboxDirectories, generateSandboxId } = await import(
+    "../utils/sandbox.js"
+  );
+  const sandboxId = generateSandboxId("build");
+  createSandboxDirectories(workspace, sandboxId);
+
+  // Append sandbox-id to prompt so logger can extract it
+  const promptWithSandbox = `${prompt} --sandbox-id ${sandboxId}`;
+
   const exec = executor ?? createClaudeAgentExecutor({ workspace });
-  const result = await exec.executePrompt(prompt, {
+  const result = await exec.executePrompt(promptWithSandbox, {
     workspace,
-    contentId,
+    contentId: sandboxId,
   });
 
   if (result.success && result.data) {
@@ -363,19 +391,121 @@ export async function executeBatch(
 
 /**
  * Streaming batch executor for wizard use.
- * Returns an async generator that yields StreamingEvents.
+ * v0.7.1: Creates sandbox for logging consistency with run command
+ * Returns an async generator that yields StreamingEvents and final result.
  */
-export function executeStreamingBatch(
+export async function* executeStreamingBatch(
   prompt: string,
   workspace: string
-): AsyncGenerator<StreamingEvent> {
-  const contentId = crypto.randomUUID();
-  const executor = createClaudeAgentExecutor({ workspace });
+): AsyncGenerator<StreamingEvent, StreamingResult> {
+  // v0.7.1: Create sandbox for build session (same pattern as run command)
+  const { createSandboxDirectories, generateSandboxId } = await import(
+    "../utils/sandbox.js"
+  );
+  const sandboxId = generateSandboxId("build");
+  createSandboxDirectories(workspace, sandboxId);
 
-  return executor.executePromptStreaming(prompt, {
+  // Append sandbox-id to prompt so logger can extract it
+  const promptWithSandbox = `${prompt} --sandbox-id ${sandboxId}`;
+
+  const executor = createClaudeAgentExecutor({ workspace });
+  const generator = executor.executePromptStreaming(promptWithSandbox, {
     workspace,
-    contentId,
+    contentId: sandboxId,
   });
+
+  // Properly capture return value using manual iteration
+  let iterResult = await generator.next();
+  while (!iterResult.done) {
+    yield iterResult.value;
+    iterResult = await generator.next();
+  }
+
+  // Map executor result to StreamingResult
+  const executorResult = iterResult.value;
+  return {
+    success: executorResult.success,
+    data: executorResult.data as BuildResult | undefined,
+    error: executorResult.error,
+  };
+}
+
+/**
+ * QuestionCallback type for interactive streaming
+ */
+export type QuestionCallback = (
+  questions: Array<{
+    question: string;
+    header: string;
+    options: Array<{ label: string; description: string }>;
+    multiSelect: boolean;
+  }>
+) => Promise<Record<string, string>>;
+
+/**
+ * Interactive streaming batch executor for wizard use (v0.7.1).
+ * Supports AskUserQuestion tool via questionCallback.
+ * v0.7.1: Creates sandbox for logging consistency with run command
+ * Returns an async generator that yields StreamingEvents and final result.
+ */
+export async function* executeInteractiveStreamingBatch(
+  prompt: string,
+  workspace: string,
+  questionCallback?: QuestionCallback
+): AsyncGenerator<StreamingEvent, StreamingResult> {
+  // v0.7.1: Create sandbox for build session (same pattern as run command)
+  const { createSandboxDirectories, generateSandboxId } = await import(
+    "../utils/sandbox.js"
+  );
+  const sandboxId = generateSandboxId("build");
+  createSandboxDirectories(workspace, sandboxId);
+
+  // Append sandbox-id to prompt so logger can extract it
+  const promptWithSandbox = `${prompt} --sandbox-id ${sandboxId}`;
+
+  // Dynamically import interactive executor to avoid circular dependencies
+  const { executeInteractiveQueryStreaming } = await import(
+    "@looplia-core/provider/claude-agent-sdk"
+  );
+
+  // Use a simple schema that allows any JSON result
+  const schema = {
+    type: "object",
+    properties: {
+      status: { type: "string" },
+      workflowPath: { type: "string" },
+      workflowName: { type: "string" },
+      stepsCount: { type: "number" },
+      error: { type: "string" },
+    },
+  };
+
+  const generator = executeInteractiveQueryStreaming<BuildResult>(
+    promptWithSandbox,
+    schema as Record<string, unknown>,
+    { workspace },
+    questionCallback
+  );
+
+  // Properly capture return value using manual iteration
+  let iterResult = await generator.next();
+  while (!iterResult.done) {
+    yield iterResult.value;
+    iterResult = await generator.next();
+  }
+
+  // Map executor result to StreamingResult
+  const executorResult = iterResult.value;
+  if (executorResult.success) {
+    return {
+      success: true,
+      data: executorResult.data,
+    };
+  }
+  return {
+    success: false,
+    error: { message: executorResult.error?.message ?? "Unknown error" },
+  };
 }
 
 /**
@@ -631,12 +761,12 @@ export async function runBuildCommand(args: string[]): Promise<void> {
     // 1. Ensure workspace
     const workspace = ensureWorkspace(parsed.mock);
 
-    // 2. v0.7.0: Sync registry to ensure freshest skill catalog
+    // 2. v0.7.1: Compile local skill catalog (no remote fetching)
     if (!parsed.mock) {
       try {
-        await compileRegistry();
+        await compileRegistry({ localOnly: true });
       } catch {
-        // Registry sync failure is non-fatal - continue with existing cache
+        // Registry compilation failure is non-fatal - continue with existing cache
       }
     }
 
