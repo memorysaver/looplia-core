@@ -8,7 +8,7 @@ Looplia Core is an agentic workflow platform powered by the Claude Agent SDK. It
 
 **Vision:** A universal CLI for AI-powered workflows — one tool, many domains, powered by composable skills.
 
-## v0.7.0 Architecture
+## v0.7.1 Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -188,20 +188,19 @@ Workflows are markdown files with YAML frontmatter. Each step declares a `skill:
 
 ## Sandbox Architecture
 
-Each `--file` creates an isolated sandbox:
+Both `run` and `build` commands create isolated sandbox directories:
 
 ```
 ~/.looplia/sandbox/{sandbox-id}/
-├── inputs/content.md      # Copied from --file
+├── inputs/content.md      # (run only) Copied from --file
 ├── outputs/               # Generated artifacts
-│   ├── summary.json
-│   ├── ideas.json
-│   └── writing-kit.json
 ├── logs/                  # Session logs
 └── validation.json        # Step completion tracking
 ```
 
-**Sandbox ID format:** `{slug}-{YYYY-MM-DD}-{random4chars}` (e.g., `my-article-2025-12-18-xk7m`)
+**Sandbox ID formats:**
+- Run: `{slug}-{YYYY-MM-DD}-{random4chars}` (e.g., `my-article-2025-12-18-xk7m`)
+- Build: `build-{YYYY-MM-DD}-{random4chars}` (e.g., `build-2026-01-12-a1b2`)
 
 ## Available Skills
 
@@ -310,7 +309,8 @@ looplia run writing-kit --file ./article.md
 | v0.6.8 | Claude Code path resolution fix |
 | v0.6.9 | SDK Compatibility, Endpoint-Aware API Key Selection |
 | v0.6.10 | Unified Command Initialization, E2E Testing Skill |
-| **v0.7.0** | **Skill Registry System, Marketplace Integration** |
+| v0.7.0 | Skill Registry System, Marketplace Integration |
+| **v0.7.1** | **Build Sandbox Support, ZenMux Compatibility** |
 
 ## License
 

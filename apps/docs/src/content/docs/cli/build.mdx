@@ -184,6 +184,28 @@ steps:
 Transforms podcast transcripts into engaging newsletter content.
 ```
 
+## Build Sandbox
+
+The build command creates a sandbox for logging and debugging (v0.7.1):
+
+```
+~/.looplia/sandbox/build-2026-01-12-a1b2/
+├── logs/
+│   └── query-*.log
+└── outputs/
+```
+
+This enables:
+- **Debugging**: View logs from the workflow generation process
+- **Reproducibility**: Track what skills were matched and why
+- **Troubleshooting**: Identify issues with skill matching or workflow composition
+
+View build logs with:
+
+```bash
+tail -f ~/.looplia/sandbox/build-*/logs/*.log
+```
+
 ## Tips for Good Descriptions
 
 <Aside type="tip">
