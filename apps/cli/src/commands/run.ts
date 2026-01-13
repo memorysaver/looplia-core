@@ -39,6 +39,7 @@ import {
 import { renderStreamingQuery } from "../components";
 import { COMMANDS } from "../constants.js";
 import {
+  copyOutputsToDestination,
   createSandboxDirectories,
   generateSandboxId,
 } from "../utils/sandbox.js";
@@ -225,6 +226,7 @@ type RunArgs = {
   file?: string;
   inputs?: Record<string, ParsedInput>;
   sandboxId?: string;
+  output?: string;
   mock: boolean;
   noStreaming: boolean;
   help: boolean;
@@ -268,6 +270,8 @@ function isValueFlag(arg: string): boolean {
     arg === "-f" ||
     arg === "--input" ||
     arg === "-i" ||
+    arg === "--output" ||
+    arg === "-o" ||
     arg === "--sandbox" ||
     arg === "-s" ||
     arg === "--sandbox-id"
@@ -337,6 +341,10 @@ function processArg(
     case "-s":
       result.sandboxId = nextArg;
       break;
+    case "--output":
+    case "-o":
+      result.output = nextArg;
+      break;
     case "--mock":
       result.mock = true;
       break;
@@ -396,6 +404,8 @@ Options:
   --file, -f <path>         Path to content file (creates new sandbox, legacy)
   --input, -i <name=value>  Named input (can specify multiple times)
                             Value can be a file path or inline JSON
+  --output, -o <dir>        Copy outputs to this directory after completion
+                            Also supports LOOPLIA_OUTPUT_DIR env var
   --sandbox-id, -s <id>     Resume existing sandbox
   --mock                    Use mock mode (no API calls)
   --no-streaming            Disable streaming output
@@ -416,6 +426,9 @@ Examples:
 
   # Resume existing sandbox
   looplia run writing-kit --sandbox-id text-2025-12-18-abc123
+
+  # Copy outputs to specific directory (v0.7.2)
+  looplia run writing-kit --file article.md --output ./results/
 `);
 }
 
@@ -691,6 +704,25 @@ function renderResult(result: WorkflowResult): void {
 }
 
 /**
+ * Copy outputs to user-specified directory (v0.7.2)
+ * Supports --output flag and LOOPLIA_OUTPUT_DIR env var
+ */
+function handleOutputCopy(
+  workspace: string,
+  sandboxId: string,
+  outputDir: string | undefined
+): void {
+  if (!outputDir) {
+    return;
+  }
+
+  const copiedCount = copyOutputsToDestination(workspace, sandboxId, outputDir);
+  if (copiedCount > 0) {
+    console.log(`\n✓ ${copiedCount} output file(s) copied to ${outputDir}`);
+  }
+}
+
+/**
  * Handle JIT skill installation (v0.7.0)
  * Returns false if installation fails and should abort
  */
@@ -778,6 +810,12 @@ export async function runRunCommand(args: string[]): Promise<void> {
 
     // 8. Render result
     renderResult(result);
+
+    // 9. v0.7.2: Copy outputs to user-specified directory
+    if (result.status === "success") {
+      const outputDir = parsed.output || process.env.LOOPLIA_OUTPUT_DIR;
+      handleOutputCopy(workspace, sandboxId, outputDir);
+    }
 
     if (result.status !== "success") {
       process.exit(1);

@@ -16,11 +16,14 @@ Biome (the underlying engine) provides extremely fast Rust-based linting and for
 
 Write code that is **accessible, performant, type-safe, and maintainable**. Focus on clarity and explicit intent over brevity. Study @docs/README.md to understand the project concept. Ask or clarify directly if you have any questions or suggestions.
 
----
+## Development Workflow
+- Never use the git commit command after a task is finished.
+- Manage commits and branches using GitButler CLI with AI coding agents. 
 
 ## PR Checklist
+Before creating or merging a PR, review [docs/PR_CHECKLIST.md](../docs/PR_CHECKLIST.md).
 
-Before creating or merging a PR, review @docs/PR_CHECKLIST.md
+---
 
 ### Type Safety & Explicitness
 

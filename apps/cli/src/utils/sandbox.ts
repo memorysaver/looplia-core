@@ -8,8 +8,8 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { copyFileSync, mkdirSync, readdirSync } from "node:fs";
+import { join, resolve } from "node:path";
 
 /**
  * Standard sandbox directory names
@@ -68,4 +68,51 @@ export function createSandboxDirectories(
   mkdirSync(join(sandboxDir, SANDBOX_DIRS.LOGS), { recursive: true });
 
   return sandboxDir;
+}
+
+/**
+ * Copy sandbox outputs to user-specified destination directory.
+ * Creates the destination directory if it doesn't exist.
+ * Copies all files from sandbox/{sandboxId}/outputs/ to destDir.
+ *
+ * v0.7.2: Added for --output flag and LOOPLIA_OUTPUT_DIR support.
+ *
+ * @param workspace - Workspace path (~/.looplia)
+ * @param sandboxId - Sandbox identifier
+ * @param destDir - User-specified destination directory (absolute or relative)
+ * @returns Number of files copied
+ */
+export function copyOutputsToDestination(
+  workspace: string,
+  sandboxId: string,
+  destDir: string
+): number {
+  const outputsPath = join(
+    workspace,
+    "sandbox",
+    sandboxId,
+    SANDBOX_DIRS.OUTPUTS
+  );
+  const resolvedDest = resolve(destDir);
+
+  // Create destination directory if needed
+  mkdirSync(resolvedDest, { recursive: true });
+
+  // Copy all files from outputs directory
+  let copiedCount = 0;
+  try {
+    const entries = readdirSync(outputsPath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isFile()) {
+        const srcPath = join(outputsPath, entry.name);
+        const destPath = join(resolvedDest, entry.name);
+        copyFileSync(srcPath, destPath);
+        copiedCount += 1;
+      }
+    }
+  } catch {
+    // If outputs directory doesn't exist or is empty, return 0
+  }
+
+  return copiedCount;
 }
