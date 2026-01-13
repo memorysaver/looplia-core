@@ -61,11 +61,6 @@ export const DEFAULT_MARKETPLACE_SOURCES = [
     description:
       "Official Anthropic skills - xlsx, pdf, pptx, docx, frontend-design, and more",
   },
-  {
-    name: "awesome-claude-skills",
-    url: "https://github.com/ComposioHQ/awesome-claude-skills",
-    description: "Community-curated Claude skills collection by ComposioHQ",
-  },
 ] as const;
 
 /**
