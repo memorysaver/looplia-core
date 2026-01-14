@@ -85,15 +85,13 @@ describe("registry/compiler", () => {
       const content = await readFile(sourcesFile, "utf-8");
       const sources = JSON.parse(content);
 
-      // v0.7.1: Predefined github sources (looplia, anthropic, ComposioHQ)
-      expect(sources.length).toBe(3);
+      // Predefined github sources (looplia, anthropic)
+      expect(sources.length).toBe(2);
       expect(sources[0].id).toBe("github:memorysaver/looplia-skills");
       expect(sources[0].type).toBe("github");
       expect(sources[0].enabled).toBe(true);
       expect(sources[1].id).toBe("github:anthropics/skills");
       expect(sources[1].type).toBe("github");
-      expect(sources[2].id).toBe("github:ComposioHQ/awesome-claude-skills");
-      expect(sources[2].type).toBe("github");
     });
   });
 
