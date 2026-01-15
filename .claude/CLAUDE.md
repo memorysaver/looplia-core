@@ -18,7 +18,8 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 
 ## Development Workflow
 - Never use the git commit command after a task is finished.
-- Manage commits and branches using GitButler CLI with AI coding agents. 
+- Manage commits and branches using GitButler CLI with AI coding agents.
+- Merge PRs with `gh pr merge <PR#> --squash --delete-branch`, then run `but base update` to auto-clean merged branches. 
 
 ## PR Checklist
 Before creating or merging a PR, review [docs/PR_CHECKLIST.md](../docs/PR_CHECKLIST.md).

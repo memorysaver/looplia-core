@@ -16,9 +16,10 @@
 2. [Problem Statement](#2-problem-statement)
 3. [Solution Overview](#3-solution-overview)
 4. [Dockerfile.prod Design](#4-dockerfileprod-design)
-5. [Anthropic/CLIProxyAPI Configuration](#5-anthropiccliproxyapi-configuration)
-6. [Build & Validation Plan](#6-build--validation-plan)
-7. [Open Questions & Future Work](#7-open-questions--future-work)
+5. [Workspace & Output Management](#5-workspace--output-management)
+6. [Anthropic/CLIProxyAPI Configuration](#6-anthropiccliproxyapi-configuration)
+7. [Build & Validation Plan](#7-build--validation-plan)
+8. [Open Questions & Future Work](#8-open-questions--future-work)
 
 ---
 
@@ -29,7 +30,7 @@
 | Version | Focus | Key Change |
 |---------|-------|------------|
 | v0.7.1 | Registry simplification | Local-only builds, explicit sync |
-| **v0.7.2** | **Docker distribution** | **`Dockerfile.prod` installs CLI from npm** |
+| **v0.7.2** | **Docker distribution + Output management** | **`Dockerfile.prod` + `--output` flag** |
 
 v0.7.2 introduces a dedicated production Dockerfile that installs the published
 `@looplia/looplia-cli` package directly from npm. Unlike the existing E2E image
@@ -43,6 +44,7 @@ of `bun install -g @looplia/looplia-cli`.
 2. Remove the requirement to `bun run build` before packaging.
 3. Preserve workspace auto-initialization, bundled plugins, and marketplace sync.
 4. Keep CLIProxyAPI integration trivial via Anthropic-compatible env vars.
+5. Enable users to easily retrieve outputs via `--output` flag and `LOOPLIA_OUTPUT_DIR` env var.
 
 ---
 
@@ -157,7 +159,66 @@ docker run --rm \
 
 ---
 
-## 5. Anthropic/CLIProxyAPI Configuration
+## 5. Workspace & Output Management
+
+### Problem
+
+Workflow outputs are stored in `~/.looplia/sandbox/{id}/outputs/`, requiring
+users to navigate there manually. For Docker deployments, outputs are lost
+when the container exits unless explicitly extracted via volume mounts.
+
+### Solution
+
+Add `--output <dir>` flag and `LOOPLIA_OUTPUT_DIR` environment variable to
+copy outputs to a user-specified location after workflow completion.
+
+### CLI Changes
+
+```bash
+# New flag
+looplia run workflow-id --file input.md --output ./results/
+
+# Environment variable (useful for Docker)
+export LOOPLIA_OUTPUT_DIR=./outputs
+looplia run workflow-id --file input.md
+```
+
+**Priority order:** `--output` flag > `LOOPLIA_OUTPUT_DIR` env var > no copy (default)
+
+### Usage Patterns
+
+| Scenario | Command | Outputs Location |
+|----------|---------|------------------|
+| Local default | `looplia run wf --file x.md` | `~/.looplia/sandbox/{id}/outputs/` |
+| Local explicit | `looplia run wf --file x.md --output ./out/` | `./out/` |
+| Docker | See below | Mounted volume on host |
+
+### Docker Pattern (Recommended)
+
+```bash
+# Mount project directory and set output location via env var
+docker run --rm \
+  -v $(pwd):/project \
+  -e ANTHROPIC_API_KEY=... \
+  -e LOOPLIA_OUTPUT_DIR=/project/outputs \
+  looplia:prod run writing-kit --file /project/article.md
+
+# Outputs appear in ./outputs/ on host after container exits
+```
+
+This pattern ensures outputs persist after container termination without
+requiring users to understand the internal sandbox structure.
+
+### Implementation Notes
+
+- Outputs are copied (not moved) after successful workflow completion
+- Destination directory is created if it doesn't exist
+- All files in `sandbox/{id}/outputs/` are copied to the destination
+- Copy count is reported: `✓ 3 output file(s) copied to ./results/`
+
+---
+
+## 6. Anthropic/CLIProxyAPI Configuration
 
 Looplia currently consumes Anthropic-compatible credentials. Users integrating
 [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) can leverage the same
@@ -187,7 +248,7 @@ expectations for predictability.
 
 ---
 
-## 6. Build & Validation Plan
+## 7. Build & Validation Plan
 
 | Step | Command | Purpose |
 |------|---------|---------|
@@ -201,7 +262,7 @@ image once published to a registry.
 
 ---
 
-## 7. Open Questions & Future Work
+## 8. Open Questions & Future Work
 
 1. **Image publication** — decide whether to push signed images to GHCR or Docker Hub on tag releases.
 2. **Multi-architecture builds** — investigate `linux/arm64` support for Apple Silicon Cloudflare targets.

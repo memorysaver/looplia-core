@@ -1,0 +1,50 @@
+# Production image - installs looplia from npm
+# ============================================
+# Build:
+#   docker build -f Dockerfile.prod -t looplia:prod .
+#   docker build -f Dockerfile.prod --build-arg VERSION=0.7.2 -t looplia:0.7.2 .
+#
+# Run with Anthropic API (direct):
+#   docker run -e ANTHROPIC_API_KEY=sk-ant-... looplia:prod --help
+#
+# Run with CLIProxyAPI (via ANTHROPIC_BASE_URL):
+#   docker run -e ANTHROPIC_API_KEY=your-proxy-key \
+#              -e ANTHROPIC_BASE_URL=http://your-proxy:8080/v1 \
+#              looplia:prod run workflow-name
+#
+# Run with mounted workflows:
+#   docker run -e ANTHROPIC_API_KEY=... \
+#              -v $(pwd)/workflows:/home/looplia/workflows \
+#              -v $(pwd)/sandbox:/home/looplia/sandbox \
+#              looplia:prod run writing-kit --file /home/looplia/workflows/article.md
+
+ARG VERSION=latest
+FROM oven/bun:1.2-alpine
+
+# Create non-root user (same UID/GID as E2E for consistency)
+RUN addgroup -g 1001 -S looplia && \
+    adduser -S looplia -u 1001 -G looplia
+
+# Install git for marketplace sync (v0.7.1+)
+RUN apk add --no-cache git
+
+# Install looplia CLI from npm
+ARG VERSION
+RUN bun install -g @looplia/looplia-cli@${VERSION}
+
+# Create workspace directory with proper ownership
+RUN mkdir -p /home/looplia/.looplia && \
+    chown -R looplia:looplia /home/looplia
+
+# Switch to non-root user
+USER looplia
+WORKDIR /home/looplia
+
+# Production environment
+ENV NODE_ENV=production
+
+# Inline entrypoint: auto-initialize workspace if needed, then run CLI
+# - `looplia init --yes` runs silently on first launch
+# - All arguments passed to the container go to looplia CLI
+ENTRYPOINT ["sh", "-c", "looplia init --yes 2>/dev/null || true; exec looplia \"$@\"", "--"]
+CMD ["--help"]
