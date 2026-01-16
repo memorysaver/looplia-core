@@ -194,6 +194,49 @@ describe("run command", () => {
     });
   });
 
+  describe("parseArgs output flag (v0.7.2)", () => {
+    test("should parse --output flag", () => {
+      const result = parseArgs(["workflow", "--output", "./results"]);
+      expect(result.output).toBe("./results");
+    });
+
+    test("should parse -o short flag", () => {
+      const result = parseArgs(["workflow", "-o", "./results"]);
+      expect(result.output).toBe("./results");
+    });
+
+    test("should handle output with other flags", () => {
+      const result = parseArgs([
+        "workflow",
+        "--file",
+        "input.md",
+        "--output",
+        "./out",
+      ]);
+      expect(result.output).toBe("./out");
+      expect(result.file).toBe("input.md");
+    });
+
+    test("should handle output with absolute path", () => {
+      const result = parseArgs(["workflow", "--output", "/tmp/outputs"]);
+      expect(result.output).toBe("/tmp/outputs");
+    });
+
+    test("should handle output flag at end of args", () => {
+      const result = parseArgs([
+        "workflow",
+        "--file",
+        "x.md",
+        "--mock",
+        "-o",
+        "./out",
+      ]);
+      expect(result.output).toBe("./out");
+      expect(result.file).toBe("x.md");
+      expect(result.mock).toBe(true);
+    });
+  });
+
   describe("generateInputlessSandboxId (Priority 1 Fix)", () => {
     test("should use workflow ID in sandbox name", () => {
       const sandboxId = generateInputlessSandboxId("hn-reporter");

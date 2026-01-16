@@ -404,7 +404,7 @@ Options:
   --file, -f <path>         Path to content file (creates new sandbox, legacy)
   --input, -i <name=value>  Named input (can specify multiple times)
                             Value can be a file path or inline JSON
-  --output, -o <dir>        Copy outputs to this directory after completion
+  --output, -o <dir>        Copy outputs to this directory (default: cwd)
                             Also supports LOOPLIA_OUTPUT_DIR env var
   --sandbox-id, -s <id>     Resume existing sandbox
   --mock                    Use mock mode (no API calls)
@@ -704,8 +704,8 @@ function renderResult(result: WorkflowResult): void {
 }
 
 /**
- * Copy outputs to user-specified directory (v0.7.2)
- * Supports --output flag and LOOPLIA_OUTPUT_DIR env var
+ * Copy outputs to destination directory (v0.7.2)
+ * Priority: --output flag > LOOPLIA_OUTPUT_DIR env var > cwd (default)
  */
 function handleOutputCopy(
   workspace: string,
@@ -811,9 +811,10 @@ export async function runRunCommand(args: string[]): Promise<void> {
     // 8. Render result
     renderResult(result);
 
-    // 9. v0.7.2: Copy outputs to user-specified directory
+    // 9. v0.7.2: Copy outputs to destination (default: cwd)
     if (result.status === "success") {
-      const outputDir = parsed.output || process.env.LOOPLIA_OUTPUT_DIR;
+      const outputDir =
+        parsed.output || process.env.LOOPLIA_OUTPUT_DIR || process.cwd();
       handleOutputCopy(workspace, sandboxId, outputDir);
     }
 

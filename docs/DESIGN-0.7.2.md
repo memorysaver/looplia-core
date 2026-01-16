@@ -171,25 +171,30 @@ when the container exits unless explicitly extracted via volume mounts.
 
 Add `--output <dir>` flag and `LOOPLIA_OUTPUT_DIR` environment variable to
 copy outputs to a user-specified location after workflow completion.
+**Default:** outputs are copied to the current working directory (cwd).
 
 ### CLI Changes
 
 ```bash
-# New flag
+# Default behavior - outputs go to current directory
+looplia run workflow-id --file input.md
+# Outputs appear in ./
+
+# Explicit output directory
 looplia run workflow-id --file input.md --output ./results/
 
 # Environment variable (useful for Docker)
-export LOOPLIA_OUTPUT_DIR=./outputs
+export LOOPLIA_OUTPUT_DIR=/project/outputs
 looplia run workflow-id --file input.md
 ```
 
-**Priority order:** `--output` flag > `LOOPLIA_OUTPUT_DIR` env var > no copy (default)
+**Priority order:** `--output` flag > `LOOPLIA_OUTPUT_DIR` env var > `cwd` (default)
 
 ### Usage Patterns
 
 | Scenario | Command | Outputs Location |
 |----------|---------|------------------|
-| Local default | `looplia run wf --file x.md` | `~/.looplia/sandbox/{id}/outputs/` |
+| Local default | `looplia run wf --file x.md` | Current directory (`./`) |
 | Local explicit | `looplia run wf --file x.md --output ./out/` | `./out/` |
 | Docker | See below | Mounted volume on host |
 
