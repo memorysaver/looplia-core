@@ -27,6 +27,7 @@ looplia run <workflow-id> [options]
 | `--sandbox-id <id>` | Resume existing sandbox |
 | `--mock` | Mock mode (no API calls, for testing) |
 | `--no-streaming` | Batch mode without streaming TUI |
+| `--output <dir>` / `-o` | Copy outputs to specified directory |
 
 ## Examples
 
@@ -64,6 +65,20 @@ looplia run writing-kit --file test.md --mock
 looplia run writing-kit --file test.md --no-streaming
 ```
 
+### Output Directory
+
+```bash
+# Copy outputs to specific directory
+looplia run writing-kit --file article.md --output ./results
+
+# Copy to absolute path
+looplia run writing-kit --file article.md -o /tmp/outputs
+```
+
+<Aside type="note">
+By default, outputs are copied to the current working directory. Use `--output` to specify a different location, or set `LOOPLIA_OUTPUT_DIR` environment variable.
+</Aside>
+
 ## How It Works
 
 1. **Input Processing**
@@ -82,6 +97,7 @@ looplia run writing-kit --file test.md --no-streaming
 
 4. **Output Generation**
    - Writes artifacts to `sandbox/{id}/outputs/`
+   - Copies outputs to destination directory (default: current working directory)
    - Updates `validation.json` with completion status
 
 ## Streaming TUI
