@@ -70,6 +70,7 @@ jobs:
             -v "$(pwd)/.claude/skills/looplia-e2e/assets:/assets:ro" \
             $IMAGE_NAME \
             run writing-kit --file /assets/ai-healthcare.md \
+            --output /outputs \
             --topics "ai,healthcare,technology" \
             --tone "expert")
 
@@ -78,6 +79,7 @@ jobs:
 
           # Always copy files for debugging (even on failure)
           docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace/ || true
+          docker cp "$CONTAINER_ID:/outputs/." test-outputs/ || true
           docker rm "$CONTAINER_ID"
 
           # Exit with original code
@@ -144,6 +146,29 @@ jobs:
 
           [ -f "$SANDBOX_DIR/outputs/writing-kit.json" ] || (echo "ERROR: outputs/writing-kit.json not found (Stage 3)" && exit 1)
           echo "✓ outputs/writing-kit.json exists (Stage 3)"
+
+      - name: Validate output copy (v0.7.2)
+        run: |
+          echo "Checking --output flag copied files correctly..."
+
+          [ -d "test-outputs" ] || (echo "ERROR: test-outputs directory not found" && exit 1)
+
+          [ -f "test-outputs/summary.json" ] || (echo "ERROR: summary.json not copied" && exit 1)
+          echo "✓ summary.json copied to --output directory"
+
+          [ -f "test-outputs/ideas.json" ] || (echo "ERROR: ideas.json not copied" && exit 1)
+          echo "✓ ideas.json copied to --output directory"
+
+          [ -f "test-outputs/writing-kit.json" ] || (echo "ERROR: writing-kit.json not copied" && exit 1)
+          echo "✓ writing-kit.json copied to --output directory"
+
+          SANDBOX_DIR=$(find test-workspace/sandbox -maxdepth 1 -type d ! -name sandbox | head -1)
+          if diff "$SANDBOX_DIR/outputs/writing-kit.json" "test-outputs/writing-kit.json" > /dev/null; then
+            echo "✓ Output content matches sandbox (verified)"
+          else
+            echo "ERROR: Output content differs from sandbox"
+            exit 1
+          fi
 
       - name: Validate writing-kit output
         run: |
@@ -245,7 +270,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results-markdown
-          path: test-workspace/
+          path: |
+            test-workspace/
+            test-outputs/
           retention-days: 7
 
   # Test: ZenMux GLM-4.7 with inline execution strategy (no Task subagents)
