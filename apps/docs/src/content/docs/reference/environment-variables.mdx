@@ -69,6 +69,7 @@ looplia run writing-kit --file article.md
 | `LOOPLIA_DEV_ROOT` | Path to looplia-core source repository | - |
 | `LOOPLIA_HOME` | Override workspace path | `~/.looplia` |
 | `LOOPLIA_DEBUG` | Enable debug logging | `false` |
+| `LOOPLIA_OUTPUT_DIR` | Default output directory for `run` command | cwd |
 
 ### Development Mode
 
@@ -100,6 +101,24 @@ looplia run writing-kit --file test.md
 ```
 
 Debug logs are written to `~/.looplia/logs/`.
+
+### Output Directory
+
+Use `LOOPLIA_OUTPUT_DIR` to set a default output location for workflow results:
+
+```bash
+# Set default output directory
+export LOOPLIA_OUTPUT_DIR=~/looplia-outputs
+
+# Outputs will be copied here after each run
+looplia run writing-kit --file article.md
+# → Results in ~/looplia-outputs/
+```
+
+Priority order for output directory:
+1. `--output` / `-o` flag (highest priority)
+2. `LOOPLIA_OUTPUT_DIR` environment variable
+3. Current working directory (default)
 
 ### Custom Workspace Path
 
@@ -212,6 +231,7 @@ docker run -e ANTHROPIC_API_KEY=sk-ant-... -v ./content:/data my-looplia
 | `LOOPLIA_DEV_ROOT` | path | Development source path |
 | `LOOPLIA_HOME` | path | Override workspace path (~/.looplia) |
 | `LOOPLIA_DEBUG` | boolean | Enable debug logging |
+| `LOOPLIA_OUTPUT_DIR` | path | Default output directory for run command |
 
 ## See Also
 
