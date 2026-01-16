@@ -5,6 +5,30 @@ All notable changes to Looplia-Core will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.2] - 2026-01-16
+
+### Added
+
+- **Production Dockerfile** (`Dockerfile.prod`) - NPM-sourced runtime image
+  - Installs `@looplia/looplia-cli` directly from npm
+  - Build arg `VERSION` for pinning specific releases
+  - No local build artifacts required
+
+- **Output Management** - Copy sandbox outputs to user-specified location
+  - `--output <dir>` / `-o` flag for explicit output directory
+  - `LOOPLIA_OUTPUT_DIR` environment variable support
+  - Default: outputs copied to current working directory
+  - `copyOutputsToDestination()` utility in `utils/sandbox.ts`
+
+### Changed
+
+- **Default Output Behavior** - Outputs now copied to cwd by default
+  - Priority: `--output` flag > `LOOPLIA_OUTPUT_DIR` env > cwd
+
+### Documentation
+
+- **DESIGN-0.7.2.md** - Production Docker image and output management spec
+
 ## [0.7.1] - 2026-01-12
 
 ### Added
@@ -798,7 +822,8 @@ The following were considered but **intentionally deferred** to v0.6+:
 
 ---
 
-[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.7.2...HEAD
+[0.7.2]: https://github.com/memorysaver/looplia-core/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/memorysaver/looplia-core/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/memorysaver/looplia-core/compare/v0.6.10...v0.7.0
 [0.6.10]: https://github.com/memorysaver/looplia-core/compare/v0.6.9...v0.6.10
