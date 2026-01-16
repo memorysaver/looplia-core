@@ -70,7 +70,7 @@ jobs:
             -v "$(pwd)/.claude/skills/looplia-e2e/assets:/assets:ro" \
             $IMAGE_NAME \
             run writing-kit --file /assets/ai-healthcare.md \
-            --output /outputs \
+            --output /home/looplia/outputs \
             --topics "ai,healthcare,technology" \
             --tone "expert")
 
@@ -79,7 +79,7 @@ jobs:
 
           # Always copy files for debugging (even on failure)
           docker cp "$CONTAINER_ID:/home/looplia/.looplia/." test-workspace/ || true
-          docker cp "$CONTAINER_ID:/outputs/." test-outputs/ || true
+          docker cp "$CONTAINER_ID:/home/looplia/outputs/." test-outputs/ || true
           docker rm "$CONTAINER_ID"
 
           # Exit with original code

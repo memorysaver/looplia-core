@@ -25,9 +25,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Default Output Behavior** - Outputs now copied to cwd by default
   - Priority: `--output` flag > `LOOPLIA_OUTPUT_DIR` env > cwd
 
+### Fixed
+
+- **Docker E2E Permissions** - Fixed CI test failure caused by non-root container user
+  - Changed output path from `/outputs` to `/home/looplia/outputs`
+  - Container runs as `looplia` user who cannot create root-level directories
+
 ### Documentation
 
 - **DESIGN-0.7.2.md** - Production Docker image and output management spec
+- **GitButler Workflow** - Added comprehensive Git workflow documentation to CLAUDE.md
+  - GitButler CLI commands for commits and branches
+  - PR creation and merge procedures
+  - Troubleshooting for base update failures after squash merge
 
 ## [0.7.1] - 2026-01-12
 
