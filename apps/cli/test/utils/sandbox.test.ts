@@ -139,4 +139,10 @@ describe("copyOutputsToDestination", () => {
     expect(existsSync(join(testDest, "file.json"))).toBe(true);
     expect(existsSync(join(testDest, "subdir"))).toBe(false);
   });
+
+  test("should return 0 for empty input parameters", () => {
+    expect(copyOutputsToDestination("", sandboxId, testDest)).toBe(0);
+    expect(copyOutputsToDestination(testWorkspace, "", testDest)).toBe(0);
+    expect(copyOutputsToDestination(testWorkspace, sandboxId, "")).toBe(0);
+  });
 });

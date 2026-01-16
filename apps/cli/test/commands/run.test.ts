@@ -235,6 +235,13 @@ describe("run command", () => {
       expect(result.file).toBe("x.md");
       expect(result.mock).toBe(true);
     });
+
+    test("should return undefined when no output specified", () => {
+      // Tests that parseArgs returns undefined for output, allowing
+      // runRunCommand to apply priority: flag > env > cwd
+      const result = parseArgs(["workflow", "--file", "x.md"]);
+      expect(result.output).toBeUndefined();
+    });
   });
 
   describe("generateInputlessSandboxId (Priority 1 Fix)", () => {

@@ -75,6 +75,8 @@ export function createSandboxDirectories(
  * Creates the destination directory if it doesn't exist.
  * Copies all files from sandbox/{sandboxId}/outputs/ to destDir.
  *
+ * @note Existing files at destination will be OVERWRITTEN without warning.
+ *
  * v0.7.2: Added for --output flag and LOOPLIA_OUTPUT_DIR support.
  *
  * @param workspace - Workspace path (~/.looplia)
@@ -87,6 +89,11 @@ export function copyOutputsToDestination(
   sandboxId: string,
   destDir: string
 ): number {
+  // Input validation
+  if (!(workspace && sandboxId && destDir)) {
+    return 0;
+  }
+
   const outputsPath = join(
     workspace,
     "sandbox",
@@ -110,8 +117,12 @@ export function copyOutputsToDestination(
         copiedCount += 1;
       }
     }
-  } catch {
-    // If outputs directory doesn't exist or is empty, return 0
+  } catch (error) {
+    // Only silently ignore ENOENT (directory doesn't exist)
+    const nodeError = error as NodeJS.ErrnoException;
+    if (nodeError.code !== "ENOENT") {
+      console.warn(`Warning: Error copying outputs: ${error}`);
+    }
   }
 
   return copiedCount;
