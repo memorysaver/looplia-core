@@ -59,7 +59,7 @@ jobs:
         run: gunzip -c looplia-image.tar.gz | docker load
 
       - name: Create test workspace
-        run: mkdir -p test-workspace
+        run: mkdir -p test-workspace test-outputs
 
       - name: Run writing-kit workflow
         env:
@@ -90,6 +90,9 @@ jobs:
         run: |
           echo "=== Workspace Structure ==="
           find test-workspace -type f 2>/dev/null | head -50 || echo "No files found"
+          echo ""
+          echo "=== Output Copy Directory (--output flag) ==="
+          ls -la test-outputs/ 2>/dev/null || echo "No test-outputs directory"
           echo ""
           echo "=== Sandbox folder contents ==="
           SANDBOX_DIR=$(find test-workspace/sandbox -maxdepth 1 -type d ! -name sandbox 2>/dev/null | head -1)
@@ -163,12 +166,15 @@ jobs:
           echo "✓ writing-kit.json copied to --output directory"
 
           SANDBOX_DIR=$(find test-workspace/sandbox -maxdepth 1 -type d ! -name sandbox | head -1)
-          if diff "$SANDBOX_DIR/outputs/writing-kit.json" "test-outputs/writing-kit.json" > /dev/null; then
-            echo "✓ Output content matches sandbox (verified)"
-          else
-            echo "ERROR: Output content differs from sandbox"
-            exit 1
-          fi
+          [ -n "$SANDBOX_DIR" ] || (echo "ERROR: No sandbox directory found" && exit 1)
+
+          for file in summary.json ideas.json writing-kit.json; do
+            if ! diff "$SANDBOX_DIR/outputs/$file" "test-outputs/$file" > /dev/null; then
+              echo "ERROR: $file content differs from sandbox"
+              exit 1
+            fi
+          done
+          echo "✓ All output files match sandbox (verified)"
 
       - name: Validate writing-kit output
         run: |
