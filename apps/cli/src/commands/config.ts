@@ -248,8 +248,8 @@ async function showProviderConfig(): Promise<void> {
   }
   console.log(`  Provider: ${info.provider}`);
 
-  if (info.authTokenSource === "keychain") {
-    console.log("  Auth Source: macOS Keychain (Claude Code)");
+  if (info.authTokenSource === "subscription") {
+    console.log("  Auth Source: Claude Code Subscription (OAuth)");
   } else if (info.authToken) {
     console.log(`  Auth Token: ${maskAuthToken(info.authToken)}`);
   }

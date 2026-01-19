@@ -75,9 +75,9 @@ describe("model-provider", () => {
       );
     });
 
-    it("should have Claude Code subscription presets with keychain authTokenSource", () => {
+    it("should have Claude Code subscription presets with subscription authTokenSource", () => {
       expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_HAIKU.authTokenSource).toBe(
-        "keychain"
+        "subscription"
       );
       expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_HAIKU.apiProvider).toBe(
         "anthropic"
@@ -87,14 +87,14 @@ describe("model-provider", () => {
       );
 
       expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_SONNET.authTokenSource).toBe(
-        "keychain"
+        "subscription"
       );
       expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_SONNET.mainModel).toBe(
         "claude-sonnet-4-5-20250929"
       );
 
       expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_OPUS.authTokenSource).toBe(
-        "keychain"
+        "subscription"
       );
       expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_OPUS.mainModel).toBe(
         "claude-opus-4-5-20251101"
@@ -153,7 +153,7 @@ describe("model-provider", () => {
       const settings = applyPreset("CLAUDE_CODE_SUBSCRIPTION_OPUS");
 
       expect(settings.apiProvider.type).toBe("anthropic");
-      expect(settings.apiProvider.authTokenSource).toBe("keychain");
+      expect(settings.apiProvider.authTokenSource).toBe("subscription");
       expect(settings.agents.main).toBe("claude-opus-4-5-20251101");
     });
   });
@@ -243,13 +243,13 @@ describe("model-provider", () => {
       expect(info.provider).toBe("custom");
     });
 
-    it("should include authTokenSource when using keychain auth", () => {
+    it("should include authTokenSource when using subscription auth", () => {
       const settings: LoopliaSettings = {
         version: "1.0",
         preset: "CLAUDE_CODE_SUBSCRIPTION_OPUS",
         apiProvider: {
           type: "anthropic",
-          authTokenSource: "keychain",
+          authTokenSource: "subscription",
         },
         agents: {
           main: "claude-opus-4-5-20251101",
@@ -260,7 +260,7 @@ describe("model-provider", () => {
       const info = getSettingsDisplayInfo(settings);
 
       expect(info.status).toBe("configured");
-      expect(info.authTokenSource).toBe("keychain");
+      expect(info.authTokenSource).toBe("subscription");
       expect(info.authToken).toBeUndefined();
     });
   });

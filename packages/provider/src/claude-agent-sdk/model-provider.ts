@@ -65,8 +65,8 @@ export type LoopliaSettings = {
 
     /**
      * Auth token source for subscription-based authentication
-     * When set to "keychain", reads OAuth token from macOS Keychain
-     * (Claude Code subscription)
+     * When set to "subscription", uses Claude Code subscription OAuth token
+     * (from CLAUDE_CODE_OAUTH_TOKEN env var or macOS Keychain)
      */
     authTokenSource?: AuthTokenSource;
   };
@@ -94,9 +94,10 @@ export type LoopliaSettings = {
 
 /**
  * Auth token source type
- * - "keychain": Read OAuth token from macOS Keychain (Claude Code subscription)
+ * - "subscription": Use Claude Code subscription OAuth token
+ *   (from CLAUDE_CODE_OAUTH_TOKEN env var or macOS Keychain)
  */
-export type AuthTokenSource = "keychain";
+export type AuthTokenSource = "subscription";
 
 /**
  * Preset definition type
@@ -107,7 +108,7 @@ export type PresetDefinition = {
   baseUrl?: string;
   /**
    * Auth token source for subscription-based presets
-   * When set to "keychain", reads OAuth token from macOS Keychain
+   * When set to "subscription", uses Claude Code OAuth token
    */
   authTokenSource?: AuthTokenSource;
   mainModel: string;
@@ -159,7 +160,7 @@ export const PRESETS: Record<string, PresetDefinition> = {
   CLAUDE_CODE_SUBSCRIPTION_HAIKU: {
     name: "Claude Code Subscription (Haiku)",
     apiProvider: "anthropic",
-    authTokenSource: "keychain",
+    authTokenSource: "subscription",
     mainModel: "claude-haiku-4-5-20251001",
     executorModel: "claude-haiku-4-5-20251001",
     haikuModel: "claude-haiku-4-5-20251001",
@@ -169,7 +170,7 @@ export const PRESETS: Record<string, PresetDefinition> = {
   CLAUDE_CODE_SUBSCRIPTION_SONNET: {
     name: "Claude Code Subscription (Sonnet)",
     apiProvider: "anthropic",
-    authTokenSource: "keychain",
+    authTokenSource: "subscription",
     mainModel: "claude-sonnet-4-5-20250929",
     executorModel: "claude-sonnet-4-5-20250929",
     haikuModel: "claude-sonnet-4-5-20250929",
@@ -179,7 +180,7 @@ export const PRESETS: Record<string, PresetDefinition> = {
   CLAUDE_CODE_SUBSCRIPTION_OPUS: {
     name: "Claude Code Subscription (Opus)",
     apiProvider: "anthropic",
-    authTokenSource: "keychain",
+    authTokenSource: "subscription",
     mainModel: "claude-opus-4-5-20251101",
     executorModel: "claude-opus-4-5-20251101",
     haikuModel: "claude-opus-4-5-20251101",
@@ -468,11 +469,11 @@ function injectModelTierEnv(mainModel: string, executorModel: string): void {
 }
 
 /**
- * Inject keychain OAuth token for Claude Code subscription
+ * Inject OAuth token for Claude Code subscription
  *
  * Authentication Flow:
- * 1. Read OAuth token from macOS Keychain (Claude Code stores it there)
- * 2. Set CLAUDE_CODE_OAUTH_TOKEN environment variable
+ * 1. Check if CLAUDE_CODE_OAUTH_TOKEN is already set (e.g., GitHub Actions)
+ * 2. If not set and on macOS, read from Keychain
  * 3. Clear ANTHROPIC_API_KEY to force SDK to use OAuth token
  *
  * Why clear ANTHROPIC_API_KEY?
@@ -487,15 +488,30 @@ function injectModelTierEnv(mainModel: string, executorModel: string): void {
  * When using OAuth token, SDK logs `apiKeySource: "none"` because
  * ANTHROPIC_API_KEY is not set. This is expected behavior - "none"
  * means the SDK is using CLAUDE_CODE_OAUTH_TOKEN (subscription auth).
+ *
+ * Usage Scenarios:
+ * - macOS local: Token read from Keychain automatically
+ * - GitHub Actions: Set CLAUDE_CODE_OAUTH_TOKEN in env secrets
+ * - Other CI: Set CLAUDE_CODE_OAUTH_TOKEN manually
  */
-function injectKeychainAuth(): void {
+function injectSubscriptionAuth(): void {
+  // If CLAUDE_CODE_OAUTH_TOKEN is already set (e.g., GitHub Actions),
+  // just clear ANTHROPIC_API_KEY and use the existing token
+  if (process.env.CLAUDE_CODE_OAUTH_TOKEN) {
+    process.env.ANTHROPIC_API_KEY = undefined;
+    return;
+  }
+
+  // On non-macOS, we can't read from Keychain
   if (process.platform !== "darwin") {
     console.error(
-      "Warning: Keychain auth only available on macOS. Set CLAUDE_CODE_OAUTH_TOKEN manually."
+      "Warning: CLAUDE_CODE_OAUTH_TOKEN not set and Keychain not available (non-macOS). " +
+        "Set CLAUDE_CODE_OAUTH_TOKEN environment variable."
     );
     return;
   }
 
+  // Try to read from macOS Keychain
   const token = readKeychainToken();
   if (token) {
     process.env.CLAUDE_CODE_OAUTH_TOKEN = token;
@@ -505,7 +521,8 @@ function injectKeychainAuth(): void {
   } else {
     console.error(
       "Warning: Could not read Claude Code credentials from Keychain. " +
-        "Ensure Claude Code is installed and you are logged in."
+        "Ensure Claude Code is installed and you are logged in, " +
+        "or set CLAUDE_CODE_OAUTH_TOKEN environment variable."
     );
   }
 }
@@ -557,8 +574,8 @@ function injectNonAnthropicProviderEnv(
  */
 export function injectLoopliaSettingsEnv(settings: LoopliaSettings): void {
   // Keychain auth source (Claude Code subscription)
-  if (settings.apiProvider.authTokenSource === "keychain") {
-    injectKeychainAuth();
+  if (settings.apiProvider.authTokenSource === "subscription") {
+    injectSubscriptionAuth();
   }
 
   // For non-anthropic providers (ZenMux, custom)
