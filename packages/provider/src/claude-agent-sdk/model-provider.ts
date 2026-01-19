@@ -339,7 +339,21 @@ const CONFIG_FILE = "looplia.setting.json";
  * stored in macOS Keychain. This enables using Claude subscription
  * instead of separate API credits.
  *
- * @returns The OAuth token if found, null otherwise
+ * Keychain Entry:
+ *   Service: "Claude Code-credentials"
+ *   Value: JSON object with structure:
+ *   {
+ *     "claudeAiOauth": {
+ *       "accessToken": "sk-ant-oat01-...",  // <-- This is what we extract
+ *       "refreshToken": "sk-ant-ort01-...",
+ *       "expiresAt": 1768878802300,
+ *       "scopes": ["user:inference", "user:profile", ...],
+ *       "subscriptionType": "max",
+ *       "rateLimitTier": "default_claude_max_5x"
+ *     }
+ *   }
+ *
+ * @returns The OAuth accessToken if found, null otherwise
  */
 export function readKeychainToken(): string | null {
   // Only available on macOS
@@ -349,11 +363,20 @@ export function readKeychainToken(): string | null {
 
   try {
     const { execSync } = require("node:child_process");
-    const token = execSync(
+    const rawValue = execSync(
       'security find-generic-password -s "Claude Code-credentials" -w',
       { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
     ).trim();
-    return token || null;
+
+    if (!rawValue) {
+      return null;
+    }
+
+    // Parse JSON and extract the OAuth access token
+    const credentials = JSON.parse(rawValue);
+    const accessToken = credentials?.claudeAiOauth?.accessToken;
+
+    return accessToken || null;
   } catch {
     return null;
   }
@@ -446,6 +469,24 @@ function injectModelTierEnv(mainModel: string, executorModel: string): void {
 
 /**
  * Inject keychain OAuth token for Claude Code subscription
+ *
+ * Authentication Flow:
+ * 1. Read OAuth token from macOS Keychain (Claude Code stores it there)
+ * 2. Set CLAUDE_CODE_OAUTH_TOKEN environment variable
+ * 3. Clear ANTHROPIC_API_KEY to force SDK to use OAuth token
+ *
+ * Why clear ANTHROPIC_API_KEY?
+ * The Claude Agent SDK checks env vars in this order:
+ *   1. ANTHROPIC_API_KEY (direct API key)
+ *   2. CLAUDE_CODE_OAUTH_TOKEN (subscription OAuth token)
+ *
+ * If ANTHROPIC_API_KEY exists (even empty/invalid), SDK uses it first.
+ * By clearing it, we ensure the subscription OAuth token is used.
+ *
+ * SDK Logging Note:
+ * When using OAuth token, SDK logs `apiKeySource: "none"` because
+ * ANTHROPIC_API_KEY is not set. This is expected behavior - "none"
+ * means the SDK is using CLAUDE_CODE_OAUTH_TOKEN (subscription auth).
  */
 function injectKeychainAuth(): void {
   if (process.platform !== "darwin") {
@@ -458,6 +499,9 @@ function injectKeychainAuth(): void {
   const token = readKeychainToken();
   if (token) {
     process.env.CLAUDE_CODE_OAUTH_TOKEN = token;
+    // Clear ANTHROPIC_API_KEY to ensure SDK uses OAuth token
+    // SDK will report apiKeySource: "none" which indicates OAuth auth
+    process.env.ANTHROPIC_API_KEY = undefined;
   } else {
     console.error(
       "Warning: Could not read Claude Code credentials from Keychain. " +
