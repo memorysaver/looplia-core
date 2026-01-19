@@ -298,6 +298,8 @@ describe("build command integration", () => {
     });
 
     it("should write artifact to workflows directory when present (v0.7.3)", () => {
+      const { readFileSync } = require("node:fs");
+
       const workflowContent = `---
 name: test-workflow
 version: 1.0.0
@@ -319,6 +321,10 @@ version: 1.0.0
       // Verify file was written
       const writtenPath = join(testDir, "workflows", "test-workflow.md");
       expect(existsSync(writtenPath)).toBe(true);
+
+      // Verify file content matches artifact content
+      const writtenContent = readFileSync(writtenPath, "utf-8");
+      expect(writtenContent).toBe(workflowContent);
 
       // Verify success message includes the written path
       expect(consoleLogSpy).toHaveBeenCalledWith(

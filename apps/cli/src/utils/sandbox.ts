@@ -144,7 +144,7 @@ export function copyOutputsToDestination(
  * @param workspace - Workspace path (~/.looplia)
  * @param filename - Workflow filename (e.g., "article-summary.md")
  * @param content - Complete workflow markdown content
- * @returns Full path to written file, or null if parameters are invalid
+ * @returns Full path to written file, or null if parameters are invalid or write fails
  */
 export function writeWorkflowArtifact(
   workspace: string,
@@ -156,16 +156,22 @@ export function writeWorkflowArtifact(
     return null;
   }
 
-  const workflowsDir = join(workspace, "workflows");
-  mkdirSync(workflowsDir, { recursive: true });
+  try {
+    const workflowsDir = join(workspace, "workflows");
+    mkdirSync(workflowsDir, { recursive: true });
 
-  const filePath = join(workflowsDir, filename);
-  writeFileSync(filePath, content, "utf-8");
+    const filePath = join(workflowsDir, filename);
+    writeFileSync(filePath, content, "utf-8");
 
-  // Verify file was written
-  if (!existsSync(filePath)) {
+    // Verify file was written
+    if (!existsSync(filePath)) {
+      return null;
+    }
+
+    return filePath;
+  } catch (error) {
+    // Handle FS errors (permission denied, disk full, etc.)
+    console.warn(`Warning: Error writing workflow artifact: ${error}`);
     return null;
   }
-
-  return filePath;
 }

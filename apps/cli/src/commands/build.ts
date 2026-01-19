@@ -59,6 +59,7 @@ export type BuildResult = {
   status: "success" | "error";
   workflowPath?: string;
   workflowName?: string;
+  /** Distinct from workflowName; used when agent returns an ID for the workflow */
   workflowId?: string;
   stepsCount?: number;
   error?: string;
@@ -762,7 +763,8 @@ function handleArtifactWrite(
   const writtenPath = writeWorkflowArtifact(workspace, filename, content);
 
   if (!writtenPath) {
-    console.warn("⚠ Failed to write workflow artifact");
+    // Per spec: write failure for valid artifact should be error, not warning
+    console.error("✘ Failed to write workflow artifact");
     return null;
   }
 
@@ -770,30 +772,49 @@ function handleArtifactWrite(
 }
 
 /**
+ * Render success message with workflow details
+ */
+function renderSuccessMessage(
+  result: BuildResult,
+  displayPath: string | null
+): void {
+  console.log("\n✅ Workflow created successfully");
+  if (displayPath) {
+    console.log(`Path: ${displayPath}`);
+  }
+  if (result.workflowName || result.workflowId) {
+    const name = result.workflowName ?? result.workflowId;
+    console.log("\nRun with:");
+    console.log(`  looplia run ${name} --file <content.md>`);
+  }
+  if (result.stepsCount) {
+    console.log(`\nSteps: ${result.stepsCount}`);
+  }
+}
+
+/**
  * Render the result
  * v0.7.3: Now writes artifact to disk via CLI-controlled persistence
  */
 export function renderResult(result: BuildResult, workspace: string): void {
-  if (result.status === "success") {
-    // v0.7.3: CLI writes the artifact
-    const writtenPath = handleArtifactWrite(result, workspace);
-    const displayPath = writtenPath ?? result.workflowPath;
-
-    console.log("\n✅ Workflow created successfully");
-    if (displayPath) {
-      console.log(`Path: ${displayPath}`);
-    }
-    if (result.workflowName || result.workflowId) {
-      const name = result.workflowName ?? result.workflowId;
-      console.log("\nRun with:");
-      console.log(`  looplia run ${name} --file <content.md>`);
-    }
-    if (result.stepsCount) {
-      console.log(`\nSteps: ${result.stepsCount}`);
-    }
-  } else {
+  if (result.status !== "success") {
     console.error(`\n❌ Build failed: ${result.error ?? "Unknown error"}`);
+    return;
   }
+
+  // v0.7.3: CLI writes the artifact
+  const writtenPath = handleArtifactWrite(result, workspace);
+
+  // Per spec: valid artifact that fails to write should be error status
+  const hasValidArtifact =
+    result.artifact?.filename && result.artifact?.content;
+  if (hasValidArtifact && !writtenPath) {
+    console.error("\n❌ Build failed: Unable to save workflow artifact");
+    return;
+  }
+
+  const displayPath = writtenPath ?? result.workflowPath ?? null;
+  renderSuccessMessage(result, displayPath);
 }
 
 /**
