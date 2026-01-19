@@ -8,7 +8,7 @@ Looplia Core is an agentic workflow platform powered by the Claude Agent SDK. It
 
 **Vision:** A universal CLI for AI-powered workflows — one tool, many domains, powered by composable skills.
 
-## v0.7.1 Architecture
+## v0.7.2 Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -288,29 +288,15 @@ looplia run writing-kit --file ./article.md
 
 | Document | Description |
 |----------|-------------|
+| [docs/README.md](./docs/README.md) | Full documentation index |
 | [DESIGN-0.7.0.md](./docs/DESIGN-0.7.0.md) | Skill Registry System design |
-| [AGENTIC_CONCEPT_1.0.md](./docs/AGENTIC_CONCEPT_1.0.md) | Skills-first architecture design |
 | [GLOSSARY.md](./docs/GLOSSARY.md) | Ubiquitous language reference |
+| [openspec/project.md](./openspec/project.md) | Project conventions (OpenSpec) |
 | [PR_CHECKLIST.md](./docs/PR_CHECKLIST.md) | PR checklist for contributors |
 
 ## Version History
 
-| Version | Focus |
-|---------|-------|
-| v0.5.x | Agent system, two-plugin model |
-| v0.6.0 | Steps-based workflows, `run: agents/X` syntax |
-| v0.6.1 | Skills-first, universal skill-executor |
-| v0.6.2 | Per-step orchestration |
-| v0.6.3 | Input-less workflows, web-capable skills |
-| v0.6.4 | Interactive Build Wizard, Streaming TUI |
-| v0.6.5 | Agent SDK Local Plugin Loading, Bootstrap Module |
-| v0.6.6 | Model Provider Configuration, ZenMux Integration |
-| v0.6.7 | Package rename to @looplia/looplia-cli |
-| v0.6.8 | Claude Code path resolution fix |
-| v0.6.9 | SDK Compatibility, Endpoint-Aware API Key Selection |
-| v0.6.10 | Unified Command Initialization, E2E Testing Skill |
-| v0.7.0 | Skill Registry System, Marketplace Integration |
-| **v0.7.1** | **Build Sandbox Support, ZenMux Compatibility** |
+See [CHANGELOG.md](./CHANGELOG.md) for detailed version history and release notes.
 
 ## License
 
