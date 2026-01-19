@@ -8,6 +8,7 @@
  * @see https://github.com/memorysaver/looplia-core/docs/DESIGN-0.6.6.md
  */
 
+import { execSync } from "node:child_process";
 import {
   chmod,
   mkdir,
@@ -363,7 +364,7 @@ export function readKeychainToken(): string | null {
   }
 
   try {
-    const { execSync } = require("node:child_process");
+    // Use top-level imported execSync for consistency with codebase
     const rawValue = execSync(
       'security find-generic-password -s "Claude Code-credentials" -w',
       { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
@@ -379,12 +380,13 @@ export function readKeychainToken(): string | null {
 
     return accessToken || null;
   } catch (error: unknown) {
-    // Log error for debugging - keychain access can fail for various reasons
-    // (keychain locked, permission denied, invalid JSON, etc.)
+    // Security: Don't log full error message which might contain sensitive paths
+    // Only surface generic error when it's not a "not found" case (expected when not logged in)
     const message = error instanceof Error ? error.message : String(error);
-    // Only log if not a "not found" error (which is expected when not logged in)
     if (!message.includes("could not be found")) {
-      console.error("Keychain access error:", message);
+      console.error(
+        "Failed to access macOS Keychain. Ensure Claude Code is installed and you are logged in."
+      );
     }
     return null;
   }
