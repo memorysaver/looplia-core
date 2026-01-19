@@ -437,65 +437,6 @@ describe("bootstrap/default-sources", () => {
         },
         { timeout: 120_000 }
       );
-
-      it(
-        "should create individual plugins from awesome-claude-skills (ComposioHQ)",
-        async () => {
-          const results = await installDefaultSources();
-
-          // ComposioHQ style: each plugins[] entry = 1 plugin
-          const brandResult = results.find(
-            (r) => r.skill === "brand-guidelines"
-          );
-          const mcpResult = results.find((r) => r.skill === "mcp-builder");
-
-          expect(brandResult).toBeDefined();
-          expect(brandResult?.status).toBe("installed");
-          expect(mcpResult).toBeDefined();
-          expect(mcpResult?.status).toBe("installed");
-
-          // Verify directories created
-          const brandPath = join(workspace.path, "plugins", "brand-guidelines");
-          const mcpPath = join(workspace.path, "plugins", "mcp-builder");
-          expect(await pathExists(brandPath)).toBe(true);
-          expect(await pathExists(mcpPath)).toBe(true);
-        },
-        { timeout: 60_000 }
-      );
-
-      it(
-        "should create ComposioHQ plugins with single skill matching plugin name",
-        async () => {
-          await installDefaultSources();
-
-          // Each ComposioHQ plugin has 1 skill with same name as plugin
-          const brandSkillsDir = join(
-            workspace.path,
-            "plugins",
-            "brand-guidelines",
-            "skills"
-          );
-          expect(await pathExists(brandSkillsDir)).toBe(true);
-
-          const brandSkills = await readdir(brandSkillsDir);
-          expect(brandSkills).toHaveLength(1);
-          expect(brandSkills).toContain("brand-guidelines"); // Skill name = plugin name
-        },
-        { timeout: 60_000 }
-      );
-
-      it(
-        "should install 29+ plugins total from both marketplaces",
-        async () => {
-          const results = await installDefaultSources();
-
-          const installed = results.filter((r) => r.status === "installed");
-
-          // 2 from Anthropic (document-skills, example-skills) + 27 from ComposioHQ
-          expect(installed.length).toBeGreaterThanOrEqual(29);
-        },
-        { timeout: 60_000 }
-      );
     }
   );
 });

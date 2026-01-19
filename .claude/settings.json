@@ -1,38 +1,12 @@
 {
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Edit|MultiEdit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "but claude pre-tool"
-          }
-        ]
-      }
-    ],
     "PostToolUse": [
       {
-        "matcher": "Edit|MultiEdit|Write",
+        "matcher": "Edit|Write",
         "hooks": [
-          {
-            "type": "command",
-            "command": "but claude post-tool"
-          },
           {
             "type": "command",
             "command": "npx ultracite fix"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "but claude stop"
           }
         ]
       }
@@ -40,7 +14,6 @@
   },
   "enabledPlugins": {
     "agent-sdk-dev@claude-plugins-official": true,
-    "plugin-dev@claude-plugins-official": true,
-    "hookify@claude-plugins-official": true
+    "plugin-dev@claude-plugins-official": true
   }
 }

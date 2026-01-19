@@ -16,28 +16,6 @@ Biome (the underlying engine) provides extremely fast Rust-based linting and for
 
 Write code that is **accessible, performant, type-safe, and maintainable**. Focus on clarity and explicit intent over brevity. Study @docs/README.md to understand the project concept. Ask or clarify directly if you have any questions or suggestions.
 
-## Development Workflow
-
-### Git & Commits
-- Never use `git commit` directly - use GitButler CLI instead
-- Use `but status` to see virtual branches and changes
-- Use `but commit <branch-name> -m "message"` to commit
-- Use `but rub <file-id> <branch-id>` to assign changes to branches
-
-### Creating PRs
-1. Push branch: `but push <branch-name>`
-2. Create PR: `gh pr create --base main --head <branch-name> --title "..." --body "..."`
-
-### Merging PRs
-1. Check CI: `gh pr checks <PR#>`
-2. Merge: `gh pr merge <PR#> --squash --delete-branch`
-3. Update base: `git fetch origin main && but base update`
-
-**Troubleshooting:** If `but base update` fails after merge:
-- GitButler may have stale virtual branch refs (squash creates new commit SHA)
-- Run `but base update` again - it usually auto-detects merged branches on retry
-- If issues persist: `but branch delete <name> --force`
-
 ## PR Checklist
 Before creating or merging a PR, review [docs/PR_CHECKLIST.md](../docs/PR_CHECKLIST.md).
 

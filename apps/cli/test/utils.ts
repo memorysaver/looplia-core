@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import {
   mkdtempSync,
   readdirSync,
@@ -16,6 +16,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const CLI_ROOT = join(__dirname, "..");
 // Project root is three levels up from test/ (apps/cli/test -> project root)
 const PROJECT_ROOT = join(__dirname, "..", "..", "..");
+let didBuild = false;
 
 /**
  * Execute the CLI binary and capture output
@@ -29,6 +30,21 @@ export function execCLI(args: string[]): Promise<{
     // Path to the compiled CLI entry point (relative to CLI root, not cwd)
     // v0.6.8: Output changed from index.js to cli.js for Agent SDK compatibility
     const cliPath = join(CLI_ROOT, "dist", "cli.js");
+
+    // Build once for tests to ensure version is current
+    if (!didBuild) {
+      didBuild = true;
+      const buildResult = spawnSync("bun", ["run", "build"], {
+        cwd: CLI_ROOT,
+        env: process.env,
+        stdio: "inherit",
+      });
+
+      if (buildResult.status !== 0) {
+        reject(new Error("CLI build failed before tests"));
+        return;
+      }
+    }
 
     // Run from project root so getPluginPath() finds plugins/looplia-writer
     // Use bun instead of node - the bundle requires bun runtime
