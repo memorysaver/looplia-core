@@ -269,19 +269,19 @@ steps:
     expect(() => parseWorkflow(invalid)).toThrow("'input' field");
   });
 
-  it("should allow missing input field for search skill (v0.6.3 input-less)", () => {
+  it("should allow missing input field for browser-research skill (v0.6.3 input-less)", () => {
     const valid = `---
 name: hn-reporter
-description: Input-less workflow using search skill
+description: Input-less workflow using browser-research skill
 steps:
   - id: find-news
-    skill: search
+    skill: browser-research
     mission: Search Hacker News for top AI stories
     output: \${{ sandbox }}/outputs/news.json
 ---`;
 
     const result = parseWorkflow(valid);
-    expect(result.definition.steps[0].skill).toBe("search");
+    expect(result.definition.steps[0].skill).toBe("browser-research");
     expect(result.definition.steps[0].input).toBeUndefined();
   });
 

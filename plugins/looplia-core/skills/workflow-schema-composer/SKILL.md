@@ -108,12 +108,12 @@ These skills can operate WITHOUT an input field - they fetch/generate data auton
 **Example input-less first step:**
 ```yaml
 - id: fetch-data
-  skill: search
+  skill: browser-research
   mission: |
     Search the web for recent technology trends.
     Extract titles, URLs, and key details.
   output: ${{ sandbox }}/outputs/data.json
-  # NO input field - search operates autonomously
+  # NO input field - browser-research operates autonomously
 ```
 
 ### Step 5: Suggest Validation
@@ -319,17 +319,17 @@ description: Fetch trending news and compile a digest report
 
 # v0.7.0: Explicit skills declaration
 skills:
-  - search
+  - browser-research
   - content-documenter
 
 steps:
   - id: fetch-news
-    skill: search
+    skill: browser-research
     mission: |
       Search the web for today's trending technology news.
       Extract title, URL, source, and brief summary for each story.
     output: ${{ sandbox }}/outputs/news.json
-    # NO input field - search operates autonomously
+    # NO input field - browser-research operates autonomously
     validate:
       required_fields: [query, mode, results]
 
@@ -374,7 +374,7 @@ Given enriched prompt:
 **BAD workflow (ignores preferences):**
 ```yaml
 - id: fetch-news
-  skill: search
+  skill: browser-research
   mission: |
     Search HackerNews for AI news articles.
     Extract titles and summaries.
@@ -388,7 +388,7 @@ Given enriched prompt:
 **GOOD workflow (incorporates preferences):**
 ```yaml
 - id: fetch-news
-  skill: search
+  skill: browser-research
   mission: |
     Search HackerNews for the top 5 AI news articles
     focusing on LLM developments and adoption trends.

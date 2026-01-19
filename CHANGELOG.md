@@ -7,7 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Search Skill Refactor** - Moved `search` skill out of looplia-core
+  - Removed `search` skill from looplia-core plugin (domain skills belong in external registries)
+  - Updated examples to use `browser-research` skill from looplia-skills registry
+  - Web research capabilities now provided by: `agent-browser`, `browser-research`, `rss-reader`
+
 ### Fixed
+
+- **Registry Sync Stale Skills** - Skills directory now cleared before sync to remove stale skills
+  - Previously, removed skills would persist locally after registry sync
+  - Now clears skills directory before copying to ensure only current skills remain
+  - Added warnings when skill paths don't exist in source repository
 
 - **CLI Output Persistence** - CLI now writes workflow artifacts directly to avoid missing outputs
   - Prevents successful runs from returning without persisted workflow files

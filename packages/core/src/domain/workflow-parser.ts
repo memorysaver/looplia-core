@@ -23,7 +23,7 @@ import type {
  * Skills that can operate without input files (input-less capable).
  * These skills generate data autonomously (e.g., web search, local search).
  */
-const INPUTLESS_CAPABLE_SKILLS = ["search"];
+const INPUTLESS_CAPABLE_SKILLS = ["browser-research"];
 
 // Top-level regex constants for performance
 const ARRAY_PATTERN = /^\[(.*)\]$/;

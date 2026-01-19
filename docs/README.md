@@ -371,7 +371,7 @@ v0.6.3 enables workflows that start without user-provided input files:
 
 | Feature | Description |
 |---------|-------------|
-| **Input-less workflows** | Workflows with `search` skill can start without `--file` |
+| **Input-less workflows** | Workflows with `browser-research` skill can start without `--file` |
 | **WebSearch/WebFetch** | Skills can now perform web searches and fetch URLs |
 | **Named inputs** | `--input name=value` syntax for multi-input workflows |
 
@@ -379,10 +379,10 @@ v0.6.3 enables workflows that start without user-provided input files:
 ```yaml
 steps:
   - id: search
-    skill: search
+    skill: browser-research
     mission: "Find top HN stories about AI"
     output: ${{ sandbox }}/outputs/search-results.json
-    # No input field - search skill fetches from web
+    # No input field - browser-research skill fetches from web
 ```
 
 See [DESIGN-0.6.3.md](./DESIGN-0.6.3.md) for full details.
