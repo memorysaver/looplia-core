@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Claude Code Subscription Presets** - Use existing Claude subscription via macOS Keychain
+  - New presets: `CLAUDE_CODE_SUBSCRIPTION_HAIKU`, `CLAUDE_CODE_SUBSCRIPTION_SONNET`, `CLAUDE_CODE_SUBSCRIPTION_OPUS`
+  - Reads OAuth token from macOS Keychain (requires Claude Code to be installed and logged in)
+  - Configure with: `looplia config provider preset CLAUDE_CODE_SUBSCRIPTION_SONNET`
+  - macOS-only; non-macOS users can set `CLAUDE_CODE_OAUTH_TOKEN` env var manually
+
+### Changed
+
+- **Claude Sonnet Model Version** - Updated from `claude-sonnet-4-5-20250514` to `claude-sonnet-4-5-20250929`
+
 ## [0.7.3] - 2026-01-19
 
 ### Changed

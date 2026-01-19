@@ -112,4 +112,5 @@ Uses **Ultracite** (Biome-based) with these principles:
 
 **Model Presets:**
 - Anthropic Direct: `ANTHROPIC_CLAUDE_HAIKU`, `ANTHROPIC_CLAUDE_SONNET`
+- Claude Code Subscription (macOS): `CLAUDE_CODE_SUBSCRIPTION_HAIKU`, `CLAUDE_CODE_SUBSCRIPTION_SONNET`, `CLAUDE_CODE_SUBSCRIPTION_OPUS`
 - ZenMux: 14 presets including `ZENMUX_ZAI_GLM47`

@@ -11,6 +11,7 @@ import {
   type LoopliaSettings,
   maskAuthToken,
   PRESETS,
+  readKeychainToken,
   readLoopliaSettings,
   removeLoopliaSettings,
   writeLoopliaSettings,
@@ -34,8 +35,8 @@ describe("model-provider", () => {
   });
 
   describe("PRESETS", () => {
-    it("should have 16 presets defined", () => {
-      expect(Object.keys(PRESETS)).toHaveLength(16);
+    it("should have 19 presets defined", () => {
+      expect(Object.keys(PRESETS)).toHaveLength(19);
     });
 
     it("should have required fields for each preset", () => {
@@ -72,6 +73,32 @@ describe("model-provider", () => {
       expect(PRESETS.ZENMUX_ZAI_GLM47.apiProvider).toBe("zenmux");
       expect(PRESETS.ZENMUX_ZAI_GLM47.baseUrl).toBe(
         "https://zenmux.ai/api/anthropic"
+      );
+    });
+
+    it("should have Claude Code subscription presets with subscription authTokenSource", () => {
+      expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_HAIKU.authTokenSource).toBe(
+        "subscription"
+      );
+      expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_HAIKU.apiProvider).toBe(
+        "anthropic"
+      );
+      expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_HAIKU.mainModel).toBe(
+        "claude-haiku-4-5-20251001"
+      );
+
+      expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_SONNET.authTokenSource).toBe(
+        "subscription"
+      );
+      expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_SONNET.mainModel).toBe(
+        "claude-sonnet-4-5-20250929"
+      );
+
+      expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_OPUS.authTokenSource).toBe(
+        "subscription"
+      );
+      expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_OPUS.mainModel).toBe(
+        "claude-opus-4-5-20251101"
       );
     });
   });
@@ -121,6 +148,14 @@ describe("model-provider", () => {
       expect(settings.apiProvider.type).toBe("anthropic");
       expect(settings.apiProvider.baseUrl).toBeUndefined();
       expect(settings.agents.main).toBe("claude-haiku-4-5-20251001");
+    });
+
+    it("should include authTokenSource for Claude Code subscription presets", () => {
+      const settings = applyPreset("CLAUDE_CODE_SUBSCRIPTION_OPUS");
+
+      expect(settings.apiProvider.type).toBe("anthropic");
+      expect(settings.apiProvider.authTokenSource).toBe("subscription");
+      expect(settings.agents.main).toBe("claude-opus-4-5-20251101");
     });
   });
 
@@ -207,6 +242,27 @@ describe("model-provider", () => {
       const info = getSettingsDisplayInfo(settings);
 
       expect(info.provider).toBe("custom");
+    });
+
+    it("should include authTokenSource when using subscription auth", () => {
+      const settings: LoopliaSettings = {
+        version: "1.0",
+        preset: "CLAUDE_CODE_SUBSCRIPTION_OPUS",
+        apiProvider: {
+          type: "anthropic",
+          authTokenSource: "subscription",
+        },
+        agents: {
+          main: "claude-opus-4-5-20251101",
+          executor: "claude-opus-4-5-20251101",
+        },
+      };
+
+      const info = getSettingsDisplayInfo(settings);
+
+      expect(info.status).toBe("configured");
+      expect(info.authTokenSource).toBe("subscription");
+      expect(info.authToken).toBeUndefined();
     });
   });
 
@@ -602,6 +658,202 @@ describe("model-provider", () => {
         // Should not throw
         await expect(removeLoopliaSettings()).resolves.toBeUndefined();
       });
+    });
+  });
+
+  describe("readKeychainToken", () => {
+    it("should return null on non-darwin platforms", () => {
+      // This test validates behavior when not on macOS
+      // On non-darwin, it should return null immediately without calling execSync
+      if (process.platform !== "darwin") {
+        const result = readKeychainToken();
+        expect(result).toBeNull();
+      } else {
+        // On macOS, the function will try to read the keychain
+        // It will either return a token or null (if not logged in)
+        const result = readKeychainToken();
+        expect(result === null || typeof result === "string").toBe(true);
+      }
+    });
+
+    it("should return string or null on macOS", () => {
+      // On macOS, should either return valid token string or null
+      // (null if Claude Code not installed or not logged in)
+      const result = readKeychainToken();
+
+      if (process.platform === "darwin") {
+        // Result should be either null or a non-empty string
+        if (result !== null) {
+          expect(typeof result).toBe("string");
+          expect(result.length).toBeGreaterThan(0);
+        }
+      } else {
+        // Non-darwin always returns null
+        expect(result).toBeNull();
+      }
+    });
+  });
+
+  describe("injectLoopliaSettingsEnv with subscription auth", () => {
+    const originalEnv: Record<string, string | undefined> = {};
+
+    beforeEach(() => {
+      // Save original env vars
+      originalEnv.CLAUDE_CODE_OAUTH_TOKEN = process.env.CLAUDE_CODE_OAUTH_TOKEN;
+      originalEnv.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+      originalEnv.ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL;
+      originalEnv.LOOPLIA_AGENT_MODEL_MAIN =
+        process.env.LOOPLIA_AGENT_MODEL_MAIN;
+      originalEnv.LOOPLIA_AGENT_MODEL_EXECUTOR =
+        process.env.LOOPLIA_AGENT_MODEL_EXECUTOR;
+      originalEnv.ANTHROPIC_DEFAULT_HAIKU_MODEL =
+        process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL;
+      originalEnv.ANTHROPIC_DEFAULT_SONNET_MODEL =
+        process.env.ANTHROPIC_DEFAULT_SONNET_MODEL;
+      originalEnv.ANTHROPIC_DEFAULT_OPUS_MODEL =
+        process.env.ANTHROPIC_DEFAULT_OPUS_MODEL;
+
+      // Clear env vars for testing
+      process.env.CLAUDE_CODE_OAUTH_TOKEN = undefined;
+      process.env.ANTHROPIC_API_KEY = undefined;
+      process.env.ANTHROPIC_BASE_URL = undefined;
+      process.env.LOOPLIA_AGENT_MODEL_MAIN = undefined;
+      process.env.LOOPLIA_AGENT_MODEL_EXECUTOR = undefined;
+      process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = undefined;
+      process.env.ANTHROPIC_DEFAULT_SONNET_MODEL = undefined;
+      process.env.ANTHROPIC_DEFAULT_OPUS_MODEL = undefined;
+    });
+
+    afterEach(() => {
+      // Restore original env vars
+      for (const [key, value] of Object.entries(originalEnv)) {
+        if (value === undefined) {
+          delete process.env[key];
+        } else {
+          process.env[key] = value;
+        }
+      }
+    });
+
+    it("should use existing CLAUDE_CODE_OAUTH_TOKEN when set", () => {
+      // Pre-set the OAuth token (simulating CI environment)
+      process.env.CLAUDE_CODE_OAUTH_TOKEN = "sk-ant-oat01-test-token";
+      process.env.ANTHROPIC_API_KEY = "sk-existing-api-key";
+
+      const settings: LoopliaSettings = {
+        version: "1.0",
+        apiProvider: {
+          type: "anthropic",
+          authTokenSource: "subscription",
+        },
+        agents: {
+          main: "claude-opus-4-5-20251101",
+          executor: "claude-opus-4-5-20251101",
+        },
+      };
+
+      injectLoopliaSettingsEnv(settings);
+
+      // OAuth token should be preserved
+      expect(process.env.CLAUDE_CODE_OAUTH_TOKEN).toBe(
+        "sk-ant-oat01-test-token"
+      );
+      // API key should be cleared to force SDK to use OAuth
+      expect(process.env.ANTHROPIC_API_KEY).toBeUndefined();
+    });
+
+    it("should clear ANTHROPIC_API_KEY when using subscription auth", () => {
+      process.env.ANTHROPIC_API_KEY = "sk-should-be-cleared";
+      process.env.CLAUDE_CODE_OAUTH_TOKEN = "sk-ant-oat01-oauth-token";
+
+      const settings: LoopliaSettings = {
+        version: "1.0",
+        apiProvider: {
+          type: "anthropic",
+          authTokenSource: "subscription",
+        },
+        agents: {
+          main: "claude-haiku-4-5-20251001",
+          executor: "claude-haiku-4-5-20251001",
+        },
+      };
+
+      injectLoopliaSettingsEnv(settings);
+
+      // ANTHROPIC_API_KEY must be cleared for SDK to use OAuth token
+      expect(process.env.ANTHROPIC_API_KEY).toBeUndefined();
+    });
+
+    it("should NOT clear ANTHROPIC_API_KEY when NOT using subscription auth", () => {
+      process.env.ANTHROPIC_API_KEY = "sk-should-remain";
+
+      const settings: LoopliaSettings = {
+        version: "1.0",
+        apiProvider: {
+          type: "anthropic",
+          // No authTokenSource - regular API key auth
+        },
+        agents: {
+          main: "claude-haiku-4-5-20251001",
+          executor: "claude-haiku-4-5-20251001",
+        },
+      };
+
+      injectLoopliaSettingsEnv(settings);
+
+      // API key should remain unchanged for non-subscription auth
+      expect(process.env.ANTHROPIC_API_KEY).toBe("sk-should-remain");
+    });
+
+    it("should attempt keychain read when CLAUDE_CODE_OAUTH_TOKEN not set on macOS", () => {
+      // This test verifies the keychain fallback path on macOS
+      const settings: LoopliaSettings = {
+        version: "1.0",
+        apiProvider: {
+          type: "anthropic",
+          authTokenSource: "subscription",
+        },
+        agents: {
+          main: "claude-opus-4-5-20251101",
+          executor: "claude-opus-4-5-20251101",
+        },
+      };
+
+      // Ensure no pre-existing OAuth token
+      expect(process.env.CLAUDE_CODE_OAUTH_TOKEN).toBeUndefined();
+
+      injectLoopliaSettingsEnv(settings);
+
+      if (process.platform === "darwin") {
+        // On macOS, keychain will be attempted
+        // CLAUDE_CODE_OAUTH_TOKEN may be set if logged into Claude Code
+        // Either way, ANTHROPIC_API_KEY should be cleared if token found
+        if (process.env.CLAUDE_CODE_OAUTH_TOKEN) {
+          expect(typeof process.env.CLAUDE_CODE_OAUTH_TOKEN).toBe("string");
+          expect(process.env.ANTHROPIC_API_KEY).toBeUndefined();
+        }
+        // If token not found, no changes (warning logged)
+      } else {
+        // Non-macOS: keychain not available, token not set
+        expect(process.env.CLAUDE_CODE_OAUTH_TOKEN).toBeUndefined();
+      }
+    });
+
+    it("should apply subscription preset correctly", () => {
+      process.env.CLAUDE_CODE_OAUTH_TOKEN = "sk-ant-oat01-test";
+
+      const settings = applyPreset("CLAUDE_CODE_SUBSCRIPTION_OPUS");
+      injectLoopliaSettingsEnv(settings);
+
+      // Verify preset was applied
+      expect(settings.apiProvider.authTokenSource).toBe("subscription");
+      expect(settings.agents.main).toBe("claude-opus-4-5-20251101");
+
+      // Verify env vars
+      expect(process.env.LOOPLIA_AGENT_MODEL_MAIN).toBe(
+        "claude-opus-4-5-20251101"
+      );
+      expect(process.env.ANTHROPIC_API_KEY).toBeUndefined();
     });
   });
 });
