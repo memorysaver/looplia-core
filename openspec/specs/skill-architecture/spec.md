@@ -21,7 +21,7 @@ The looplia-core plugin SHALL contain only workflow orchestration skills that ar
 #### Scenario: Web search capability not in core
 - **WHEN** a user needs web search or research capabilities
 - **THEN** they SHALL install the `search-and-research` plugin from the `looplia-skills` registry
-- **AND** use skills like `web-search`, `rss-reader`, or `browser-research`
+- **AND** use skills like `browser-research`, `rss-reader`, or `agent-browser`
 
 ### Requirement: External Domain Skills Registry
 

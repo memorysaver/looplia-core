@@ -9,9 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Search Skill Refactor** - Replaced `search` skill with `web-search` in examples
+- **Search Skill Refactor** - Replaced `search` skill with `browser-research` in examples
   - Removed deprecated `search` skill from looplia-skills marketplace
-  - Updated example-skills to use `web-search` skill instead
+  - Updated example-skills to use `browser-research` skill instead
   - Marketplace now provides: `agent-browser`, `browser-research`, `rss-reader`
 
 ### Fixed

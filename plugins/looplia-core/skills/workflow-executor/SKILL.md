@@ -113,17 +113,17 @@ Before executing a step, validate:
 ### Input-less Capable Skills
 
 These skills can operate without an `input` field:
-- `web-search` - Executes search missions autonomously (from looplia-skills)
+- `browser-research` - Executes research missions autonomously (from looplia-skills)
 
 Example input-less step:
 ```yaml
 - id: find-news
-  skill: web-search
+  skill: browser-research
   mission: |
     Search Hacker News for today's top 3 AI stories.
     Extract title, URL, points, and brief summary.
   output: ${{ sandbox }}/outputs/news.json
-  # No input field - web-search operates autonomously
+  # No input field - browser-research operates autonomously
 ```
 
 ---
