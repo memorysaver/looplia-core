@@ -29,5 +29,5 @@
 ## 5. Validation
 
 - [x] 5.1 Run `openspec validate search-skill-refactor --strict --no-interactive`
-- [ ] 5.2 Test registry sync picks up skills from looplia-skills
-- [ ] 5.3 Ensure looplia-core build passes with search skill removed
+- [x] 5.2 Test registry sync picks up skills from looplia-skills
+- [x] 5.3 Ensure looplia-core build passes with search skill removed
