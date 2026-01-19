@@ -49,20 +49,3 @@ test-workspace
 .cache
 tmp
 temp
-
-# START Ruler Generated Files
-/.codex/config.json
-/.codex/config.json.bak
-/.codex/config.toml
-/.codex/config.toml.bak
-/.gemini/settings.json
-/.gemini/settings.json.bak
-/.mcp.json
-/.mcp.json.bak
-/AGENTS.md
-/AGENTS.md.bak
-/CLAUDE.md
-/CLAUDE.md.bak
-/opencode.json
-/opencode.json.bak
-# END Ruler Generated Files

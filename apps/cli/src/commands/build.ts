@@ -29,6 +29,7 @@ import {
 import { renderStreamingQuery } from "../components/index.js";
 import { renderBuildWizard } from "../components/wizard/index.js";
 import { COMMANDS } from "../constants.js";
+import { writeWorkflowArtifact } from "../utils/sandbox.js";
 import { isInteractive } from "../utils/terminal.js";
 
 /** Maximum description length to prevent excessive prompt size */
@@ -44,14 +45,25 @@ const MAX_WORKFLOW_NAME_LENGTH = 50;
 const BUILD_COMMAND = COMMANDS.BUILD;
 
 /**
+ * Artifact schema for CLI-controlled persistence (v0.7.3)
+ */
+export type BuildArtifact = {
+  filename: string; // e.g., "article-summary.md"
+  content: string; // Complete markdown content
+};
+
+/**
  * Build result type
  */
 export type BuildResult = {
   status: "success" | "error";
   workflowPath?: string;
   workflowName?: string;
+  /** Distinct from workflowName; used when agent returns an ID for the workflow */
+  workflowId?: string;
   stepsCount?: number;
   error?: string;
+  artifact?: BuildArtifact; // v0.7.3: CLI writes from this
 };
 
 /**
@@ -726,24 +738,83 @@ function executeBuild(
 }
 
 /**
- * Render the result
+ * Write artifact to disk if present (v0.7.3: CLI-controlled persistence)
+ * Returns the actual file path written, or null if no artifact or write failed
  */
-export function renderResult(result: BuildResult): void {
-  if (result.status === "success") {
-    console.log("\n✅ Workflow created successfully");
-    if (result.workflowPath) {
-      console.log(`Path: ${result.workflowPath}`);
-    }
-    if (result.workflowName) {
-      console.log("\nRun with:");
-      console.log(`  looplia run ${result.workflowName} --file <content.md>`);
-    }
-    if (result.stepsCount) {
-      console.log(`\nSteps: ${result.stepsCount}`);
-    }
-  } else {
-    console.error(`\n❌ Build failed: ${result.error ?? "Unknown error"}`);
+function handleArtifactWrite(
+  result: BuildResult,
+  workspace: string
+): string | null {
+  // No artifact provided - backward compatibility
+  if (!result.artifact) {
+    console.warn("⚠ No artifact in result - workflow may not be saved");
+    return null;
   }
+
+  const { filename, content } = result.artifact;
+
+  // Invalid artifact - log warning but don't fail
+  if (!(filename && content)) {
+    console.warn("⚠ Invalid artifact (missing filename or content)");
+    return null;
+  }
+
+  // Write the artifact
+  const writtenPath = writeWorkflowArtifact(workspace, filename, content);
+
+  if (!writtenPath) {
+    // Per spec: write failure for valid artifact should be error, not warning
+    console.error("✘ Failed to write workflow artifact");
+    return null;
+  }
+
+  return writtenPath;
+}
+
+/**
+ * Render success message with workflow details
+ */
+function renderSuccessMessage(
+  result: BuildResult,
+  displayPath: string | null
+): void {
+  console.log("\n✅ Workflow created successfully");
+  if (displayPath) {
+    console.log(`Path: ${displayPath}`);
+  }
+  if (result.workflowName || result.workflowId) {
+    const name = result.workflowName ?? result.workflowId;
+    console.log("\nRun with:");
+    console.log(`  looplia run ${name} --file <content.md>`);
+  }
+  if (result.stepsCount) {
+    console.log(`\nSteps: ${result.stepsCount}`);
+  }
+}
+
+/**
+ * Render the result
+ * v0.7.3: Now writes artifact to disk via CLI-controlled persistence
+ */
+export function renderResult(result: BuildResult, workspace: string): void {
+  if (result.status !== "success") {
+    console.error(`\n❌ Build failed: ${result.error ?? "Unknown error"}`);
+    return;
+  }
+
+  // v0.7.3: CLI writes the artifact
+  const writtenPath = handleArtifactWrite(result, workspace);
+
+  // Per spec: valid artifact that fails to write should be error status
+  const hasValidArtifact =
+    result.artifact?.filename && result.artifact?.content;
+  if (hasValidArtifact && !writtenPath) {
+    console.error("\n❌ Build failed: Unable to save workflow artifact");
+    return;
+  }
+
+  const displayPath = writtenPath ?? result.workflowPath ?? null;
+  renderSuccessMessage(result, displayPath);
 }
 
 /**
@@ -779,8 +850,8 @@ export async function runBuildCommand(args: string[]): Promise<void> {
     // 5. Execute
     const result = await executeBuild(prompt, workspace, parsed);
 
-    // 6. Render result
-    renderResult(result);
+    // 6. Render result (v0.7.3: includes CLI-controlled artifact persistence)
+    renderResult(result, workspace);
 
     if (result.status !== "success") {
       process.exit(1);
