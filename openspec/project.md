@@ -8,7 +8,7 @@
 - Deterministic multi-step orchestration via a universal skill-executor
 - Sandbox-based isolated workflow execution
 
-**Current Version:** v0.7.2
+**Current Version:** v0.7.3
 
 ## Tech Stack
 

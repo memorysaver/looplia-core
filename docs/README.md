@@ -1,6 +1,6 @@
 # Looplia-Core Documentation
 
-> **Version:** 0.7.2
+> **Version:** 0.7.3
 > **Last Updated:** January 2026
 
 This directory contains the core documentation for Looplia-Core, a Claude Agent SDK-based agentic workflow platform.
@@ -9,7 +9,7 @@ This directory contains the core documentation for Looplia-Core, a Claude Agent 
 
 ## Core Documents (Latest)
 
-These are the current, authoritative documents for the v0.7.2 architecture:
+These are the current, authoritative documents for the v0.7.3 architecture:
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
@@ -615,7 +615,7 @@ Previous versions are preserved in `/docs/archive/` for reference:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        DOCUMENT RELATIONSHIPS (v0.7.2)                       │
+│                        DOCUMENT RELATIONSHIPS (v0.7.3)                       │
 └─────────────────────────────────────────────────────────────────────────────┘
 
                               ┌──────────────┐
@@ -645,7 +645,7 @@ Previous versions are preserved in `/docs/archive/` for reference:
 ```
 
 **Version Progression:**
-- v0.6.0 → v0.6.1 → v0.6.2 → v0.6.3 → v0.6.4 → v0.6.5 → v0.6.6 → v0.6.7 → v0.6.8 → v0.6.9 → v0.6.10 → v0.7.0 → v0.7.1 → **v0.7.2** (current)
+- v0.6.0 → v0.6.1 → v0.6.2 → v0.6.3 → v0.6.4 → v0.6.5 → v0.6.6 → v0.6.7 → v0.6.8 → v0.6.9 → v0.6.10 → v0.7.0 → v0.7.1 → v0.7.2 → **v0.7.3** (current)
 
 **Key Documents:**
 - **DESIGN-0.7.0.md** documents skill registry system (marketplace, selective loading)
@@ -953,4 +953,4 @@ Steps complete when `validation.json` shows `validated: true`:
 
 ---
 
-*This README provides navigation for Looplia-Core v0.7.2 documentation.*
+*This README provides navigation for Looplia-Core v0.7.3 documentation.*

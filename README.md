@@ -8,7 +8,7 @@ Looplia Core is an agentic workflow platform powered by the Claude Agent SDK. It
 
 **Vision:** A universal CLI for AI-powered workflows — one tool, many domains, powered by composable skills.
 
-## v0.7.2 Architecture
+## v0.7.3 Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
