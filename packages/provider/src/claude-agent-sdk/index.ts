@@ -26,6 +26,7 @@ export { createQueryLogger } from "./logger";
 // Re-export model provider utilities (v0.6.6)
 export type {
   ApiProviderType,
+  AuthTokenSource,
   LoopliaSettings,
   PresetDefinition,
   SettingsDisplayInfo,
@@ -39,6 +40,7 @@ export {
   injectLoopliaSettingsEnv,
   maskAuthToken,
   PRESETS,
+  readKeychainToken,
   readLoopliaSettings,
   removeLoopliaSettings,
   writeLoopliaSettings,

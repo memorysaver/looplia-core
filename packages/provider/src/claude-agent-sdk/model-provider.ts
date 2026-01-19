@@ -62,6 +62,13 @@ export type LoopliaSettings = {
      * @example "sk-ai-v1-xxx"
      */
     authToken?: string;
+
+    /**
+     * Auth token source for subscription-based authentication
+     * When set to "keychain", reads OAuth token from macOS Keychain
+     * (Claude Code subscription)
+     */
+    authTokenSource?: AuthTokenSource;
   };
 
   /**
@@ -86,12 +93,23 @@ export type LoopliaSettings = {
 };
 
 /**
+ * Auth token source type
+ * - "keychain": Read OAuth token from macOS Keychain (Claude Code subscription)
+ */
+export type AuthTokenSource = "keychain";
+
+/**
  * Preset definition type
  */
 export type PresetDefinition = {
   name: string;
   apiProvider: ApiProviderType;
   baseUrl?: string;
+  /**
+   * Auth token source for subscription-based presets
+   * When set to "keychain", reads OAuth token from macOS Keychain
+   */
+  authTokenSource?: AuthTokenSource;
   mainModel: string;
   executorModel: string;
   haikuModel: string;
@@ -130,11 +148,43 @@ export const PRESETS: Record<string, PresetDefinition> = {
   ANTHROPIC_CLAUDE_SONNET: {
     name: "Anthropic Claude Sonnet",
     apiProvider: "anthropic",
-    mainModel: "claude-sonnet-4-5-20250514",
-    executorModel: "claude-sonnet-4-5-20250514",
-    haikuModel: "claude-sonnet-4-5-20250514",
-    sonnetModel: "claude-sonnet-4-5-20250514",
-    opusModel: "claude-sonnet-4-5-20250514",
+    mainModel: "claude-sonnet-4-5-20250929",
+    executorModel: "claude-sonnet-4-5-20250929",
+    haikuModel: "claude-sonnet-4-5-20250929",
+    sonnetModel: "claude-sonnet-4-5-20250929",
+    opusModel: "claude-sonnet-4-5-20250929",
+  },
+
+  // Claude Code Subscription (macOS Keychain)
+  CLAUDE_CODE_SUBSCRIPTION_HAIKU: {
+    name: "Claude Code Subscription (Haiku)",
+    apiProvider: "anthropic",
+    authTokenSource: "keychain",
+    mainModel: "claude-haiku-4-5-20251001",
+    executorModel: "claude-haiku-4-5-20251001",
+    haikuModel: "claude-haiku-4-5-20251001",
+    sonnetModel: "claude-haiku-4-5-20251001",
+    opusModel: "claude-haiku-4-5-20251001",
+  },
+  CLAUDE_CODE_SUBSCRIPTION_SONNET: {
+    name: "Claude Code Subscription (Sonnet)",
+    apiProvider: "anthropic",
+    authTokenSource: "keychain",
+    mainModel: "claude-sonnet-4-5-20250929",
+    executorModel: "claude-sonnet-4-5-20250929",
+    haikuModel: "claude-sonnet-4-5-20250929",
+    sonnetModel: "claude-sonnet-4-5-20250929",
+    opusModel: "claude-sonnet-4-5-20250929",
+  },
+  CLAUDE_CODE_SUBSCRIPTION_OPUS: {
+    name: "Claude Code Subscription (Opus)",
+    apiProvider: "anthropic",
+    authTokenSource: "keychain",
+    mainModel: "claude-opus-4-5-20251101",
+    executorModel: "claude-opus-4-5-20251101",
+    haikuModel: "claude-opus-4-5-20251101",
+    sonnetModel: "claude-opus-4-5-20251101",
+    opusModel: "claude-opus-4-5-20251101",
   },
 
   // ZenMux Presets
@@ -283,6 +333,33 @@ export const PRESETS: Record<string, PresetDefinition> = {
 const CONFIG_FILE = "looplia.setting.json";
 
 /**
+ * Read OAuth token from macOS Keychain (Claude Code credentials)
+ *
+ * Uses the 'security' command to retrieve the Claude Code OAuth token
+ * stored in macOS Keychain. This enables using Claude subscription
+ * instead of separate API credits.
+ *
+ * @returns The OAuth token if found, null otherwise
+ */
+export function readKeychainToken(): string | null {
+  // Only available on macOS
+  if (process.platform !== "darwin") {
+    return null;
+  }
+
+  try {
+    const { execSync } = require("node:child_process");
+    const token = execSync(
+      'security find-generic-password -s "Claude Code-credentials" -w',
+      { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
+    ).trim();
+    return token || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Get the path to the looplia home directory
  */
 export function getLoopliaHome(): string {
@@ -368,13 +445,63 @@ function injectModelTierEnv(mainModel: string, executorModel: string): void {
 }
 
 /**
+ * Inject keychain OAuth token for Claude Code subscription
+ */
+function injectKeychainAuth(): void {
+  if (process.platform !== "darwin") {
+    console.error(
+      "Warning: Keychain auth only available on macOS. Set CLAUDE_CODE_OAUTH_TOKEN manually."
+    );
+    return;
+  }
+
+  const token = readKeychainToken();
+  if (token) {
+    process.env.CLAUDE_CODE_OAUTH_TOKEN = token;
+  } else {
+    console.error(
+      "Warning: Could not read Claude Code credentials from Keychain. " +
+        "Ensure Claude Code is installed and you are logged in."
+    );
+  }
+}
+
+/**
+ * Inject API configuration for non-Anthropic providers (ZenMux, custom)
+ */
+function injectNonAnthropicProviderEnv(
+  apiProvider: LoopliaSettings["apiProvider"]
+): void {
+  // Set API endpoint (only if not already set in env)
+  if (apiProvider.baseUrl && !process.env.ANTHROPIC_BASE_URL) {
+    process.env.ANTHROPIC_BASE_URL = apiProvider.baseUrl;
+  }
+
+  // API key selection: settings file authToken takes priority
+  if (apiProvider.authToken) {
+    process.env.ANTHROPIC_API_KEY = apiProvider.authToken;
+    return;
+  }
+
+  // Fallback: endpoint-specific env var (ZenMux)
+  const isZenmuxEndpoint =
+    apiProvider.type === "zenmux" || apiProvider.baseUrl?.includes("zenmux.ai");
+
+  if (isZenmuxEndpoint && process.env.ZENMUX_API_KEY) {
+    process.env.ANTHROPIC_API_KEY = process.env.ZENMUX_API_KEY;
+  }
+  // For custom endpoints: ANTHROPIC_API_KEY is used as-is (no override needed)
+}
+
+/**
  * Inject looplia settings as environment variables
  * Called before SDK query() invocation
  *
  * API Key Priority:
- * 1. Settings file authToken (user explicitly configured via CLI)
- * 2. Endpoint-specific env var (ZENMUX_API_KEY for ZenMux endpoint)
- * 3. Generic ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN
+ * 1. Keychain auth source (Claude Code subscription via macOS Keychain)
+ * 2. Settings file authToken (user explicitly configured via CLI)
+ * 3. Endpoint-specific env var (ZENMUX_API_KEY for ZenMux endpoint)
+ * 4. Generic ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN
  *
  * ZenMux API Pattern (per official sample):
  * ```python
@@ -385,29 +512,14 @@ function injectModelTierEnv(mainModel: string, executorModel: string): void {
  * ```
  */
 export function injectLoopliaSettingsEnv(settings: LoopliaSettings): void {
+  // Keychain auth source (Claude Code subscription)
+  if (settings.apiProvider.authTokenSource === "keychain") {
+    injectKeychainAuth();
+  }
+
   // For non-anthropic providers (ZenMux, custom)
   if (settings.apiProvider.type !== "anthropic") {
-    // Set API endpoint (only if not already set in env)
-    if (settings.apiProvider.baseUrl && !process.env.ANTHROPIC_BASE_URL) {
-      process.env.ANTHROPIC_BASE_URL = settings.apiProvider.baseUrl;
-    }
-
-    // API key selection based on priority:
-    // Priority 1: authToken from settings file (user explicitly configured)
-    if (settings.apiProvider.authToken) {
-      process.env.ANTHROPIC_API_KEY = settings.apiProvider.authToken;
-    }
-    // Priority 2: Endpoint-specific env var fallback
-    else {
-      const isZenmuxEndpoint =
-        settings.apiProvider.type === "zenmux" ||
-        settings.apiProvider.baseUrl?.includes("zenmux.ai");
-
-      if (isZenmuxEndpoint && process.env.ZENMUX_API_KEY) {
-        process.env.ANTHROPIC_API_KEY = process.env.ZENMUX_API_KEY;
-      }
-      // For custom endpoints: ANTHROPIC_API_KEY is used as-is (no override needed)
-    }
+    injectNonAnthropicProviderEnv(settings.apiProvider);
   }
 
   injectModelTierEnv(settings.agents.main, settings.agents.executor);
@@ -421,6 +533,7 @@ export type SettingsDisplayInfo = {
   preset?: string;
   provider: string;
   authToken?: string;
+  authTokenSource?: AuthTokenSource;
   agents: {
     main: string;
     executor: string;
@@ -454,6 +567,7 @@ export function getSettingsDisplayInfo(
     preset: settings.preset,
     provider,
     authToken: settings.apiProvider.authToken,
+    authTokenSource: settings.apiProvider.authTokenSource,
     agents: {
       main: settings.agents.main,
       executor: settings.agents.executor,
@@ -491,6 +605,7 @@ export function applyPreset(
       type: preset.apiProvider,
       baseUrl: preset.baseUrl,
       authToken: existingSettings?.apiProvider.authToken,
+      authTokenSource: preset.authTokenSource,
     },
     agents: {
       main: preset.mainModel,

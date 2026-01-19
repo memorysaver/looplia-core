@@ -34,8 +34,8 @@ describe("model-provider", () => {
   });
 
   describe("PRESETS", () => {
-    it("should have 16 presets defined", () => {
-      expect(Object.keys(PRESETS)).toHaveLength(16);
+    it("should have 19 presets defined", () => {
+      expect(Object.keys(PRESETS)).toHaveLength(19);
     });
 
     it("should have required fields for each preset", () => {
