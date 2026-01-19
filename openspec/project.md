@@ -8,7 +8,7 @@
 - Deterministic multi-step orchestration via a universal skill-executor
 - Sandbox-based isolated workflow execution
 
-**Current Version:** v0.7.2
+**Current Version:** v0.7.3
 
 ## Tech Stack
 
@@ -70,7 +70,7 @@ Uses **Ultracite** (Biome-based) with these principles:
 
 - **Main Branch:** `main`
 - **Feature Branches:** `feature/<name>` for new features
-- **PR Checklist:** Review `docs/PR_CHECKLIST.md` before merging
+- **Release Checklist:** Review `docs/RELEASE_CHECKLIST.md` for development and release workflow
 - **Commit Convention:** Co-authored commits with Claude Code
 
 ## Domain Context

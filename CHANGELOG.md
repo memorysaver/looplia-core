@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-01-19
+
 ### Changed
 
 - **Search Skill Refactor** - Moved `search` skill out of looplia-core
@@ -860,7 +862,8 @@ The following were considered but **intentionally deferred** to v0.6+:
 
 ---
 
-[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.7.3...HEAD
+[0.7.3]: https://github.com/memorysaver/looplia-core/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/memorysaver/looplia-core/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/memorysaver/looplia-core/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/memorysaver/looplia-core/compare/v0.6.10...v0.7.0

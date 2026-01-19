@@ -1,0 +1,486 @@
+---
+title: "News Monitoring Workflow"
+description: Build an automated news monitoring workflow using looplia's interactive build wizard and domain skills.
+---
+
+import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+Looplia makes it easy to automate news monitoring without writing code. This guide shows how to use `looplia build` to create a news monitoring workflow from natural language, then run it with `looplia run`.
+
+## What You'll Learn
+
+- Using `looplia build` to create workflows interactively
+- How looplia translates your description into workflow YAML
+- Running workflows with `looplia run`
+- Combining news research with the writing kit skills to generate article ideas
+
+## Prerequisites
+
+- Looplia CLI installed (`bun install -g looplia`)
+- Chrome browser with the Claude in Chrome extension
+
+## The Looplia Approach
+
+Instead of learning commands and APIs, you describe what you want:
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  Describe   │ →  │   Answer    │ →  │  Generate   │ →  │    Run      │
+│  Your Goal  │    │  Questions  │    │  Workflow   │    │  & Review   │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+```
+
+Looplia handles the complexity—browser automation, content extraction, and summarization—through domain skills that work together.
+
+## Building Your Workflow
+
+<Steps>
+
+1. **Start the build wizard**
+
+   Launch `looplia build` with your goal:
+
+   ```bash
+   looplia build "monitor Hacker News and summarize trending tech stories"
+   ```
+
+   Or start without a description and enter it interactively:
+
+   ```bash
+   looplia build
+   ```
+
+2. **Describe your goal**
+
+   If you didn't provide a description, you'll see a prompt:
+
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │  Describe what you want to automate                     │
+   │                                                         │
+   │  > monitor Hacker News for trending tech stories and    │
+   │    summarize the top discussions                        │
+   │                                                         │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+   Be specific about what you want: the news sources, what to extract, and how you want results formatted.
+
+3. **Answer clarification questions**
+
+   Looplia analyzes your description and asks follow-up questions to understand your needs:
+
+   ```
+   ┌─ News Sources ─────────────────────────────────────────┐
+   │ Which sources should be monitored?                     │
+   │                                                        │
+   │ ○ Hacker News only                                     │
+   │ ● Hacker News + Lobsters                               │
+   │ ○ Hacker News + Reddit r/programming                   │
+   │ ○ Custom list (specify below)                          │
+   └────────────────────────────────────────────────────────┘
+
+   ┌─ Content Depth ────────────────────────────────────────┐
+   │ How deep should the analysis go?                       │
+   │                                                        │
+   │ ○ Headlines and scores only                            │
+   │ ● Headlines + top comments                             │
+   │ ○ Full article content + comments                      │
+   └────────────────────────────────────────────────────────┘
+
+   ┌─ Output Format ────────────────────────────────────────┐
+   │ How should results be formatted?                       │
+   │                                                        │
+   │ ● Markdown summary                                     │
+   │ ○ JSON data                                            │
+   │ ○ Both                                                 │
+   └────────────────────────────────────────────────────────┘
+   ```
+
+   Your answers shape the workflow that gets generated.
+
+4. **Review the generated workflow**
+
+   Looplia shows a preview of what it will create:
+
+   ```
+   ┌─ Workflow Preview ─────────────────────────────────────┐
+   │ Name: news-monitor                                     │
+   │ Steps: 2                                               │
+   │                                                        │
+   │ 1. fetch-stories (browser-research)                    │
+   │    Extract top stories from HN and Lobsters            │
+   │                                                        │
+   │ 2. generate-summary (media-reviewer)                   │
+   │    Analyze and summarize findings                      │
+   │                                                        │
+   │ Output: ~/.looplia/workflows/news-monitor.yaml         │
+   └────────────────────────────────────────────────────────┘
+
+   Generate this workflow? [Y/n]
+   ```
+
+</Steps>
+
+## The Generated Workflow
+
+After confirming, looplia creates a workflow file. Here's what a typical news monitoring workflow looks like:
+
+```yaml
+name: news-monitor
+version: 1.0.0
+description: Monitor Hacker News and Lobsters for trending tech stories
+
+steps:
+  - id: fetch-stories
+    skill: browser-research
+    mission: |
+      Navigate to Hacker News front page.
+      Extract the top 10 stories with: title, points, comment count, URL.
+      For stories with 100+ comments, click through and extract
+      the top 3 comment threads with their replies.
+
+      Then navigate to Lobsters front page.
+      Extract the top 10 stories with the same information.
+    output: ${{ sandbox }}/outputs/stories.json
+
+  - id: generate-summary
+    skill: media-reviewer
+    mission: |
+      Analyze the extracted stories from both sources.
+      Identify:
+      - Trending topics (appearing on both sites)
+      - Community sentiment from comment threads
+      - Notable discussions worth highlighting
+      - Emerging themes in tech
+      Format as a structured markdown digest.
+    needs: [fetch-stories]
+    input: ${{ steps.fetch-stories.output }}
+    output: ${{ sandbox }}/outputs/daily-digest.md
+    final: true
+```
+
+<Aside type="note">
+The workflow uses **domain skills** like `browser-research` and `media-reviewer`—not low-level browser commands. Skills encapsulate complex behaviors so you can focus on what you want, not how to get it.
+</Aside>
+
+## Running the Workflow
+
+Execute your workflow with a single command:
+
+```bash
+looplia run news-monitor
+```
+
+Looplia will:
+
+1. **Create an isolated sandbox** — Each run gets a clean environment
+2. **Execute steps in order** — Respecting dependencies defined in `needs`
+3. **Handle browser automation** — Skills manage all the details
+4. **Validate outputs** — Ensuring each step produces expected results
+5. **Return the final artifact** — Your formatted digest
+
+### Watching Execution
+
+Add `--verbose` to see detailed progress:
+
+```bash
+looplia run news-monitor --verbose
+```
+
+```
+[fetch-stories] Starting browser-research skill...
+[fetch-stories] Navigating to news.ycombinator.com
+[fetch-stories] Extracted 10 stories from Hacker News
+[fetch-stories] Navigating to lobste.rs
+[fetch-stories] Extracted 10 stories from Lobsters
+[fetch-stories] ✓ Complete → outputs/stories.json
+
+[generate-summary] Starting media-reviewer skill...
+[generate-summary] Analyzing 20 stories...
+[generate-summary] ✓ Complete → outputs/daily-digest.md
+
+Workflow complete! Final output: outputs/daily-digest.md
+```
+
+## Sample Output
+
+Here's what your news monitoring workflow produces:
+
+```markdown
+# Tech News Digest - January 20, 2026
+
+## Executive Summary
+
+- AI tooling dominates discussions with new code review assistants gaining traction
+- Growing skepticism around microservices, monolith architecture seeing renewed interest
+- Rust continues strong adoption in systems programming
+- OpenAI's GPT-5 announcement sparks mixed reactions on safety vs capability
+
+## Top Stories
+
+### 1. Show HN: I built an AI code reviewer (HN: 423 pts, Lobsters: 45 pts)
+
+A developer released an open-source AI tool for pull request reviews using Claude API.
+
+**Why it's trending:** Addresses real pain point; positive early feedback on accuracy
+
+**Key discussion points:**
+- Debate on AI vs human code review quality
+- Questions about handling proprietary codebases
+- Interest in self-hosting options
+
+### 2. OpenAI announces GPT-5 preview (HN: 892 pts)
+
+Early access revealed for next-generation model with 10x context window.
+
+**Why it's trending:** Major industry announcement; implications for AI development
+
+**Key discussion points:**
+- Safety researchers raising concerns
+- Developers excited about longer context
+- Comparison to Claude and Gemini capabilities
+
+### 3. The hidden cost of microservices (HN: 287 pts, Lobsters: 67 pts)
+
+Technical analysis of operational overhead for small teams.
+
+**Why it's trending:** Resonates with engineers experiencing microservices fatigue
+
+**Key discussion points:**
+- Strong agreement from experienced engineers
+- Debate on when monoliths make sense
+- Platform engineering as a middle ground
+
+## Emerging Trends
+
+- **AI developer tools**: Code assistants, review bots, and documentation generators
+- **Architecture simplification**: Push back against unnecessary complexity
+- **Rust adoption**: Systems programming moving away from C/C++
+```
+
+## From News to Article Ideas
+
+A powerful use case is combining news monitoring with the [Writing Kit](/workflows/writing-kit/) skills to generate article ideas from trending stories. Instead of just summarizing news, you can use it as source material for your own content.
+
+### News-to-Writing-Kit Workflow
+
+This workflow fetches trending news, then runs it through the writing kit pipeline to generate article ideas:
+
+```yaml
+name: news-to-article
+version: 1.0.0
+description: Transform trending news into article ideas and writing kits
+
+steps:
+  - id: fetch-stories
+    skill: browser-research
+    mission: |
+      Navigate to Hacker News front page.
+      Extract the top 5 stories with highest engagement.
+      For each story, click through and extract:
+      - Full article content (if accessible)
+      - Top 5 comment threads with context
+      Focus on stories with strong opinions or debates.
+    output: ${{ sandbox }}/outputs/stories.json
+
+  - id: analyze-content
+    skill: media-reviewer
+    mission: |
+      Deep analysis of the fetched news stories.
+      For each story, extract:
+      - Key themes and concepts
+      - Verbatim quotes from articles and comments
+      - Points of controversy or debate
+      - Underlying trends the story represents
+      Identify which stories have the most potential for derivative content.
+    needs: [fetch-stories]
+    input: ${{ steps.fetch-stories.output }}
+    output: ${{ sandbox }}/outputs/analysis.json
+
+  - id: generate-ideas
+    skill: idea-synthesis
+    mission: |
+      Generate creative article ideas based on the news analysis.
+      For each trending story, create:
+      - 3 unique angles for a new article (not just rewriting the news)
+      - Compelling hooks that differentiate from the original
+      - Questions worth exploring further
+      - Content prompts for different formats (blog, thread, newsletter)
+      Focus on adding original perspective, not summarizing.
+    needs: [analyze-content]
+    input: ${{ steps.analyze-content.output }}
+    output: ${{ sandbox }}/outputs/ideas.json
+
+  - id: assemble-kit
+    skill: writing-kit-assembler
+    mission: |
+      Create a writing kit for the most promising article idea.
+      Include:
+      - Selected hook and angle
+      - Structured outline with sections
+      - Key quotes to reference (with attribution)
+      - Suggested research to strengthen the piece
+      - Call-to-action options
+    needs: [analyze-content, generate-ideas]
+    input:
+      - ${{ steps.analyze-content.output }}
+      - ${{ steps.generate-ideas.output }}
+    output: ${{ sandbox }}/outputs/writing-kit.json
+    final: true
+```
+
+### Running the News-to-Article Workflow
+
+```bash
+looplia run news-to-article
+```
+
+This produces a complete writing kit based on trending news:
+
+```json
+{
+  "title": "Beyond the Hype: What AI Code Reviewers Actually Catch",
+  "sourceStory": "Show HN: I built an AI code reviewer",
+  "selectedAngle": "Contrarian take: AI reviewers excel at what humans hate doing",
+  "hook": "What if the best use of AI code review isn't catching bugs—it's freeing humans to think about architecture?",
+  "outline": {
+    "sections": [
+      {
+        "title": "The Real Problem with Code Review",
+        "points": ["Review fatigue statistics", "What gets missed when humans rush"],
+        "suggestedLength": "250 words"
+      },
+      {
+        "title": "Where AI Actually Shines",
+        "points": ["Style consistency", "Security patterns", "Documentation gaps"],
+        "suggestedLength": "400 words"
+      },
+      {
+        "title": "The Human-AI Review Partnership",
+        "points": ["Division of labor", "Real team experiences"],
+        "suggestedLength": "350 words"
+      }
+    ]
+  },
+  "keyQuotes": [
+    {
+      "text": "Finally something that catches actual bugs, not just style issues",
+      "source": "HN commenter",
+      "useFor": "Opening or supporting argument"
+    }
+  ],
+  "researchSuggestions": [
+    "Find statistics on code review effectiveness",
+    "Interview developers using AI review tools"
+  ],
+  "callToAction": [
+    "Share your experience with AI-assisted code review",
+    "Try the tool and report back"
+  ]
+}
+```
+
+<Aside type="tip">
+The key to good derivative content is adding original perspective. The writing kit helps you find angles the original story didn't explore, rather than just rewriting what's already been said.
+</Aside>
+
+## Customizing Your Workflow
+
+The generated workflow is a starting point. Edit `~/.looplia/workflows/news-monitor.yaml` to customize:
+
+### Change sources
+
+Modify the `fetch-stories` mission to target different sites:
+
+```yaml
+mission: |
+  Navigate to Reddit r/programming.
+  Extract top 20 posts from the past 24 hours.
+  Include: title, score, comment count, flair, URL.
+```
+
+### Adjust depth
+
+Change how much content gets extracted:
+
+```yaml
+mission: |
+  For ALL stories (not just high-engagement ones),
+  click through and extract the full article text.
+```
+
+### Add filtering
+
+Focus on specific topics:
+
+```yaml
+mission: |
+  Extract stories related to:
+  - AI/ML/LLMs
+  - Rust programming
+  - DevOps and infrastructure
+
+  Skip stories about other topics.
+```
+
+### Change output format
+
+Request different formatting:
+
+```yaml
+mission: |
+  Output as JSON with the following structure:
+  {
+    "date": "...",
+    "stories": [...],
+    "trends": [...],
+    "summary": "..."
+  }
+```
+
+## Workflow Variations
+
+Try these prompts with `looplia build` for different monitoring setups:
+
+### Reddit Programming Digest
+
+```bash
+looplia build "monitor Reddit r/programming, r/rust, and r/golang for top weekly discussions"
+```
+
+### ProductHunt Tracker
+
+```bash
+looplia build "track new ProductHunt launches, extract founder info and early user feedback"
+```
+
+### Multi-Source Daily Digest
+
+```bash
+looplia build "daily tech digest combining Hacker News, Lobsters, and Reddit with deduplication"
+```
+
+### Topic-Focused Monitor
+
+```bash
+looplia build "monitor tech news for AI safety discussions and research paper releases"
+```
+
+### News-to-Content Pipeline
+
+```bash
+looplia build "fetch trending tech news and generate article ideas with writing outlines"
+```
+
+<Aside type="tip">
+The more specific your description, the better the generated workflow. Include details about sources, content depth, filtering criteria, and output format.
+</Aside>
+
+## See Also
+
+- [Writing Kit Workflow](/workflows/writing-kit/) — Transform content into structured writing kits
+- [Understanding Workflows](/workflows/understanding-workflows/) — Workflow schema reference
+- [Building Custom Workflows](/workflows/custom-workflows/) — Create workflows manually
+- [build Command](/cli/build/) — Interactive workflow creation
+- [run Command](/cli/run/) — Workflow execution options
