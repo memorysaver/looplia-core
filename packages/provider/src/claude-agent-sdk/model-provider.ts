@@ -378,7 +378,14 @@ export function readKeychainToken(): string | null {
     const accessToken = credentials?.claudeAiOauth?.accessToken;
 
     return accessToken || null;
-  } catch {
+  } catch (error: unknown) {
+    // Log error for debugging - keychain access can fail for various reasons
+    // (keychain locked, permission denied, invalid JSON, etc.)
+    const message = error instanceof Error ? error.message : String(error);
+    // Only log if not a "not found" error (which is expected when not logged in)
+    if (!message.includes("could not be found")) {
+      console.error("Keychain access error:", message);
+    }
     return null;
   }
 }
