@@ -241,7 +241,7 @@ describe("build command integration", () => {
         stepsCount: 5,
       };
 
-      renderResult(result);
+      renderResult(result, testDir);
 
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining("Workflow created successfully")
@@ -262,7 +262,7 @@ describe("build command integration", () => {
         status: "success",
       };
 
-      renderResult(result);
+      renderResult(result, testDir);
 
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining("Workflow created successfully")
@@ -275,7 +275,7 @@ describe("build command integration", () => {
         error: "Failed to generate workflow",
       };
 
-      renderResult(result);
+      renderResult(result, testDir);
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         expect.stringContaining("Build failed")
@@ -290,11 +290,82 @@ describe("build command integration", () => {
         status: "error",
       };
 
-      renderResult(result);
+      renderResult(result, testDir);
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         expect.stringContaining("Unknown error")
       );
+    });
+
+    it("should write artifact to workflows directory when present (v0.7.3)", () => {
+      const workflowContent = `---
+name: test-workflow
+version: 1.0.0
+---
+
+# Test Workflow
+`;
+      const result: BuildResult = {
+        status: "success",
+        workflowName: "test-workflow",
+        artifact: {
+          filename: "test-workflow.md",
+          content: workflowContent,
+        },
+      };
+
+      renderResult(result, testDir);
+
+      // Verify file was written
+      const writtenPath = join(testDir, "workflows", "test-workflow.md");
+      expect(existsSync(writtenPath)).toBe(true);
+
+      // Verify success message includes the written path
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Workflow created successfully")
+      );
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining(writtenPath)
+      );
+    });
+
+    it("should warn when artifact is missing (v0.7.3 backward compat)", () => {
+      const consoleWarnSpy = spyOn(console, "warn").mockImplementation(() => {
+        // intentionally empty
+      });
+
+      const result: BuildResult = {
+        status: "success",
+        workflowName: "test",
+      };
+
+      renderResult(result, testDir);
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("No artifact in result")
+      );
+      consoleWarnSpy.mockRestore();
+    });
+
+    it("should warn when artifact has invalid content (v0.7.3)", () => {
+      const consoleWarnSpy = spyOn(console, "warn").mockImplementation(() => {
+        // intentionally empty
+      });
+
+      const result: BuildResult = {
+        status: "success",
+        artifact: {
+          filename: "test.md",
+          content: "", // Empty content is invalid
+        },
+      };
+
+      renderResult(result, testDir);
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Invalid artifact")
+      );
+      consoleWarnSpy.mockRestore();
     });
   });
 
@@ -338,7 +409,7 @@ describe("build command integration", () => {
       expect(result.stepsCount).toBe(4);
 
       // Render and verify output
-      renderResult(result);
+      renderResult(result, testDir);
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining("Workflow created successfully")
       );

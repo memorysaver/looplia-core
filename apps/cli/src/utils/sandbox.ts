@@ -8,7 +8,13 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { copyFileSync, mkdirSync, readdirSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 
 /**
@@ -126,4 +132,40 @@ export function copyOutputsToDestination(
   }
 
   return copiedCount;
+}
+
+/**
+ * Write workflow artifact to the workflows directory.
+ * Creates the workflows directory if it doesn't exist.
+ *
+ * v0.7.3: Added for CLI-controlled artifact persistence.
+ * Design principle: CLI controls final output persistence; Agent handles execution/generation.
+ *
+ * @param workspace - Workspace path (~/.looplia)
+ * @param filename - Workflow filename (e.g., "article-summary.md")
+ * @param content - Complete workflow markdown content
+ * @returns Full path to written file, or null if parameters are invalid
+ */
+export function writeWorkflowArtifact(
+  workspace: string,
+  filename: string,
+  content: string
+): string | null {
+  // Input validation - return null for invalid parameters
+  if (!(workspace && filename && content)) {
+    return null;
+  }
+
+  const workflowsDir = join(workspace, "workflows");
+  mkdirSync(workflowsDir, { recursive: true });
+
+  const filePath = join(workflowsDir, filename);
+  writeFileSync(filePath, content, "utf-8");
+
+  // Verify file was written
+  if (!existsSync(filePath)) {
+    return null;
+  }
+
+  return filePath;
 }

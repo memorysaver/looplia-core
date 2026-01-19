@@ -18,6 +18,7 @@ import { join } from "node:path";
 import {
   copyOutputsToDestination,
   SANDBOX_DIRS,
+  writeWorkflowArtifact,
 } from "../../src/utils/sandbox";
 
 describe("copyOutputsToDestination", () => {
@@ -144,5 +145,83 @@ describe("copyOutputsToDestination", () => {
     expect(copyOutputsToDestination("", sandboxId, testDest)).toBe(0);
     expect(copyOutputsToDestination(testWorkspace, "", testDest)).toBe(0);
     expect(copyOutputsToDestination(testWorkspace, sandboxId, "")).toBe(0);
+  });
+});
+
+describe("writeWorkflowArtifact", () => {
+  let testWorkspace: string;
+
+  beforeEach(() => {
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    testWorkspace = join(tmpdir(), `artifact-test-workspace-${uniqueId}`);
+    mkdirSync(testWorkspace, { recursive: true });
+  });
+
+  afterEach(() => {
+    if (existsSync(testWorkspace)) {
+      rmSync(testWorkspace, { recursive: true, force: true });
+    }
+  });
+
+  test("should write workflow file to workflows directory", () => {
+    const filename = "test-workflow.md";
+    const content = "---\nname: test\n---\n\n# Test Workflow";
+
+    const result = writeWorkflowArtifact(testWorkspace, filename, content);
+
+    expect(result).toBe(join(testWorkspace, "workflows", filename));
+    expect(existsSync(result as string)).toBe(true);
+
+    const written = readFileSync(result as string, "utf-8");
+    expect(written).toBe(content);
+  });
+
+  test("should create workflows directory if not exists", () => {
+    const workflowsDir = join(testWorkspace, "workflows");
+    expect(existsSync(workflowsDir)).toBe(false);
+
+    writeWorkflowArtifact(testWorkspace, "new-workflow.md", "content");
+
+    expect(existsSync(workflowsDir)).toBe(true);
+  });
+
+  test("should overwrite existing workflow file", () => {
+    const filename = "existing.md";
+    const workflowsDir = join(testWorkspace, "workflows");
+    mkdirSync(workflowsDir, { recursive: true });
+    writeFileSync(join(workflowsDir, filename), "old content");
+
+    const newContent = "new content";
+    writeWorkflowArtifact(testWorkspace, filename, newContent);
+
+    const written = readFileSync(join(workflowsDir, filename), "utf-8");
+    expect(written).toBe(newContent);
+  });
+
+  test("should return null for empty workspace", () => {
+    const result = writeWorkflowArtifact("", "file.md", "content");
+    expect(result).toBeNull();
+  });
+
+  test("should return null for empty filename", () => {
+    const result = writeWorkflowArtifact(testWorkspace, "", "content");
+    expect(result).toBeNull();
+  });
+
+  test("should return null for empty content", () => {
+    const result = writeWorkflowArtifact(testWorkspace, "file.md", "");
+    expect(result).toBeNull();
+  });
+
+  test("should return full absolute path", () => {
+    const result = writeWorkflowArtifact(
+      testWorkspace,
+      "my-workflow.md",
+      "content"
+    );
+
+    expect(result).toContain(testWorkspace);
+    expect(result).toContain("workflows");
+    expect(result).toContain("my-workflow.md");
   });
 });

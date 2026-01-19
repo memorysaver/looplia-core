@@ -196,14 +196,20 @@ No input required - this workflow uses autonomous skills to fetch data.
 
 ## Output Format
 
-Return a JSON object:
+Return a JSON object (v0.7.3: used by CLI for artifact persistence):
 
 ```json
 {
   "filename": "video-to-blog.md",
-  "content": "---\nname: video-to-blog\n..."
+  "content": "---\nname: video-to-blog\nversion: 1.0.0\n...\n---\n\n# Video to Blog Workflow\n..."
 }
 ```
+
+**Important**: `content` MUST be the complete, ready-to-write markdown file including:
+- Full YAML frontmatter (between `---` delimiters)
+- Markdown body (usage docs, steps section)
+
+The CLI writes this content directly to `{workspace}/workflows/{filename}`.
 
 ## Schema Reference
 
