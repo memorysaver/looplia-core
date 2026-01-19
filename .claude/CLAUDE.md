@@ -45,8 +45,34 @@ Core workflow:
 3. `agent-browser click @e1` / `fill @e2 "text"` - Interact using refs
 4. Re-snapshot after page changes
 
-## PR Checklist
-Before creating or merging a PR, review [docs/PR_CHECKLIST.md](../docs/PR_CHECKLIST.md).
+## Development and Release Workflow
+
+### Feature Development
+1. **Create OpenSpec proposal** for new features (see Development Workflow section)
+2. **Create feature branch** from `main`
+3. **Implement** following the proposal's tasks.md
+4. **Update CHANGELOG.md** - Add entry under `## [Unreleased]`
+5. **Create PR** and merge to `main`
+6. **Archive OpenSpec** after merge: `openspec archive <id> --yes`
+
+### Release Process
+1. **Create version bump branch**: `git checkout -b chore/version-bump-X.Y.Z`
+2. **Bump versions** in all package.json files
+3. **Move CHANGELOG** `[Unreleased]` → `[X.Y.Z] - YYYY-MM-DD`
+4. **Update docs** with new version references
+5. **Create PR** and merge
+6. **Push tag**: `git tag vX.Y.Z && git push origin vX.Y.Z`
+7. Tag push triggers CI release workflow
+
+### Quick Reference
+| Action | Command |
+|--------|---------|
+| Local verify | `bun test && bun run check-types && bun x ultracite check` |
+| List changes | `openspec list` |
+| Validate | `openspec validate <id> --strict --no-interactive` |
+| Archive | `openspec archive <id> --yes` |
+
+For full details, see [docs/RELEASE_CHECKLIST.md](../docs/RELEASE_CHECKLIST.md).
 
 ## Development Workflow (OpenSpec)
 
