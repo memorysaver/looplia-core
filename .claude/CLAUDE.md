@@ -29,6 +29,64 @@ Core workflow:
 ## PR Checklist
 Before creating or merging a PR, review [docs/PR_CHECKLIST.md](../docs/PR_CHECKLIST.md).
 
+## Development Workflow (OpenSpec)
+
+This project uses **OpenSpec** for spec-driven development. Create proposals before implementing significant changes.
+
+### When to Create a Proposal
+
+| Create Proposal | Skip Proposal |
+|-----------------|---------------|
+| New features | Bug fixes (restoring spec behavior) |
+| Breaking changes (API, schema) | Typos, formatting, comments |
+| Architecture changes | Non-breaking dependency updates |
+| Performance/security changes | Tests for existing behavior |
+
+### Quick Commands
+
+```bash
+openspec list                  # List active changes
+openspec list --specs          # List existing specifications
+openspec show <item>           # View change or spec details
+openspec validate <id> --strict --no-interactive  # Validate before PR
+openspec archive <id> --yes    # Archive after deployment
+```
+
+### Three-Stage Workflow
+
+**Stage 1: Propose** (before coding)
+1. Check existing specs: `openspec list --specs`
+2. Create `openspec/changes/<change-id>/` with:
+   - `proposal.md` - Why and what changes
+   - `tasks.md` - Implementation checklist
+   - `specs/<capability>/spec.md` - Delta changes (ADDED/MODIFIED/REMOVED)
+3. Validate: `openspec validate <change-id> --strict --no-interactive`
+4. **Wait for approval before implementing**
+
+**Stage 2: Implement** (after approval)
+1. Follow `tasks.md` checklist sequentially
+2. Mark tasks complete as you go
+3. Run tests and type checks
+
+**Stage 3: Archive** (after deployment)
+```bash
+openspec archive <change-id> --yes
+```
+
+### Spec Delta Format
+
+```markdown
+## ADDED Requirements
+### Requirement: New Feature Name
+The system SHALL provide...
+
+#### Scenario: Success case
+- **WHEN** user performs action
+- **THEN** expected result occurs
+```
+
+For details, see [openspec/AGENTS.md](../openspec/AGENTS.md) and [openspec/project.md](../openspec/project.md).
+
 ---
 
 ### Type Safety & Explicitness

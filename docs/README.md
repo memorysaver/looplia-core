@@ -1,6 +1,6 @@
 # Looplia-Core Documentation
 
-> **Version:** 0.7.1
+> **Version:** 0.7.2
 > **Last Updated:** January 2026
 
 This directory contains the core documentation for Looplia-Core, a Claude Agent SDK-based agentic workflow platform.
@@ -9,29 +9,27 @@ This directory contains the core documentation for Looplia-Core, a Claude Agent 
 
 ## Core Documents (Latest)
 
-These are the current, authoritative documents for the v0.7.0 architecture:
+These are the current, authoritative documents for the v0.7.2 architecture:
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
+| [DESIGN-0.7.2.md](./DESIGN-0.7.2.md) | **Output flag and LOOPLIA_OUTPUT_DIR**, workflow output management | Developers, Architects |
+| [DESIGN-0.7.1.md](./DESIGN-0.7.1.md) | **Build sandbox support**, ZenMux skill compatibility | Developers, Architects |
 | [DESIGN-0.7.0.md](./DESIGN-0.7.0.md) | **Skill Registry System**, marketplace integration, selective loading | Developers, Architects |
 | [AGENTIC_CONCEPT_1.0.md](./AGENTIC_CONCEPT_1.0.md) | **Skills-first architecture overview** - comprehensive guide to v0.6.1/v0.6.2 | All team members |
-| [DESIGN-0.6.9.md](./DESIGN-0.6.9.md) | **SDK Compatibility & API Key Selection**, optional Claude Code path, endpoint-aware keys | Developers, Architects |
-| [DESIGN-0.6.8.md](./DESIGN-0.6.8.md) | **Claude Code Path Resolution**, executable discovery, caching | Developers, Architects |
-| [DESIGN-0.6.7.md](./DESIGN-0.6.7.md) | **Docker E2E Support**, containerized testing, CI improvements | Developers, Architects |
+| [DESIGN-0.6.10.md](./DESIGN-0.6.10.md) | **Unified command initialization**, E2E testing | Developers, Architects |
+| [DESIGN-0.6.9.md](./DESIGN-0.6.9.md) | **SDK Compatibility & API Key Selection**, endpoint-aware keys | Developers, Architects |
 | [DESIGN-0.6.6.md](./DESIGN-0.6.6.md) | **Model Provider Configuration**, ZenMux support, dual-strategy execution | Developers, Architects |
 | [DESIGN-0.6.5.md](./DESIGN-0.6.5.md) | **Agent SDK plugin loading**, bootstrap module, dev mode | Developers, Architects |
 | [DESIGN-0.6.3.md](./DESIGN-0.6.3.md) | **Input-less workflows**, web-capable skills, named inputs | Developers, Architects |
 | [DESIGN-0.6.2.md](./DESIGN-0.6.2.md) | **Schema-in-Skill architecture**, plugin-first domain types | Developers, Architects |
 | [DESIGN-0.6.1.md](./DESIGN-0.6.1.md) | **Skills-first architecture**, universal skill-executor, `/build` command | Developers, Architects |
 | [DESIGN-0.6.0.md](./DESIGN-0.6.0.md) | Steps-based workflow schema, deterministic subagent invocation | Developers, Architects |
-| [CLEANUP-0.6.1.md](./CLEANUP-0.6.1.md) | Legacy code removal plan for v0.6.1 | Developers |
-| [CONTEXT-INJECTION.md](./CONTEXT-INJECTION.md) | **Context injection flow** when running workflows (ASCII diagram) | Developers, Architects |
 | [GLOSSARY.md](./GLOSSARY.md) | Ubiquitous language reference (domain terms + TypeScript types) | All team members |
-| [HOOK_VALIDATOR.md](./HOOK_VALIDATOR.md) | Hook system implementation details | Developers |
-| [PR_CHECKLIST.md](./PR_CHECKLIST.md) | **PR checklist** for docs, CI/CD alignment, version consistency | Contributors, Claude Code |
+| [PR_CHECKLIST.md](./PR_CHECKLIST.md) | **PR checklist** with OpenSpec workflow integration | Contributors, Claude Code |
+| [openspec/project.md](../openspec/project.md) | **Project conventions** for OpenSpec workflow | All team members |
+| [CONTEXT-INJECTION.md](./CONTEXT-INJECTION.md) | Context injection flow when running workflows (ASCII diagram) | Developers, Architects |
 | [CLAUDE_PLUGINS.md](./CLAUDE_PLUGINS.md) | Claude Code plugin system reference | Developers |
-| [SUBAGENTS.md](./SUBAGENTS.md) | Anthropic official Subagents documentation (reference) | Developers |
-| [AGENT-SKILLS.md](./AGENT-SKILLS.md) | Anthropic official Agent Skills documentation (reference) | Developers |
 | [AGENT-SDK.md](./AGENT-SDK.md) | Claude Agent SDK TypeScript reference (message types, tools, hooks) | Developers |
 
 ### Archived Documents
@@ -617,7 +615,7 @@ Previous versions are preserved in `/docs/archive/` for reference:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        DOCUMENT RELATIONSHIPS (v0.6.6)                       │
+│                        DOCUMENT RELATIONSHIPS (v0.7.2)                       │
 └─────────────────────────────────────────────────────────────────────────────┘
 
                               ┌──────────────┐
@@ -647,7 +645,7 @@ Previous versions are preserved in `/docs/archive/` for reference:
 ```
 
 **Version Progression:**
-- v0.6.0 → v0.6.1 → v0.6.2 → v0.6.3 → v0.6.4 → v0.6.5 → v0.6.6 → v0.6.7 → v0.6.8 → v0.6.9 → v0.6.10 → v0.7.0 → **v0.7.1** (current)
+- v0.6.0 → v0.6.1 → v0.6.2 → v0.6.3 → v0.6.4 → v0.6.5 → v0.6.6 → v0.6.7 → v0.6.8 → v0.6.9 → v0.6.10 → v0.7.0 → v0.7.1 → **v0.7.2** (current)
 
 **Key Documents:**
 - **DESIGN-0.7.0.md** documents skill registry system (marketplace, selective loading)
@@ -955,4 +953,4 @@ Steps complete when `validation.json` shows `validated: true`:
 
 ---
 
-*This README provides navigation for Looplia-Core v0.7.1 documentation.*
+*This README provides navigation for Looplia-Core v0.7.2 documentation.*

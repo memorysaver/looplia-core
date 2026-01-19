@@ -1,194 +1,91 @@
 # PR Checklist
 
-> **For Claude Code and Contributors:** Use this checklist before creating or merging pull requests to ensure consistency across documentation and CI/CD.
+> Quick reference for Claude Code and contributors before creating or merging PRs.
 
 ---
 
-## Pre-Merge Requirements
+## 1. OpenSpec Decision (Start Here)
 
-**Before merging a PR, verify:**
+| Requires Proposal | Skip Proposal |
+|-------------------|---------------|
+| New features/capabilities | Bug fixes |
+| Breaking changes (API, schema) | Typos, formatting, comments |
+| Architecture/pattern changes | Non-breaking dependency updates |
+| Performance/security changes | Tests for existing behavior |
 
-- [ ] **Version bump** - Has the version been incremented appropriately?
-  - Patch (0.5.x) for bug fixes
-  - Minor (0.x.0) for new features
-  - Major (x.0.0) for breaking changes
-- [ ] **CHANGELOG updated** - Are all changes documented in CHANGELOG.md?
-- [ ] **Tests pass** - `bun test` and `bun run check-types`
-- [ ] **CI/CD green** - All GitHub Actions checks pass
-
----
-
-## Documentation Updates
-
-When making changes to the codebase, ensure the following documents are updated to reflect the changes:
-
-### Changelog (Required for all PRs)
-
-- [ ] **[CHANGELOG.md](../CHANGELOG.md)**
-  - Add entry under appropriate version section
-  - Use correct category: Added, Changed, Fixed, Removed, Documentation
-  - Follow [Keep a Changelog](https://keepachangelog.com/) format
-  - Update version links at bottom of file
-
-### Core Documentation
-
-- [ ] **[README.md](../README.md)** (root)
-  - Features list
-  - Architecture diagram
-  - CLI commands table
-  - Quick start guide
-  - Environment variables
-
-- [ ] **[docs/README.md](./README.md)** (documentation index)
-  - Version number in header
-  - "What's New" section
-  - Key concepts section
-  - Document relationships diagram
-  - Quick links for developers/architects
-
-### Architecture Documents
-
-- [ ] **[docs/DESIGN-0.6.0.md](./DESIGN-0.6.0.md)**
-  - Steps-based workflow schema
-  - Plugin structure
-  - Command specifications
-  - Sandbox architecture
-  - Hook-based validation
-
-- [ ] **[docs/DESIGN-0.6.1.md](./DESIGN-0.6.1.md)**
-  - Skills-first architecture
-  - Universal skill-executor
-  - `/build` command
-  - Agent to skill migration
-
-- [ ] **[docs/DESIGN-0.6.2.md](./DESIGN-0.6.2.md)**
-  - Schema-in-Skill architecture
-  - Domain types cleanup
-
-- [ ] **[docs/archive/AGENTIC_CONCEPT-0.5.md](./archive/AGENTIC_CONCEPT-0.5.md)** (historical)
-  - Agent system design
-  - Subagent definitions
-  - Skills auto-loading
-  - Validation-driven completion
-
-### Reference Documents
-
-- [ ] **[docs/GLOSSARY.md](./GLOSSARY.md)**
-  - New domain terms
-  - Updated TypeScript types
-  - Workspace structure changes
-  - Deprecated terms marked
-
-- [ ] **[docs/archive/TEST_PLAN-0.6.md](./archive/TEST_PLAN-0.6.md)** (historical)
-  - Test commands and paths
-  - Log verification examples
-  - Troubleshooting section
-  - Steps-based validation schema
-
----
-
-## CI/CD Alignment
-
-Ensure CI/CD files match the current architecture design:
-
-### GitHub Actions
-
-- [ ] **[.github/workflows/docker-e2e.yml](../.github/workflows/docker-e2e.yml)**
-  - Folder paths match design (e.g., `sandbox/` vs `contentItem/`)
-  - File paths match design (e.g., `inputs/`, `outputs/`, `logs/`)
-  - Validation steps align with `validation.json` schema (v0.6.0 uses `.steps` not `.outputs`)
-  - Subagent verification matches expected agents
-
-### Test Scripts
-
-- [ ] **[scripts/docker-e2e.sh](../scripts/docker-e2e.sh)**
-  - Version number in header
-  - Folder structure matches design
-  - Output paths match design
-  - Workspace validation checks correct directories
-
-### Other CI Files
-
-- [ ] **[.github/workflows/ci.yml](../.github/workflows/ci.yml)** (if exists)
-  - Build and test commands
-  - Type checking
-
----
-
-## Version Consistency
-
-When releasing a new version, update version references in:
-
-- [ ] `CHANGELOG.md` - Add new version section, update version links
-- [ ] `docs/README.md` header (`Version: X.X.X`)
-- [ ] `scripts/docker-e2e.sh` header comment and `main()` output
-- [ ] `package.json` files (if applicable)
-- [ ] Design document filenames (e.g., `DESIGN-0.5.2.md`)
-
----
-
-## Folder Structure Changes
-
-If changing the workspace folder structure (e.g., `contentItem/` to `sandbox/`):
-
-1. **Update all documentation** with new paths
-2. **Update GLOSSARY.md** with new/deprecated terms
-3. **Update CI/CD files** with new paths
-4. **Update test scripts** with new paths
-5. **Search codebase** for hardcoded paths:
-   ```bash
-   grep -r "contentItem" --include="*.ts" --include="*.md" --include="*.yml" --include="*.sh"
-   ```
-
----
-
-## Quick Verification Commands
-
+**If proposal required:**
 ```bash
-# Check for outdated path references
-grep -r "contentItem" docs/ .github/ scripts/ --include="*.md" --include="*.yml" --include="*.sh"
-
-# Verify documentation links work
-find docs/ -name "*.md" -exec grep -l "\[.*\](.*\.md)" {} \;
-
-# Check version consistency
-grep -r "Version:" docs/README.md scripts/docker-e2e.sh
-
-# Run tests to verify CI alignment
-bun test
-bun run check-types
+openspec validate <change-id> --strict --no-interactive
 ```
 
 ---
 
-## PR Description Template
+## 2. Pre-Merge Checklist
 
-When creating a PR, include:
+- [ ] **CI passes** - All GitHub Actions checks green
+- [ ] **Version bumped** - Patch/Minor/Major as appropriate
+- [ ] **CHANGELOG.md** - Entry added under correct version
+- [ ] **OpenSpec validated** - If proposal exists
+- [ ] **Tests pass locally** - `bun test && bun run check-types`
+
+---
+
+## 3. Key Documents to Update
+
+| Document | Update When |
+|----------|-------------|
+| `CHANGELOG.md` | Always (required) |
+| `README.md` (root) | Architecture changes, version bump |
+| `docs/README.md` | New features, version bump |
+| `docs/GLOSSARY.md` | New domain terms |
+| `openspec/project.md` | Conventions changed |
+
+See [docs/README.md](./README.md) for full documentation index.
+
+---
+
+## 4. PR Description Template
 
 ```markdown
 ## Summary
-[Brief description of changes]
+[Brief description]
 
-## Version & Changelog
-- [ ] Version bumped (if applicable): `X.X.X` → `X.X.X`
-- [ ] CHANGELOG.md updated with changes
+## OpenSpec
+- Proposal required: Yes / No
+- Change ID: `<id>` (if applicable)
 
-## Documentation Updated
-- [ ] README.md
-- [ ] docs/README.md
-- [ ] docs/GLOSSARY.md
-- [ ] docs/DESIGN-0.6.1.md or docs/DESIGN-0.6.2.md (if architecture changes)
-- [ ] Other: ___
+## Changes
+- Version: `X.X.X` -> `X.X.X`
+- CHANGELOG.md updated: Yes
 
-## CI/CD Verified
-- [ ] docker-e2e.yml paths match design
-- [ ] docker-e2e.sh paths match design
-- [ ] Tests pass locally
-
-## Breaking Changes
-[List any breaking changes or migration steps]
+## Testing
+- `bun test` passes
+- `bun run check-types` passes
 ```
 
 ---
 
-*This checklist ensures consistency between code, documentation, and CI/CD pipelines.*
+## 5. Post-Merge
+
+If OpenSpec proposal was used:
+```bash
+openspec archive <change-id> --yes
+```
+
+---
+
+## Quick Commands
+
+```bash
+# Local verification
+bun test && bun run check-types && bun x ultracite check
+
+# OpenSpec
+openspec list                    # List active changes
+openspec validate <id> --strict --no-interactive
+openspec archive <id> --yes      # Post-merge cleanup
+```
+
+---
+
+*See [openspec/project.md](../openspec/project.md) for project conventions.*
