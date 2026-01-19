@@ -1,7 +1,7 @@
 # skill-architecture Specification
 
 ## Purpose
-TBD - created by archiving change search-skill-refactor. Update Purpose after archive.
+Defines the architectural separation between core workflow orchestration skills in the `looplia-core` plugin and domain-specific skills provided by external registries in the looplia plugin ecosystem.
 ## Requirements
 ### Requirement: Core Plugin Orchestration Scope
 
