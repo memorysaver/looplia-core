@@ -73,6 +73,13 @@ export default defineConfig({
             { label: "Understanding Workflows", slug: "workflows/understanding-workflows" },
             { label: "Writing Kit", slug: "workflows/writing-kit" },
             { label: "Building Custom Workflows", slug: "workflows/custom-workflows" },
+            {
+              label: "Guides",
+              items: [
+                { label: "Overview", slug: "workflows/guides" },
+                { label: "News Monitoring", slug: "workflows/guides/news-monitoring" },
+              ],
+            },
           ],
         },
         {
