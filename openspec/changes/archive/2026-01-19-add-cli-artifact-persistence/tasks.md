@@ -20,8 +20,8 @@
 
 ## 4. E2E validation
 
-- [ ] 4.1 Run Docker E2E tests locally to verify `test-build` passes consistently
-- [ ] 4.2 Run CI to confirm flaky test is fixed
+- [x] 4.1 Run Docker E2E tests locally to verify `test-build` passes consistently
+- [x] 4.2 Run CI to confirm flaky test is fixed
 
 ## Dependencies
 

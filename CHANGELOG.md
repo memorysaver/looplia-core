@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **CLI Output Persistence** - CLI now writes workflow artifacts directly to avoid missing outputs
+  - Prevents successful runs from returning without persisted workflow files
+
 ### Documentation
 
 - **OpenSpec Integration** - Added spec-driven development framework
