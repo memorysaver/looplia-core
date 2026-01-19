@@ -225,6 +225,8 @@ async function copyPluginSkills(
       const destPath = join(pluginDir, "skills", skillName);
       if (await pathExists(srcPath)) {
         await cp(srcPath, destPath, { recursive: true });
+      } else {
+        console.warn(`Warning: Skill path not found in source: ${skillPath}`);
       }
     }
   } else {
@@ -233,6 +235,8 @@ async function copyPluginSkills(
     const destPath = join(pluginDir, "skills", plugin.name);
     if (await pathExists(srcPath)) {
       await cp(srcPath, destPath, { recursive: true });
+    } else {
+      console.warn(`Warning: Skill source not found: ${plugin.source}`);
     }
   }
 }
@@ -298,8 +302,14 @@ async function installMarketplaceSource(
   const results: InstallResult[] = [];
   for (const plugin of manifest.plugins) {
     const pluginDir = join(pluginsDir, plugin.name);
+    const skillsDir = join(pluginDir, "skills");
 
     try {
+      // Clear existing skills directory to remove stale skills
+      if (await pathExists(skillsDir)) {
+        await rm(skillsDir, { recursive: true, force: true });
+      }
+
       await createPluginStructure({ pluginDir, plugin, marketplace });
       await copyPluginSkills(plugin, tempDir, pluginDir);
       results.push({
