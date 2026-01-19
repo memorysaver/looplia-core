@@ -74,6 +74,32 @@ describe("model-provider", () => {
         "https://zenmux.ai/api/anthropic"
       );
     });
+
+    it("should have Claude Code subscription presets with keychain authTokenSource", () => {
+      expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_HAIKU.authTokenSource).toBe(
+        "keychain"
+      );
+      expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_HAIKU.apiProvider).toBe(
+        "anthropic"
+      );
+      expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_HAIKU.mainModel).toBe(
+        "claude-haiku-4-5-20251001"
+      );
+
+      expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_SONNET.authTokenSource).toBe(
+        "keychain"
+      );
+      expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_SONNET.mainModel).toBe(
+        "claude-sonnet-4-5-20250929"
+      );
+
+      expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_OPUS.authTokenSource).toBe(
+        "keychain"
+      );
+      expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_OPUS.mainModel).toBe(
+        "claude-opus-4-5-20251101"
+      );
+    });
   });
 
   describe("applyPreset", () => {
@@ -121,6 +147,14 @@ describe("model-provider", () => {
       expect(settings.apiProvider.type).toBe("anthropic");
       expect(settings.apiProvider.baseUrl).toBeUndefined();
       expect(settings.agents.main).toBe("claude-haiku-4-5-20251001");
+    });
+
+    it("should include authTokenSource for Claude Code subscription presets", () => {
+      const settings = applyPreset("CLAUDE_CODE_SUBSCRIPTION_OPUS");
+
+      expect(settings.apiProvider.type).toBe("anthropic");
+      expect(settings.apiProvider.authTokenSource).toBe("keychain");
+      expect(settings.agents.main).toBe("claude-opus-4-5-20251101");
     });
   });
 
@@ -207,6 +241,27 @@ describe("model-provider", () => {
       const info = getSettingsDisplayInfo(settings);
 
       expect(info.provider).toBe("custom");
+    });
+
+    it("should include authTokenSource when using keychain auth", () => {
+      const settings: LoopliaSettings = {
+        version: "1.0",
+        preset: "CLAUDE_CODE_SUBSCRIPTION_OPUS",
+        apiProvider: {
+          type: "anthropic",
+          authTokenSource: "keychain",
+        },
+        agents: {
+          main: "claude-opus-4-5-20251101",
+          executor: "claude-opus-4-5-20251101",
+        },
+      };
+
+      const info = getSettingsDisplayInfo(settings);
+
+      expect(info.status).toBe("configured");
+      expect(info.authTokenSource).toBe("keychain");
+      expect(info.authToken).toBeUndefined();
     });
   });
 
