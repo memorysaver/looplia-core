@@ -8,7 +8,6 @@
  * @see https://github.com/memorysaver/looplia-core/docs/DESIGN-0.6.6.md
  */
 
-import { execSync } from "node:child_process";
 import {
   chmod,
   mkdir,
@@ -67,7 +66,7 @@ export type LoopliaSettings = {
     /**
      * Auth token source for subscription-based authentication
      * When set to "subscription", uses Claude Code subscription OAuth token
-     * (from CLAUDE_CODE_OAUTH_TOKEN env var or macOS Keychain)
+     * (from CLAUDE_CODE_OAUTH_TOKEN env var - must be set manually)
      */
     authTokenSource?: AuthTokenSource;
   };
@@ -96,7 +95,7 @@ export type LoopliaSettings = {
 /**
  * Auth token source type
  * - "subscription": Use Claude Code subscription OAuth token
- *   (from CLAUDE_CODE_OAUTH_TOKEN env var or macOS Keychain)
+ *   (from CLAUDE_CODE_OAUTH_TOKEN env var - must be set manually)
  */
 export type AuthTokenSource = "subscription";
 
@@ -335,64 +334,6 @@ export const PRESETS: Record<string, PresetDefinition> = {
 const CONFIG_FILE = "looplia.setting.json";
 
 /**
- * Read OAuth token from macOS Keychain (Claude Code credentials)
- *
- * Uses the 'security' command to retrieve the Claude Code OAuth token
- * stored in macOS Keychain. This enables using Claude subscription
- * instead of separate API credits.
- *
- * Keychain Entry:
- *   Service: "Claude Code-credentials"
- *   Value: JSON object with structure:
- *   {
- *     "claudeAiOauth": {
- *       "accessToken": "sk-ant-oat01-...",  // <-- This is what we extract
- *       "refreshToken": "sk-ant-ort01-...",
- *       "expiresAt": 1768878802300,
- *       "scopes": ["user:inference", "user:profile", ...],
- *       "subscriptionType": "max",
- *       "rateLimitTier": "default_claude_max_5x"
- *     }
- *   }
- *
- * @returns The OAuth accessToken if found, null otherwise
- */
-export function readKeychainToken(): string | null {
-  // Only available on macOS
-  if (process.platform !== "darwin") {
-    return null;
-  }
-
-  try {
-    // Use top-level imported execSync for consistency with codebase
-    const rawValue = execSync(
-      'security find-generic-password -s "Claude Code-credentials" -w',
-      { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
-    ).trim();
-
-    if (!rawValue) {
-      return null;
-    }
-
-    // Parse JSON and extract the OAuth access token
-    const credentials = JSON.parse(rawValue);
-    const accessToken = credentials?.claudeAiOauth?.accessToken;
-
-    return accessToken || null;
-  } catch (error: unknown) {
-    // Security: Don't log full error message which might contain sensitive paths
-    // Only surface generic error when it's not a "not found" case (expected when not logged in)
-    const message = error instanceof Error ? error.message : String(error);
-    if (!message.includes("could not be found")) {
-      console.error(
-        "Failed to access macOS Keychain. Ensure Claude Code is installed and you are logged in."
-      );
-    }
-    return null;
-  }
-}
-
-/**
  * Get the path to the looplia home directory
  */
 export function getLoopliaHome(): string {
@@ -480,11 +421,6 @@ function injectModelTierEnv(mainModel: string, executorModel: string): void {
 /**
  * Inject OAuth token for Claude Code subscription
  *
- * Authentication Flow:
- * 1. Check if CLAUDE_CODE_OAUTH_TOKEN is already set (e.g., GitHub Actions)
- * 2. If not set and on macOS, read from Keychain
- * 3. Clear ANTHROPIC_API_KEY to force SDK to use OAuth token
- *
  * Why clear ANTHROPIC_API_KEY?
  * The Claude Agent SDK checks env vars in this order:
  *   1. ANTHROPIC_API_KEY (direct API key)
@@ -498,42 +434,20 @@ function injectModelTierEnv(mainModel: string, executorModel: string): void {
  * ANTHROPIC_API_KEY is not set. This is expected behavior - "none"
  * means the SDK is using CLAUDE_CODE_OAUTH_TOKEN (subscription auth).
  *
- * Usage Scenarios:
- * - macOS local: Token read from Keychain automatically
- * - GitHub Actions: Set CLAUDE_CODE_OAUTH_TOKEN in env secrets
- * - Other CI: Set CLAUDE_CODE_OAUTH_TOKEN manually
+ * Usage: Set CLAUDE_CODE_OAUTH_TOKEN environment variable manually.
+ * On macOS, you can extract it from Keychain:
+ *   security find-generic-password -s "Claude Code-credentials" -w | jq -r '.claudeAiOauth.accessToken'
  */
 function injectSubscriptionAuth(): void {
-  // If CLAUDE_CODE_OAUTH_TOKEN is already set (e.g., GitHub Actions),
-  // just clear ANTHROPIC_API_KEY and use the existing token
-  if (process.env.CLAUDE_CODE_OAUTH_TOKEN) {
-    process.env.ANTHROPIC_API_KEY = undefined;
-    return;
-  }
-
-  // On non-macOS, we can't read from Keychain
-  if (process.platform !== "darwin") {
-    console.error(
-      "Warning: CLAUDE_CODE_OAUTH_TOKEN not set and Keychain not available (non-macOS). " +
-        "Set CLAUDE_CODE_OAUTH_TOKEN environment variable."
-    );
-    return;
-  }
-
-  // Try to read from macOS Keychain
-  const token = readKeychainToken();
-  if (token) {
-    process.env.CLAUDE_CODE_OAUTH_TOKEN = token;
-    // Clear ANTHROPIC_API_KEY to ensure SDK uses OAuth token
-    // SDK will report apiKeySource: "none" which indicates OAuth auth
-    process.env.ANTHROPIC_API_KEY = undefined;
-  } else {
-    console.error(
-      "Warning: Could not read Claude Code credentials from Keychain. " +
-        "Ensure Claude Code is installed and you are logged in, " +
-        "or set CLAUDE_CODE_OAUTH_TOKEN environment variable."
+  // Clear ANTHROPIC_API_KEY so SDK falls back to CLAUDE_CODE_OAUTH_TOKEN
+  // User must set CLAUDE_CODE_OAUTH_TOKEN manually
+  if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) {
+    console.warn(
+      "Warning: CLAUDE_CODE_OAUTH_TOKEN not set. " +
+        "Set this environment variable to use Claude Code subscription auth."
     );
   }
+  process.env.ANTHROPIC_API_KEY = undefined;
 }
 
 /**
@@ -568,7 +482,7 @@ function injectNonAnthropicProviderEnv(
  * Called before SDK query() invocation
  *
  * API Key Priority:
- * 1. Keychain auth source (Claude Code subscription via macOS Keychain)
+ * 1. Subscription auth (CLAUDE_CODE_OAUTH_TOKEN env var)
  * 2. Settings file authToken (user explicitly configured via CLI)
  * 3. Endpoint-specific env var (ZENMUX_API_KEY for ZenMux endpoint)
  * 4. Generic ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN
@@ -582,7 +496,7 @@ function injectNonAnthropicProviderEnv(
  * ```
  */
 export function injectLoopliaSettingsEnv(settings: LoopliaSettings): void {
-  // Keychain auth source (Claude Code subscription)
+  // Subscription auth (CLAUDE_CODE_OAUTH_TOKEN env var)
   if (settings.apiProvider.authTokenSource === "subscription") {
     injectSubscriptionAuth();
   }

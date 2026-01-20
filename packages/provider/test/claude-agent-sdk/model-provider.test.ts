@@ -11,7 +11,6 @@ import {
   type LoopliaSettings,
   maskAuthToken,
   PRESETS,
-  readKeychainToken,
   readLoopliaSettings,
   removeLoopliaSettings,
   writeLoopliaSettings,
@@ -661,39 +660,6 @@ describe("model-provider", () => {
     });
   });
 
-  describe("readKeychainToken", () => {
-    it("should return null on non-darwin platforms", () => {
-      // This test validates behavior when not on macOS
-      // On non-darwin, it should return null immediately without calling execSync
-      if (process.platform !== "darwin") {
-        const result = readKeychainToken();
-        expect(result).toBeNull();
-      } else {
-        // On macOS, the function will try to read the keychain
-        // It will either return a token or null (if not logged in)
-        const result = readKeychainToken();
-        expect(result === null || typeof result === "string").toBe(true);
-      }
-    });
-
-    it("should return string or null on macOS", () => {
-      // On macOS, should either return valid token string or null
-      // (null if Claude Code not installed or not logged in)
-      const result = readKeychainToken();
-
-      if (process.platform === "darwin") {
-        // Result should be either null or a non-empty string
-        if (result !== null) {
-          expect(typeof result).toBe("string");
-          expect(result.length).toBeGreaterThan(0);
-        }
-      } else {
-        // Non-darwin always returns null
-        expect(result).toBeNull();
-      }
-    });
-  });
-
   describe("injectLoopliaSettingsEnv with subscription auth", () => {
     const originalEnv: Record<string, string | undefined> = {};
 
@@ -805,8 +771,11 @@ describe("model-provider", () => {
       expect(process.env.ANTHROPIC_API_KEY).toBe("sk-should-remain");
     });
 
-    it("should attempt keychain read when CLAUDE_CODE_OAUTH_TOKEN not set on macOS", () => {
-      // This test verifies the keychain fallback path on macOS
+    it("should clear ANTHROPIC_API_KEY even when CLAUDE_CODE_OAUTH_TOKEN not set", () => {
+      // When subscription auth is configured but token not set,
+      // ANTHROPIC_API_KEY should still be cleared (SDK needs token)
+      process.env.ANTHROPIC_API_KEY = "sk-should-be-cleared";
+
       const settings: LoopliaSettings = {
         version: "1.0",
         apiProvider: {
@@ -822,21 +791,11 @@ describe("model-provider", () => {
       // Ensure no pre-existing OAuth token
       expect(process.env.CLAUDE_CODE_OAUTH_TOKEN).toBeUndefined();
 
+      // Should log warning but still clear API key
       injectLoopliaSettingsEnv(settings);
 
-      if (process.platform === "darwin") {
-        // On macOS, keychain will be attempted
-        // CLAUDE_CODE_OAUTH_TOKEN may be set if logged into Claude Code
-        // Either way, ANTHROPIC_API_KEY should be cleared if token found
-        if (process.env.CLAUDE_CODE_OAUTH_TOKEN) {
-          expect(typeof process.env.CLAUDE_CODE_OAUTH_TOKEN).toBe("string");
-          expect(process.env.ANTHROPIC_API_KEY).toBeUndefined();
-        }
-        // If token not found, no changes (warning logged)
-      } else {
-        // Non-macOS: keychain not available, token not set
-        expect(process.env.CLAUDE_CODE_OAUTH_TOKEN).toBeUndefined();
-      }
+      // ANTHROPIC_API_KEY should be cleared
+      expect(process.env.ANTHROPIC_API_KEY).toBeUndefined();
     });
 
     it("should apply subscription preset correctly", () => {

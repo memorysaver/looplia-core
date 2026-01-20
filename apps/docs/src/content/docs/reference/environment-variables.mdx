@@ -16,7 +16,7 @@ Looplia uses environment variables for API keys, model configuration, and develo
 | `CLAUDE_CODE_OAUTH_TOKEN` | Claude Code OAuth token (alternative auth) | No |
 
 <Aside>
-*Either `ANTHROPIC_API_KEY` or `ZENMUX_API_KEY` is required, depending on your provider configuration.
+*Either `ANTHROPIC_API_KEY` or `ZENMUX_API_KEY` is required, depending on your provider configuration. Alternatively, use `CLAUDE_CODE_OAUTH_TOKEN` with subscription presets.
 </Aside>
 
 ### Setting API Keys
@@ -33,6 +33,34 @@ source ~/.zshrc
 echo 'ANTHROPIC_API_KEY=sk-ant-api03-...' >> .env
 env $(cat .env) looplia run writing-kit --file test.md
 ```
+
+### Claude Code Subscription Authentication
+
+Use your existing Claude Code subscription instead of separate API credits:
+
+```bash
+# 1. Apply a subscription preset
+looplia config provider preset CLAUDE_CODE_SUBSCRIPTION_SONNET
+
+# 2. Set CLAUDE_CODE_OAUTH_TOKEN environment variable
+# On macOS, extract from Keychain:
+export CLAUDE_CODE_OAUTH_TOKEN=$(security find-generic-password -s "Claude Code-credentials" -w | jq -r '.claudeAiOauth.accessToken')
+
+# Or set directly if you have the token:
+export CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-...
+
+# 3. Run workflow
+looplia run writing-kit --file article.md
+```
+
+Available subscription presets:
+- `CLAUDE_CODE_SUBSCRIPTION_HAIKU` — Uses Claude Haiku 4.5
+- `CLAUDE_CODE_SUBSCRIPTION_SONNET` — Uses Claude Sonnet 4.5
+- `CLAUDE_CODE_SUBSCRIPTION_OPUS` — Uses Claude Opus 4.5
+
+<Aside type="tip">
+Add the token extraction to your `~/.zshrc` or `~/.bashrc` to automatically set the token on shell startup.
+</Aside>
 
 ## Model Configuration
 
@@ -167,9 +195,10 @@ looplia run writing-kit --file article.md
 
 **API Keys:** Config file takes precedence when explicitly set:
 
-1. **Config file `authToken`** (highest priority) — set via `looplia config provider set auth-token`
-2. **Endpoint-specific env var** — `ZENMUX_API_KEY` for ZenMux, `ANTHROPIC_API_KEY` for Anthropic
-3. **Default env var** (`ANTHROPIC_API_KEY`)
+1. **Subscription auth** (highest priority) — `CLAUDE_CODE_OAUTH_TOKEN` with subscription preset
+2. **Config file `authToken`** — set via `looplia config provider set auth-token`
+3. **Endpoint-specific env var** — `ZENMUX_API_KEY` for ZenMux, `ANTHROPIC_API_KEY` for Anthropic
+4. **Default env var** (`ANTHROPIC_API_KEY`)
 
 **Model Settings:** Environment variables take precedence:
 
@@ -199,6 +228,22 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v1
       - run: bunx looplia init --yes
+      - run: bunx looplia run writing-kit --file content.md --no-streaming
+```
+
+With Claude Code subscription:
+
+```yaml
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    env:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v1
+      - run: bunx looplia init --yes
+      - run: bunx looplia config provider preset CLAUDE_CODE_SUBSCRIPTION_SONNET
       - run: bunx looplia run writing-kit --file content.md --no-streaming
 ```
 

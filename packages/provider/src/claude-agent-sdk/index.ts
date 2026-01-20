@@ -40,7 +40,6 @@ export {
   injectLoopliaSettingsEnv,
   maskAuthToken,
   PRESETS,
-  readKeychainToken,
   readLoopliaSettings,
   removeLoopliaSettings,
   writeLoopliaSettings,

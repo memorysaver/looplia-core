@@ -276,13 +276,34 @@ looplia run writing-kit --file ./article.md
 | Variable | Description |
 |----------|-------------|
 | `ANTHROPIC_API_KEY` | Required for Claude API |
-| `CLAUDE_CODE_OAUTH_TOKEN` | Alternative: OAuth token |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Alternative: OAuth token for subscription auth |
 | `ZENMUX_API_KEY` | ZenMux proxy API key (auto-mapped to ANTHROPIC_API_KEY) |
 | `LOOPLIA_AGENT_MODEL_MAIN` | Override main agent model |
 | `LOOPLIA_AGENT_MODEL_EXECUTOR` | Override executor model |
 | `LOOPLIA_HOME` | Override ~/.looplia path (testing/custom installs) |
 | `LOOPLIA_DEV` | Enable development mode (load from source) |
 | `LOOPLIA_DEV_ROOT` | Path to looplia-core repo (for dev mode) |
+
+### Claude Code Subscription Authentication
+
+To use your Claude Code subscription instead of direct API credits:
+
+```bash
+# 1. Apply a subscription preset
+looplia config provider preset CLAUDE_CODE_SUBSCRIPTION_OPUS
+
+# 2. Set CLAUDE_CODE_OAUTH_TOKEN environment variable
+# On macOS, extract from Keychain:
+export CLAUDE_CODE_OAUTH_TOKEN=$(security find-generic-password -s "Claude Code-credentials" -w | jq -r '.claudeAiOauth.accessToken')
+
+# Or set directly if you have the token:
+export CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-...
+```
+
+Available subscription presets:
+- `CLAUDE_CODE_SUBSCRIPTION_HAIKU` - Uses Claude Haiku 4.5
+- `CLAUDE_CODE_SUBSCRIPTION_SONNET` - Uses Claude Sonnet 4.5
+- `CLAUDE_CODE_SUBSCRIPTION_OPUS` - Uses Claude Opus 4.5
 
 ## Documentation
 
