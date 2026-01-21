@@ -81,10 +81,13 @@ Available presets:
   ZENMUX_XAI_GROK41FAST            ZenMux Grok-4.1-Fast
   ZENMUX_DEEPSEEK_V32              ZenMux DeepSeek-v3.2
   ZENMUX_MISTRAL_LARGE2512         ZenMux Mistral-Large-2512
+  OPENROUTER_PRESET                OpenRouter (user-configured preset)
+  OLLAMA_GLM47_CLOUD               Ollama GLM-4.7 Cloud
+  OLLAMA_MINIMAX_M21_CLOUD         Ollama MiniMax-M2.1 Cloud
 
 Configuration keys for 'set':
-  api-provider     Provider type: anthropic, zenmux, custom
-  base-url         API base URL (for zenmux/custom)
+  api-provider     Provider type: anthropic, zenmux, openrouter, ollama, custom
+  base-url         API base URL (for zenmux/openrouter/ollama/custom)
   auth-token       Authentication token (fallback if env var not set)
   main-model       Model for main agent
   executor-model   Model for skill executor
@@ -92,9 +95,13 @@ Configuration keys for 'set':
 API keys (set in .env - looplia auto-maps based on provider):
   ANTHROPIC_API_KEY   For Anthropic (direct)
   ZENMUX_API_KEY      For ZenMux (auto-mapped to ANTHROPIC_API_KEY)
+  OPENROUTER_API_KEY  For OpenRouter (auto-mapped to ANTHROPIC_API_KEY)
+  OLLAMA_API_KEY      For Ollama (optional, defaults to "ollama")
 
 Examples:
   looplia config provider preset ZENMUX_ZAI_GLM47
+  looplia config provider preset OPENROUTER_PRESET
+  looplia config provider preset OLLAMA_GLM47_CLOUD
   looplia config provider show
 `);
 }

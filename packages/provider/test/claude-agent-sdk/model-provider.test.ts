@@ -34,8 +34,8 @@ describe("model-provider", () => {
   });
 
   describe("PRESETS", () => {
-    it("should have 19 presets defined", () => {
-      expect(Object.keys(PRESETS)).toHaveLength(19);
+    it("should have 22 presets defined", () => {
+      expect(Object.keys(PRESETS)).toHaveLength(22);
     });
 
     it("should have required fields for each preset", () => {
@@ -98,6 +98,46 @@ describe("model-provider", () => {
       );
       expect(PRESETS.CLAUDE_CODE_SUBSCRIPTION_OPUS.mainModel).toBe(
         "claude-opus-4-5-20251101"
+      );
+    });
+
+    it("should have OpenRouter preset configured correctly", () => {
+      expect(PRESETS.OPENROUTER_PRESET.name).toBe(
+        "OpenRouter (User-Configured Preset)"
+      );
+      expect(PRESETS.OPENROUTER_PRESET.apiProvider).toBe("openrouter");
+      expect(PRESETS.OPENROUTER_PRESET.baseUrl).toBe(
+        "https://openrouter.ai/api"
+      );
+      expect(PRESETS.OPENROUTER_PRESET.mainModel).toBe(
+        "@preset/looplia-default"
+      );
+      expect(PRESETS.OPENROUTER_PRESET.executorModel).toBe(
+        "@preset/looplia-default"
+      );
+    });
+
+    it("should have Ollama GLM-4.7 preset configured correctly", () => {
+      expect(PRESETS.OLLAMA_GLM47_CLOUD.name).toBe("Ollama GLM-4.7 Cloud");
+      expect(PRESETS.OLLAMA_GLM47_CLOUD.apiProvider).toBe("ollama");
+      expect(PRESETS.OLLAMA_GLM47_CLOUD.baseUrl).toBe("http://localhost:11434");
+      expect(PRESETS.OLLAMA_GLM47_CLOUD.mainModel).toBe("glm-4.7:cloud");
+      expect(PRESETS.OLLAMA_GLM47_CLOUD.executorModel).toBe("glm-4.7:cloud");
+    });
+
+    it("should have Ollama MiniMax-M2.1 preset configured correctly", () => {
+      expect(PRESETS.OLLAMA_MINIMAX_M21_CLOUD.name).toBe(
+        "Ollama MiniMax-M2.1 Cloud"
+      );
+      expect(PRESETS.OLLAMA_MINIMAX_M21_CLOUD.apiProvider).toBe("ollama");
+      expect(PRESETS.OLLAMA_MINIMAX_M21_CLOUD.baseUrl).toBe(
+        "http://localhost:11434"
+      );
+      expect(PRESETS.OLLAMA_MINIMAX_M21_CLOUD.mainModel).toBe(
+        "minimax-m2.1:cloud"
+      );
+      expect(PRESETS.OLLAMA_MINIMAX_M21_CLOUD.executorModel).toBe(
+        "minimax-m2.1:cloud"
       );
     });
   });
@@ -273,6 +313,8 @@ describe("model-provider", () => {
       originalEnv.ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL;
       originalEnv.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
       originalEnv.ZENMUX_API_KEY = process.env.ZENMUX_API_KEY;
+      originalEnv.OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+      originalEnv.OLLAMA_API_KEY = process.env.OLLAMA_API_KEY;
       originalEnv.LOOPLIA_AGENT_MODEL_MAIN =
         process.env.LOOPLIA_AGENT_MODEL_MAIN;
       originalEnv.LOOPLIA_AGENT_MODEL_EXECUTOR =
@@ -288,6 +330,8 @@ describe("model-provider", () => {
       process.env.ANTHROPIC_BASE_URL = undefined;
       process.env.ANTHROPIC_API_KEY = undefined;
       process.env.ZENMUX_API_KEY = undefined;
+      process.env.OPENROUTER_API_KEY = undefined;
+      process.env.OLLAMA_API_KEY = undefined;
       process.env.LOOPLIA_AGENT_MODEL_MAIN = undefined;
       process.env.LOOPLIA_AGENT_MODEL_EXECUTOR = undefined;
       process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = undefined;
@@ -497,6 +541,113 @@ describe("model-provider", () => {
         "existing-sonnet"
       );
       expect(process.env.ANTHROPIC_DEFAULT_OPUS_MODEL).toBe("existing-opus");
+    });
+
+    it("should auto-map OPENROUTER_API_KEY to ANTHROPIC_API_KEY for OpenRouter endpoints", () => {
+      process.env.OPENROUTER_API_KEY = "sk-or-test-key";
+      process.env.ANTHROPIC_API_KEY = undefined;
+
+      const settings: LoopliaSettings = {
+        version: "1.0",
+        apiProvider: {
+          type: "openrouter",
+          baseUrl: "https://openrouter.ai/api",
+        },
+        agents: {
+          main: "@preset/looplia-default",
+          executor: "@preset/looplia-default",
+        },
+      };
+
+      injectLoopliaSettingsEnv(settings);
+
+      expect(process.env.ANTHROPIC_API_KEY).toBe("sk-or-test-key");
+    });
+
+    it("should prioritize authToken over OPENROUTER_API_KEY", () => {
+      process.env.OPENROUTER_API_KEY = "sk-or-env-key";
+      process.env.ANTHROPIC_API_KEY = undefined;
+
+      const settings: LoopliaSettings = {
+        version: "1.0",
+        apiProvider: {
+          type: "openrouter",
+          baseUrl: "https://openrouter.ai/api",
+          authToken: "sk-or-auth-token",
+        },
+        agents: {
+          main: "@preset/looplia-default",
+          executor: "@preset/looplia-default",
+        },
+      };
+
+      injectLoopliaSettingsEnv(settings);
+
+      expect(process.env.ANTHROPIC_API_KEY).toBe("sk-or-auth-token");
+    });
+
+    it("should use OLLAMA_API_KEY when set for Ollama endpoints", () => {
+      process.env.OLLAMA_API_KEY = "custom-ollama-key";
+      process.env.ANTHROPIC_API_KEY = undefined;
+
+      const settings: LoopliaSettings = {
+        version: "1.0",
+        apiProvider: {
+          type: "ollama",
+          baseUrl: "http://localhost:11434",
+        },
+        agents: {
+          main: "glm-4.7:cloud",
+          executor: "glm-4.7:cloud",
+        },
+      };
+
+      injectLoopliaSettingsEnv(settings);
+
+      expect(process.env.ANTHROPIC_API_KEY).toBe("custom-ollama-key");
+    });
+
+    it("should default to literal 'ollama' when OLLAMA_API_KEY not set", () => {
+      process.env.OLLAMA_API_KEY = undefined;
+      process.env.ANTHROPIC_API_KEY = undefined;
+
+      const settings: LoopliaSettings = {
+        version: "1.0",
+        apiProvider: {
+          type: "ollama",
+          baseUrl: "http://localhost:11434",
+        },
+        agents: {
+          main: "glm-4.7:cloud",
+          executor: "glm-4.7:cloud",
+        },
+      };
+
+      injectLoopliaSettingsEnv(settings);
+
+      expect(process.env.ANTHROPIC_API_KEY).toBe("ollama");
+    });
+
+    it("should prioritize authToken over Ollama default", () => {
+      process.env.OLLAMA_API_KEY = undefined;
+      process.env.ANTHROPIC_API_KEY = undefined;
+
+      const settings: LoopliaSettings = {
+        version: "1.0",
+        apiProvider: {
+          type: "ollama",
+          baseUrl: "http://localhost:11434",
+          authToken: "custom-auth-token",
+        },
+        agents: {
+          main: "glm-4.7:cloud",
+          executor: "glm-4.7:cloud",
+        },
+      };
+
+      injectLoopliaSettingsEnv(settings);
+
+      expect(process.env.ANTHROPIC_API_KEY).toBe("custom-auth-token");
     });
   });
 

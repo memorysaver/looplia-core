@@ -278,6 +278,8 @@ looplia run writing-kit --file ./article.md
 | `ANTHROPIC_API_KEY` | Required for Claude API |
 | `CLAUDE_CODE_OAUTH_TOKEN` | Alternative: OAuth token for subscription auth |
 | `ZENMUX_API_KEY` | ZenMux proxy API key (auto-mapped to ANTHROPIC_API_KEY) |
+| `OPENROUTER_API_KEY` | OpenRouter API key (auto-mapped to ANTHROPIC_API_KEY) |
+| `OLLAMA_API_KEY` | Ollama API key (optional, defaults to "ollama") |
 | `LOOPLIA_AGENT_MODEL_MAIN` | Override main agent model |
 | `LOOPLIA_AGENT_MODEL_EXECUTOR` | Override executor model |
 | `LOOPLIA_HOME` | Override ~/.looplia path (testing/custom installs) |

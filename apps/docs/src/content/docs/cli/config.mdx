@@ -110,6 +110,20 @@ Available presets:
 | `ANTHROPIC_CLAUDE_HAIKU` | claude-haiku-4-20250514 | Fast, cost-effective |
 | `ANTHROPIC_CLAUDE_SONNET` | claude-sonnet-4-20250514 | Balanced performance |
   </TabItem>
+  <TabItem label="Ollama">
+| Preset | Model | Description |
+|--------|-------|-------------|
+| `OLLAMA_GLM47_CLOUD` | glm-4.7:cloud | GLM-4.7 cloud model |
+| `OLLAMA_MINIMAX_M21_CLOUD` | minimax-m2.1:cloud | MiniMax-M2.1 cloud |
+  </TabItem>
+  <TabItem label="OpenRouter">
+| Preset | Model | Description |
+|--------|-------|-------------|
+| `OPENROUTER_PRESET` | @preset/looplia-default | User-configured preset |
+
+Configure models in your [OpenRouter dashboard](https://openrouter.ai/settings/presets).
+Create a preset named "looplia-default" with your preferred model settings.
+  </TabItem>
   <TabItem label="ZenMux Proxy">
 | Preset | Model | Provider |
 |--------|-------|----------|
@@ -144,7 +158,7 @@ looplia config provider set <key> <value>
 | `auth-token` | API key for the provider |
 | `model` | Model identifier |
 | `base-url` | API endpoint URL |
-| `provider` | Provider name (`anthropic`, `zenmux`) |
+| `provider` | Provider name (`anthropic`, `zenmux`, `openrouter`, `ollama`, `custom`) |
 
 Examples:
 
