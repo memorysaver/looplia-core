@@ -1,15 +1,8 @@
-# Spec Delta: Model Provider - OpenRouter and Ollama
+# model-provider Specification
 
-## Why
-
-Extend looplia's model provider support to include OpenRouter and Ollama, providing users with:
-- **OpenRouter**: Unified API for accessing multiple LLM providers with centralized billing and preset management
-- **Ollama**: Local LLM execution for privacy, cost savings, and cloud model support
-
-This change follows the established ZenMux pattern, adding provider types, presets, and environment variable auto-mapping while maintaining full backward compatibility.
-
-## ADDED Requirements
-
+## Purpose
+TBD - created by archiving change add-openrouter-ollama-presets. Update Purpose after archive.
+## Requirements
 ### Requirement: OpenRouter Provider Type
 
 The system SHALL support OpenRouter as a first-class provider type.
@@ -239,27 +232,24 @@ The environment variables reference SHALL document new providers comprehensively
   - `OPENROUTER_API_KEY` for OpenRouter endpoints
   - `OLLAMA_API_KEY` for Ollama endpoints (with default fallback noted)
 
-## MODIFIED Requirements
-
-### Requirement: ApiProviderType (Modified)
+### Requirement: ApiProviderType
 
 The `ApiProviderType` SHALL include OpenRouter and Ollama as valid provider types.
 
 #### Scenario: Extended provider type union
 - **GIVEN** the `ApiProviderType` type definition
 - **THEN** it SHALL be defined as: `"anthropic" | "zenmux" | "openrouter" | "ollama" | "custom"`
-- **AND** maintain backward compatibility with existing provider types
 
-### Requirement: Available Presets Count (Modified)
+### Requirement: Available Presets Count
 
-The system SHALL provide 22 total presets (previously 19).
+The system SHALL provide 22 total presets.
 
 #### Scenario: Preset list completeness
 - **GIVEN** the PRESETS constant
 - **THEN** it SHALL contain exactly 22 preset definitions
 - **AND** include all Anthropic, Claude Code Subscription, ZenMux, OpenRouter, and Ollama presets
 
-### Requirement: Provider-Specific Environment Variable Mapping (Modified)
+### Requirement: Provider-Specific Environment Variable Mapping
 
 The environment variable injection SHALL support mapping for all provider types.
 
@@ -280,6 +270,3 @@ The environment variable injection SHALL support mapping for all provider types.
   - `apiProvider.type === "ollama"` OR `baseUrl` contains "localhost:11434"
 - **AND** apply appropriate environment variable mapping
 
-## REMOVED Requirements
-
-(None)
