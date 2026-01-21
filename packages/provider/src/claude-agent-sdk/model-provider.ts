@@ -500,26 +500,39 @@ function injectNonAnthropicProviderEnv(
     process.env.ANTHROPIC_BASE_URL = apiProvider.baseUrl;
   }
 
-  // API key selection: settings file authToken takes priority
-  if (apiProvider.authToken) {
-    process.env.ANTHROPIC_API_KEY = apiProvider.authToken;
-    return;
-  }
-
-  // Fallback: provider-specific env var auto-mapping
-  const isZenmuxEndpoint =
-    apiProvider.type === "zenmux" || apiProvider.baseUrl?.includes("zenmux.ai");
+  // Detect provider type for auth token handling
   const isOpenRouterEndpoint =
     apiProvider.type === "openrouter" ||
     apiProvider.baseUrl?.includes("openrouter.ai");
+  const isZenmuxEndpoint =
+    apiProvider.type === "zenmux" || apiProvider.baseUrl?.includes("zenmux.ai");
   const isOllamaEndpoint =
     apiProvider.type === "ollama" ||
     apiProvider.baseUrl?.includes("localhost:11434");
 
+  // API key selection: settings file authToken takes priority
+  if (apiProvider.authToken) {
+    if (isOpenRouterEndpoint) {
+      // OpenRouter requires ANTHROPIC_AUTH_TOKEN (not ANTHROPIC_API_KEY)
+      // See: https://openrouter.ai/docs/guides/guides/claude-code-integration
+      process.env.ANTHROPIC_AUTH_TOKEN = apiProvider.authToken;
+      // Must clear ANTHROPIC_API_KEY so SDK uses AUTH_TOKEN
+      // Use undefined (not "") because getApiKey uses ?? which treats "" as valid
+      process.env.ANTHROPIC_API_KEY = undefined;
+    } else {
+      process.env.ANTHROPIC_API_KEY = apiProvider.authToken;
+    }
+    return;
+  }
+
+  // Fallback: provider-specific env var auto-mapping
   if (isZenmuxEndpoint && process.env.ZENMUX_API_KEY) {
     process.env.ANTHROPIC_API_KEY = process.env.ZENMUX_API_KEY;
   } else if (isOpenRouterEndpoint && process.env.OPENROUTER_API_KEY) {
-    process.env.ANTHROPIC_API_KEY = process.env.OPENROUTER_API_KEY;
+    // OpenRouter requires ANTHROPIC_AUTH_TOKEN (not ANTHROPIC_API_KEY)
+    process.env.ANTHROPIC_AUTH_TOKEN = process.env.OPENROUTER_API_KEY;
+    // Must clear ANTHROPIC_API_KEY so SDK uses AUTH_TOKEN
+    process.env.ANTHROPIC_API_KEY = undefined;
   } else if (isOllamaEndpoint) {
     // Ollama: Use OLLAMA_API_KEY if set, otherwise default to literal "ollama"
     process.env.ANTHROPIC_API_KEY = process.env.OLLAMA_API_KEY || "ollama";
@@ -541,9 +554,11 @@ function injectNonAnthropicProviderEnv(
  * 4. Generic ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN
  *
  * Provider API Patterns:
- * - ZenMux: Uses ZENMUX_API_KEY, base_url="https://zenmux.ai/api/anthropic"
- * - OpenRouter: Uses OPENROUTER_API_KEY, base_url="https://openrouter.ai/api"
- * - Ollama: Uses "ollama" literal or OLLAMA_API_KEY, base_url="http://localhost:11434"
+ * - ZenMux: Maps ZENMUX_API_KEY → ANTHROPIC_API_KEY
+ * - OpenRouter: Maps OPENROUTER_API_KEY → ANTHROPIC_AUTH_TOKEN (special case!)
+ *   - Also sets ANTHROPIC_API_KEY="" (must be explicitly empty)
+ *   - See: https://openrouter.ai/docs/guides/guides/claude-code-integration
+ * - Ollama: Maps OLLAMA_API_KEY → ANTHROPIC_API_KEY (or defaults to "ollama")
  */
 export function injectLoopliaSettingsEnv(settings: LoopliaSettings): void {
   // Subscription auth (CLAUDE_CODE_OAUTH_TOKEN env var)

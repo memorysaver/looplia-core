@@ -312,6 +312,7 @@ describe("model-provider", () => {
       // Save original env vars
       originalEnv.ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL;
       originalEnv.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+      originalEnv.ANTHROPIC_AUTH_TOKEN = process.env.ANTHROPIC_AUTH_TOKEN;
       originalEnv.ZENMUX_API_KEY = process.env.ZENMUX_API_KEY;
       originalEnv.OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
       originalEnv.OLLAMA_API_KEY = process.env.OLLAMA_API_KEY;
@@ -329,6 +330,7 @@ describe("model-provider", () => {
       // Clear env vars for testing
       process.env.ANTHROPIC_BASE_URL = undefined;
       process.env.ANTHROPIC_API_KEY = undefined;
+      process.env.ANTHROPIC_AUTH_TOKEN = undefined;
       process.env.ZENMUX_API_KEY = undefined;
       process.env.OPENROUTER_API_KEY = undefined;
       process.env.OLLAMA_API_KEY = undefined;
@@ -543,9 +545,10 @@ describe("model-provider", () => {
       expect(process.env.ANTHROPIC_DEFAULT_OPUS_MODEL).toBe("existing-opus");
     });
 
-    it("should auto-map OPENROUTER_API_KEY to ANTHROPIC_API_KEY for OpenRouter endpoints", () => {
+    it("should auto-map OPENROUTER_API_KEY to ANTHROPIC_AUTH_TOKEN for OpenRouter endpoints", () => {
       process.env.OPENROUTER_API_KEY = "sk-or-test-key";
       process.env.ANTHROPIC_API_KEY = undefined;
+      process.env.ANTHROPIC_AUTH_TOKEN = undefined;
 
       const settings: LoopliaSettings = {
         version: "1.0",
@@ -561,12 +564,15 @@ describe("model-provider", () => {
 
       injectLoopliaSettingsEnv(settings);
 
-      expect(process.env.ANTHROPIC_API_KEY).toBe("sk-or-test-key");
+      // OpenRouter uses AUTH_TOKEN, not API_KEY
+      expect(process.env.ANTHROPIC_AUTH_TOKEN).toBe("sk-or-test-key");
+      expect(process.env.ANTHROPIC_API_KEY).toBeUndefined();
     });
 
-    it("should prioritize authToken over OPENROUTER_API_KEY", () => {
+    it("should prioritize authToken over OPENROUTER_API_KEY and use AUTH_TOKEN", () => {
       process.env.OPENROUTER_API_KEY = "sk-or-env-key";
       process.env.ANTHROPIC_API_KEY = undefined;
+      process.env.ANTHROPIC_AUTH_TOKEN = undefined;
 
       const settings: LoopliaSettings = {
         version: "1.0",
@@ -583,7 +589,9 @@ describe("model-provider", () => {
 
       injectLoopliaSettingsEnv(settings);
 
-      expect(process.env.ANTHROPIC_API_KEY).toBe("sk-or-auth-token");
+      // OpenRouter uses AUTH_TOKEN, not API_KEY
+      expect(process.env.ANTHROPIC_AUTH_TOKEN).toBe("sk-or-auth-token");
+      expect(process.env.ANTHROPIC_API_KEY).toBeUndefined();
     });
 
     it("should use OLLAMA_API_KEY when set for Ollama endpoints", () => {
