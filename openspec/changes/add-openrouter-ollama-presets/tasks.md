@@ -43,7 +43,7 @@ Implement OpenRouter and Ollama provider support following the existing ZenMux p
   - File: `packages/provider/src/claude-agent-sdk/model-provider.ts:453-478`
   - Add OpenRouter detection:
     - Check `apiProvider.type === "openrouter"` OR `baseUrl.includes("openrouter.ai")`
-    - Map `OPENROUTER_API_KEY` → `ANTHROPIC_API_KEY`
+    - Map `OPENROUTER_API_KEY` → `ANTHROPIC_AUTH_TOKEN`
   - Add Ollama detection:
     - Check `apiProvider.type === "ollama"` OR `baseUrl.includes("localhost:11434")`
     - Use `OLLAMA_API_KEY` if set, else default to `"ollama"` literal
@@ -76,7 +76,7 @@ Implement OpenRouter and Ollama provider support following the existing ZenMux p
 - [ ] **Update API keys documentation in help**
   - File: `apps/cli/src/commands/config.ts:92-95`
   - Add:
-    - `OPENROUTER_API_KEY  For OpenRouter (auto-mapped to ANTHROPIC_API_KEY)`
+    - `OPENROUTER_API_KEY  For OpenRouter (auto-mapped to ANTHROPIC_AUTH_TOKEN)`
     - `OLLAMA_API_KEY      For Ollama (optional, defaults to "ollama")`
   - Verify: Help text documents all env vars
 
@@ -99,7 +99,7 @@ Implement OpenRouter and Ollama provider support following the existing ZenMux p
 - [ ] **Update README.md environment variables**
   - File: `README.md:276-286`
   - Add rows to table:
-    - `OPENROUTER_API_KEY | OpenRouter API key (auto-mapped to ANTHROPIC_API_KEY)`
+    - `OPENROUTER_API_KEY | OpenRouter API key (auto-mapped to ANTHROPIC_AUTH_TOKEN)`
     - `OLLAMA_API_KEY | Ollama API key (optional, defaults to "ollama")`
   - Verify: Table formatting is correct
 
@@ -107,7 +107,7 @@ Implement OpenRouter and Ollama provider support following the existing ZenMux p
   - File: `.env.example:1-11`
   - Add commented examples:
     ```bash
-    # For OpenRouter (auto-mapped to ANTHROPIC_API_KEY when preset is OPENROUTER_*):
+    # For OpenRouter (auto-mapped to ANTHROPIC_AUTH_TOKEN when preset is OPENROUTER_*):
     # OPENROUTER_API_KEY=sk-or-v1-your-openrouter-key-here
     #
     # For Ollama (auto-mapped to ANTHROPIC_API_KEY, defaults to "ollama" if not set):

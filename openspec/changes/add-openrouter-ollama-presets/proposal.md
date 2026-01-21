@@ -79,7 +79,7 @@ OLLAMA_GLM47_CLOUD: {
 ```
 
 **Environment Variable Mapping:**
-- `OPENROUTER_API_KEY` → `ANTHROPIC_API_KEY`
+- `OPENROUTER_API_KEY` → `ANTHROPIC_AUTH_TOKEN`
 - `OLLAMA_API_KEY` (optional) → `ANTHROPIC_API_KEY` (defaults to `"ollama"` if not set)
 
 ## Impact Analysis

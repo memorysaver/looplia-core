@@ -556,7 +556,7 @@ function injectNonAnthropicProviderEnv(
  * Provider API Patterns:
  * - ZenMux: Maps ZENMUX_API_KEY → ANTHROPIC_API_KEY
  * - OpenRouter: Maps OPENROUTER_API_KEY → ANTHROPIC_AUTH_TOKEN (special case!)
- *   - Also sets ANTHROPIC_API_KEY="" (must be explicitly empty)
+ *   - Also sets ANTHROPIC_API_KEY=undefined (must be explicitly empty)
  *   - See: https://openrouter.ai/docs/guides/guides/claude-code-integration
  * - Ollama: Maps OLLAMA_API_KEY → ANTHROPIC_API_KEY (or defaults to "ollama")
  */

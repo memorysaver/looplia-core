@@ -210,12 +210,12 @@ These variables work with the provider system:
 |----------|-------------|
 | `ANTHROPIC_API_KEY` | Used when provider is `anthropic` |
 | `ZENMUX_API_KEY` | Used when provider is `zenmux` (auto-mapped to `ANTHROPIC_API_KEY` for SDK) |
-| `OPENROUTER_API_KEY` | Used when provider is `openrouter` (auto-mapped to `ANTHROPIC_API_KEY` for SDK) |
+| `OPENROUTER_API_KEY` | Used when provider is `openrouter` (auto-mapped to `ANTHROPIC_AUTH_TOKEN` for SDK) |
 | `OLLAMA_API_KEY` | Used when provider is `ollama` (auto-mapped to `ANTHROPIC_API_KEY` for SDK, defaults to "ollama") |
 
 ### Auto-Mapping
 
-Looplia automatically maps provider-specific API keys to `ANTHROPIC_API_KEY` for SDK compatibility:
+Looplia automatically maps provider-specific API keys to `ANTHROPIC_API_KEY` for SDK compatibility (except OpenRouter, which uses `ANTHROPIC_AUTH_TOKEN`):
 
 **ZenMux:**
 ```bash

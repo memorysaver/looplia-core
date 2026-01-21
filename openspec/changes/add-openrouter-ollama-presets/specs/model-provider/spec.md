@@ -87,7 +87,7 @@ The system SHALL auto-map `OPENROUTER_API_KEY` environment variable to `ANTHROPI
 - **GIVEN** the configured `baseUrl` contains "openrouter.ai"
 - **AND** `OPENROUTER_API_KEY` is set in environment
 - **WHEN** the system injects environment variables
-- **THEN** `ANTHROPIC_API_KEY` SHALL be set to the value of `OPENROUTER_API_KEY`
+- **THEN** `ANTHROPIC_AUTH_TOKEN` SHALL be set to the value of `OPENROUTER_API_KEY`
 - **AND** `ANTHROPIC_BASE_URL` SHALL be set to the configured `baseUrl`
 
 ### Requirement: Ollama API Key Handling
@@ -140,7 +140,7 @@ The CLI help text SHALL include the new OpenRouter and Ollama presets.
 #### Scenario: API keys documentation includes new providers
 - **GIVEN** user runs `looplia config provider --help`
 - **THEN** the output SHALL document:
-  - `OPENROUTER_API_KEY` - For OpenRouter (auto-mapped to ANTHROPIC_API_KEY)
+  - `OPENROUTER_API_KEY` - For OpenRouter (auto-mapped to ANTHROPIC_AUTH_TOKEN)
   - `OLLAMA_API_KEY` - For Ollama (optional, defaults to "ollama")
 
 #### Scenario: Provider type list includes new providers
@@ -230,7 +230,7 @@ The environment variables reference SHALL document new providers comprehensively
 #### Scenario: Provider configuration section includes new mappings
 - **GIVEN** the "Provider Configuration" section in environment-variables.mdx
 - **THEN** it SHALL document:
-  - OpenRouter auto-mapping (`OPENROUTER_API_KEY` → `ANTHROPIC_API_KEY`)
+  - OpenRouter auto-mapping (`OPENROUTER_API_KEY` → `ANTHROPIC_AUTH_TOKEN`)
   - Ollama authentication pattern (defaults to `"ollama"` literal)
 
 #### Scenario: Priority order updated for new providers

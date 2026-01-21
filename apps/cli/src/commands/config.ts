@@ -95,7 +95,7 @@ Configuration keys for 'set':
 API keys (set in .env - looplia auto-maps based on provider):
   ANTHROPIC_API_KEY   For Anthropic (direct)
   ZENMUX_API_KEY      For ZenMux (auto-mapped to ANTHROPIC_API_KEY)
-  OPENROUTER_API_KEY  For OpenRouter (auto-mapped to ANTHROPIC_API_KEY)
+  OPENROUTER_API_KEY  For OpenRouter (auto-mapped to ANTHROPIC_AUTH_TOKEN)
   OLLAMA_API_KEY      For Ollama (optional, defaults to "ollama")
 
 Examples:
