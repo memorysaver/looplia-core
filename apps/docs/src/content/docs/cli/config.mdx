@@ -121,8 +121,35 @@ Available presets:
 |--------|-------|-------------|
 | `OPENROUTER_PRESET` | @preset/looplia-default | User-configured preset |
 
-Configure models in your [OpenRouter dashboard](https://openrouter.ai/settings/presets).
-Create a preset named "looplia-default" with your preferred model settings.
+**Setup Instructions:**
+
+1. **Create preset in OpenRouter dashboard:**
+   - Visit [OpenRouter Presets](https://openrouter.ai/settings/presets)
+   - Click "Create Preset"
+   - Name it **exactly** `looplia-default`
+   - Select your preferred model (e.g., Claude Sonnet, GPT-4, Gemini)
+   - Configure routing options (fallbacks, providers, etc.)
+   - Save the preset
+
+2. **Configure looplia:**
+   ```bash
+   # Set your OpenRouter API key
+   export OPENROUTER_API_KEY=sk-or-v1-...
+
+   # Apply the preset
+   looplia config provider preset OPENROUTER_PRESET
+
+   # Verify configuration
+   looplia config provider show
+   ```
+
+3. **Run workflows:**
+   ```bash
+   looplia run writing-kit --file article.md
+   ```
+
+Your workflows will use whatever model you configured in the OpenRouter dashboard.
+You can change models at any time by updating the preset - no need to reconfigure looplia.
   </TabItem>
   <TabItem label="ZenMux Proxy">
 | Preset | Model | Provider |

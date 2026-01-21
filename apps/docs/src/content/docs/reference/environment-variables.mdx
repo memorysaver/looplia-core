@@ -36,6 +36,39 @@ echo 'ANTHROPIC_API_KEY=sk-ant-api03-...' >> .env
 env $(cat .env) looplia run writing-kit --file test.md
 ```
 
+### OpenRouter Configuration
+
+Use OpenRouter to access multiple AI providers through a single API with centralized model management:
+
+```bash
+# 1. Create preset in OpenRouter dashboard
+# Visit: https://openrouter.ai/settings/presets
+# - Click "Create Preset"
+# - Name it exactly "looplia-default"
+# - Select your preferred model (Claude, GPT-4, Gemini, etc.)
+# - Configure routing, fallbacks, and providers
+# - Save the preset
+
+# 2. Set OpenRouter API key
+export OPENROUTER_API_KEY=sk-or-v1-...
+
+# 3. Apply preset
+looplia config provider preset OPENROUTER_PRESET
+
+# 4. Run workflow
+looplia run writing-kit --file article.md
+```
+
+**Benefits:**
+- Access 100+ models through one integration
+- Change models via dashboard without reconfiguring looplia
+- Use advanced routing (fallbacks, load balancing, cost optimization)
+- Centralized billing and usage tracking
+
+<Aside type="tip">
+The preset name **must be exactly** `looplia-default`. You can update model selections in the OpenRouter dashboard at any time without changing looplia configuration.
+</Aside>
+
 ### Claude Code Subscription Authentication
 
 Use your existing Claude Code subscription instead of separate API credits:
