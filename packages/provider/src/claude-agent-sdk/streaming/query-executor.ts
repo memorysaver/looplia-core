@@ -19,6 +19,7 @@ import { mapException } from "../utils/error-mapper";
 import type { AgenticQueryResult } from "../utils/shared";
 import {
   extractContentIdFromPrompt,
+  extractSandboxResult,
   getOrInitWorkspace,
 } from "../utils/shared";
 import {
@@ -48,14 +49,17 @@ import type { StreamingEvent } from "./types";
  *
  * Key SDK options:
  * - allowedTools: ["Read", "Skill"] - Tools the agent can use
- * - outputFormat: json_schema - Structured output validation
  *
+ * Note: outputFormat (json_schema) was removed to support non-Anthropic models.
+ * Final results are now extracted from sandbox output files after workflow completion.
+ *
+ * @see openspec/changes/remove-structuredoutput-enforcement/design.md
  * @yields StreamingEvent objects for UI consumption
  * @returns Final AgenticQueryResult on completion
  */
 export async function* executeAgenticQueryStreaming<T>(
   prompt: string,
-  jsonSchema: Record<string, unknown>,
+  _jsonSchema: Record<string, unknown>,
   config?: ClaudeAgentConfig
 ): AsyncGenerator<StreamingEvent, AgenticQueryResult<T>> {
   const resolvedConfig = resolveConfig(config);
@@ -146,7 +150,8 @@ export async function* executeAgenticQueryStreaming<T>(
           "WebSearch",
           "WebFetch",
         ],
-        outputFormat: { type: "json_schema", schema: jsonSchema },
+        // v0.7.2: Removed outputFormat to support non-Anthropic models
+        // Final results are now extracted from sandbox output files via extractSandboxResult()
         // v0.6.9: No custom agents - using built-in general-purpose for workflow steps
       },
     });
@@ -175,6 +180,12 @@ export async function* executeAgenticQueryStreaming<T>(
 
     logger.close();
     yield progressTracker.onComplete();
+
+    // v0.7.2: If no result from StructuredOutput (e.g., non-Anthropic models),
+    // extract the final artifact from sandbox output files
+    if (!finalResult) {
+      finalResult = await extractSandboxResult<T>();
+    }
 
     return (
       finalResult ?? {

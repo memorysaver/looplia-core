@@ -10,5 +10,6 @@ export {
   extractContentIdFromPrompt,
   VALID_CONTENT_ID_PATTERN,
 } from "./content-id";
+export { extractSandboxResult } from "./sandbox-result";
 export type { AgenticQueryResult } from "./types";
 export { clearWorkspaceCache, getOrInitWorkspace } from "./workspace-cache";

@@ -28,6 +28,7 @@ import { mapException } from "../utils/error-mapper";
 import type { AgenticQueryResult } from "../utils/shared";
 import {
   extractContentIdFromPrompt,
+  extractSandboxResult,
   getOrInitWorkspace,
 } from "../utils/shared";
 import {
@@ -85,7 +86,7 @@ export type QuestionCallback = (
  */
 export async function* executeInteractiveQueryStreaming<T>(
   prompt: string,
-  jsonSchema: Record<string, unknown>,
+  _jsonSchema: Record<string, unknown>,
   config?: ClaudeAgentConfig,
   questionCallback?: QuestionCallback
 ): AsyncGenerator<StreamingEvent, AgenticQueryResult<T>> {
@@ -208,7 +209,8 @@ export async function* executeInteractiveQueryStreaming<T>(
           "WebFetch",
           "AskUserQuestion", // Only in interactive mode
         ],
-        outputFormat: { type: "json_schema", schema: jsonSchema },
+        // v0.7.2: Removed outputFormat to support non-Anthropic models
+        // Final results are now extracted from sandbox output files via extractSandboxResult()
       },
     });
 
@@ -236,6 +238,12 @@ export async function* executeInteractiveQueryStreaming<T>(
 
     logger.close();
     yield progressTracker.onComplete();
+
+    // v0.7.2: If no result from StructuredOutput (e.g., non-Anthropic models),
+    // extract the final artifact from sandbox output files
+    if (!finalResult) {
+      finalResult = await extractSandboxResult<T>();
+    }
 
     return (
       finalResult ?? {

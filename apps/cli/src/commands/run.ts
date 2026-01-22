@@ -22,6 +22,7 @@ import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import {
   extractWorkflowSkills,
+  generateValidationManifest,
   isInputlessWorkflow,
   type ParsedWorkflow,
   parseWorkflow,
@@ -787,6 +788,31 @@ export async function runRunCommand(args: string[]): Promise<void> {
 
     // 3. Resolve or create sandbox (validates inputs before API key check)
     const sandboxId = resolveSandboxId(workspace, parsed, allowInputless);
+
+    // 3.5. Populate validation.json with workflow steps (v0.7.4)
+    // This enables stop-guard.sh to validate workflow completion
+    if (workflowInfo?.parsed?.definition) {
+      const manifest = generateValidationManifest(
+        workflowInfo.parsed.definition
+      );
+      const validationPath = join(
+        workspace,
+        "sandbox",
+        sandboxId,
+        "validation.json"
+      );
+      if (existsSync(validationPath)) {
+        const existing = JSON.parse(
+          readFileSync(validationPath, "utf-8")
+        ) as ValidationJson;
+        existing.steps = manifest.steps;
+        writeFileSync(
+          validationPath,
+          JSON.stringify(existing, null, 2),
+          "utf-8"
+        );
+      }
+    }
 
     // 4. v0.7.0: JIT skill installation
     if (!(parsed.mock || (await handleJitInstallation(workflowInfo)))) {

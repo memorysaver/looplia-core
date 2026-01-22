@@ -40,7 +40,9 @@ for step in $(jq -r '.steps | keys[]' "$VALIDATION_JSON" 2>/dev/null); do
 done
 
 if [[ -n "$MISSING" ]]; then
-  echo "{\"decision\": \"block\", \"reason\": \"Missing output files for steps:$MISSING. You MUST call the Write tool to create these files at the paths specified in the workflow.\"}"
+  # Following ralph-loop pattern: reason field is the continuation prompt fed back to agent
+  REASON="Your workflow is not complete. You still need to create output files for these steps:$MISSING. Please continue working on the workflow by using the Write tool to create the required JSON files at the paths specified in validation.json for each incomplete step. Do not stop until all workflow steps have their output files created."
+  echo "{\"decision\": \"block\", \"reason\": \"$REASON\"}"
   exit 0
 fi
 
@@ -48,7 +50,9 @@ fi
 PENDING=$(jq -r '.steps | to_entries[] | select(.value.validated == false) | .key' "$VALIDATION_JSON" 2>/dev/null | tr '\n' ', ' | sed 's/,$//')
 
 if [[ -n "$PENDING" ]]; then
-  echo "{\"decision\": \"block\", \"reason\": \"Workflow incomplete. Pending validation for steps: $PENDING. Output files exist but need validation - re-write them to trigger validation.\"}"
+  # Following ralph-loop pattern: reason field is the continuation prompt fed back to agent
+  REASON="Your workflow is not complete. The following steps need validation: $PENDING. The output files exist but have not been validated yet. Please re-write these output files using the Write tool to trigger validation. Do not stop until all workflow steps are validated."
+  echo "{\"decision\": \"block\", \"reason\": \"$REASON\"}"
   exit 0
 fi
 
