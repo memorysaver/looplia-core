@@ -1,0 +1,299 @@
+---
+title: Presets Reference
+description: Complete reference for all 22 Looplia provider presets.
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+Looplia includes **22 built-in presets** for quickly configuring model providers. Presets bundle provider settings, API endpoints, and model configurations into a single command.
+
+## Quick Reference
+
+| Category | Count | Description |
+|----------|-------|-------------|
+| [Anthropic Direct](#anthropic-direct) | 2 | Direct Anthropic API with your API key |
+| [Claude Code Subscription](#claude-code-subscription) | 3 | Use your Claude Code subscription |
+| [ZenMux Proxy](#zenmux-proxy) | 14 | Access multiple providers via ZenMux |
+| [OpenRouter](#openrouter) | 1 | User-configured preset via OpenRouter dashboard |
+| [Ollama](#ollama) | 2 | Local Ollama with cloud model routing |
+| **Total** | **22** | |
+
+## Applying Presets
+
+```bash
+# Apply a preset
+looplia config provider preset <PRESET_NAME>
+
+# Verify configuration
+looplia config provider show
+
+# Run workflow
+looplia run writing-kit --file article.md
+```
+
+---
+
+## Anthropic Direct
+
+Direct connection to Anthropic's API. Requires `ANTHROPIC_API_KEY` environment variable.
+
+| Preset | Model | Description |
+|--------|-------|-------------|
+| `ANTHROPIC_CLAUDE_HAIKU` | claude-haiku-4-5-20251001 | Fast, cost-effective |
+| `ANTHROPIC_CLAUDE_SONNET` | claude-sonnet-4-5-20250929 | Balanced performance |
+
+### Setup
+
+```bash
+# Set API key
+export ANTHROPIC_API_KEY=sk-ant-api03-...
+
+# Apply preset
+looplia config provider preset ANTHROPIC_CLAUDE_HAIKU
+
+# Run workflow
+looplia run writing-kit --file article.md
+```
+
+<Aside>
+These presets use Anthropic's API directly. Get your API key from [console.anthropic.com](https://console.anthropic.com).
+</Aside>
+
+---
+
+## Claude Code Subscription
+
+Use your existing Claude Code subscription instead of separate API credits. Requires `CLAUDE_CODE_OAUTH_TOKEN` environment variable.
+
+| Preset | Model | Description |
+|--------|-------|-------------|
+| `CLAUDE_CODE_SUBSCRIPTION_HAIKU` | claude-haiku-4-5-20251001 | Haiku via subscription |
+| `CLAUDE_CODE_SUBSCRIPTION_SONNET` | claude-sonnet-4-5-20250929 | Sonnet via subscription |
+| `CLAUDE_CODE_SUBSCRIPTION_OPUS` | claude-opus-4-5-20251101 | Opus via subscription |
+
+### Setup
+
+```bash
+# Extract OAuth token from macOS Keychain
+export CLAUDE_CODE_OAUTH_TOKEN=$(security find-generic-password -s "Claude Code-credentials" -w | jq -r '.claudeAiOauth.accessToken')
+
+# Or set directly if you have the token
+export CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-...
+
+# Apply preset
+looplia config provider preset CLAUDE_CODE_SUBSCRIPTION_SONNET
+
+# Run workflow
+looplia run writing-kit --file article.md
+```
+
+<Aside type="tip">
+Add the token extraction to your `~/.zshrc` or `~/.bashrc` to automatically set the token on shell startup.
+</Aside>
+
+---
+
+## ZenMux Proxy
+
+Access multiple AI providers through the ZenMux proxy. Requires `ZENMUX_API_KEY` environment variable.
+
+<Tabs>
+  <TabItem label="Anthropic">
+| Preset | Model | Provider |
+|--------|-------|----------|
+| `ZENMUX_ANTHROPIC_HAIKU45` | anthropic/claude-haiku-4.5 | Anthropic |
+  </TabItem>
+  <TabItem label="Zhipu AI">
+| Preset | Model | Provider |
+|--------|-------|----------|
+| `ZENMUX_ZAI_GLM47` | z-ai/glm-4.7 | Zhipu AI |
+| `ZENMUX_ZAI_GLM46V` | z-ai/glm-4.6v | Zhipu AI |
+| `ZENMUX_ZAI_GLM46VFLASH` | z-ai/glm-4.6v-flash | Zhipu AI |
+  </TabItem>
+  <TabItem label="Google">
+| Preset | Model | Provider |
+|--------|-------|----------|
+| `ZENMUX_GOOGLE_GEMINI3FLASH` | google/gemini-3-flash-preview | Google |
+| `ZENMUX_GOOGLE_GEMINI3FLASH_FREE` | google/gemini-3-flash-preview-free | Google (Free) |
+  </TabItem>
+  <TabItem label="Other Providers">
+| Preset | Model | Provider |
+|--------|-------|----------|
+| `ZENMUX_MINIMAX_M21` | minimax/minimax-m2.1 | MiniMax |
+| `ZENMUX_XIAOMI_MIMOV2FLASH` | xiaomi/mimo-v2-flash | Xiaomi |
+| `ZENMUX_XAI_GROK41FAST` | x-ai/grok-4.1-fast | xAI |
+| `ZENMUX_DEEPSEEK_V32` | deepseek/deepseek-v3.2 | DeepSeek |
+| `ZENMUX_DEEPSEEK_REASONER` | deepseek/deepseek-reasoner | DeepSeek |
+| `ZENMUX_VOLCENGINE_DOUBAO_SEED` | volcengine/doubao-seed-1.8 | ByteDance |
+| `ZENMUX_MISTRAL_LARGE2512` | mistralai/mistral-large-2512 | Mistral |
+| `ZENMUX_OPENAI_GPT51CODEXMINI` | openai/gpt-5.1-codex-mini | OpenAI |
+  </TabItem>
+</Tabs>
+
+### Setup
+
+```bash
+# Set ZenMux API key
+export ZENMUX_API_KEY=sk-zenmux-...
+
+# Apply preset (example: GLM-4.7)
+looplia config provider preset ZENMUX_ZAI_GLM47
+
+# Run workflow
+looplia run writing-kit --file article.md
+```
+
+### All ZenMux Presets
+
+| Preset | Model | Provider |
+|--------|-------|----------|
+| `ZENMUX_ANTHROPIC_HAIKU45` | anthropic/claude-haiku-4.5 | Anthropic |
+| `ZENMUX_ZAI_GLM47` | z-ai/glm-4.7 | Zhipu AI |
+| `ZENMUX_ZAI_GLM46V` | z-ai/glm-4.6v | Zhipu AI |
+| `ZENMUX_ZAI_GLM46VFLASH` | z-ai/glm-4.6v-flash | Zhipu AI |
+| `ZENMUX_MINIMAX_M21` | minimax/minimax-m2.1 | MiniMax |
+| `ZENMUX_GOOGLE_GEMINI3FLASH` | google/gemini-3-flash-preview | Google |
+| `ZENMUX_GOOGLE_GEMINI3FLASH_FREE` | google/gemini-3-flash-preview-free | Google (Free) |
+| `ZENMUX_XIAOMI_MIMOV2FLASH` | xiaomi/mimo-v2-flash | Xiaomi |
+| `ZENMUX_XAI_GROK41FAST` | x-ai/grok-4.1-fast | xAI |
+| `ZENMUX_DEEPSEEK_V32` | deepseek/deepseek-v3.2 | DeepSeek |
+| `ZENMUX_DEEPSEEK_REASONER` | deepseek/deepseek-reasoner | DeepSeek |
+| `ZENMUX_VOLCENGINE_DOUBAO_SEED` | volcengine/doubao-seed-1.8 | ByteDance |
+| `ZENMUX_MISTRAL_LARGE2512` | mistralai/mistral-large-2512 | Mistral |
+| `ZENMUX_OPENAI_GPT51CODEXMINI` | openai/gpt-5.1-codex-mini | OpenAI |
+
+<Aside>
+ZenMux provides a unified API for accessing multiple AI providers. The base URL is `https://zenmux.ai/api/anthropic`.
+</Aside>
+
+---
+
+## OpenRouter
+
+Access multiple models through OpenRouter with centralized configuration via their dashboard.
+
+| Preset | Model | Description |
+|--------|-------|-------------|
+| `OPENROUTER_PRESET` | @preset/looplia-default | User-configured preset |
+
+### Setup
+
+1. **Create preset in OpenRouter dashboard:**
+   - Visit [OpenRouter Presets](https://openrouter.ai/settings/presets)
+   - Click "Create Preset"
+   - Name it **exactly** `looplia-default`
+   - Select your preferred model (Claude, GPT-4, Gemini, etc.)
+   - Configure routing options (fallbacks, providers, etc.)
+   - Save the preset
+
+2. **Configure looplia:**
+   ```bash
+   # Set OpenRouter API key
+   export OPENROUTER_API_KEY=sk-or-v1-...
+
+   # Apply preset
+   looplia config provider preset OPENROUTER_PRESET
+
+   # Verify configuration
+   looplia config provider show
+   ```
+
+3. **Run workflows:**
+   ```bash
+   looplia run writing-kit --file article.md
+   ```
+
+<Aside type="tip">
+The preset name **must be exactly** `looplia-default`. You can update model selections in the OpenRouter dashboard at any time without changing looplia configuration.
+</Aside>
+
+### Benefits
+
+- Access 100+ models through one integration
+- Change models via dashboard without reconfiguring looplia
+- Use advanced routing (fallbacks, load balancing, cost optimization)
+- Centralized billing and usage tracking
+
+---
+
+## Ollama
+
+Local Ollama installation with cloud model routing. Requires Ollama running locally.
+
+| Preset | Model | Description |
+|--------|-------|-------------|
+| `OLLAMA_GLM47_CLOUD` | glm-4.7:cloud | GLM-4.7 via Ollama cloud routing |
+| `OLLAMA_MINIMAX_M21_CLOUD` | minimax-m2.1:cloud | MiniMax-M2.1 via Ollama cloud routing |
+
+### Setup
+
+```bash
+# Ensure Ollama is running
+ollama serve
+
+# Optional: Set API key (defaults to "ollama" if not set)
+export OLLAMA_API_KEY=ollama
+
+# Apply preset
+looplia config provider preset OLLAMA_GLM47_CLOUD
+
+# Run workflow
+looplia run writing-kit --file article.md
+```
+
+<Aside>
+Ollama presets use cloud model routing through your local Ollama instance at `http://localhost:11434`.
+</Aside>
+
+---
+
+## Custom Configuration
+
+For advanced use cases, you can set individual provider values:
+
+```bash
+# Set custom base URL
+looplia config provider set base-url https://custom-proxy.example.com
+
+# Set auth token
+looplia config provider set auth-token sk-custom-xxx
+
+# Set model
+looplia config provider set model custom-model-name
+
+# Set provider type
+looplia config provider set provider custom
+```
+
+### Reset Configuration
+
+```bash
+# Reset to defaults
+looplia config provider reset
+```
+
+---
+
+## Environment Variables
+
+Provider settings can also be configured via environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `ANTHROPIC_API_KEY` | Anthropic API key (default provider) |
+| `ZENMUX_API_KEY` | ZenMux API key (auto-mapped) |
+| `OPENROUTER_API_KEY` | OpenRouter API key (uses ANTHROPIC_AUTH_TOKEN) |
+| `OLLAMA_API_KEY` | Ollama API key (defaults to "ollama") |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Claude Code subscription OAuth token |
+
+<Aside type="caution">
+Config file `authToken` takes precedence over environment variables when explicitly set via `looplia config provider set auth-token`.
+</Aside>
+
+---
+
+## See Also
+
+- [config Command](/cli/config/) — Manage provider settings
+- [Environment Variables](/reference/environment-variables/) — Full variable reference
+- [Installation](/getting-started/installation/) — Initial setup

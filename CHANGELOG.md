@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **OpenRouter and Ollama Provider Presets** - Added support for OpenRouter and Ollama as model provider options
+  - New presets: `OPENROUTER_PRESET`, `OLLAMA_GLM47_CLOUD`, `OLLAMA_MINIMAX_M21_CLOUD`
+  - OpenRouter uses `@preset/looplia-default` for dashboard-configured models
+  - Ollama presets for local inference with GLM-4.7 and MiniMax-M2.1 cloud models
+  - Environment variables: `OPENROUTER_API_KEY` and `OLLAMA_API_KEY` auto-map to `ANTHROPIC_API_KEY`
+  - Ollama defaults to literal `"ollama"` when `OLLAMA_API_KEY` not set
+  - Configure with: `looplia config provider preset OPENROUTER_PRESET` or `OLLAMA_GLM47_CLOUD`
+  - Total presets increased from 19 to 22
+
 - **Claude Code Subscription Presets** - Use existing Claude subscription via OAuth token
   - New presets: `CLAUDE_CODE_SUBSCRIPTION_HAIKU`, `CLAUDE_CODE_SUBSCRIPTION_SONNET`, `CLAUDE_CODE_SUBSCRIPTION_OPUS`
   - Requires `CLAUDE_CODE_OAUTH_TOKEN` environment variable (extract from macOS Keychain or set manually)

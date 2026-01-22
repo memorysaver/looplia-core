@@ -92,7 +92,7 @@ Available Presets:
   ANTHROPIC_CLAUDE_SONNET
   ZENMUX_ZAI_GLM47
   ZENMUX_GOOGLE_GEMINI3FLASH
-  ... (16 total)
+  ... (22 total)
 ```
 
 ### Apply a Preset
@@ -109,6 +109,47 @@ Available presets:
 |--------|-------|-------------|
 | `ANTHROPIC_CLAUDE_HAIKU` | claude-haiku-4-20250514 | Fast, cost-effective |
 | `ANTHROPIC_CLAUDE_SONNET` | claude-sonnet-4-20250514 | Balanced performance |
+  </TabItem>
+  <TabItem label="Ollama">
+| Preset | Model | Description |
+|--------|-------|-------------|
+| `OLLAMA_GLM47_CLOUD` | glm-4.7:cloud | GLM-4.7 cloud model |
+| `OLLAMA_MINIMAX_M21_CLOUD` | minimax-m2.1:cloud | MiniMax-M2.1 cloud |
+  </TabItem>
+  <TabItem label="OpenRouter">
+| Preset | Model | Description |
+|--------|-------|-------------|
+| `OPENROUTER_PRESET` | @preset/looplia-default | User-configured preset |
+
+**Setup Instructions:**
+
+1. **Create preset in OpenRouter dashboard:**
+   - Visit [OpenRouter Presets](https://openrouter.ai/settings/presets)
+   - Click "Create Preset"
+   - Name it **exactly** `looplia-default`
+   - Select your preferred model (e.g., Claude Sonnet, GPT-4, Gemini)
+   - Configure routing options (fallbacks, providers, etc.)
+   - Save the preset
+
+2. **Configure looplia:**
+   ```bash
+   # Set your OpenRouter API key
+   export OPENROUTER_API_KEY=sk-or-v1-...
+
+   # Apply the preset
+   looplia config provider preset OPENROUTER_PRESET
+
+   # Verify configuration
+   looplia config provider show
+   ```
+
+3. **Run workflows:**
+   ```bash
+   looplia run writing-kit --file article.md
+   ```
+
+Your workflows will use whatever model you configured in the OpenRouter dashboard.
+You can change models at any time by updating the preset - no need to reconfigure looplia.
   </TabItem>
   <TabItem label="ZenMux Proxy">
 | Preset | Model | Provider |
@@ -144,7 +185,7 @@ looplia config provider set <key> <value>
 | `auth-token` | API key for the provider |
 | `model` | Model identifier |
 | `base-url` | API endpoint URL |
-| `provider` | Provider name (`anthropic`, `zenmux`) |
+| `provider` | Provider name (`anthropic`, `zenmux`, `openrouter`, `ollama`, `custom`) |
 
 Examples:
 
@@ -238,5 +279,6 @@ Provider settings can also be set via environment variables:
 ## See Also
 
 - [Installation](/getting-started/installation/) — Initial setup
+- [Presets Reference](/reference/presets/) — All 22 provider presets
 - [Environment Variables](/reference/environment-variables/) — Full reference
 - [run](/cli/run/) — Execute workflows with configured provider

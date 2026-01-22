@@ -13,10 +13,12 @@ Looplia uses environment variables for API keys, model configuration, and develo
 |----------|-------------|----------|
 | `ANTHROPIC_API_KEY` | Anthropic API key for Claude | Yes* |
 | `ZENMUX_API_KEY` | ZenMux proxy API key | Yes* |
+| `OPENROUTER_API_KEY` | OpenRouter API key | Yes* |
+| `OLLAMA_API_KEY` | Ollama API key (defaults to "ollama") | No |
 | `CLAUDE_CODE_OAUTH_TOKEN` | Claude Code OAuth token (alternative auth) | No |
 
 <Aside>
-*Either `ANTHROPIC_API_KEY` or `ZENMUX_API_KEY` is required, depending on your provider configuration. Alternatively, use `CLAUDE_CODE_OAUTH_TOKEN` with subscription presets.
+*Either `ANTHROPIC_API_KEY`, `ZENMUX_API_KEY`, or `OPENROUTER_API_KEY` is required, depending on your provider configuration. Alternatively, use `CLAUDE_CODE_OAUTH_TOKEN` with subscription presets. For Ollama, `OLLAMA_API_KEY` defaults to "ollama" if not set.
 </Aside>
 
 ### Setting API Keys
@@ -33,6 +35,39 @@ source ~/.zshrc
 echo 'ANTHROPIC_API_KEY=sk-ant-api03-...' >> .env
 env $(cat .env) looplia run writing-kit --file test.md
 ```
+
+### OpenRouter Configuration
+
+Use OpenRouter to access multiple AI providers through a single API with centralized model management:
+
+```bash
+# 1. Create preset in OpenRouter dashboard
+# Visit: https://openrouter.ai/settings/presets
+# - Click "Create Preset"
+# - Name it exactly "looplia-default"
+# - Select your preferred model (Claude, GPT-4, Gemini, etc.)
+# - Configure routing, fallbacks, and providers
+# - Save the preset
+
+# 2. Set OpenRouter API key
+export OPENROUTER_API_KEY=sk-or-v1-...
+
+# 3. Apply preset
+looplia config provider preset OPENROUTER_PRESET
+
+# 4. Run workflow
+looplia run writing-kit --file article.md
+```
+
+**Benefits:**
+- Access 100+ models through one integration
+- Change models via dashboard without reconfiguring looplia
+- Use advanced routing (fallbacks, load balancing, cost optimization)
+- Centralized billing and usage tracking
+
+<Aside type="tip">
+The preset name **must be exactly** `looplia-default`. You can update model selections in the OpenRouter dashboard at any time without changing looplia configuration.
+</Aside>
 
 ### Claude Code Subscription Authentication
 
@@ -175,11 +210,14 @@ These variables work with the provider system:
 |----------|-------------|
 | `ANTHROPIC_API_KEY` | Used when provider is `anthropic` |
 | `ZENMUX_API_KEY` | Used when provider is `zenmux` (auto-mapped to `ANTHROPIC_API_KEY` for SDK) |
+| `OPENROUTER_API_KEY` | Used when provider is `openrouter` (auto-mapped to `ANTHROPIC_AUTH_TOKEN` for SDK) |
+| `OLLAMA_API_KEY` | Used when provider is `ollama` (auto-mapped to `ANTHROPIC_API_KEY` for SDK, defaults to "ollama") |
 
 ### Auto-Mapping
 
-When using ZenMux, Looplia automatically maps credentials:
+Looplia automatically maps provider-specific API keys to `ANTHROPIC_API_KEY` for SDK compatibility (except OpenRouter, which uses `ANTHROPIC_AUTH_TOKEN`):
 
+**ZenMux:**
 ```bash
 # Set ZenMux key
 export ZENMUX_API_KEY=sk-zenmux-...
@@ -191,14 +229,39 @@ looplia config provider preset ZENMUX_ZAI_GLM47
 looplia run writing-kit --file article.md
 ```
 
+**OpenRouter:**
+```bash
+# Set OpenRouter key
+export OPENROUTER_API_KEY=sk-or-v1-...
+
+# Configure OpenRouter provider
+looplia config provider preset OPENROUTER_PRESET
+
+# The OPENROUTER_API_KEY is automatically used
+looplia run writing-kit --file article.md
+```
+
+**Ollama:**
+```bash
+# Optional: Set Ollama key (defaults to "ollama" if not set)
+export OLLAMA_API_KEY=ollama
+
+# Configure Ollama provider
+looplia config provider preset OLLAMA_GLM47_CLOUD
+
+# Uses OLLAMA_API_KEY or defaults to "ollama"
+looplia run writing-kit --file article.md
+```
+
 ## Priority Order (v0.6.9+)
 
 **API Keys:** Config file takes precedence when explicitly set:
 
 1. **Subscription auth** (highest priority) — `CLAUDE_CODE_OAUTH_TOKEN` with subscription preset
 2. **Config file `authToken`** — set via `looplia config provider set auth-token`
-3. **Endpoint-specific env var** — `ZENMUX_API_KEY` for ZenMux, `ANTHROPIC_API_KEY` for Anthropic
+3. **Endpoint-specific env var** — `ZENMUX_API_KEY` for ZenMux, `OPENROUTER_API_KEY` for OpenRouter, `OLLAMA_API_KEY` for Ollama, `ANTHROPIC_API_KEY` for Anthropic
 4. **Default env var** (`ANTHROPIC_API_KEY`)
+5. **Ollama default** (lowest priority) — literal `"ollama"` string when provider is Ollama and no other auth is set
 
 **Model Settings:** Environment variables take precedence:
 
@@ -266,6 +329,8 @@ docker run -e ANTHROPIC_API_KEY=sk-ant-... -v ./content:/data my-looplia
 |----------|------|-------------|
 | `ANTHROPIC_API_KEY` | string | Anthropic API key |
 | `ZENMUX_API_KEY` | string | ZenMux proxy API key |
+| `OPENROUTER_API_KEY` | string | OpenRouter API key |
+| `OLLAMA_API_KEY` | string | Ollama API key (defaults to "ollama") |
 | `CLAUDE_CODE_OAUTH_TOKEN` | string | OAuth token authentication |
 | `LOOPLIA_AGENT_MODEL_MAIN` | string | Main agent model override |
 | `LOOPLIA_AGENT_MODEL_EXECUTOR` | string | Executor model override |

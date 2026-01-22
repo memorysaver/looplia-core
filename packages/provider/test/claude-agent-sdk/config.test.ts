@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
   DEFAULT_CONFIG,
   resolveConfig,
@@ -69,6 +69,17 @@ describe("config", () => {
 
   describe("validateConfig", () => {
     const originalApiKey = process.env.ANTHROPIC_API_KEY;
+    const originalOAuthToken = process.env.CLAUDE_CODE_OAUTH_TOKEN;
+    const originalOpenRouterKey = process.env.OPENROUTER_API_KEY;
+    const originalOllamaKey = process.env.OLLAMA_API_KEY;
+
+    beforeEach(() => {
+      // Clear all API keys before each test
+      process.env.ANTHROPIC_API_KEY = undefined;
+      process.env.CLAUDE_CODE_OAUTH_TOKEN = undefined;
+      process.env.OPENROUTER_API_KEY = undefined;
+      process.env.OLLAMA_API_KEY = undefined;
+    });
 
     afterEach(() => {
       // Restore original env
@@ -76,6 +87,21 @@ describe("config", () => {
         process.env.ANTHROPIC_API_KEY = originalApiKey;
       } else {
         process.env.ANTHROPIC_API_KEY = undefined;
+      }
+      if (originalOAuthToken) {
+        process.env.CLAUDE_CODE_OAUTH_TOKEN = originalOAuthToken;
+      } else {
+        process.env.CLAUDE_CODE_OAUTH_TOKEN = undefined;
+      }
+      if (originalOpenRouterKey) {
+        process.env.OPENROUTER_API_KEY = originalOpenRouterKey;
+      } else {
+        process.env.OPENROUTER_API_KEY = undefined;
+      }
+      if (originalOllamaKey) {
+        process.env.OLLAMA_API_KEY = originalOllamaKey;
+      } else {
+        process.env.OLLAMA_API_KEY = undefined;
       }
     });
 

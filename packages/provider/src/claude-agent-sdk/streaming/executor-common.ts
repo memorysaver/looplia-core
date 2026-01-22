@@ -21,12 +21,14 @@ import type { CompleteEvent, StreamingEvent } from "./types";
 
 /**
  * Get API key from config or environment
- * ZenMux and other providers use ANTHROPIC_API_KEY (same as Anthropic SDK)
+ * - ZenMux, Ollama use ANTHROPIC_API_KEY (same as Anthropic SDK)
+ * - OpenRouter uses ANTHROPIC_AUTH_TOKEN
  */
 export function getApiKey(config?: ClaudeAgentConfig): string | undefined {
   return (
     config?.apiKey ??
     process.env.ANTHROPIC_API_KEY ??
+    process.env.ANTHROPIC_AUTH_TOKEN ??
     process.env.CLAUDE_CODE_OAUTH_TOKEN
   );
 }
@@ -51,7 +53,7 @@ export async function initializeAndValidateApiKey(
   const apiKey = getApiKey(config);
   if (!apiKey) {
     throw new Error(
-      "API key is required. Set ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN environment variable"
+      "API key is required. Set ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN, or CLAUDE_CODE_OAUTH_TOKEN environment variable"
     );
   }
 

@@ -797,10 +797,27 @@ steps:
 </div>
 
 <Tabs>
-  <TabItem label="Anthropic Direct">
+  <TabItem label="Anthropic Official">
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
 looplia run writing-kit --file article.md
+```
+  </TabItem>
+  <TabItem label="Ollama Local">
+```bash
+# Run GLM-4.7 cloud model locally
+looplia config provider preset OLLAMA_GLM47_CLOUD
+export OLLAMA_API_KEY=ollama  # Optional, defaults to "ollama"
+looplia run writing-kit --file article.md
+```
+  </TabItem>
+  <TabItem label="OpenRouter">
+```bash
+# Use OpenRouter with dashboard-configured preset
+looplia config provider preset OPENROUTER_PRESET
+export OPENROUTER_API_KEY=sk-or-v1-...
+looplia run writing-kit --file article.md
+# Models configured at: https://openrouter.ai/settings/presets
 ```
   </TabItem>
   <TabItem label="ZenMux Proxy">
@@ -813,8 +830,8 @@ looplia run writing-kit --file article.md
 </Tabs>
 
 <CardGrid>
-  <Card title="16+ Model Presets" icon="setting">
-    Anthropic Claude (Haiku, Sonnet), Google Gemini, OpenAI GPT, xAI Grok, DeepSeek, and more via ZenMux.
+  <Card title="Model Presets" icon="setting">
+    Anthropic, Claude Code Subscription, Ollama, OpenRouter, and ZenMux. See [all presets](/reference/presets/).
   </Card>
   <Card title="Cost Optimization" icon="approve-check">
     Switch between providers based on cost, speed, or capability requirements per workflow.
