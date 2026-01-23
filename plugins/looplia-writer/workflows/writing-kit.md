@@ -39,9 +39,7 @@ steps:
       Include meta information (difficulty, time to write, audience).
       Calculate relevance scores based on user profile.
     needs: [summary, ideas]
-    input:
-      - ${{ steps.summary.output }}
-      - ${{ steps.ideas.output }}
+    input: ["${{ steps.summary.output }}", "${{ steps.ideas.output }}"]
     output: ${{ sandbox }}/outputs/writing-kit.json
     final: true
     validate:
