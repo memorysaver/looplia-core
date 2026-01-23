@@ -34,6 +34,7 @@ import {
 } from "@looplia-core/provider";
 import {
   createClaudeAgentExecutor,
+  createWorkflowHooks,
   initializeCommandEnvironment,
   type WorkflowResult,
 } from "@looplia-core/provider/claude-agent-sdk";
@@ -520,6 +521,7 @@ function executeMock(args: RunArgs): WorkflowResult {
 /**
  * Execute with streaming UI
  * v0.7.0: Added requiredSkills for selective plugin loading
+ * v0.7.4: Added workflow hooks for validation protection
  */
 async function executeStreaming(
   prompt: string,
@@ -528,7 +530,11 @@ async function executeStreaming(
   requiredSkills?: string[]
 ): Promise<WorkflowResult> {
   const contentId = crypto.randomUUID();
-  const executor = createClaudeAgentExecutor({ workspace });
+  // v0.7.4: Pass workflow hooks for stop-guard and post-write validation
+  const executor = createClaudeAgentExecutor({
+    workspace,
+    runHooks: createWorkflowHooks(),
+  });
 
   const generator = executor.executePromptStreaming(prompt, {
     workspace,
@@ -572,6 +578,7 @@ async function executeStreaming(
 /**
  * Execute in batch mode (non-streaming)
  * v0.7.0: Added requiredSkills for selective plugin loading
+ * v0.7.4: Added workflow hooks for validation protection
  */
 async function executeBatch(
   prompt: string,
@@ -582,15 +589,26 @@ async function executeBatch(
   console.error("⏳ Processing...");
 
   const contentId = crypto.randomUUID();
-  const executor = createClaudeAgentExecutor({ workspace });
+  // v0.7.4: Pass workflow hooks for stop-guard and post-write validation
+  const executor = createClaudeAgentExecutor({
+    workspace,
+    runHooks: createWorkflowHooks(),
+  });
   const result = await executor.executePrompt(prompt, {
     workspace,
     contentId,
     requiredSkills,
   });
 
-  if (result.success && result.data) {
-    return result.data;
+  if (result.success) {
+    // Return data if available, otherwise construct success result
+    return (
+      result.data ?? {
+        status: "success",
+        workflowId,
+        sessionId: result.sessionId,
+      }
+    );
   }
 
   return {

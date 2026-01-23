@@ -1,4 +1,16 @@
+import type {
+  HookCallbackMatcher,
+  HookEvent,
+} from "@anthropic-ai/claude-agent-sdk";
 import type { ProviderResult } from "@looplia-core/core";
+
+// v0.7.4: Re-export hook types from SDK for workflow validation
+export type {
+  HookCallback,
+  HookCallbackMatcher,
+  HookEvent,
+  HookJSONOutput,
+} from "@anthropic-ai/claude-agent-sdk";
 
 /**
  * Configuration options for Claude Agent SDK providers
@@ -37,6 +49,13 @@ export type ClaudeAgentConfig = {
    * If not provided, all plugins are loaded (backward compatible).
    */
   requiredSkills?: string[];
+
+  /**
+   * v0.7.4: SDK hooks for workflow validation.
+   * Only used by run command for workflow protection.
+   * Hooks are passed programmatically to SDK query() options.
+   */
+  runHooks?: Partial<Record<HookEvent, HookCallbackMatcher[]>>;
 };
 
 /**

@@ -57,6 +57,7 @@ import type { StreamingEvent } from "./types";
  * @yields StreamingEvent objects for UI consumption
  * @returns Final AgenticQueryResult on completion
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: SDK integration requires consolidated orchestration logic
 export async function* executeAgenticQueryStreaming<T>(
   prompt: string,
   _jsonSchema: Record<string, unknown>,
@@ -153,6 +154,10 @@ export async function* executeAgenticQueryStreaming<T>(
         // v0.7.2: Removed outputFormat to support non-Anthropic models
         // Final results are now extracted from sandbox output files via extractSandboxResult()
         // v0.6.9: No custom agents - using built-in general-purpose for workflow steps
+
+        // v0.7.4: Pass runHooks from config if provided (workflow protection)
+        // Only the run command passes hooks - other SDK usage doesn't need them
+        ...(config?.runHooks && { hooks: config.runHooks }),
       },
     });
 
