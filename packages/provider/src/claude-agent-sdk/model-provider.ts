@@ -214,6 +214,16 @@ export const PRESETS: Record<string, PresetDefinition> = {
     sonnetModel: "z-ai/glm-4.7",
     opusModel: "z-ai/glm-4.7",
   },
+  ZENMUX_ZAI_GLM47FLASHX: {
+    name: "ZenMux GLM-4.7-FlashX",
+    apiProvider: "zenmux",
+    baseUrl: "https://zenmux.ai/api/anthropic",
+    mainModel: "z-ai/glm-4.7-flashx",
+    executorModel: "z-ai/glm-4.7-flashx",
+    haikuModel: "z-ai/glm-4.7-flashx",
+    sonnetModel: "z-ai/glm-4.7-flashx",
+    opusModel: "z-ai/glm-4.7-flashx",
+  },
   ZENMUX_MINIMAX_M21: {
     name: "ZenMux MiniMax-M2.1",
     apiProvider: "zenmux",
@@ -335,7 +345,7 @@ export const PRESETS: Record<string, PresetDefinition> = {
     opusModel: "openai/gpt-5.1-codex-mini",
   },
 
-  // OpenRouter Preset
+  // OpenRouter Presets
   OPENROUTER_PRESET: {
     name: "OpenRouter (User-Configured Preset)",
     apiProvider: "openrouter",
@@ -345,6 +355,16 @@ export const PRESETS: Record<string, PresetDefinition> = {
     haikuModel: "@preset/looplia-default",
     sonnetModel: "@preset/looplia-default",
     opusModel: "@preset/looplia-default",
+  },
+  OPENROUTER_ZAI_GLM47FLASH: {
+    name: "OpenRouter GLM-4.7-Flash",
+    apiProvider: "openrouter",
+    baseUrl: "https://openrouter.ai/api",
+    mainModel: "z-ai/glm-4.7-flash",
+    executorModel: "z-ai/glm-4.7-flash",
+    haikuModel: "z-ai/glm-4.7-flash",
+    sonnetModel: "z-ai/glm-4.7-flash",
+    opusModel: "z-ai/glm-4.7-flash",
   },
 
   // Ollama Cloud Presets
