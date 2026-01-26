@@ -58,6 +58,17 @@ function parseArray(value: string): string[] | null {
   return null;
 }
 
+/** Strip surrounding quotes from YAML string values */
+function stripQuotes(value: string): string {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+  return value;
+}
+
 /** Convert YAML string value to typed value */
 function parseYamlValue(value: string): unknown {
   const array = parseArray(value);
@@ -73,7 +84,7 @@ function parseYamlValue(value: string): unknown {
   if (INTEGER_PATTERN.test(value)) {
     return Number.parseInt(value, 10);
   }
-  return value;
+  return stripQuotes(value);
 }
 
 /** Partial WorkflowInput during parsing */
