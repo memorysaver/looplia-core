@@ -26,6 +26,29 @@ Use this skill when:
 
 ---
 
+## ⚠️ CRITICAL EXECUTION MODEL - READ FIRST
+
+**YOU (the model reading this skill) must execute the step loop directly. DO NOT delegate.**
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  YOU (main agent) iterate through steps, making ONE Task call each  │
+│                                                                     │
+│  FOR step IN workflow.steps:                                        │
+│      1. Call Task(general-purpose) for THIS STEP ONLY               │
+│      2. WAIT for Task to complete                                   │
+│      3. Validate output                                             │
+│      4. THEN move to next step                                      │
+│                                                                     │
+│  ❌ WRONG: Task("Execute all workflow steps...")                    │
+│  ✅ RIGHT: Task("Execute step: summary"), Task("Execute step: ideas")│
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**3 steps = 3 Task calls. You MUST make 3 separate Task tool invocations.**
+
+---
+
 ## CRITICAL: Task Invocation with general-purpose Subagent
 
 **v0.6.9:** Using built-in `general-purpose` subagent for ALL workflow steps (all providers).
@@ -76,25 +99,37 @@ Each `Task(general-purpose)` creates a **separate context window**:
 
 **NEVER batch multiple steps** - this defeats context isolation.
 
-### Anti-Patterns
+### Anti-Patterns (VIOLATIONS = TEST FAILURE)
 
-❌ **WRONG - Delegating entire workflow:**
+❌ **FATAL ERROR - Delegating entire workflow to one Task:**
 ```json
 {
   "description": "Execute workflow: writing-kit",
   "prompt": "Run all workflow steps..."
 }
 ```
-This pollutes the subagent context with ALL steps.
+**This is WRONG.** You made 1 Task call. Tests expect 3. TEST WILL FAIL.
 
-✅ **CORRECT - One step per Task:**
-```json
-{
-  "description": "Execute step: summary",
-  "prompt": "Execute skill 'media-reviewer' for step 'summary'..."
-}
+❌ **FATAL ERROR - Executing skills inline without Task:**
 ```
-Each step gets a fresh, focused context window.
+Skill("media-reviewer")  // NO! You must use Task wrapper
+Skill("idea-synthesis")  // NO! You must use Task wrapper
+```
+**This is WRONG.** Each step MUST be wrapped in a Task call.
+
+✅ **CORRECT - One Task call per step (3 steps = 3 Task calls):**
+```
+Task("Execute step: summary")    // Task #1
+  → Subagent invokes Skill("media-reviewer")
+
+Task("Execute step: ideas")      // Task #2
+  → Subagent invokes Skill("idea-synthesis")
+
+Task("Execute step: writing-kit") // Task #3
+  → Subagent invokes Skill("writing-kit-assembler")
+```
+
+**Verification**: Count your Task tool calls. If workflow has 3 steps, you MUST have 3 Task calls.
 
 ---
 
@@ -243,18 +278,38 @@ Input:
 Computed order: [analyze-content, generate-ideas, build-writing-kit]
 ```
 
-### Phase 5: Step Execution Loop
+### Phase 5: Step Execution Loop (YOU MUST DO THIS)
 
-**Execute steps ONE AT A TIME (context isolation):**
+**YOU execute this loop. DO NOT delegate the loop to a subagent.**
 
+```
+YOU (main agent) must:
+┌────────────────────────────────────────────────────────────────┐
+│ for (const step of steps) {                                    │
+│   // 1. YOU call Task tool                                     │
+│   await Task({                                                 │
+│     subagent_type: "general-purpose",                          │
+│     description: `Execute step: ${step.id}`,                   │
+│     prompt: `Execute skill '${step.skill}' for step...`        │
+│   });                                                          │
+│                                                                │
+│   // 2. YOU wait for Task to complete                          │
+│   // 3. YOU validate output                                    │
+│   // 4. YOU update validation.json                             │
+│   // 5. YOU move to next step                                  │
+│ }                                                              │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Execution checklist:**
 1. Get first unvalidated step from dependency order
-2. Make ONE `Task(general-purpose)` call for THIS step only
-3. WAIT for Task completion before proceeding
-4. Validate output, update validation.json
-5. REPEAT for next unvalidated step
-6. STOP when ALL steps are validated
+2. **YOU** make ONE `Task(general-purpose)` call for THIS step only
+3. **YOU** WAIT for Task completion before proceeding
+4. **YOU** validate output, update validation.json
+5. **YOU** REPEAT for next unvalidated step
+6. **YOU** STOP when ALL steps are validated
 
-**MANDATORY:** Each step = separate context window = separate Task call.
+**MANDATORY:** 3 steps = 3 Task calls. Count them. If you made fewer, you did it wrong.
 
 ```
 FOR EACH step in dependency order:
