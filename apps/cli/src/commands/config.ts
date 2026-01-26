@@ -73,6 +73,7 @@ Available presets:
   CLAUDE_CODE_SUBSCRIPTION_OPUS    Claude Opus via subscription (macOS)
   ZENMUX_ANTHROPIC_HAIKU45         ZenMux Claude Haiku 4.5
   ZENMUX_ZAI_GLM47                 ZenMux GLM-4.7
+  ZENMUX_ZAI_GLM47FLASHX           ZenMux GLM-4.7-FlashX
   ZENMUX_ZAI_GLM46VFLASH           ZenMux GLM-4.6v-Flash
   ZENMUX_MINIMAX_M21               ZenMux MiniMax-M2.1
   ZENMUX_GOOGLE_GEMINI3FLASH       ZenMux Gemini-3-Flash
@@ -82,6 +83,7 @@ Available presets:
   ZENMUX_DEEPSEEK_V32              ZenMux DeepSeek-v3.2
   ZENMUX_MISTRAL_LARGE2512         ZenMux Mistral-Large-2512
   OPENROUTER_PRESET                OpenRouter (user-configured preset)
+  OPENROUTER_ZAI_GLM47FLASH        OpenRouter GLM-4.7-Flash
   OLLAMA_GLM47_CLOUD               Ollama GLM-4.7 Cloud
   OLLAMA_MINIMAX_M21_CLOUD         Ollama MiniMax-M2.1 Cloud
 

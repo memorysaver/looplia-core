@@ -94,6 +94,7 @@ export default defineConfig({
           label: "Reference",
           items: [
             { label: "Sandbox Architecture", slug: "reference/sandbox" },
+            { label: "Validation System", slug: "reference/validation" },
             { label: "Environment Variables", slug: "reference/environment-variables" },
             { label: "Troubleshooting", slug: "reference/troubleshooting" },
           ],

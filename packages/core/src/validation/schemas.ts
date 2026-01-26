@@ -129,6 +129,7 @@ export const ValidationManifestSchema = z.object({
   version: z.string().optional(),
   sandboxId: z.string().optional(),
   createdAt: z.string().optional(),
+  finalStepId: z.string().optional(),
   steps: z.record(z.string(), StepValidationStateSchema),
 });
 

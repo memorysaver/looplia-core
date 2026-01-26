@@ -22,6 +22,8 @@ import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import {
   extractWorkflowSkills,
+  generateValidationManifest,
+  getFinalStep,
   isInputlessWorkflow,
   type ParsedWorkflow,
   parseWorkflow,
@@ -33,6 +35,7 @@ import {
 } from "@looplia-core/provider";
 import {
   createClaudeAgentExecutor,
+  createWorkflowHooks,
   initializeCommandEnvironment,
   type WorkflowResult,
 } from "@looplia-core/provider/claude-agent-sdk";
@@ -73,6 +76,7 @@ export type ValidationJson = {
   sandboxId: string;
   createdAt: string;
   status: "pending" | "in_progress" | "completed" | "failed";
+  finalStepId?: string;
   steps: Record<string, { validated: boolean; validatedAt?: string }>;
 };
 
@@ -519,6 +523,7 @@ function executeMock(args: RunArgs): WorkflowResult {
 /**
  * Execute with streaming UI
  * v0.7.0: Added requiredSkills for selective plugin loading
+ * v0.7.4: Added workflow hooks for validation protection
  */
 async function executeStreaming(
   prompt: string,
@@ -527,7 +532,11 @@ async function executeStreaming(
   requiredSkills?: string[]
 ): Promise<WorkflowResult> {
   const contentId = crypto.randomUUID();
-  const executor = createClaudeAgentExecutor({ workspace });
+  // v0.7.4: Pass workflow hooks for stop-guard and post-write validation
+  const executor = createClaudeAgentExecutor({
+    workspace,
+    runHooks: createWorkflowHooks(),
+  });
 
   const generator = executor.executePromptStreaming(prompt, {
     workspace,
@@ -571,6 +580,7 @@ async function executeStreaming(
 /**
  * Execute in batch mode (non-streaming)
  * v0.7.0: Added requiredSkills for selective plugin loading
+ * v0.7.4: Added workflow hooks for validation protection
  */
 async function executeBatch(
   prompt: string,
@@ -581,15 +591,26 @@ async function executeBatch(
   console.error("⏳ Processing...");
 
   const contentId = crypto.randomUUID();
-  const executor = createClaudeAgentExecutor({ workspace });
+  // v0.7.4: Pass workflow hooks for stop-guard and post-write validation
+  const executor = createClaudeAgentExecutor({
+    workspace,
+    runHooks: createWorkflowHooks(),
+  });
   const result = await executor.executePrompt(prompt, {
     workspace,
     contentId,
     requiredSkills,
   });
 
-  if (result.success && result.data) {
-    return result.data;
+  if (result.success) {
+    // Return data if available, otherwise construct success result
+    return (
+      result.data ?? {
+        status: "success",
+        workflowId,
+        sessionId: result.sessionId,
+      }
+    );
   }
 
   return {
@@ -760,6 +781,37 @@ async function handleJitInstallation(
   }
 }
 
+function populateValidationManifest(
+  workspace: string,
+  sandboxId: string,
+  workflowId: string,
+  workflowInfo: ReturnType<typeof parseWorkflowFile>
+): void {
+  if (!workflowInfo?.parsed?.definition) {
+    return;
+  }
+
+  const manifest = generateValidationManifest(workflowInfo.parsed.definition);
+  const finalStepId = getFinalStep(workflowInfo.parsed.definition);
+  const sandboxDir = join(workspace, "sandbox", sandboxId);
+  const validationPath = join(sandboxDir, "validation.json");
+
+  if (!existsSync(validationPath)) {
+    createInitialValidationJson(sandboxDir, sandboxId, workflowId);
+  }
+
+  if (!existsSync(validationPath)) {
+    return;
+  }
+
+  const existing = JSON.parse(
+    readFileSync(validationPath, "utf-8")
+  ) as ValidationJson;
+  existing.steps = manifest.steps;
+  existing.finalStepId = finalStepId;
+  writeFileSync(validationPath, JSON.stringify(existing, null, 2), "utf-8");
+}
+
 /**
  * Main entry point for run command (v0.7.0 thin wrapper)
  */
@@ -787,6 +839,18 @@ export async function runRunCommand(args: string[]): Promise<void> {
 
     // 3. Resolve or create sandbox (validates inputs before API key check)
     const sandboxId = resolveSandboxId(workspace, parsed, allowInputless);
+
+    process.env.LOOPLIA_SANDBOX_ID = sandboxId;
+    process.env.LOOPLIA_SANDBOX_ROOT = join(workspace, "sandbox");
+
+    // 3.5. Populate validation.json with workflow steps (v0.7.4)
+    // This enables stop-guard.sh to validate workflow completion
+    populateValidationManifest(
+      workspace,
+      sandboxId,
+      parsed.workflowId,
+      workflowInfo
+    );
 
     // 4. v0.7.0: JIT skill installation
     if (!(parsed.mock || (await handleJitInstallation(workflowInfo)))) {

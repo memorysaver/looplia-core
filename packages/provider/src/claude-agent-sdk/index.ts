@@ -14,12 +14,18 @@ export { initializeCommandEnvironment } from "./command-init";
 export type {
   ClaudeAgentConfig,
   ConfigValidationResult,
+  HookCallback,
+  HookCallbackMatcher,
+  HookEvent,
+  HookJSONOutput,
   ProviderResultWithUsage,
   ProviderUsage,
 } from "./config";
 export { validateConfig } from "./config";
 // Re-export executor (Clean Architecture)
 export { createClaudeAgentExecutor } from "./executor";
+// Re-export workflow hooks (v0.7.4)
+export { createWorkflowHooks } from "./hooks";
 // Re-export logger
 export type { QueryLogger } from "./logger";
 export { createQueryLogger } from "./logger";

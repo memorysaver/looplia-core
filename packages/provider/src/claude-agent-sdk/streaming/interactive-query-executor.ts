@@ -14,6 +14,7 @@
  * @see docs/DESIGN-0.7.1.md section 8
  */
 
+import { join } from "node:path";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import {
   getLoopliaPluginPath,
@@ -28,6 +29,7 @@ import { mapException } from "../utils/error-mapper";
 import type { AgenticQueryResult } from "../utils/shared";
 import {
   extractContentIdFromPrompt,
+  extractSandboxResult,
   getOrInitWorkspace,
 } from "../utils/shared";
 import {
@@ -83,9 +85,10 @@ export type QuestionCallback = (
  * @yields StreamingEvent objects for UI consumption
  * @returns Final AgenticQueryResult on completion
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: SDK integration requires consolidated orchestration logic
 export async function* executeInteractiveQueryStreaming<T>(
   prompt: string,
-  jsonSchema: Record<string, unknown>,
+  _jsonSchema: Record<string, unknown>,
   config?: ClaudeAgentConfig,
   questionCallback?: QuestionCallback
 ): AsyncGenerator<StreamingEvent, AgenticQueryResult<T>> {
@@ -208,7 +211,8 @@ export async function* executeInteractiveQueryStreaming<T>(
           "WebFetch",
           "AskUserQuestion", // Only in interactive mode
         ],
-        outputFormat: { type: "json_schema", schema: jsonSchema },
+        // v0.7.2: Removed outputFormat to support non-Anthropic models
+        // Final results are now extracted from sandbox output files via extractSandboxResult()
       },
     });
 
@@ -236,6 +240,16 @@ export async function* executeInteractiveQueryStreaming<T>(
 
     logger.close();
     yield progressTracker.onComplete();
+
+    // v0.7.2: If no result from StructuredOutput (e.g., non-Anthropic models),
+    // extract the final artifact from sandbox output files
+    if (!finalResult) {
+      finalResult = await extractSandboxResult<T>({
+        sandboxId: process.env.LOOPLIA_SANDBOX_ID,
+        sandboxRoot:
+          process.env.LOOPLIA_SANDBOX_ROOT ?? join(workspace, "sandbox"),
+      });
+    }
 
     return (
       finalResult ?? {

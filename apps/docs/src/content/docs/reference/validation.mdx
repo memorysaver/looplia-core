@@ -1,0 +1,310 @@
+---
+title: Validation System
+description: How Looplia enforces workflow completion through deterministic validation.
+---
+
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
+
+Looplia uses a hook-based validation system to ensure workflows complete all steps with quality outputs before finishing. This page covers how validation works and how to configure it.
+
+## Overview
+
+When you define `validate` criteria on a workflow step, Looplia runs deterministic checks after each artifact is written. If validation fails, the workflow cannot complete until all criteria are satisfied.
+
+**Key concepts:**
+
+- **Deterministic checks** — Validation runs outside Claude's context using a TypeScript script, consuming no tokens
+- **Hook-based enforcement** — PostToolUse hooks trigger validation after Write operations
+- **Stop guard** — A Stop hook prevents workflow completion if any step has `validated: false`
+- **State tracking** — `validation.json` in the sandbox tracks each step's validation status
+
+## Validation Lifecycle
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        VALIDATION LIFECYCLE                          │
+└─────────────────────────────────────────────────────────────────────┘
+
+  Write Tool                PostToolUse Hook              validation.json
+      │                           │                             │
+      │   writes artifact         │                             │
+      ├──────────────────────────>│                             │
+      │                           │                             │
+      │                  ┌────────┴────────┐                    │
+      │                  │ post-write-     │                    │
+      │                  │ validate.sh     │                    │
+      │                  └────────┬────────┘                    │
+      │                           │                             │
+      │                  ┌────────┴────────┐                    │
+      │                  │  Read criteria  │<───────────────────┤
+      │                  │  from step      │                    │
+      │                  └────────┬────────┘                    │
+      │                           │                             │
+      │                  ┌────────┴────────┐                    │
+      │                  │  validate.ts    │                    │
+      │                  │  (deterministic │                    │
+      │                  │   checks)       │                    │
+      │                  └────────┬────────┘                    │
+      │                           │                             │
+      │                           │   Update step.validated     │
+      │                           ├────────────────────────────>│
+      │                           │                             │
+      │                           │                             │
+      │                           │                             │
+
+  Stop Event                  Stop Hook                   validation.json
+      │                           │                             │
+      │   workflow complete?      │                             │
+      ├──────────────────────────>│                             │
+      │                           │                             │
+      │                  ┌────────┴────────┐                    │
+      │                  │  Check all      │<───────────────────┤
+      │                  │  steps valid    │                    │
+      │                  └────────┬────────┘                    │
+      │                           │                             │
+      │         ┌─────────────────┴─────────────────┐           │
+      │         │                                   │           │
+      │    All validated?                    Any invalid?       │
+      │         │                                   │           │
+      │         ▼                                   ▼           │
+      │    ✅ Allow stop                    ❌ Block stop       │
+      │                                    (continue workflow)  │
+```
+
+## Validation Criteria Reference
+
+Define criteria in your workflow's `validate` field:
+
+```yaml
+- id: summary
+  skill: media-reviewer
+  validate:
+    required_fields: [contentId, headline, keyThemes]
+    min_quotes: 3
+    min_key_points: 5
+  # ...
+```
+
+### required_fields
+
+Check that specific JSON fields exist in the output. Supports dot notation for nested fields.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `required_fields` | `string[]` | List of field paths that must exist |
+
+**Examples:**
+
+```yaml
+# Simple fields
+validate:
+  required_fields: [contentId, headline, tldr]
+
+# Nested fields using dot notation
+validate:
+  required_fields: [summary.headline, metadata.author, themes]
+```
+
+**Validation logic:**
+- Field must exist and not be `null` or `undefined`
+- Dot notation traverses nested objects (e.g., `summary.headline` checks `data.summary.headline`)
+
+### min_quotes
+
+Require a minimum number of items in the `importantQuotes` array.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `min_quotes` | `number` | Minimum items required in `importantQuotes` |
+
+**Example:**
+
+```yaml
+validate:
+  min_quotes: 3  # Requires at least 3 quotes
+```
+
+**Validation logic:**
+- Checks `data.importantQuotes` array length
+- Fails if array doesn't exist or has fewer items than specified
+
+### min_key_points
+
+Require a minimum number of key points. Checks both `bullets` and `keyPoints` arrays, using the higher count.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `min_key_points` | `number` | Minimum items required in `bullets` or `keyPoints` |
+
+**Example:**
+
+```yaml
+validate:
+  min_key_points: 5  # Requires at least 5 bullets or key points
+```
+
+**Validation logic:**
+- Checks `Math.max(data.bullets.length, data.keyPoints.length)`
+- Works regardless of which field name the skill uses
+
+### min_outline_sections
+
+Require a minimum number of outline sections. Used primarily with the writing-kit workflow.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `min_outline_sections` | `number` | Minimum items required in `suggestedOutline` |
+
+**Example:**
+
+```yaml
+validate:
+  min_outline_sections: 4  # Requires at least 4 outline sections
+```
+
+**Validation logic:**
+- Checks `data.suggestedOutline` array length
+- Designed for writing-kit artifacts with outline generation
+
+### has_hooks
+
+Require at least one hook in the artifact. Used for idea synthesis validation.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `has_hooks` | `boolean` | When `true`, requires non-empty `hooks` array |
+
+**Example:**
+
+```yaml
+validate:
+  has_hooks: true  # Requires at least 1 hook
+```
+
+**Validation logic:**
+- Checks `data.hooks` array or `data.ideas.hooks` array
+- Passes if either location has at least one item
+
+## validation.json Structure
+
+Each sandbox contains a `validation.json` file tracking step completion:
+
+```json
+{
+  "workflow": "writing-kit",
+  "version": "1.2.0",
+  "sandboxId": "article-2026-01-12-xk7m",
+  "finalStepId": "writing-kit",
+  "steps": {
+    "summary": {
+      "output": "outputs/summary.json",
+      "validated": true
+    },
+    "ideas": {
+      "output": "outputs/ideas.json",
+      "validated": true
+    },
+    "writing-kit": {
+      "output": "outputs/writing-kit.json",
+      "validated": false
+    }
+  }
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `workflow` | Workflow name |
+| `version` | Workflow version |
+| `sandboxId` | Current sandbox identifier |
+| `finalStepId` | Step ID used for final artifact extraction |
+| `steps` | Map of step ID to step state |
+| `steps.<id>.output` | Relative path to step output |
+| `steps.<id>.validated` | Whether step passed validation |
+
+<Aside type="tip">
+When resuming a workflow with `--sandbox-id`, steps with `validated: true` are skipped.
+</Aside>
+
+## Troubleshooting
+
+### "Validation failed" errors
+
+When validation fails, the system outputs which checks failed:
+
+```
+❌ Validation failed for step 'summary':
+   - min_quotes: Found 1 quotes, need at least 3
+   - has_contentId: Missing required field: contentId
+```
+
+**Solutions:**
+
+1. **Review the mission** — Ensure your step mission requests enough items to satisfy criteria
+2. **Adjust criteria** — Lower thresholds if requirements are too strict
+3. **Check output format** — Verify the skill outputs the expected field names
+
+### Workflow won't stop
+
+If the workflow keeps running after you think it's complete:
+
+```bash
+# Check validation state
+cat ~/.looplia/sandbox/*/validation.json
+```
+
+Look for steps with `validated: false`. These must be completed before the workflow can finish.
+
+### Validation not running
+
+Validation only runs when:
+1. The step has a `validate` field defined
+2. The Write tool creates the step's output file
+3. The PostToolUse hook is properly installed
+
+Check that your workflow step has validation criteria:
+
+```yaml
+- id: my-step
+  skill: media-reviewer
+  validate:           # This is required!
+    min_quotes: 3
+  output: ${{ sandbox }}/outputs/my-output.json
+```
+
+### Fields exist but validation fails
+
+For nested fields, ensure you use dot notation:
+
+```yaml
+# Wrong - checks for top-level "headline" field
+validate:
+  required_fields: [headline]
+
+# Correct - checks for nested "summary.headline"
+validate:
+  required_fields: [summary.headline]
+```
+
+## Best Practices
+
+<CardGrid>
+  <Card title="Match Criteria to Mission" icon="pencil">
+    If you require 3 quotes, your mission should explicitly ask for "at least 3 quotes."
+  </Card>
+  <Card title="Start Lenient" icon="rocket">
+    Begin with lower thresholds and increase as you tune your workflow.
+  </Card>
+  <Card title="Use Required Fields" icon="approve-check">
+    Always validate that essential fields exist before marking a step complete.
+  </Card>
+  <Card title="Check Before Resume" icon="seti:todo">
+    Review `validation.json` before resuming to understand workflow state.
+  </Card>
+</CardGrid>
+
+## See Also
+
+- [Understanding Workflows](/workflows/understanding-workflows/) — Workflow schema reference
+- [Building Custom Workflows](/workflows/custom-workflows/) — Create workflows with validation
+- [Sandbox Architecture](/reference/sandbox/) — How sandboxes track state

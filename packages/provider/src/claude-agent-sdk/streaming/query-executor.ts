@@ -5,6 +5,7 @@
  * Yields StreamingEvent objects for UI consumption while processing SDK messages.
  */
 
+import { join } from "node:path";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import {
   getLoopliaPluginPath,
@@ -19,6 +20,7 @@ import { mapException } from "../utils/error-mapper";
 import type { AgenticQueryResult } from "../utils/shared";
 import {
   extractContentIdFromPrompt,
+  extractSandboxResult,
   getOrInitWorkspace,
 } from "../utils/shared";
 import {
@@ -48,14 +50,18 @@ import type { StreamingEvent } from "./types";
  *
  * Key SDK options:
  * - allowedTools: ["Read", "Skill"] - Tools the agent can use
- * - outputFormat: json_schema - Structured output validation
  *
+ * Note: outputFormat (json_schema) was removed to support non-Anthropic models.
+ * Final results are now extracted from sandbox output files after workflow completion.
+ *
+ * @see openspec/changes/remove-structuredoutput-enforcement/design.md
  * @yields StreamingEvent objects for UI consumption
  * @returns Final AgenticQueryResult on completion
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: SDK integration requires consolidated orchestration logic
 export async function* executeAgenticQueryStreaming<T>(
   prompt: string,
-  jsonSchema: Record<string, unknown>,
+  _jsonSchema: Record<string, unknown>,
   config?: ClaudeAgentConfig
 ): AsyncGenerator<StreamingEvent, AgenticQueryResult<T>> {
   const resolvedConfig = resolveConfig(config);
@@ -146,8 +152,13 @@ export async function* executeAgenticQueryStreaming<T>(
           "WebSearch",
           "WebFetch",
         ],
-        outputFormat: { type: "json_schema", schema: jsonSchema },
+        // v0.7.2: Removed outputFormat to support non-Anthropic models
+        // Final results are now extracted from sandbox output files via extractSandboxResult()
         // v0.6.9: No custom agents - using built-in general-purpose for workflow steps
+
+        // v0.7.4: Pass runHooks from config if provided (workflow protection)
+        // Only the run command passes hooks - other SDK usage doesn't need them
+        ...(config?.runHooks && { hooks: config.runHooks }),
       },
     });
 
@@ -175,6 +186,16 @@ export async function* executeAgenticQueryStreaming<T>(
 
     logger.close();
     yield progressTracker.onComplete();
+
+    // v0.7.2: If no result from StructuredOutput (e.g., non-Anthropic models),
+    // extract the final artifact from sandbox output files
+    if (!finalResult) {
+      finalResult = await extractSandboxResult<T>({
+        sandboxId: process.env.LOOPLIA_SANDBOX_ID,
+        sandboxRoot:
+          process.env.LOOPLIA_SANDBOX_ROOT ?? join(workspace, "sandbox"),
+      });
+    }
 
     return (
       finalResult ?? {

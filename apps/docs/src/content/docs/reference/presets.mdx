@@ -1,11 +1,11 @@
 ---
 title: Presets Reference
-description: Complete reference for all 22 Looplia provider presets.
+description: Complete reference for all 24 Looplia provider presets.
 ---
 
 import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
-Looplia includes **22 built-in presets** for quickly configuring model providers. Presets bundle provider settings, API endpoints, and model configurations into a single command.
+Looplia includes **24 built-in presets** for quickly configuring model providers. Presets bundle provider settings, API endpoints, and model configurations into a single command.
 
 ## Quick Reference
 
@@ -13,10 +13,10 @@ Looplia includes **22 built-in presets** for quickly configuring model providers
 |----------|-------|-------------|
 | [Anthropic Direct](#anthropic-direct) | 2 | Direct Anthropic API with your API key |
 | [Claude Code Subscription](#claude-code-subscription) | 3 | Use your Claude Code subscription |
-| [ZenMux Proxy](#zenmux-proxy) | 14 | Access multiple providers via ZenMux |
-| [OpenRouter](#openrouter) | 1 | User-configured preset via OpenRouter dashboard |
+| [ZenMux Proxy](#zenmux-proxy) | 15 | Access multiple providers via ZenMux |
+| [OpenRouter](#openrouter) | 2 | Access models via OpenRouter |
 | [Ollama](#ollama) | 2 | Local Ollama with cloud model routing |
-| **Total** | **22** | |
+| **Total** | **24** | |
 
 ## Applying Presets
 
@@ -107,6 +107,7 @@ Access multiple AI providers through the ZenMux proxy. Requires `ZENMUX_API_KEY`
 | Preset | Model | Provider |
 |--------|-------|----------|
 | `ZENMUX_ZAI_GLM47` | z-ai/glm-4.7 | Zhipu AI |
+| `ZENMUX_ZAI_GLM47FLASHX` | z-ai/glm-4.7-flashx | Zhipu AI |
 | `ZENMUX_ZAI_GLM46V` | z-ai/glm-4.6v | Zhipu AI |
 | `ZENMUX_ZAI_GLM46VFLASH` | z-ai/glm-4.6v-flash | Zhipu AI |
   </TabItem>
@@ -149,6 +150,7 @@ looplia run writing-kit --file article.md
 |--------|-------|----------|
 | `ZENMUX_ANTHROPIC_HAIKU45` | anthropic/claude-haiku-4.5 | Anthropic |
 | `ZENMUX_ZAI_GLM47` | z-ai/glm-4.7 | Zhipu AI |
+| `ZENMUX_ZAI_GLM47FLASHX` | z-ai/glm-4.7-flashx | Zhipu AI |
 | `ZENMUX_ZAI_GLM46V` | z-ai/glm-4.6v | Zhipu AI |
 | `ZENMUX_ZAI_GLM46VFLASH` | z-ai/glm-4.6v-flash | Zhipu AI |
 | `ZENMUX_MINIMAX_M21` | minimax/minimax-m2.1 | MiniMax |
@@ -175,6 +177,7 @@ Access multiple models through OpenRouter with centralized configuration via the
 | Preset | Model | Description |
 |--------|-------|-------------|
 | `OPENROUTER_PRESET` | @preset/looplia-default | User-configured preset |
+| `OPENROUTER_ZAI_GLM47FLASH` | z-ai/glm-4.7-flash | Zhipu AI GLM-4.7-Flash |
 
 ### Setup
 

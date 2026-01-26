@@ -23,7 +23,7 @@ Comprehensive end-to-end testing for looplia CLI covering Docker deployments, pu
 |-----------|-------------|--------|
 | Docker E2E | Development testing, CI | `scripts/docker-e2e.sh` |
 | Published CLI | After CI passes on main | `scripts/published-cli-e2e.sh` |
-| Local Development | Quick iteration | Manual commands below |
+| Local Development | Quick iteration with hook verification | `scripts/local-dev-e2e.sh` |
 | v0.6.10 Verification | Version-specific checks | `scripts/check-v0610.sh` |
 
 ## Test Modes
@@ -71,8 +71,31 @@ export ZENMUX_API_KEY=xxx
 
 ### Mode 3: Local Development
 
-Quick testing during development.
+Full E2E testing from local build with hook system verification.
 
+```bash
+# Auto-detect authentication (OAuth → ZenMux → Anthropic)
+./scripts/local-dev-e2e.sh
+
+# Force Claude Code OAuth (macOS Keychain)
+./scripts/local-dev-e2e.sh --oauth
+
+# Force ZenMux preset
+export ZENMUX_API_KEY=xxx
+./scripts/local-dev-e2e.sh --zenmux
+
+# Mock mode (no API calls)
+./scripts/local-dev-e2e.sh --mock
+```
+
+**What it tests:**
+- OAuth token extraction from macOS Keychain
+- Preset configuration (Haiku, ZenMux, Anthropic)
+- Hook system triggers (PostToolUse, Stop, SessionStart)
+- Workflow execution and output validation
+- All standard verification checks
+
+**Quick manual testing:**
 ```bash
 # Build and run locally
 bun run build
@@ -185,6 +208,7 @@ See [references/TROUBLESHOOTING.md](references/TROUBLESHOOTING.md) for common is
 │   ├── docker-e2e.sh           # Docker E2E test
 │   ├── debug-docker-e2e.sh     # Debug Docker E2E with ZenMux
 │   ├── published-cli-e2e.sh    # Published CLI test
+│   ├── local-dev-e2e.sh        # Local development E2E with hook verification
 │   ├── verify-workflow.sh      # Common verification functions
 │   └── check-v0610.sh          # v0.6.10 specific checks
 ├── references/
@@ -198,12 +222,18 @@ See [references/TROUBLESHOOTING.md](references/TROUBLESHOOTING.md) for common is
 
 | Variable | Priority | Description |
 |----------|----------|-------------|
-| `ZENMUX_API_KEY` | **Preferred** | ZenMux API key (cheapest - uses GLM 4.7) |
+| `CLAUDE_CODE_OAUTH_TOKEN` | **Highest** | Claude Code subscription OAuth (auto-extracted from Keychain) |
+| `ZENMUX_API_KEY` | Preferred | ZenMux API key (cheapest - uses GLM 4.7) |
 | `ANTHROPIC_API_KEY` | Fallback | Anthropic API key (more expensive) |
 
-**Cost Optimization:** Always use `ZENMUX_API_KEY` for E2E testing. The ZenMux GLM 4.7 preset is significantly cheaper than Anthropic direct API.
+**Authentication Priority (local-dev-e2e.sh --auto):**
+1. Claude Code OAuth (macOS Keychain) - Uses Haiku preset
+2. ZenMux API key - Uses GLM 4.7 preset
+3. Anthropic API key - Uses direct Haiku
 
-*One of ZENMUX_API_KEY or ANTHROPIC_API_KEY is required (unless using --mock).
+**Cost Optimization:** For CI, use `ZENMUX_API_KEY` (cheapest). For local dev on macOS, use Claude Code subscription (automatically extracted from Keychain).
+
+*One authentication method is required (unless using --mock).
 
 ## See Also
 
