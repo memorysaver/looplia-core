@@ -36,11 +36,36 @@ openspec validate <change-id> --strict --no-interactive
 ### Version Bump Process
 
 1. **Create version bump branch**: `git checkout -b chore/version-bump-X.Y.Z`
-2. **Bump versions** in all package.json files
-3. **Move CHANGELOG** entries from `[Unreleased]` → `[X.Y.Z] - YYYY-MM-DD`
-4. **Update docs** with new version references (docs/README.md, etc.)
-5. **Create PR** and merge to `main`
-6. **Push tag**: `git tag vX.Y.Z && git push origin vX.Y.Z`
+2. **Update all version references** (see checklist below)
+3. **Run verification**: `bun test && bun run check-types`
+4. **Create PR** and merge to `main`
+5. **Push tag**: `git tag vX.Y.Z && git push origin vX.Y.Z`
+
+### Version Bump Checklist
+
+**Package.json files** (5 files):
+- [ ] `apps/cli/package.json`
+- [ ] `apps/docs/package.json`
+- [ ] `packages/core/package.json`
+- [ ] `packages/config/package.json`
+- [ ] `packages/provider/package.json`
+
+**Changelog**:
+- [ ] `CHANGELOG.md` - Move `[Unreleased]` → `[X.Y.Z] - YYYY-MM-DD`
+- [ ] `CHANGELOG.md` - Add new `[Unreleased]` link, update version comparison links
+
+**Documentation**:
+- [ ] `docs/README.md` - Version header, architecture refs (4 places)
+- [ ] `apps/docs/src/content/docs/index.mdx` - Footer version badge
+
+**Verification**:
+```bash
+# Check versions updated
+grep -r '"X.Y.Z"' --include="*.json" . | grep -v node_modules
+
+# Run tests
+bun test && bun run check-types
+```
 
 ### CI/CD Trigger
 
