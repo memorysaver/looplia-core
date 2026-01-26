@@ -5,6 +5,23 @@ All notable changes to Looplia-Core will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Build Validation Hooks (v0.7.5)** - Fixed hooks not firing in interactive build mode
+  - Added `findMostRecentBuildSandbox()` fallback when `LOOPLIA_SANDBOX_ID` env var not set
+  - Made `resolveSandboxDir()` async with fallback to most recent build sandbox
+  - Pass `buildHooks`/`runHooks` from config to SDK in `interactive-query-executor.ts`
+  - Added debug logging via `LOOPLIA_DEBUG=1` for hook execution tracing
+
+### Changed
+
+- **E2E Test Skill** - Added build command test to looplia-e2e
+  - Tests workflow generation with HN AI news aggregator prompt
+  - Verifies workflow file creation and `validation.json` state
+  - Success criteria now requires both build and run tests to pass
+
 ## [0.7.4] - 2026-01-26
 
 ### Added
