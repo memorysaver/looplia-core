@@ -25,7 +25,12 @@ export { validateConfig } from "./config";
 // Re-export executor (Clean Architecture)
 export { createClaudeAgentExecutor } from "./executor";
 // Re-export workflow hooks (v0.7.4)
-export { createWorkflowHooks } from "./hooks";
+// Re-export build hooks (v0.7.5)
+export {
+  type BuildValidationManifest,
+  createBuildHooks,
+  createWorkflowHooks,
+} from "./hooks";
 // Re-export logger
 export type { QueryLogger } from "./logger";
 export { createQueryLogger } from "./logger";

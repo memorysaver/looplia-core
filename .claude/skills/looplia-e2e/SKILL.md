@@ -8,7 +8,7 @@ license: MIT
 compatibility: Requires jq and bun. Works with Claude Code.
 metadata:
   author: looplia
-  version: "0.7.4"
+  version: "0.7.5"
 ---
 
 # Looplia E2E Test Skill
@@ -33,11 +33,22 @@ The script performs these steps:
 2. **Reset** - Removes `~/.looplia` for fresh start
 3. **Init** - Initializes workspace with plugins
 4. **Configure** - Sets provider to ZenMux MiniMax M2.1
-5. **Run** - Executes writing-kit workflow with ai-healthcare.md
-6. **Verify** - Checks outputs, validation state, and logs
+5. **Build Command** - Tests workflow generation (HN AI news aggregator)
+6. **Run Command** - Executes writing-kit workflow with ai-healthcare.md
+7. **Verify** - Checks outputs, validation state, and logs
 
 ## Expected Outputs
 
+**Build command:**
+```
+~/.looplia/workflows/e2e-build-test.md    # Generated workflow file
+~/.looplia/sandbox/build-<id>/
+├── validation.json       # workflowValidated: true
+└── logs/
+    └── *.log             # Execution logs
+```
+
+**Run command:**
 ```
 ~/.looplia/sandbox/<run-id>/
 ├── outputs/
@@ -51,6 +62,11 @@ The script performs these steps:
 
 ## Success Criteria
 
+**Build command:**
+- Workflow file created at `~/.looplia/workflows/e2e-build-test.md`
+- validation.json shows `workflowValidated: true`
+
+**Run command:**
 - 3 output files created (summary.json, ideas.json, writing-kit.json)
 - All 3 steps validated in validation.json
 - Final output writing-kit.json exists
