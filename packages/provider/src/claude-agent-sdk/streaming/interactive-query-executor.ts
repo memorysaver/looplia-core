@@ -211,6 +211,9 @@ export async function* executeInteractiveQueryStreaming<T>(
           "WebFetch",
           "AskUserQuestion", // Only in interactive mode
         ],
+        // v0.7.5: Pass hooks from config if provided (build validation)
+        ...(resolvedConfig?.runHooks && { hooks: resolvedConfig.runHooks }),
+        ...(resolvedConfig?.buildHooks && { hooks: resolvedConfig.buildHooks }),
         // v0.7.2: Removed outputFormat to support non-Anthropic models
         // Final results are now extracted from sandbox output files via extractSandboxResult()
       },

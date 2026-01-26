@@ -11,7 +11,7 @@
  * @see packages/provider/src/claude-agent-sdk/config.ts
  */
 
-import { readFile, rename, writeFile } from "node:fs/promises";
+import { readdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type {
   HookCallback,
@@ -21,6 +21,9 @@ import type {
 } from "@anthropic-ai/claude-agent-sdk";
 import { parseWorkflow } from "@looplia-core/core";
 import { getLoopliaPluginPath } from "../../bootstrap";
+
+/** Enable debug logging via LOOPLIA_DEBUG=1 */
+const DEBUG = process.env.LOOPLIA_DEBUG === "1";
 
 /**
  * Build validation manifest structure
@@ -85,14 +88,50 @@ function resolveSandboxRoot(context?: HookContext): string {
 }
 
 /**
- * Resolve sandbox directory from context
+ * Find the most recently modified build sandbox directory
+ * Fallback when sandboxId is not provided via environment variable
  */
-function resolveSandboxDir(context?: HookContext): string | undefined {
+async function findMostRecentBuildSandbox(
+  sandboxRoot: string
+): Promise<string | undefined> {
+  try {
+    const entries = await readdir(sandboxRoot, { withFileTypes: true });
+    const dirs = entries.filter(
+      (e) => e.isDirectory() && e.name.startsWith("build-")
+    );
+
+    if (dirs.length === 0) {
+      return;
+    }
+
+    const dirStats = await Promise.all(
+      dirs.map(async (dir) => {
+        const dirPath = join(sandboxRoot, dir.name);
+        const dirStat = await stat(dirPath);
+        return { path: dirPath, mtime: dirStat.mtime.getTime() };
+      })
+    );
+
+    dirStats.sort((a, b) => b.mtime - a.mtime);
+    return dirStats[0]?.path;
+  } catch {
+    return;
+  }
+}
+
+/**
+ * Resolve sandbox directory from context
+ * Falls back to most recent build sandbox if sandboxId not provided
+ */
+async function resolveSandboxDir(
+  context?: HookContext
+): Promise<string | undefined> {
   const sandboxRoot = resolveSandboxRoot(context);
   if (context?.sandboxId) {
     return join(sandboxRoot, context.sandboxId);
   }
-  return;
+  // Fallback: find most recent build sandbox
+  return await findMostRecentBuildSandbox(sandboxRoot);
 }
 
 /**
@@ -101,8 +140,11 @@ function resolveSandboxDir(context?: HookContext): string | undefined {
 export async function readBuildValidation(
   context?: HookContext
 ): Promise<BuildValidationManifest | undefined> {
-  const sandboxDir = resolveSandboxDir(context);
+  const sandboxDir = await resolveSandboxDir(context);
   if (!sandboxDir) {
+    if (DEBUG) {
+      console.error("[build-hooks] readBuildValidation: no sandbox dir found");
+    }
     return;
   }
 
@@ -127,8 +169,13 @@ export async function updateBuildValidation(
   context: HookContext,
   updates: Partial<BuildValidationManifest>
 ): Promise<void> {
-  const sandboxDir = resolveSandboxDir(context);
+  const sandboxDir = await resolveSandboxDir(context);
   if (!sandboxDir) {
+    if (DEBUG) {
+      console.error(
+        "[build-hooks] updateBuildValidation: no sandbox dir found"
+      );
+    }
     return;
   }
 
@@ -145,7 +192,16 @@ export async function updateBuildValidation(
     const tempPath = `${validationPath}.tmp`;
     await writeFile(tempPath, JSON.stringify(updated, null, 2), "utf-8");
     await rename(tempPath, validationPath);
-  } catch {
+
+    if (DEBUG) {
+      console.error(
+        `[build-hooks] updateBuildValidation: updated ${validationPath}`
+      );
+    }
+  } catch (error) {
+    if (DEBUG) {
+      console.error("[build-hooks] updateBuildValidation error:", error);
+    }
     // Ignore errors - validation may not exist yet
   }
 }
@@ -159,9 +215,21 @@ export async function updateBuildValidation(
  */
 export function createBuildValidateHook(context?: HookContext): HookCallback {
   return async (input: Record<string, unknown>): Promise<HookJSONOutput> => {
+    if (DEBUG) {
+      console.error(
+        "[build-hooks] PostToolUse fired:",
+        JSON.stringify(input).slice(0, 200)
+      );
+    }
+
     const hookInput = input as WriteToolInput;
     const filePath = hookInput.tool_input?.file_path;
     const content = hookInput.tool_input?.content;
+
+    if (DEBUG) {
+      console.error("[build-hooks] file_path:", filePath);
+      console.error("[build-hooks] isWorkflowFile:", isWorkflowFile(filePath));
+    }
 
     // Only validate workflow files
     if (!isWorkflowFile(filePath)) {
@@ -218,6 +286,13 @@ export function createBuildValidateHook(context?: HookContext): HookCallback {
  */
 export function createBuildStopGuardHook(context?: HookContext): HookCallback {
   return async (input: Record<string, unknown>): Promise<HookJSONOutput> => {
+    if (DEBUG) {
+      console.error(
+        "[build-hooks] Stop/SubagentStop fired:",
+        JSON.stringify(input).slice(0, 200)
+      );
+    }
+
     const hookInput = input as StopHookInput;
 
     // Prevent infinite loop - SDK sets stop_hook_active when re-entering
@@ -226,6 +301,10 @@ export function createBuildStopGuardHook(context?: HookContext): HookCallback {
     }
 
     const validation = await readBuildValidation(context);
+
+    if (DEBUG) {
+      console.error("[build-hooks] validation:", JSON.stringify(validation));
+    }
 
     // If no validation manifest, allow stop (may be non-build context)
     if (!validation) {
