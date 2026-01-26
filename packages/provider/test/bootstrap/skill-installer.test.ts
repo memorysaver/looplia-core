@@ -100,10 +100,6 @@ describe("bootstrap/skill-installer", () => {
       expect(CORE_SKILLS).toContain("workflow-executor");
     });
 
-    it("should include workflow-executor-inline", () => {
-      expect(CORE_SKILLS).toContain("workflow-executor-inline");
-    });
-
     it("should include workflow-validator", () => {
       expect(CORE_SKILLS).toContain("workflow-validator");
     });
@@ -112,8 +108,8 @@ describe("bootstrap/skill-installer", () => {
       expect(CORE_SKILLS).toContain("registry-loader");
     });
 
-    it("should have exactly 4 core skills", () => {
-      expect(CORE_SKILLS).toHaveLength(4);
+    it("should have exactly 3 core skills", () => {
+      expect(CORE_SKILLS).toHaveLength(3);
     });
   });
 

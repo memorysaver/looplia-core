@@ -11,7 +11,6 @@ The looplia-core plugin SHALL contain only workflow orchestration skills that ar
 - **WHEN** inspecting the looplia-core plugin skills directory
 - **THEN** the following skills are present:
   - `workflow-executor`
-  - `workflow-executor-inline`
   - `workflow-validator`
   - `workflow-schema-composer`
   - `registry-loader`

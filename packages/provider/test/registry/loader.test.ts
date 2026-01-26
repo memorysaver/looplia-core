@@ -103,8 +103,8 @@ describe("registry/loader", () => {
       expect(CORE_SKILLS).toContain("registry-loader");
     });
 
-    it("should have at least 4 core skills", () => {
-      expect(CORE_SKILLS.length).toBeGreaterThanOrEqual(4);
+    it("should have at least 3 core skills", () => {
+      expect(CORE_SKILLS.length).toBeGreaterThanOrEqual(3);
     });
   });
 

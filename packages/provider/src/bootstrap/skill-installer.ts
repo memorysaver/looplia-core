@@ -33,7 +33,6 @@ const SLASH_TO_DASH_REGEX = /\//g;
  */
 export const CORE_SKILLS = [
   "workflow-executor",
-  "workflow-executor-inline",
   "workflow-validator",
   "registry-loader",
 ];

@@ -281,7 +281,7 @@ jobs:
             test-outputs/
           retention-days: 7
 
-  # Test: ZenMux GLM-4.7 with inline execution strategy (no Task subagents)
+  # Test: ZenMux GLM-4.7 with unified subagent strategy (v0.6.9)
   test-zenmux-glm:
     runs-on: ubuntu-latest
     needs: build
