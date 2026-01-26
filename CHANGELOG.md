@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **TypeScript Workflow Hooks (v0.7.4)** - Programmatic hooks replace shell scripts
+  - `stopGuardHook` - Blocks workflow completion until all steps validated
+  - `postWriteValidateHook` - Auto-validates outputs on Write tool use
+  - Hooks passed via `config.runHooks` to SDK query
+  - New module: `packages/provider/src/claude-agent-sdk/hooks/workflow-hooks.ts`
+
+- **Sandbox Result Extraction** - Read final artifacts from validated sandbox outputs
+  - `extractSandboxResult()` finds sandbox, reads validation.json, returns final artifact
+  - Works with any model (no StructuredOutput tool dependency)
+
+- **GLM-4.7 Model Presets** - New presets for GLM models
+  - `ZENMUX_ZAI_GLM47FLASHX` - GLM-4.7-FlashX via ZenMux
+  - `OPENROUTER_ZAI_GLM47FLASH` - GLM-4.7-Flash via OpenRouter
+
 - **OpenRouter and Ollama Provider Presets** - Added support for OpenRouter and Ollama as model provider options
   - New presets: `OPENROUTER_PRESET`, `OLLAMA_GLM47_CLOUD`, `OLLAMA_MINIMAX_M21_CLOUD`
   - OpenRouter uses `@preset/looplia-default` for dashboard-configured models
@@ -26,7 +40,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Hook System Architecture (v0.7.4)** - Shell scripts replaced with TypeScript
+  - Removed: `hooks.json`, `stop-guard.sh`, `post-write-validate.sh`, `compact-inject-state.sh`
+  - Hooks now integrated into SDK query via programmatic API
+
 - **Claude Sonnet Model Version** - Updated from `claude-sonnet-4-5-20250514` to `claude-sonnet-4-5-20250929`
+
+### Fixed
+
+- **Non-Anthropic Model Compatibility (v0.7.4)** - Removed StructuredOutput enforcement
+  - SDK's `outputFormat: json_schema` caused infinite loops with GLM, MiniMax models
+  - Workflow completion now enforced by TypeScript hooks instead
 
 ## [0.7.3] - 2026-01-19
 
