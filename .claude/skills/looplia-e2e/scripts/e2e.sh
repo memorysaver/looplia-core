@@ -65,7 +65,7 @@ echo "✓ Provider configured: ZENMUX_MINIMAX_M21"
 echo ""
 echo "Testing build command..."
 BUILD_EXIT_CODE=0
-$CLI build "Create a simple test workflow that summarizes text input" --name e2e-build-test --no-interactive || BUILD_EXIT_CODE=$?
+$CLI build "read hacker news and select top 5 ai news that has traction for my social account then compile it into one markdown file for me" --name e2e-build-test --no-interactive || BUILD_EXIT_CODE=$?
 
 if [[ $BUILD_EXIT_CODE -ne 0 ]]; then
   echo ""

@@ -33,7 +33,7 @@ The script performs these steps:
 2. **Reset** - Removes `~/.looplia` for fresh start
 3. **Init** - Initializes workspace with plugins
 4. **Configure** - Sets provider to ZenMux MiniMax M2.1
-5. **Build Command** - Tests workflow generation with `looplia build`
+5. **Build Command** - Tests workflow generation (HN AI news aggregator)
 6. **Run Command** - Executes writing-kit workflow with ai-healthcare.md
 7. **Verify** - Checks outputs, validation state, and logs
 
