@@ -159,6 +159,9 @@ export async function* executeAgenticQueryStreaming<T>(
         // v0.7.4: Pass runHooks from config if provided (workflow protection)
         // Only the run command passes hooks - other SDK usage doesn't need them
         ...(config?.runHooks && { hooks: config.runHooks }),
+        // v0.7.5: Pass buildHooks from config if provided (build validation)
+        // Only the build command passes hooks - validates workflow file structure
+        ...(config?.buildHooks && { hooks: config.buildHooks }),
       },
     });
 

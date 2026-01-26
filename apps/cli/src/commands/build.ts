@@ -16,13 +16,15 @@
  * @see plugins/looplia-core/commands/build.md
  */
 
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 
 import type { StreamingEvent } from "@looplia-core/core";
 import { compileRegistry } from "@looplia-core/provider";
 import {
+  type BuildValidationManifest,
+  createBuildHooks,
   createClaudeAgentExecutor,
   initializeCommandEnvironment,
 } from "@looplia-core/provider/claude-agent-sdk";
@@ -309,6 +311,7 @@ function executeMock(args: BuildArgs): BuildResult {
  * Execute with streaming UI (legacy).
  * Wraps streaming execution with error handling and proper session tracking.
  * v0.7.1: Creates sandbox for logging consistency with run command
+ * v0.7.5: Uses buildHooks for workflow file validation
  * @deprecated Use executeWizard for interactive builds (v0.6.4+)
  */
 export async function executeStreamingLegacy(
@@ -321,12 +324,24 @@ export async function executeStreamingLegacy(
       "../utils/sandbox.js"
     );
     const sandboxId = generateSandboxId("build");
+    const sandboxDir = join(workspace, "sandbox", sandboxId);
     createSandboxDirectories(workspace, sandboxId);
+
+    // v0.7.5: Create build-type validation.json for build hooks
+    createBuildValidationJson(sandboxDir, sandboxId, "untitled");
+
+    // v0.7.5: Set env vars for hooks to find sandbox
+    process.env.LOOPLIA_SANDBOX_ID = sandboxId;
+    process.env.LOOPLIA_SANDBOX_ROOT = join(workspace, "sandbox");
 
     // Append sandbox-id to prompt so logger can extract it
     const promptWithSandbox = `${prompt} --sandbox-id ${sandboxId}`;
 
-    const executor = createClaudeAgentExecutor({ workspace });
+    // v0.7.5: Pass buildHooks for workflow file validation
+    const executor = createClaudeAgentExecutor({
+      workspace,
+      buildHooks: createBuildHooks(),
+    });
     const generator = executor.executePromptStreaming(promptWithSandbox, {
       workspace,
       contentId: sandboxId,
@@ -347,6 +362,18 @@ export async function executeStreamingLegacy(
         status: "error",
         error: error.message,
       };
+    }
+
+    // v0.7.5: Handle success with no data by reading validation.json
+    if (!result) {
+      const validation = readBuildValidationSync(sandboxDir);
+      if (validation?.workflowValidated && validation.workflowPath) {
+        return {
+          status: "success",
+          workflowPath: validation.workflowPath,
+          workflowName: validation.workflowName ?? undefined,
+        };
+      }
     }
 
     return (
@@ -380,12 +407,23 @@ export async function executeBatch(
     "../utils/sandbox.js"
   );
   const sandboxId = generateSandboxId("build");
+  const sandboxDir = join(workspace, "sandbox", sandboxId);
   createSandboxDirectories(workspace, sandboxId);
+
+  // v0.7.5: Create build-type validation.json for build hooks
+  createBuildValidationJson(sandboxDir, sandboxId, "untitled");
+
+  // v0.7.5: Set env vars for hooks to find sandbox
+  process.env.LOOPLIA_SANDBOX_ID = sandboxId;
+  process.env.LOOPLIA_SANDBOX_ROOT = join(workspace, "sandbox");
 
   // Append sandbox-id to prompt so logger can extract it
   const promptWithSandbox = `${prompt} --sandbox-id ${sandboxId}`;
 
-  const exec = executor ?? createClaudeAgentExecutor({ workspace });
+  // v0.7.5: Pass buildHooks for workflow file validation
+  const exec =
+    executor ??
+    createClaudeAgentExecutor({ workspace, buildHooks: createBuildHooks() });
   const result = await exec.executePrompt(promptWithSandbox, {
     workspace,
     contentId: sandboxId,
@@ -395,6 +433,19 @@ export async function executeBatch(
     return result.data as BuildResult;
   }
 
+  // v0.7.5: When buildHooks are used, success with no data means workflow was created
+  // Check validation.json for the result
+  if (result.success && !result.data) {
+    const validation = readBuildValidationSync(sandboxDir);
+    if (validation?.workflowValidated && validation.workflowPath) {
+      return {
+        status: "success",
+        workflowPath: validation.workflowPath,
+        workflowName: validation.workflowName ?? undefined,
+      };
+    }
+  }
+
   return {
     status: "error",
     error: result.error?.message ?? "Unknown error",
@@ -402,8 +453,57 @@ export async function executeBatch(
 }
 
 /**
+ * Create initial build validation.json (v0.7.5)
+ */
+function createBuildValidationJson(
+  sandboxDir: string,
+  sandboxId: string,
+  workflowName: string
+): void {
+  const validation: BuildValidationManifest = {
+    type: "build",
+    workflow: workflowName,
+    version: "1.0.0",
+    sandboxId,
+    createdAt: new Date().toISOString(),
+    status: "building",
+    workflowValidated: false,
+    workflowPath: null,
+    workflowName: null,
+  };
+  writeFileSync(
+    join(sandboxDir, "validation.json"),
+    JSON.stringify(validation, null, 2),
+    "utf-8"
+  );
+}
+
+/**
+ * Read build validation.json synchronously (v0.7.5)
+ */
+function readBuildValidationSync(
+  sandboxDir: string
+): BuildValidationManifest | undefined {
+  try {
+    const { readFileSync } = require("node:fs");
+    const content = readFileSync(
+      join(sandboxDir, "validation.json"),
+      "utf-8"
+    ) as string;
+    const manifest = JSON.parse(content) as BuildValidationManifest;
+    if (manifest.type === "build") {
+      return manifest;
+    }
+    return;
+  } catch {
+    return;
+  }
+}
+
+/**
  * Streaming batch executor for wizard use.
  * v0.7.1: Creates sandbox for logging consistency with run command
+ * v0.7.5: Uses buildHooks for workflow file validation
  * Returns an async generator that yields StreamingEvents and final result.
  */
 export async function* executeStreamingBatch(
@@ -415,12 +515,24 @@ export async function* executeStreamingBatch(
     "../utils/sandbox.js"
   );
   const sandboxId = generateSandboxId("build");
+  const sandboxDir = join(workspace, "sandbox", sandboxId);
   createSandboxDirectories(workspace, sandboxId);
+
+  // v0.7.5: Create build-type validation.json for build hooks
+  createBuildValidationJson(sandboxDir, sandboxId, "untitled");
+
+  // v0.7.5: Set env vars for hooks to find sandbox
+  process.env.LOOPLIA_SANDBOX_ID = sandboxId;
+  process.env.LOOPLIA_SANDBOX_ROOT = join(workspace, "sandbox");
 
   // Append sandbox-id to prompt so logger can extract it
   const promptWithSandbox = `${prompt} --sandbox-id ${sandboxId}`;
 
-  const executor = createClaudeAgentExecutor({ workspace });
+  // v0.7.5: Pass buildHooks for workflow file validation
+  const executor = createClaudeAgentExecutor({
+    workspace,
+    buildHooks: createBuildHooks(),
+  });
   const generator = executor.executePromptStreaming(promptWithSandbox, {
     workspace,
     contentId: sandboxId,
@@ -435,6 +547,22 @@ export async function* executeStreamingBatch(
 
   // Map executor result to StreamingResult
   const executorResult = iterResult.value;
+
+  // v0.7.5: Handle success with no data by reading validation.json
+  if (executorResult.success && !executorResult.data) {
+    const validation = readBuildValidationSync(sandboxDir);
+    if (validation?.workflowValidated && validation.workflowPath) {
+      return {
+        success: true,
+        data: {
+          status: "success",
+          workflowPath: validation.workflowPath,
+          workflowName: validation.workflowName ?? undefined,
+        },
+      };
+    }
+  }
+
   return {
     success: executorResult.success,
     data: executorResult.data as BuildResult | undefined,
@@ -458,6 +586,7 @@ export type QuestionCallback = (
  * Interactive streaming batch executor for wizard use (v0.7.1).
  * Supports AskUserQuestion tool via questionCallback.
  * v0.7.1: Creates sandbox for logging consistency with run command
+ * v0.7.5: Uses buildHooks for workflow file validation
  * Returns an async generator that yields StreamingEvents and final result.
  */
 export async function* executeInteractiveStreamingBatch(
@@ -470,7 +599,15 @@ export async function* executeInteractiveStreamingBatch(
     "../utils/sandbox.js"
   );
   const sandboxId = generateSandboxId("build");
+  const sandboxDir = join(workspace, "sandbox", sandboxId);
   createSandboxDirectories(workspace, sandboxId);
+
+  // v0.7.5: Create build-type validation.json for build hooks
+  createBuildValidationJson(sandboxDir, sandboxId, "untitled");
+
+  // v0.7.5: Set env vars for hooks to find sandbox
+  process.env.LOOPLIA_SANDBOX_ID = sandboxId;
+  process.env.LOOPLIA_SANDBOX_ROOT = join(workspace, "sandbox");
 
   // Append sandbox-id to prompt so logger can extract it
   const promptWithSandbox = `${prompt} --sandbox-id ${sandboxId}`;
@@ -492,10 +629,11 @@ export async function* executeInteractiveStreamingBatch(
     },
   };
 
+  // v0.7.5: Pass buildHooks for workflow file validation
   const generator = executeInteractiveQueryStreaming<BuildResult>(
     promptWithSandbox,
     schema as Record<string, unknown>,
-    { workspace },
+    { workspace, buildHooks: createBuildHooks() },
     questionCallback
   );
 
@@ -508,6 +646,22 @@ export async function* executeInteractiveStreamingBatch(
 
   // Map executor result to StreamingResult
   const executorResult = iterResult.value;
+
+  // v0.7.5: Handle success with no data by reading validation.json
+  if (executorResult.success && !executorResult.data) {
+    const validation = readBuildValidationSync(sandboxDir);
+    if (validation?.workflowValidated && validation.workflowPath) {
+      return {
+        success: true,
+        data: {
+          status: "success",
+          workflowPath: validation.workflowPath,
+          workflowName: validation.workflowName ?? undefined,
+        },
+      };
+    }
+  }
+
   if (executorResult.success) {
     return {
       success: true,

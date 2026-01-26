@@ -17,9 +17,10 @@ const LOCK_MAX_RETRIES = 5;
 const LOCK_RETRY_DELAY_MS = 200;
 
 /**
- * Validation manifest structure from sandbox/validation.json
+ * Validation manifest structure from sandbox/validation.json (run command)
  */
-type ValidationManifest = {
+type RunValidationManifest = {
+  type?: "run"; // Optional for backward compatibility
   workflow: string;
   version?: string;
   sandboxId?: string;
@@ -36,9 +37,43 @@ type ValidationManifest = {
 };
 
 /**
- * Type guard to validate manifest structure
+ * Build validation manifest structure (v0.7.5 - build command)
  */
-function isValidationManifest(value: unknown): value is ValidationManifest {
+type BuildValidationManifest = {
+  type: "build";
+  workflow: string;
+  version: string;
+  sandboxId: string;
+  createdAt: string;
+  status: "building" | "validated" | "failed";
+  workflowValidated: boolean;
+  workflowPath: string | null;
+  workflowName: string | null;
+  error?: string;
+};
+
+/**
+ * Union type for all validation manifest types
+ */
+type ValidationManifest = RunValidationManifest | BuildValidationManifest;
+
+/**
+ * Type guard for build validation manifest
+ */
+function isBuildManifest(value: unknown): value is BuildValidationManifest {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const obj = value as Record<string, unknown>;
+  return obj.type === "build";
+}
+
+/**
+ * Type guard to validate run manifest structure
+ */
+function isRunValidationManifest(
+  value: unknown
+): value is RunValidationManifest {
   if (!value || typeof value !== "object") {
     return false;
   }
@@ -48,6 +83,13 @@ function isValidationManifest(value: unknown): value is ValidationManifest {
     typeof obj.steps === "object" &&
     obj.steps !== null
   );
+}
+
+/**
+ * Type guard to validate manifest structure (either run or build)
+ */
+function isValidationManifest(value: unknown): value is ValidationManifest {
+  return isBuildManifest(value) || isRunValidationManifest(value);
 }
 
 /**
@@ -122,7 +164,7 @@ async function findMostRecentSandbox(
  * Find the final step in validation manifest
  */
 function findFinalStep(
-  steps: ValidationManifest["steps"]
+  steps: RunValidationManifest["steps"]
 ): { id: string; output: string } | undefined {
   const stepEntries = Object.entries(steps);
   if (stepEntries.length === 0) {
@@ -138,7 +180,7 @@ function findFinalStep(
 }
 
 function resolveFinalStep(
-  steps: ValidationManifest["steps"],
+  steps: RunValidationManifest["steps"],
   finalStepId?: string
 ): { id: string; output: string } | undefined {
   if (finalStepId) {
@@ -154,7 +196,7 @@ function resolveFinalStep(
 /**
  * Check if all steps in the manifest are validated
  */
-function areAllStepsValidated(steps: ValidationManifest["steps"]): {
+function areAllStepsValidated(steps: RunValidationManifest["steps"]): {
   allValidated: boolean;
   pendingSteps: string[];
 } {
@@ -259,37 +301,34 @@ async function readFinalArtifact<T>(
 }
 
 /**
- * Extract final workflow result from sandbox
- *
- * After SDK query completes, reads validation.json to find
- * the validated output files and returns the final artifact.
- *
- * @param sandboxId - Optional sandbox ID. If not provided, uses most recent sandbox.
- * @returns AgenticQueryResult with extracted artifact or error
+ * Extract build result from build-type validation manifest (v0.7.5)
  */
-export async function extractSandboxResult<T>(
-  options?: SandboxResultOptions
+function extractBuildResult<T>(
+  manifest: BuildValidationManifest,
+  sandboxDir: string
+): AgenticQueryResult<T> {
+  if (!manifest.workflowValidated) {
+    return validationError("build", manifest.error ?? "Workflow not validated");
+  }
+
+  return {
+    success: true,
+    data: {
+      status: "success",
+      sandboxId: manifest.sandboxId ?? sandboxDir.split("/").pop(),
+      workflowName: manifest.workflowName,
+      workflowPath: manifest.workflowPath,
+    } as T,
+  };
+}
+
+/**
+ * Extract run result from run-type validation manifest
+ */
+async function extractRunResult<T>(
+  manifest: RunValidationManifest,
+  sandboxDir: string
 ): Promise<AgenticQueryResult<T>> {
-  const loopliaHome = getLoopliaPluginPath();
-  const sandboxRoot = options?.sandboxRoot ?? join(loopliaHome, "sandbox");
-  const sandboxId = options?.sandboxId;
-
-  // Find sandbox directory
-  const sandboxDir = await resolveSandboxDir(sandboxRoot, sandboxId);
-  if (!sandboxDir) {
-    const message = sandboxId
-      ? `Sandbox not found: ${sandboxId}`
-      : "No sandbox directories found";
-    return validationError("sandbox", message);
-  }
-
-  // Read validation.json
-  const { manifest, error: readError } =
-    await readValidationManifest(sandboxDir);
-  if (!manifest) {
-    return validationError("validation.json", readError ?? "Unknown error");
-  }
-
   // Check all steps are validated
   const { allValidated, pendingSteps } = areAllStepsValidated(manifest.steps);
   if (!allValidated) {
@@ -324,4 +363,48 @@ export async function extractSandboxResult<T>(
       artifact,
     } as T,
   };
+}
+
+/**
+ * Extract final workflow result from sandbox
+ *
+ * After SDK query completes, reads validation.json to find
+ * the validated output files and returns the final artifact.
+ *
+ * v0.7.5: Supports both run-type and build-type validation manifests.
+ * Build manifests track workflow file validation rather than step outputs.
+ *
+ * @param sandboxId - Optional sandbox ID. If not provided, uses most recent sandbox.
+ * @returns AgenticQueryResult with extracted artifact or error
+ */
+export async function extractSandboxResult<T>(
+  options?: SandboxResultOptions
+): Promise<AgenticQueryResult<T>> {
+  const loopliaHome = getLoopliaPluginPath();
+  const sandboxRoot = options?.sandboxRoot ?? join(loopliaHome, "sandbox");
+  const sandboxId = options?.sandboxId;
+
+  // Find sandbox directory
+  const sandboxDir = await resolveSandboxDir(sandboxRoot, sandboxId);
+  if (!sandboxDir) {
+    const message = sandboxId
+      ? `Sandbox not found: ${sandboxId}`
+      : "No sandbox directories found";
+    return validationError("sandbox", message);
+  }
+
+  // Read validation.json
+  const { manifest, error: readError } =
+    await readValidationManifest(sandboxDir);
+  if (!manifest) {
+    return validationError("validation.json", readError ?? "Unknown error");
+  }
+
+  // v0.7.5: Handle build-type manifests differently
+  if (isBuildManifest(manifest)) {
+    return extractBuildResult<T>(manifest, sandboxDir);
+  }
+
+  // Run-type manifest - extract step outputs
+  return extractRunResult<T>(manifest, sandboxDir);
 }

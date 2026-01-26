@@ -56,6 +56,13 @@ export type ClaudeAgentConfig = {
    * Hooks are passed programmatically to SDK query() options.
    */
   runHooks?: Partial<Record<HookEvent, HookCallbackMatcher[]>>;
+
+  /**
+   * v0.7.5: SDK hooks for build validation.
+   * Only used by build command for workflow file validation.
+   * Validates generated workflows have valid YAML frontmatter and structure.
+   */
+  buildHooks?: Partial<Record<HookEvent, HookCallbackMatcher[]>>;
 };
 
 /**
