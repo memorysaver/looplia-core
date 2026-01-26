@@ -7,10 +7,14 @@
  * @see openspec/changes/remove-structuredoutput-enforcement/design.md
  */
 
-import { readdir, readFile, stat } from "node:fs/promises";
+import { access, readdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { getLoopliaPluginPath } from "../../../bootstrap";
 import type { AgenticQueryResult } from "./types";
+
+/** Lock retry constants matching workflow-hooks.ts */
+const LOCK_MAX_RETRIES = 5;
+const LOCK_RETRY_DELAY_MS = 200;
 
 /**
  * Validation manifest structure from sandbox/validation.json
@@ -30,6 +34,40 @@ type ValidationManifest = {
     }
   >;
 };
+
+/**
+ * Type guard to validate manifest structure
+ */
+function isValidationManifest(value: unknown): value is ValidationManifest {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const obj = value as Record<string, unknown>;
+  return (
+    typeof obj.workflow === "string" &&
+    typeof obj.steps === "object" &&
+    obj.steps !== null
+  );
+}
+
+/**
+ * Sleep for specified milliseconds
+ */
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Check if lock file exists
+ */
+async function lockExists(lockPath: string): Promise<boolean> {
+  try {
+    await access(lockPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 type SandboxResultOptions = {
   sandboxId?: string;
@@ -149,19 +187,41 @@ function resolveSandboxDir(
 
 /**
  * Read and parse validation manifest from sandbox
+ *
+ * Handles concurrency with workflow hooks by checking for lock file
+ * and retrying if the file is being written to.
  */
 async function readValidationManifest(
   sandboxDir: string
 ): Promise<{ manifest?: ValidationManifest; error?: string }> {
   const validationPath = join(sandboxDir, "validation.json");
+  const lockPath = `${validationPath}.lock`;
 
-  try {
-    const content = await readFile(validationPath, "utf-8");
-    return { manifest: JSON.parse(content) as ValidationManifest };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { error: `Failed to read validation.json: ${message}` };
+  // Retry loop with backoff if lock exists
+  for (let attempt = 0; attempt < LOCK_MAX_RETRIES; attempt++) {
+    // Check if lock file exists (hook is writing)
+    if (await lockExists(lockPath)) {
+      await sleep(LOCK_RETRY_DELAY_MS);
+      continue;
+    }
+
+    try {
+      const content = await readFile(validationPath, "utf-8");
+      const parsed: unknown = JSON.parse(content);
+
+      // Validate manifest structure
+      if (!isValidationManifest(parsed)) {
+        return { error: "Invalid validation manifest structure" };
+      }
+
+      return { manifest: parsed };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { error: `Failed to read validation.json: ${message}` };
+    }
   }
+
+  return { error: "Timeout waiting for validation.json lock to release" };
 }
 
 /**
