@@ -20,6 +20,7 @@ type ValidationManifest = {
   version?: string;
   sandboxId?: string;
   createdAt?: string;
+  finalStepId?: string;
   steps: Record<
     string,
     {
@@ -28,6 +29,11 @@ type ValidationManifest = {
       validated: boolean;
     }
   >;
+};
+
+type SandboxResultOptions = {
+  sandboxId?: string;
+  sandboxRoot?: string;
 };
 
 /**
@@ -91,6 +97,20 @@ function findFinalStep(
   }
 
   return { id: lastEntry[0], output: lastEntry[1].output };
+}
+
+function resolveFinalStep(
+  steps: ValidationManifest["steps"],
+  finalStepId?: string
+): { id: string; output: string } | undefined {
+  if (finalStepId) {
+    const step = steps[finalStepId];
+    if (step?.output) {
+      return { id: finalStepId, output: step.output };
+    }
+  }
+
+  return findFinalStep(steps);
 }
 
 /**
@@ -188,10 +208,11 @@ async function readFinalArtifact<T>(
  * @returns AgenticQueryResult with extracted artifact or error
  */
 export async function extractSandboxResult<T>(
-  sandboxId?: string
+  options?: SandboxResultOptions
 ): Promise<AgenticQueryResult<T>> {
   const loopliaHome = getLoopliaPluginPath();
-  const sandboxRoot = join(loopliaHome, "sandbox");
+  const sandboxRoot = options?.sandboxRoot ?? join(loopliaHome, "sandbox");
+  const sandboxId = options?.sandboxId;
 
   // Find sandbox directory
   const sandboxDir = await resolveSandboxDir(sandboxRoot, sandboxId);
@@ -219,7 +240,7 @@ export async function extractSandboxResult<T>(
   }
 
   // Find final step
-  const finalStep = findFinalStep(manifest.steps);
+  const finalStep = resolveFinalStep(manifest.steps, manifest.finalStepId);
   if (!finalStep) {
     return validationError("steps", "No steps found in validation manifest");
   }

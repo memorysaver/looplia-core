@@ -23,6 +23,7 @@ import { basename, join, resolve } from "node:path";
 import {
   extractWorkflowSkills,
   generateValidationManifest,
+  getFinalStep,
   isInputlessWorkflow,
   type ParsedWorkflow,
   parseWorkflow,
@@ -75,6 +76,7 @@ export type ValidationJson = {
   sandboxId: string;
   createdAt: string;
   status: "pending" | "in_progress" | "completed" | "failed";
+  finalStepId?: string;
   steps: Record<string, { validated: boolean; validatedAt?: string }>;
 };
 
@@ -779,6 +781,37 @@ async function handleJitInstallation(
   }
 }
 
+function populateValidationManifest(
+  workspace: string,
+  sandboxId: string,
+  workflowId: string,
+  workflowInfo: ReturnType<typeof parseWorkflowFile>
+): void {
+  if (!workflowInfo?.parsed?.definition) {
+    return;
+  }
+
+  const manifest = generateValidationManifest(workflowInfo.parsed.definition);
+  const finalStepId = getFinalStep(workflowInfo.parsed.definition);
+  const sandboxDir = join(workspace, "sandbox", sandboxId);
+  const validationPath = join(sandboxDir, "validation.json");
+
+  if (!existsSync(validationPath)) {
+    createInitialValidationJson(sandboxDir, sandboxId, workflowId);
+  }
+
+  if (!existsSync(validationPath)) {
+    return;
+  }
+
+  const existing = JSON.parse(
+    readFileSync(validationPath, "utf-8")
+  ) as ValidationJson;
+  existing.steps = manifest.steps;
+  existing.finalStepId = finalStepId;
+  writeFileSync(validationPath, JSON.stringify(existing, null, 2), "utf-8");
+}
+
 /**
  * Main entry point for run command (v0.7.0 thin wrapper)
  */
@@ -807,30 +840,17 @@ export async function runRunCommand(args: string[]): Promise<void> {
     // 3. Resolve or create sandbox (validates inputs before API key check)
     const sandboxId = resolveSandboxId(workspace, parsed, allowInputless);
 
+    process.env.LOOPLIA_SANDBOX_ID = sandboxId;
+    process.env.LOOPLIA_SANDBOX_ROOT = join(workspace, "sandbox");
+
     // 3.5. Populate validation.json with workflow steps (v0.7.4)
     // This enables stop-guard.sh to validate workflow completion
-    if (workflowInfo?.parsed?.definition) {
-      const manifest = generateValidationManifest(
-        workflowInfo.parsed.definition
-      );
-      const validationPath = join(
-        workspace,
-        "sandbox",
-        sandboxId,
-        "validation.json"
-      );
-      if (existsSync(validationPath)) {
-        const existing = JSON.parse(
-          readFileSync(validationPath, "utf-8")
-        ) as ValidationJson;
-        existing.steps = manifest.steps;
-        writeFileSync(
-          validationPath,
-          JSON.stringify(existing, null, 2),
-          "utf-8"
-        );
-      }
-    }
+    populateValidationManifest(
+      workspace,
+      sandboxId,
+      parsed.workflowId,
+      workflowInfo
+    );
 
     // 4. v0.7.0: JIT skill installation
     if (!(parsed.mock || (await handleJitInstallation(workflowInfo)))) {

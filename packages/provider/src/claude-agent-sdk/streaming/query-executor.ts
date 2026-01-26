@@ -5,6 +5,7 @@
  * Yields StreamingEvent objects for UI consumption while processing SDK messages.
  */
 
+import { join } from "node:path";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import {
   getLoopliaPluginPath,
@@ -189,7 +190,11 @@ export async function* executeAgenticQueryStreaming<T>(
     // v0.7.2: If no result from StructuredOutput (e.g., non-Anthropic models),
     // extract the final artifact from sandbox output files
     if (!finalResult) {
-      finalResult = await extractSandboxResult<T>();
+      finalResult = await extractSandboxResult<T>({
+        sandboxId: process.env.LOOPLIA_SANDBOX_ID,
+        sandboxRoot:
+          process.env.LOOPLIA_SANDBOX_ROOT ?? join(workspace, "sandbox"),
+      });
     }
 
     return (

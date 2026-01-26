@@ -406,6 +406,7 @@ describe("generateValidationManifest", () => {
 
     expect(manifest.workflow).toBe("test-workflow");
     expect(manifest.version).toBe("1.0.0");
+    expect(manifest.finalStepId).toBe("build");
     expect(Object.keys(manifest.steps)).toHaveLength(3);
   });
 

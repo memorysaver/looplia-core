@@ -194,6 +194,7 @@ Each sandbox contains a `validation.json` file tracking step completion:
   "workflow": "writing-kit",
   "version": "1.2.0",
   "sandboxId": "article-2026-01-12-xk7m",
+  "finalStepId": "writing-kit",
   "steps": {
     "summary": {
       "output": "outputs/summary.json",
@@ -216,6 +217,7 @@ Each sandbox contains a `validation.json` file tracking step completion:
 | `workflow` | Workflow name |
 | `version` | Workflow version |
 | `sandboxId` | Current sandbox identifier |
+| `finalStepId` | Step ID used for final artifact extraction |
 | `steps` | Map of step ID to step state |
 | `steps.<id>.output` | Relative path to step output |
 | `steps.<id>.validated` | Whether step passed validation |

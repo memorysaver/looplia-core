@@ -588,6 +588,7 @@ export function generateValidationManifest(
   return {
     workflow: definition.name,
     version: definition.version,
+    finalStepId: getFinalStep(definition),
     steps,
   };
 }

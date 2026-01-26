@@ -166,6 +166,8 @@ export type ValidationManifest = {
   sandboxId?: string;
   /** Creation timestamp */
   createdAt?: string;
+  /** Final step ID for artifact extraction */
+  finalStepId?: string;
   /** Validation state for each step (v0.6.0 - replaces outputs) */
   steps: Record<string, StepValidationState>;
 };

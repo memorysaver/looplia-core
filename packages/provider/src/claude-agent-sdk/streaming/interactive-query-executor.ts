@@ -14,6 +14,7 @@
  * @see docs/DESIGN-0.7.1.md section 8
  */
 
+import { join } from "node:path";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import {
   getLoopliaPluginPath,
@@ -84,6 +85,7 @@ export type QuestionCallback = (
  * @yields StreamingEvent objects for UI consumption
  * @returns Final AgenticQueryResult on completion
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: SDK integration requires consolidated orchestration logic
 export async function* executeInteractiveQueryStreaming<T>(
   prompt: string,
   _jsonSchema: Record<string, unknown>,
@@ -242,7 +244,11 @@ export async function* executeInteractiveQueryStreaming<T>(
     // v0.7.2: If no result from StructuredOutput (e.g., non-Anthropic models),
     // extract the final artifact from sandbox output files
     if (!finalResult) {
-      finalResult = await extractSandboxResult<T>();
+      finalResult = await extractSandboxResult<T>({
+        sandboxId: process.env.LOOPLIA_SANDBOX_ID,
+        sandboxRoot:
+          process.env.LOOPLIA_SANDBOX_ROOT ?? join(workspace, "sandbox"),
+      });
     }
 
     return (
