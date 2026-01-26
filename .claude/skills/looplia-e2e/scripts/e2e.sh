@@ -61,7 +61,46 @@ if ! $CLI config provider preset ZENMUX_MINIMAX_M21; then
 fi
 echo "✓ Provider configured: ZENMUX_MINIMAX_M21"
 
-# 6. Run writing-kit workflow with ai-healthcare.md
+# 6. Test build command (workflow generation)
+echo ""
+echo "Testing build command..."
+BUILD_EXIT_CODE=0
+$CLI build "Create a simple test workflow that summarizes text input" --name e2e-build-test --no-interactive || BUILD_EXIT_CODE=$?
+
+if [[ $BUILD_EXIT_CODE -ne 0 ]]; then
+  echo ""
+  echo "⚠ Build exited with code $BUILD_EXIT_CODE"
+else
+  echo "✓ Build command completed"
+fi
+
+# Verify build result
+BUILD_WORKFLOW="$HOME/.looplia/workflows/e2e-build-test.md"
+BUILD_SANDBOX=$(find ~/.looplia/sandbox -maxdepth 1 -type d -name "build-*" 2>/dev/null | sort -r | head -1)
+
+echo ""
+echo "Build verification:"
+if [[ -f "$BUILD_WORKFLOW" ]]; then
+  echo "  ✓ Workflow file created: $BUILD_WORKFLOW"
+  BUILD_WORKFLOW_EXISTS=1
+else
+  echo "  ✗ Workflow file not created"
+  BUILD_WORKFLOW_EXISTS=0
+fi
+
+BUILD_VALIDATED=0
+if [[ -n "$BUILD_SANDBOX" ]] && [[ -f "$BUILD_SANDBOX/validation.json" ]]; then
+  BUILD_VALIDATED=$(jq -r '.workflowValidated // false' "$BUILD_SANDBOX/validation.json" 2>/dev/null)
+  if [[ "$BUILD_VALIDATED" == "true" ]]; then
+    echo "  ✓ Workflow validated: true"
+  else
+    echo "  ✗ Workflow validated: false"
+  fi
+else
+  echo "  ✗ Build validation.json not found"
+fi
+
+# 7. Run writing-kit workflow with ai-healthcare.md
 echo ""
 echo "Running writing-kit workflow..."
 echo "File: $TEST_FILE"
@@ -73,12 +112,12 @@ if [[ $WORKFLOW_EXIT_CODE -ne 0 ]]; then
   echo "⚠ Workflow exited with code $WORKFLOW_EXIT_CODE"
 fi
 
-# 7. Verify results (always run verification)
+# 8. Verify run results (always run verification)
 echo ""
-echo "=== Verification ==="
+echo "=== Run Verification ==="
 
-# Find sandbox directory (most recent)
-SANDBOX=$(find ~/.looplia/sandbox -maxdepth 1 -type d ! -name sandbox 2>/dev/null | sort -r | head -1)
+# Find run sandbox directory (most recent non-build)
+SANDBOX=$(find ~/.looplia/sandbox -maxdepth 1 -type d ! -name sandbox ! -name "build-*" 2>/dev/null | sort -r | head -1)
 
 if [[ -z "$SANDBOX" ]]; then
   echo "✗ No sandbox directory found"
@@ -144,16 +183,33 @@ fi
 # Summary
 echo ""
 echo "=== Summary ==="
-echo "Outputs: $OUTPUT_COUNT/3"
-echo "Validated: $VALIDATED/$TOTAL"
+echo ""
+echo "Build command:"
+echo "  Workflow created: $([[ $BUILD_WORKFLOW_EXISTS -eq 1 ]] && echo "yes" || echo "no")"
+echo "  Workflow validated: $BUILD_VALIDATED"
+echo ""
+echo "Run command:"
+echo "  Outputs: $OUTPUT_COUNT/3"
+echo "  Steps validated: $VALIDATED/$TOTAL"
+
+# Determine overall pass/fail
+BUILD_PASSED=0
+RUN_PASSED=0
+
+if [[ $BUILD_WORKFLOW_EXISTS -eq 1 ]] && [[ "$BUILD_VALIDATED" == "true" ]]; then
+  BUILD_PASSED=1
+fi
 
 if [[ -f "$SANDBOX/outputs/writing-kit.json" ]] && [[ "$VALIDATED" -ge 3 ]]; then
-  echo ""
-  echo "✓ E2E test PASSED"
+  RUN_PASSED=1
+fi
+
+echo ""
+if [[ $BUILD_PASSED -eq 1 ]] && [[ $RUN_PASSED -eq 1 ]]; then
+  echo "✓ E2E test PASSED (build + run)"
   exit 0
-else
-  echo ""
-  echo "✗ E2E test FAILED"
+elif [[ $BUILD_PASSED -eq 1 ]]; then
+  echo "⚠ E2E test PARTIAL (build passed, run failed)"
   if [[ $WORKFLOW_EXIT_CODE -ne 0 ]]; then
     echo "  Workflow exit code: $WORKFLOW_EXIT_CODE"
   fi
@@ -162,6 +218,21 @@ else
   fi
   if [[ "$VALIDATED" -lt 3 ]]; then
     echo "  Unvalidated steps: $((TOTAL - VALIDATED))"
+  fi
+  exit 1
+elif [[ $RUN_PASSED -eq 1 ]]; then
+  echo "⚠ E2E test PARTIAL (run passed, build failed)"
+  if [[ $BUILD_EXIT_CODE -ne 0 ]]; then
+    echo "  Build exit code: $BUILD_EXIT_CODE"
+  fi
+  exit 1
+else
+  echo "✗ E2E test FAILED (both build and run)"
+  if [[ $BUILD_EXIT_CODE -ne 0 ]]; then
+    echo "  Build exit code: $BUILD_EXIT_CODE"
+  fi
+  if [[ $WORKFLOW_EXIT_CODE -ne 0 ]]; then
+    echo "  Workflow exit code: $WORKFLOW_EXIT_CODE"
   fi
   exit 1
 fi
