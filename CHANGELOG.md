@@ -22,6 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `searchSkills()` - Search skills.sh via Vercel CLI
   - `fetchSkillContent()` - Fetch skill content from GitHub
 
+- **Skill Search Command** - New `looplia skill search <query>` subcommand
+  - Search skills.sh registry via `npx skills find`
+  - Interactive mode prompts for skill selection (comma-separated numbers)
+  - Auto-installs selected skills to `~/.looplia/plugins/auto-discovery-plugin/`
+  - Auto-compiles registry after installation for immediate availability
+  - Non-interactive mode displays results without prompting
+
 ### Changed
 
 - **Unified Plugin Directory (v0.8.0)** - All plugins now under `~/.looplia/plugins/`

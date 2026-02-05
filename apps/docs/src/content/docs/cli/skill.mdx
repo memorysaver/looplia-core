@@ -34,6 +34,41 @@ looplia skill add frontend-design
 Skills are installed via JIT (just-in-time) cloning from their source repository.
 </Aside>
 
+### search
+
+Search the skills.sh registry for skills matching your query.
+
+```bash
+looplia skill search <query>
+```
+
+**Examples:**
+
+```bash
+looplia skill search "pdf"
+looplia skill search "excel spreadsheet"
+```
+
+In interactive mode (TTY), you'll be prompted to select skills to install:
+
+```
+Found 3 skill(s):
+
+─────────────────────────────────────────────────────────────────────────
+  #  NAME                 OWNER/REPO                    DESCRIPTION
+─────────────────────────────────────────────────────────────────────────
+  1  pdf                  anthropics/skills             PDF manipulation...
+  2  xlsx                 anthropics/skills             Excel processing...
+  3  docx                 anthropics/skills             Word documents...
+─────────────────────────────────────────────────────────────────────────
+
+Enter number(s) to install (comma-separated), or 'q' to quit: 1,2
+```
+
+<Aside type="tip">
+In non-interactive mode (piped input), search displays results without prompting. Use `looplia skill add <name>` to install specific skills.
+</Aside>
+
 ### list
 
 List skills in your workspace.
@@ -83,6 +118,7 @@ looplia skill update <name>
 | Command | Description |
 |---------|-------------|
 | `looplia skill add <name>` | Install a skill |
+| `looplia skill search <query>` | Search skills.sh registry |
 | `looplia skill list` | List installed skills |
 | `looplia skill list --available` | List all available skills |
 | `looplia skill info <name>` | Show skill details |
