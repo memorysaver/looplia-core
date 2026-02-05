@@ -17,9 +17,14 @@ const FORMAT1_PATTERN = /^(\S+)\s+-\s+(.+)\s+\(([^)]+)\)$/;
 const FORMAT2_PATTERN = /^([^/]+)\/([^\s]+)\s+-\s+(.+)$/;
 // Format 3: Just "owner/repo"
 const FORMAT3_PATTERN = /^([^/\s]+)\/([^\s]+)$/;
+// Format 4: "owner/repo@skill" (skills.sh format)
+const FORMAT4_PATTERN = /^([^/\s]+)\/([^@\s]+)@([^\s]+)$/;
 // Skill name cleanup patterns
 const SKILL_SUFFIX_PATTERN = /-skill$/;
 const SKILL_PREFIX_PATTERN = /^skill-/;
+// ANSI escape code pattern for stripping colors
+// biome-ignore lint/suspicious/noControlCharactersInRegex: intentional for ANSI escape sequence
+const ANSI_PATTERN = /\x1b\[[0-9;]*m/g;
 
 /**
  * Search result from skills.sh registry
@@ -143,6 +148,37 @@ function tryParseFormat3(line: string): SkillSearchResult | null {
 }
 
 /**
+ * Try parsing format 4: "owner/repo@skill" (skills.sh format)
+ * Example: "anthropics/skills@pdf" → owner=anthropics, repo=skills, name=pdf
+ */
+function tryParseFormat4(line: string): SkillSearchResult | null {
+  const match = line.match(FORMAT4_PATTERN);
+  if (!match) {
+    return null;
+  }
+
+  const [, owner, repo, skillName] = match;
+  if (!(owner && repo && skillName)) {
+    return null;
+  }
+
+  return {
+    name: skillName,
+    description: "",
+    owner,
+    repo,
+    installCommand: `npx skills add ${owner}/${repo}@${skillName}`,
+  };
+}
+
+/**
+ * Strip ANSI escape codes from string
+ */
+function stripAnsi(str: string): string {
+  return str.replace(ANSI_PATTERN, "");
+}
+
+/**
  * Parse the output of `npx skills find`
  *
  * Expected format varies, but we try to extract:
@@ -154,10 +190,16 @@ function parseSkillsOutput(output: string): SkillSearchResult[] {
   const results: SkillSearchResult[] = [];
   const lines = output.split("\n").filter((line) => line.trim());
 
-  for (const line of lines) {
-    // Try each format in order of specificity
+  for (const rawLine of lines) {
+    // Strip ANSI escape codes from the line
+    const line = stripAnsi(rawLine);
+
+    // Try each format in order of specificity (format 4 first since it has @skill)
     const result =
-      tryParseFormat1(line) ?? tryParseFormat2(line) ?? tryParseFormat3(line);
+      tryParseFormat4(line) ??
+      tryParseFormat1(line) ??
+      tryParseFormat2(line) ??
+      tryParseFormat3(line);
     if (result) {
       results.push(result);
     }

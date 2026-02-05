@@ -417,6 +417,25 @@ async function getGitRemoteUrl(repoPath: string): Promise<string | undefined> {
 }
 
 /**
+ * Try to read per-skill source.json for gitUrl (auto-discovered skills)
+ */
+async function getSkillSourceUrl(
+  skillPath: string
+): Promise<string | undefined> {
+  const sourcePath = join(skillPath, "source.json");
+  try {
+    if (await pathExists(sourcePath)) {
+      const content = await readFile(sourcePath, "utf-8");
+      const sourceData = JSON.parse(content) as { gitUrl?: string };
+      return sourceData.gitUrl;
+    }
+  } catch {
+    // Ignore errors reading source.json
+  }
+  return;
+}
+
+/**
  * Scan a single plugin directory for skills
  */
 async function scanPluginDirectory(
@@ -431,8 +450,8 @@ async function scanPluginDirectory(
     return skills;
   }
 
-  // For third-party plugins, try to get git remote URL
-  const gitUrl =
+  // For third-party plugins, try to get git remote URL at plugin level
+  const pluginGitUrl =
     sourceType === "thirdparty" ? await getGitRemoteUrl(pluginPath) : undefined;
 
   try {
@@ -447,6 +466,11 @@ async function scanPluginDirectory(
       const metadata = await parseSkillMetadata(skillPath);
 
       if (metadata) {
+        // Check for per-skill source.json (auto-discovered skills)
+        // Falls back to plugin-level gitUrl
+        const skillGitUrl = await getSkillSourceUrl(skillPath);
+        const gitUrl = skillGitUrl ?? pluginGitUrl;
+
         skills.push({
           name: metadata.name ?? skillEntry.name,
           title: metadata.title ?? formatTitle(skillEntry.name),

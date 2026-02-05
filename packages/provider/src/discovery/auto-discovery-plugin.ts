@@ -79,10 +79,12 @@ export async function ensureAutoDiscoveryPlugin(): Promise<void> {
  *
  * @param skillName - Name of the skill (used as directory name)
  * @param skillContent - Content of the SKILL.md file
+ * @param sourceUrl - Optional source URL (GitHub repo) for the skill
  */
 export async function installSkillToAutoDiscovery(
   skillName: string,
-  skillContent: string
+  skillContent: string,
+  sourceUrl?: string
 ): Promise<InstallResult> {
   await ensureAutoDiscoveryPlugin();
 
@@ -91,6 +93,16 @@ export async function installSkillToAutoDiscovery(
 
   const skillPath = join(skillDir, "SKILL.md");
   await writeFile(skillPath, skillContent, "utf-8");
+
+  // Store source URL in source.json for registry compilation
+  if (sourceUrl) {
+    const sourcePath = join(skillDir, "source.json");
+    await writeFile(
+      sourcePath,
+      JSON.stringify({ gitUrl: sourceUrl }, null, 2),
+      "utf-8"
+    );
+  }
 
   return {
     skill: skillName,

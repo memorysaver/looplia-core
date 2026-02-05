@@ -26,6 +26,7 @@ Usage:
 
 Subcommands:
   add <name|url>    Install skill by name or GitHub URL
+  search <query>    Search skills.sh registry
   list              List installed/available skills
   info <name>       Show skill details
   remove <name>     Remove skill from workspace
@@ -42,6 +43,7 @@ Examples:
   looplia skill add custom-analyzer --from github:user/repo
   looplia skill add https://github.com/user/my-skill
   looplia skill add https://github.com/anthropics/skills/tree/main/skills/algorithmic-art
+  looplia skill search "pdf processing"
   looplia skill list
   looplia skill list --available
   looplia skill info media-reviewer
@@ -344,6 +346,146 @@ async function skillUpdate(name: string): Promise<void> {
   }
 }
 
+type SearchResult = {
+  name: string;
+  owner: string;
+  repo: string;
+  description: string;
+};
+
+function displaySearchResults(results: SearchResult[]): void {
+  console.log(`\nFound ${results.length} skill(s):\n`);
+  console.log("─".repeat(80));
+  console.log(
+    "  #  NAME                 OWNER/REPO                    DESCRIPTION"
+  );
+  console.log("─".repeat(80));
+
+  for (const [index, result] of results.entries()) {
+    const num = String(index + 1).padStart(2);
+    const name = result.name.padEnd(20);
+    const repo = `${result.owner}/${result.repo}`.padEnd(28);
+    const desc =
+      result.description.length > 25
+        ? `${result.description.slice(0, 22)}...`
+        : result.description;
+    console.log(`  ${num} ${name} ${repo} ${desc}`);
+  }
+  console.log("─".repeat(80));
+}
+
+async function promptSkillSelection(): Promise<string> {
+  const readline = await import("node:readline");
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  const answer = await new Promise<string>((resolve) => {
+    rl.question(
+      "\nEnter number(s) to install (comma-separated), or 'q' to quit: ",
+      resolve
+    );
+  });
+  rl.close();
+  return answer;
+}
+
+function parseSkillSelection<T>(answer: string, results: T[]): T[] {
+  const indices = answer
+    .split(",")
+    .map((s) => Number.parseInt(s.trim(), 10) - 1);
+  return indices
+    .filter((i) => i >= 0 && i < results.length)
+    .map((i) => results[i])
+    .filter((s): s is T => s !== undefined);
+}
+
+async function installSelectedSkills(
+  selected: SearchResult[]
+): Promise<number> {
+  const { fetchSkillContent, installSkillToAutoDiscovery } = await import(
+    "@looplia-core/provider/discovery"
+  );
+
+  console.log(`\nInstalling ${selected.length} skill(s)...`);
+  let installedCount = 0;
+
+  for (const skill of selected) {
+    try {
+      const content = await fetchSkillContent(
+        skill.owner,
+        skill.repo,
+        skill.name
+      );
+      const sourceUrl = `https://github.com/${skill.owner}/${skill.repo}`;
+      const installResult = await installSkillToAutoDiscovery(
+        skill.name,
+        content,
+        sourceUrl
+      );
+      console.log(`  ✓ Installed: ${skill.name} → ${installResult.path}`);
+      installedCount += 1;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error(`  ✗ Failed to install ${skill.name}: ${msg}`);
+    }
+  }
+
+  return installedCount;
+}
+
+async function skillSearch(query: string): Promise<void> {
+  if (!query) {
+    console.error("Error: Search query required");
+    console.error("Usage: looplia skill search <query>");
+    process.exit(1);
+  }
+
+  console.log(`Searching skills.sh for: ${query}...`);
+
+  const { searchSkills } = await import("@looplia-core/provider/discovery");
+  const results = await searchSkills(query);
+
+  if (results.length === 0) {
+    console.log("No skills found matching your query.");
+    return;
+  }
+
+  displaySearchResults(results);
+
+  // Non-interactive mode: just show results
+  if (!process.stdin.isTTY) {
+    console.log("\nTo install a skill, run: looplia skill add <name>");
+    return;
+  }
+
+  // Interactive mode: prompt for selection
+  const answer = await promptSkillSelection();
+
+  if (answer.toLowerCase() === "q" || !answer.trim()) {
+    console.log("No skills installed.");
+    return;
+  }
+
+  const selected = parseSkillSelection(answer, results);
+
+  if (selected.length === 0) {
+    console.log("No valid selection. No skills installed.");
+    return;
+  }
+
+  const installedCount = await installSelectedSkills(selected);
+
+  // Auto-compile registry so installed skills are immediately available
+  if (installedCount > 0) {
+    console.log("\nUpdating skill catalog...");
+    const { compileRegistry } = await import("@looplia-core/provider");
+    await compileRegistry({ localOnly: true });
+    console.log("✓ Skill catalog updated");
+  }
+}
+
 export async function runSkillCommand(args: string[]): Promise<void> {
   const subcommand = args[0];
 
@@ -366,6 +508,10 @@ export async function runSkillCommand(args: string[]): Promise<void> {
   switch (subcommand) {
     case "add":
       await skillAdd(positionalArgs[1] ?? "", from);
+      break;
+
+    case "search":
+      await skillSearch(positionalArgs[1] ?? "");
       break;
 
     case "list":
