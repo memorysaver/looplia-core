@@ -62,11 +62,14 @@ export async function ensureAutoDiscoveryPlugin(): Promise<void> {
   await mkdir(join(pluginPath, ".claude-plugin"), { recursive: true });
   await mkdir(skillsDir, { recursive: true });
 
-  // Create plugin.json
+  // Create plugin.json with enhanced metadata
   const pluginJson = {
     name: "auto-discovery-plugin",
     description: "Auto-discovered skills from skills.sh registry",
     version: "1.0.0",
+    author: { name: "Looplia" },
+    keywords: ["skills", "auto-discovery", "registry", "skills.sh"],
+    homepage: "https://github.com/memorysaver/looplia-core",
   };
   await writeFile(pluginJsonPath, JSON.stringify(pluginJson, null, 2), "utf-8");
 }
