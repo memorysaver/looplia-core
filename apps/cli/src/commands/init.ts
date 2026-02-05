@@ -50,19 +50,19 @@ Description:
   Installs the looplia plugin to ~/.looplia for use with Claude Code.
 
   Default mode (npm bundle):
-    - Copies bundled plugins from npm package to ~/.looplia
+    - Copies bundled plugins from npm package to ~/.looplia/plugins/
     - Installs looplia-core (workflow engine) + looplia-writer (writing domain)
 
   Remote mode (--remote):
     - Downloads plugins from GitHub release
     - Use --remote v0.6.5 for specific version
 
-  Created structure:
+  Created structure (v0.8.0):
     ~/.looplia/
-    ├── looplia-core/               Core workflow engine
-    │   └── .claude-plugin/         Plugin manifest
-    ├── looplia-writer/             Writing domain plugin
-    │   └── .claude-plugin/         Plugin manifest
+    ├── plugins/                    All plugins (unified location)
+    │   ├── looplia-core/           Core workflow engine
+    │   ├── looplia-writer/         Writing domain plugin
+    │   └── auto-discovery-plugin/  Auto-discovered skills (created by build)
     ├── workflows/                  Workflow templates
     ├── sandbox/                    Execution isolation
     └── user-profile.json           User preferences
@@ -129,7 +129,7 @@ function printInitSuccess(targetDir: string): void {
   console.log("");
   console.log(`Looplia initialized at ${targetDir}`);
   console.log("");
-  console.log("Installed plugins:");
+  console.log("Installed plugins (in plugins/):");
   console.log("  - looplia-core/ (workflow engine)");
   console.log("  - looplia-writer/ (writing domain)");
   console.log("");

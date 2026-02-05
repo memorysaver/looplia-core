@@ -1,12 +1,13 @@
 /**
- * Default Sources Installation Tests (v0.7.1)
+ * Default Sources Installation Tests (v0.8.0)
  *
  * Tests for the skill marketplace installation during looplia init:
  * - syncRegistrySources() - Downloads sources, splits marketplaces, generates plugins
- * - getProdPluginPaths() - Scans both root AND plugins/ directories
+ * - getProdPluginPaths() - Scans ONLY plugins/ directory (v0.8.0 unified structure)
  * - Workspace structure validation
  *
  * v0.7.1: Uses unified syncRegistrySources() from registry/sync.ts
+ * v0.8.0: All plugins (first-party, third-party, auto-discovered) go to plugins/
  *
  * Uses LOOPLIA_HOME env var to redirect to temp workspace for testing.
  */
@@ -98,8 +99,8 @@ describe("bootstrap/default-sources", () => {
       await workspace.cleanup();
     });
 
-    it("should scan first-party plugins at root level", async () => {
-      // Create first-party plugins at root
+    it("should scan first-party plugins in plugins/ directory", async () => {
+      // v0.8.0: First-party plugins now go to plugins/ subdirectory
       await createMockPluginInWorkspace(workspace, "looplia-core", ["skill-a"]);
       await createMockPluginInWorkspace(workspace, "looplia-writer", [
         "skill-b",
@@ -110,6 +111,8 @@ describe("bootstrap/default-sources", () => {
 
       expect(pathStrings.some((p) => p.includes("looplia-core"))).toBe(true);
       expect(pathStrings.some((p) => p.includes("looplia-writer"))).toBe(true);
+      // v0.8.0: All plugins should be under plugins/
+      expect(pathStrings.every((p) => p.includes("/plugins/"))).toBe(true);
     });
 
     it("should scan third-party plugins in plugins/ directory", async () => {
@@ -130,15 +133,15 @@ describe("bootstrap/default-sources", () => {
       ).toBe(true);
     });
 
-    it("should exclude 'plugins', 'registry', 'sandbox', 'workflows' from root scan", async () => {
-      // These directories are created by createLoopliaWorkspace
-      // Plus 'plugins' and 'registry' which we exclude
+    it("should not include workspace directories as plugins", async () => {
+      // v0.8.0: getProdPluginPaths only scans plugins/, so workspace
+      // directories like sandbox, workflows, registry are not scanned
 
       const paths = await getProdPluginPaths();
       const pathStrings = paths.map((p) => p.path);
 
       // None of these should appear as plugins
-      for (const excluded of ["sandbox", "workflows", "plugins", "registry"]) {
+      for (const excluded of ["sandbox", "workflows", "registry"]) {
         const hasExcluded = pathStrings.some(
           (p) => p.endsWith(`/${excluded}`) || p.endsWith(`\\${excluded}`)
         );
@@ -147,10 +150,10 @@ describe("bootstrap/default-sources", () => {
     });
 
     it("should combine both first-party and third-party plugins", async () => {
-      // Create first-party at root
+      // v0.8.0: Both first-party and third-party go to plugins/
       await createMockPluginInWorkspace(workspace, "looplia-core", ["skill-a"]);
 
-      // Create third-party in plugins/
+      // Third-party also in plugins/
       await createThirdPartyPlugin(workspace, "anthropic-skills", ["xlsx"]);
 
       const paths = await getProdPluginPaths();
@@ -162,13 +165,23 @@ describe("bootstrap/default-sources", () => {
         true
       );
       expect(paths.length).toBeGreaterThanOrEqual(2);
+      // v0.8.0: All should be under plugins/
+      expect(pathStrings.every((p) => p.includes("/plugins/"))).toBe(true);
     });
 
     it("should handle missing plugins/ directory gracefully", async () => {
-      // Only create first-party plugin, no plugins/ directory
+      // v0.8.0: If plugins/ doesn't exist, should return empty array
+      // (createMockPluginInWorkspace now creates in plugins/)
+
+      // Don't create any plugins - plugins/ directory won't exist
+      const paths = await getProdPluginPaths();
+      expect(paths.length).toBe(0);
+    });
+
+    it("should find plugins when plugins/ directory exists", async () => {
+      // Create plugin (this now creates in plugins/)
       await createMockPluginInWorkspace(workspace, "looplia-core", ["skill-a"]);
 
-      // Should not throw, just return first-party plugins
       const paths = await getProdPluginPaths();
       expect(paths.length).toBeGreaterThanOrEqual(1);
       expect(paths.some((p) => p.path.includes("looplia-core"))).toBe(true);

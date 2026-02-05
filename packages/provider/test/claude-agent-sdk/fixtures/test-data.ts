@@ -117,6 +117,8 @@ export async function createLoopliaWorkspace(): Promise<LoopliaTestWorkspace> {
 /**
  * Create a mock plugin in the test workspace
  *
+ * v0.8.0: Creates plugins in plugins/ subdirectory (unified structure)
+ *
  * @param workspace - The looplia workspace
  * @param name - Plugin name (will be created as a directory)
  * @param skills - Array of skill names to create in the plugin
@@ -126,7 +128,11 @@ export async function createMockPluginInWorkspace(
   name: string,
   skills: string[]
 ): Promise<string> {
-  const pluginPath = join(workspace.path, name);
+  // v0.8.0: All plugins go to plugins/ subdirectory
+  const pluginsDir = join(workspace.path, "plugins");
+  await mkdir(pluginsDir, { recursive: true });
+
+  const pluginPath = join(pluginsDir, name);
   await mkdir(join(pluginPath, ".claude-plugin"), { recursive: true });
 
   // Create plugin.json

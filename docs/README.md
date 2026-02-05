@@ -1,7 +1,7 @@
 # Looplia-Core Documentation
 
-> **Version:** 0.7.5
-> **Last Updated:** January 2026
+> **Version:** 0.8.0
+> **Last Updated:** February 2026
 
 This directory contains the core documentation for Looplia-Core, a Claude Agent SDK-based agentic workflow platform.
 
@@ -9,7 +9,7 @@ This directory contains the core documentation for Looplia-Core, a Claude Agent 
 
 ## Core Documents
 
-These are the current, authoritative documents for the v0.7.5 architecture:
+These are the current, authoritative documents for the v0.8.0 architecture:
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
@@ -76,7 +76,7 @@ Historical design documents and version-specific specs are preserved in `/docs/a
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        DOCUMENT RELATIONSHIPS (v0.7.5)                       │
+│                        DOCUMENT RELATIONSHIPS (v0.8.0)                       │
 └─────────────────────────────────────────────────────────────────────────────┘
 
                               ┌──────────────┐
@@ -280,4 +280,4 @@ Commands exposed via Claude Code plugin system (prefixed with `/looplia:`):
 
 ---
 
-*This README provides navigation for Looplia-Core v0.7.5 documentation.*
+*This README provides navigation for Looplia-Core v0.8.0 documentation.*

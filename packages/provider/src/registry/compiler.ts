@@ -474,57 +474,38 @@ async function scanPluginDirectory(
 
 /**
  * Scan local plugins for installed skills
- * Scans both built-in plugins (looplia-*) and third-party plugins (plugins/*)
+ *
+ * v0.8.0: Unified structure - all plugins under ~/.looplia/plugins/
+ * This includes first-party (looplia-core, looplia-writer), third-party,
+ * and auto-discovered plugins.
  */
 async function scanLocalPlugins(loopliaPath: string): Promise<CompiledSkill[]> {
   const skills: CompiledSkill[] = [];
 
-  // Scan built-in plugins (looplia-core, looplia-writer, etc.)
-  try {
-    const entries = await readdir(loopliaPath, { withFileTypes: true });
-    const builtinDirs = entries.filter(
-      (e) =>
-        e.isDirectory() &&
-        !e.name.startsWith(".") &&
-        e.name !== "sandbox" &&
-        e.name !== "workflows" &&
-        e.name !== "registry" &&
-        e.name !== "plugins"
-    );
-
-    for (const pluginDir of builtinDirs) {
-      const pluginPath = join(loopliaPath, pluginDir.name);
-      const pluginSkills = await scanPluginDirectory(
-        pluginPath,
-        pluginDir.name,
-        "builtin"
-      );
-      skills.push(...pluginSkills);
-    }
-  } catch {
-    // Ignore errors scanning built-in plugins
-  }
-
-  // Scan third-party plugins (~/.looplia/plugins/*)
+  // v0.8.0: All plugins now under plugins/ directory (unified structure)
   const pluginsDir = join(loopliaPath, "plugins");
   if (await pathExists(pluginsDir)) {
     try {
       const entries = await readdir(pluginsDir, { withFileTypes: true });
-      const thirdPartyDirs = entries.filter(
+      const pluginDirs = entries.filter(
         (e) => e.isDirectory() && !e.name.startsWith(".")
       );
 
-      for (const pluginDir of thirdPartyDirs) {
+      for (const pluginDir of pluginDirs) {
         const pluginPath = join(pluginsDir, pluginDir.name);
+        // Determine source type based on plugin name
+        const sourceType = pluginDir.name.startsWith("looplia-")
+          ? "builtin"
+          : "thirdparty";
         const pluginSkills = await scanPluginDirectory(
           pluginPath,
           pluginDir.name,
-          "thirdparty"
+          sourceType
         );
         skills.push(...pluginSkills);
       }
     } catch {
-      // Ignore errors scanning third-party plugins
+      // Ignore errors scanning plugins
     }
   }
 
