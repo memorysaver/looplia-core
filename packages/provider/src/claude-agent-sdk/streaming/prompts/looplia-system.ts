@@ -6,8 +6,19 @@
  *
  * This replaces the previous CLAUDE.md file-based approach.
  * Commands are namespaced as /looplia:run, /looplia:build, etc.
+ *
+ * v0.8.0: Accepts workspace path for correct path resolution in test/custom envs.
  */
-export const loopliaSystemPrompt = `
+
+import { homedir } from "node:os";
+
+function getDefaultWorkspace(): string {
+  return process.env.LOOPLIA_HOME ?? `${homedir()}/.looplia`;
+}
+
+export function getLoopliaSystemPrompt(workspace?: string): string {
+  const ws = workspace ?? getDefaultWorkspace();
+  return `
 # Looplia Workflow Engine (v0.7.1)
 
 You are a looplia workflow engine. Execute workflows by delegating to skills.
@@ -71,7 +82,7 @@ Save generated workflow to \`workflows/{name}.md\`.
 ## Workspace Structure
 
 \`\`\`
-~/.looplia/                  # Looplia plugin root
+${ws}/                  # Looplia plugin root
 ├── .claude-plugin/
 │   └── plugin.json          # Plugin manifest
 ├── commands/                # /looplia:run, /looplia:build, etc.
@@ -93,13 +104,13 @@ Save generated workflow to \`workflows/{name}.md\`.
 
 ## Path Resolution
 
-All relative paths resolve from \`~/.looplia\` (the SDK working directory):
+All relative paths resolve from \`${ws}\` (the SDK working directory):
 
 | Path Type | Example | Resolves To |
 |-----------|---------|-------------|
-| Workflows | \`workflows/writing-kit.md\` | \`~/.looplia/workflows/writing-kit.md\` |
-| Sandbox | \`sandbox/{id}/validation.json\` | \`~/.looplia/sandbox/{id}/validation.json\` |
-| Outputs | \`sandbox/{id}/outputs/\` | \`~/.looplia/sandbox/{id}/outputs/\` |
+| Workflows | \`workflows/writing-kit.md\` | \`${ws}/workflows/writing-kit.md\` |
+| Sandbox | \`sandbox/{id}/validation.json\` | \`${ws}/sandbox/{id}/validation.json\` |
+| Outputs | \`sandbox/{id}/outputs/\` | \`${ws}/sandbox/{id}/outputs/\` |
 
 **User files** (from \`--file\` argument): Resolve against the **User Working Directory** provided in the User Context section below.
 
@@ -127,3 +138,7 @@ All relative paths resolve from \`~/.looplia\` (the SDK working directory):
 
 For implementation details, see the SKILL.md files in \`skills/\`.
 `;
+}
+
+/** @deprecated Use getLoopliaSystemPrompt(workspace) instead */
+export const loopliaSystemPrompt = getLoopliaSystemPrompt();

@@ -38,7 +38,7 @@ import {
   processEvent,
 } from "./executor-common";
 import { ProgressTracker } from "./progress-tracker";
-import { loopliaSystemPrompt } from "./prompts/looplia-system";
+import { getLoopliaSystemPrompt } from "./prompts/looplia-system";
 import {
   createTransformContext,
   type TransformContext,
@@ -198,7 +198,7 @@ export async function* executeInteractiveQueryStreaming<T>(
         systemPrompt: {
           type: "preset",
           preset: "claude_code",
-          append: `${loopliaSystemPrompt}\n\n## User Context\n\nUser Working Directory: ${userCwd}\n\nWhen processing --file arguments or user file paths, resolve them against the User Working Directory above.`,
+          append: `${getLoopliaSystemPrompt(loopliaHome)}\n\n## User Context\n\nUser Working Directory: ${userCwd}\n\nWhen processing --file arguments or user file paths, resolve them against the User Working Directory above.`,
         },
         // Include AskUserQuestion in allowed tools (interactive mode only)
         allowedTools: [

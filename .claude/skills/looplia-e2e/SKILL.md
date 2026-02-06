@@ -8,7 +8,7 @@ license: MIT
 compatibility: Requires jq and bun. Works with Claude Code.
 metadata:
   author: looplia
-  version: "0.7.5"
+  version: "0.8.0"
 ---
 
 # Looplia E2E Test Skill
@@ -25,32 +25,62 @@ echo "ZENMUX_API_KEY=your-key" >> .env
 .claude/skills/looplia-e2e/scripts/e2e.sh
 ```
 
+## Modular Test Scripts (v0.8.0)
+
+The E2E tests are modular and can be run individually:
+
+### Run All Tests
+```bash
+.claude/skills/looplia-e2e/scripts/e2e.sh
+```
+
+### Run Specific Tests
+```bash
+# Auto-discovery only
+./scripts/e2e.sh --test auto
+
+# Workflow execution only
+./scripts/e2e.sh --test workflow
+
+# Or run directly
+./scripts/e2e-auto-discovery.sh
+```
+
+### Test Isolation
+
+Tests use `LOOPLIA_HOME` to isolate from your real workspace:
+- Test workspace: `<project>/test-workspace/`
+- Your workspace: `~/.looplia/` (untouched)
+
 ## What It Tests
 
 The script performs these steps:
 
 1. **Build** - Compiles the CLI from source
-2. **Reset** - Removes `~/.looplia` for fresh start
+2. **Reset** - Removes test workspace for fresh start
 3. **Init** - Initializes workspace with plugins
 4. **Configure** - Sets provider to ZenMux MiniMax M2.1
-5. **Build Command** - Tests workflow generation (HN AI news aggregator)
+5. **Build Command** - Tests workflow generation with auto-discovery (HN AI news aggregator)
 6. **Run Command** - Executes writing-kit workflow with ai-healthcare.md
-7. **Verify** - Checks outputs, validation state, and logs
+7. **Verify** - Checks outputs, validation state, and auto-discovery results
 
 ## Expected Outputs
 
 **Build command:**
 ```
-~/.looplia/workflows/e2e-build-test.md    # Generated workflow file
-~/.looplia/sandbox/build-<id>/
+test-workspace/workflows/e2e-auto-discovery-test.md    # Generated workflow file
+test-workspace/sandbox/build-<id>/
 ├── validation.json       # workflowValidated: true
 └── logs/
     └── *.log             # Execution logs
+test-workspace/plugins/auto-discovery-plugin/
+├── .claude-plugin/       # Plugin initialized
+└── skills/               # Auto-discovered skills
 ```
 
 **Run command:**
 ```
-~/.looplia/sandbox/<run-id>/
+test-workspace/sandbox/<run-id>/
 ├── outputs/
 │   ├── summary.json      # Stage 1: Content analysis
 │   ├── ideas.json        # Stage 2: Idea generation
@@ -62,11 +92,13 @@ The script performs these steps:
 
 ## Success Criteria
 
-**Build command:**
-- Workflow file created at `~/.looplia/workflows/e2e-build-test.md`
+**Auto-discovery test:**
+- Workflow file created at `test-workspace/workflows/e2e-auto-discovery-test.md`
 - validation.json shows `workflowValidated: true`
+- Auto-discovery plugin initialized
+- Skills discovered and cataloged (external dependency)
 
-**Run command:**
+**Workflow test:**
 - 3 output files created (summary.json, ideas.json, writing-kit.json)
 - All 3 steps validated in validation.json
 - Final output writing-kit.json exists
@@ -89,8 +121,8 @@ cat .env | grep ZENMUX_API_KEY
 
 **Workspace issues:**
 ```bash
-# Manual reset
-rm -rf ~/.looplia && looplia init --yes
+# Manual reset (test workspace only)
+rm -rf test-workspace && looplia init --yes
 ```
 
 **Build issues:**
@@ -103,9 +135,11 @@ rm -rf apps/cli/dist && bun run build
 
 ```
 .claude/skills/looplia-e2e/
-├── SKILL.md              # This file
+├── SKILL.md                    # This file
 ├── scripts/
-│   └── e2e.sh            # E2E test script
+│   ├── e2e-setup.sh           # Shared setup/cleanup
+│   ├── e2e-auto-discovery.sh  # Auto-discovery focused test
+│   └── e2e.sh                 # Orchestrator (runs all tests)
 └── assets/
-    └── ai-healthcare.md  # Test content fixture
+    └── ai-healthcare.md       # Test content fixture
 ```

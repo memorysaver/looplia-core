@@ -219,7 +219,7 @@ Examples:
  * Get workspace path
  */
 export function getWorkspacePath(): string {
-  return resolve(homedir(), ".looplia");
+  return process.env.LOOPLIA_HOME ?? resolve(homedir(), ".looplia");
 }
 
 /**
