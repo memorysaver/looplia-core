@@ -84,17 +84,20 @@ describe("bootstrap", () => {
   });
 
   describe("copyPlugins", () => {
-    it("should copy plugins from source to target", async () => {
+    it("should copy plugins from source to target plugins/ directory", async () => {
       const pluginsDir = join(tempSource.path, "plugins");
       await mkdir(pluginsDir, { recursive: true });
       await createMockPluginSource(pluginsDir);
 
       await copyPlugins(tempTarget.path, pluginsDir);
 
-      // Check plugins were copied
+      // v0.8.0: Plugins are copied to plugins/ subdirectory
       const entries = await readdir(tempTarget.path);
-      expect(entries).toContain("looplia-core");
-      expect(entries).toContain("looplia-writer");
+      expect(entries).toContain("plugins");
+
+      const pluginEntries = await readdir(join(tempTarget.path, "plugins"));
+      expect(pluginEntries).toContain("looplia-core");
+      expect(pluginEntries).toContain("looplia-writer");
     });
 
     it("should extract workflows to root workflows directory", async () => {
@@ -119,9 +122,9 @@ describe("bootstrap", () => {
 
       await copyPlugins(tempTarget.path, pluginsDir);
 
-      // Workflows directory should be removed from plugin
+      // v0.8.0: Workflows directory should be removed from plugin in plugins/
       const writerEntries = await readdir(
-        join(tempTarget.path, "looplia-writer")
+        join(tempTarget.path, "plugins", "looplia-writer")
       );
       expect(writerEntries).not.toContain("workflows");
     });

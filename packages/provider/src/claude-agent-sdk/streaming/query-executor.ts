@@ -28,7 +28,7 @@ import {
   initializeAndValidateApiKey,
   processEvent,
 } from "./executor-common";
-import { loopliaSystemPrompt } from "./prompts/looplia-system";
+import { getLoopliaSystemPrompt } from "./prompts/looplia-system";
 
 // Re-export for backward compatibility - intentional to maintain API surface
 // biome-ignore lint/performance/noBarrelFile: intentional re-export for backward compatibility
@@ -139,7 +139,7 @@ export async function* executeAgenticQueryStreaming<T>(
         systemPrompt: {
           type: "preset",
           preset: "claude_code",
-          append: `${loopliaSystemPrompt}\n\n## User Context\n\nUser Working Directory: ${userCwd}\n\nWhen processing --file arguments or user file paths, resolve them against the User Working Directory above.`,
+          append: `${getLoopliaSystemPrompt(loopliaHome)}\n\n## User Context\n\nUser Working Directory: ${userCwd}\n\nWhen processing --file arguments or user file paths, resolve them against the User Working Directory above.`,
         },
         // v0.6.0: Enable Task for subagent spawning, Write/Glob for file operations
         // v0.6.3: Added WebSearch/WebFetch for input-less search skill

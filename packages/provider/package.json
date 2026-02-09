@@ -1,6 +1,6 @@
 {
   "name": "@looplia-core/provider",
-  "version": "0.7.5",
+  "version": "0.8.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,6 +16,14 @@
     "./bootstrap": {
       "types": "./dist/bootstrap/index.d.ts",
       "import": "./dist/bootstrap/index.js"
+    },
+    "./discovery": {
+      "types": "./dist/discovery/index.d.ts",
+      "import": "./dist/discovery/index.js"
+    },
+    "./utils/fs": {
+      "types": "./dist/utils/fs.d.ts",
+      "import": "./dist/utils/fs.js"
     }
   },
   "scripts": {

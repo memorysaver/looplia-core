@@ -440,7 +440,7 @@ Examples:
  * Get workspace path
  */
 function getWorkspacePath(): string {
-  return resolve(homedir(), ".looplia");
+  return process.env.LOOPLIA_HOME ?? resolve(homedir(), ".looplia");
 }
 
 /**

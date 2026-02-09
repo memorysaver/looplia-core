@@ -417,6 +417,25 @@ async function getGitRemoteUrl(repoPath: string): Promise<string | undefined> {
 }
 
 /**
+ * Try to read per-skill source.json for gitUrl (auto-discovered skills)
+ */
+async function getSkillSourceUrl(
+  skillPath: string
+): Promise<string | undefined> {
+  const sourcePath = join(skillPath, "source.json");
+  try {
+    if (await pathExists(sourcePath)) {
+      const content = await readFile(sourcePath, "utf-8");
+      const sourceData = JSON.parse(content) as { gitUrl?: string };
+      return sourceData.gitUrl;
+    }
+  } catch {
+    // Ignore errors reading source.json
+  }
+  return;
+}
+
+/**
  * Scan a single plugin directory for skills
  */
 async function scanPluginDirectory(
@@ -431,8 +450,8 @@ async function scanPluginDirectory(
     return skills;
   }
 
-  // For third-party plugins, try to get git remote URL
-  const gitUrl =
+  // For third-party plugins, try to get git remote URL at plugin level
+  const pluginGitUrl =
     sourceType === "thirdparty" ? await getGitRemoteUrl(pluginPath) : undefined;
 
   try {
@@ -447,6 +466,11 @@ async function scanPluginDirectory(
       const metadata = await parseSkillMetadata(skillPath);
 
       if (metadata) {
+        // Check for per-skill source.json (auto-discovered skills)
+        // Falls back to plugin-level gitUrl
+        const skillGitUrl = await getSkillSourceUrl(skillPath);
+        const gitUrl = skillGitUrl ?? pluginGitUrl;
+
         skills.push({
           name: metadata.name ?? skillEntry.name,
           title: metadata.title ?? formatTitle(skillEntry.name),
@@ -474,57 +498,38 @@ async function scanPluginDirectory(
 
 /**
  * Scan local plugins for installed skills
- * Scans both built-in plugins (looplia-*) and third-party plugins (plugins/*)
+ *
+ * v0.8.0: Unified structure - all plugins under ~/.looplia/plugins/
+ * This includes first-party (looplia-core, looplia-writer), third-party,
+ * and auto-discovered plugins.
  */
 async function scanLocalPlugins(loopliaPath: string): Promise<CompiledSkill[]> {
   const skills: CompiledSkill[] = [];
 
-  // Scan built-in plugins (looplia-core, looplia-writer, etc.)
-  try {
-    const entries = await readdir(loopliaPath, { withFileTypes: true });
-    const builtinDirs = entries.filter(
-      (e) =>
-        e.isDirectory() &&
-        !e.name.startsWith(".") &&
-        e.name !== "sandbox" &&
-        e.name !== "workflows" &&
-        e.name !== "registry" &&
-        e.name !== "plugins"
-    );
-
-    for (const pluginDir of builtinDirs) {
-      const pluginPath = join(loopliaPath, pluginDir.name);
-      const pluginSkills = await scanPluginDirectory(
-        pluginPath,
-        pluginDir.name,
-        "builtin"
-      );
-      skills.push(...pluginSkills);
-    }
-  } catch {
-    // Ignore errors scanning built-in plugins
-  }
-
-  // Scan third-party plugins (~/.looplia/plugins/*)
+  // v0.8.0: All plugins now under plugins/ directory (unified structure)
   const pluginsDir = join(loopliaPath, "plugins");
   if (await pathExists(pluginsDir)) {
     try {
       const entries = await readdir(pluginsDir, { withFileTypes: true });
-      const thirdPartyDirs = entries.filter(
+      const pluginDirs = entries.filter(
         (e) => e.isDirectory() && !e.name.startsWith(".")
       );
 
-      for (const pluginDir of thirdPartyDirs) {
+      for (const pluginDir of pluginDirs) {
         const pluginPath = join(pluginsDir, pluginDir.name);
+        // Determine source type based on plugin name
+        const sourceType = pluginDir.name.startsWith("looplia-")
+          ? "builtin"
+          : "thirdparty";
         const pluginSkills = await scanPluginDirectory(
           pluginPath,
           pluginDir.name,
-          "thirdparty"
+          sourceType
         );
         skills.push(...pluginSkills);
       }
     } catch {
-      // Ignore errors scanning third-party plugins
+      // Ignore errors scanning plugins
     }
   }
 

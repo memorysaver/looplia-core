@@ -5,6 +5,8 @@ export default defineConfig({
     index: "src/index.ts",
     "claude-agent-sdk/index": "src/claude-agent-sdk/index.ts",
     "bootstrap/index": "src/bootstrap/index.ts",
+    "discovery/index": "src/discovery/index.ts",
+    "utils/fs": "src/utils/fs.ts",
   },
   format: ["esm"],
   platform: "node",

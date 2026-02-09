@@ -101,6 +101,7 @@ export type BuildArgs = {
   noInteractive: boolean;
   mock: boolean;
   help: boolean;
+  skipResearch: boolean; // v0.8.0: Skip skill auto-discovery
 };
 
 /**
@@ -140,6 +141,8 @@ function processArg(
     result.noInteractive = true;
   } else if (arg === "--mock") {
     result.mock = true;
+  } else if (arg === "--skip-research" || arg === "--offline") {
+    result.skipResearch = true;
   } else if (!arg.startsWith("-")) {
     descriptionParts.push(arg);
   }
@@ -155,6 +158,7 @@ export function parseArgs(args: string[]): BuildArgs {
     noInteractive: false,
     mock: false,
     help: false,
+    skipResearch: false,
   };
 
   let skipNext = false;
@@ -192,14 +196,22 @@ Options:
   --output, -o <path>     Output directory (default: ~/.looplia/workflows/)
   --name, -n <name>       Workflow filename (derived from description if not set)
   --no-interactive        Skip TUI, batch mode
+  --skip-research         Skip skill auto-discovery (use local skills only)
+  --offline               Alias for --skip-research
   --mock                  Use mock mode (no API calls)
   --help, -h              Show this help
+
+Skill Auto-Discovery (v0.8.0):
+  By default, build searches skills.sh for relevant skills based on your
+  description and installs them to ~/.looplia/plugins/auto-discovery-plugin/.
+  Use --skip-research to disable this and use only locally installed skills.
 
 Examples:
   looplia build
   looplia build "analyze videos and create blog outlines"
   looplia build "summarize articles" --name article-summary
   looplia build "..." --no-interactive --name my-workflow
+  looplia build "..." --skip-research  # Skip skill discovery
 `);
 }
 
@@ -207,7 +219,7 @@ Examples:
  * Get workspace path
  */
 export function getWorkspacePath(): string {
-  return resolve(homedir(), ".looplia");
+  return process.env.LOOPLIA_HOME ?? resolve(homedir(), ".looplia");
 }
 
 /**
@@ -972,6 +984,110 @@ export function renderResult(result: BuildResult, workspace: string): void {
 }
 
 /**
+ * Research and install skills for workflow description (v0.8.0)
+ *
+ * Searches skills.sh using Vercel's CLI and installs matching skills
+ * to the auto-discovery-plugin for use during workflow generation.
+ *
+ * @param description - Workflow description to search for
+ * @param interactive - Whether to prompt for skill selection
+ * @returns Names of installed skills
+ */
+async function researchAndInstallSkills(
+  description: string,
+  interactive: boolean
+): Promise<string[]> {
+  // Dynamic imports to avoid loading when not needed
+  const {
+    searchSkills,
+    fetchSkillContent,
+    installSkillToAutoDiscovery,
+    isSkillAutoDiscovered,
+  } = await import("@looplia-core/provider/discovery");
+
+  console.log("Researching skills for workflow...");
+
+  // Search using Vercel's CLI
+  const results = await searchSkills(description);
+
+  if (results.length === 0) {
+    console.log("No additional skills found, using local catalog");
+    return [];
+  }
+
+  // Select skills (interactive or auto)
+  let selectedSkills: Array<{
+    name: string;
+    description: string;
+    owner: string;
+    repo: string;
+    installCommand: string;
+  }>;
+  if (interactive) {
+    // In interactive mode, show top 5 and let user see what was found
+    console.log(`Found ${results.length} potential skills:`);
+    for (const [i, skill] of results.slice(0, 5).entries()) {
+      console.log(`  ${i + 1}. ${skill.name} - ${skill.description}`);
+    }
+    // For now, auto-select top 3 (full interactive selection can be added later)
+    selectedSkills = results.slice(0, 3);
+    console.log(`Auto-selecting top ${selectedSkills.length} skills...`);
+  } else {
+    // Auto-select top 3 in batch mode
+    selectedSkills = results.slice(0, 3);
+  }
+
+  // Install to auto-discovery plugin
+  const installedNames: string[] = [];
+
+  for (const skill of selectedSkills) {
+    // Skip if already installed
+    if (await isSkillAutoDiscovered(skill.name)) {
+      console.log(`  Skipped: ${skill.name} (already installed)`);
+      installedNames.push(skill.name);
+      continue;
+    }
+
+    try {
+      const content = await fetchSkillContent(
+        skill.owner,
+        skill.repo,
+        skill.name
+      );
+      const sourceUrl = `https://github.com/${skill.owner}/${skill.repo}`;
+      await installSkillToAutoDiscovery(skill.name, content, sourceUrl);
+      installedNames.push(skill.name);
+      console.log(`  Installed: ${skill.name}`);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.warn(`  Failed to install ${skill.name}: ${msg}`);
+    }
+  }
+
+  if (installedNames.length > 0) {
+    console.log(`Installed ${installedNames.length} skills for workflow`);
+  }
+
+  return installedNames;
+}
+
+/**
+ * Run skill auto-discovery, logging errors non-fatally
+ */
+async function trySkillResearch(
+  description: string,
+  interactive: boolean
+): Promise<void> {
+  try {
+    await researchAndInstallSkills(description, interactive);
+  } catch (error: unknown) {
+    console.warn(
+      `Skill research failed: ${error instanceof Error ? error.message : error}`
+    );
+  }
+}
+
+/**
  * Main entry point for build command (v0.6.1)
  */
 export async function runBuildCommand(args: string[]): Promise<void> {
@@ -986,7 +1102,15 @@ export async function runBuildCommand(args: string[]): Promise<void> {
     // 1. Ensure workspace
     const workspace = ensureWorkspace(parsed.mock);
 
-    // 2. v0.7.1: Compile local skill catalog (no remote fetching)
+    // 2. v0.8.0: Skill auto-discovery phase (before registry compilation)
+    if (!(parsed.mock || parsed.skipResearch) && parsed.description) {
+      await trySkillResearch(
+        parsed.description,
+        isInteractive() && !parsed.noInteractive
+      );
+    }
+
+    // 3. v0.7.1: Compile local skill catalog (includes auto-discovered)
     if (!parsed.mock) {
       try {
         await compileRegistry({ localOnly: true });
@@ -995,16 +1119,16 @@ export async function runBuildCommand(args: string[]): Promise<void> {
       }
     }
 
-    // 3. Load settings, inject env vars, validate API key (v0.6.10)
+    // 4. Load settings, inject env vars, validate API key (v0.6.10)
     await initializeCommandEnvironment({ mock: parsed.mock });
 
-    // 4. Build /build prompt
+    // 5. Build /build prompt
     const prompt = buildPrompt(parsed);
 
-    // 5. Execute
+    // 6. Execute
     const result = await executeBuild(prompt, workspace, parsed);
 
-    // 6. Render result (v0.7.3: includes CLI-controlled artifact persistence)
+    // 7. Render result (v0.7.3: includes CLI-controlled artifact persistence)
     renderResult(result, workspace);
 
     if (result.status !== "success") {

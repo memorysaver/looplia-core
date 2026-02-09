@@ -1,13 +1,14 @@
 /**
- * Bootstrap Module (v0.7.1)
+ * Bootstrap Module (v0.8.0)
  *
  * Handles plugin installation for different modes:
- * - NPM Bundle: Copy from npm package to ~/.looplia
- * - Remote: Download from GitHub release to ~/.looplia
+ * - NPM Bundle: Copy from npm package to ~/.looplia/plugins/
+ * - Remote: Download from GitHub release to ~/.looplia/plugins/
  * - Development: Uses ./plugins directly (no copy needed)
  *
  * Uses marketplace.json for dynamic plugin discovery.
  * v0.7.1: Uses unified syncRegistrySources() for default marketplace installation.
+ * v0.8.0: Unified plugin directory - all plugins under ~/.looplia/plugins/
  *
  * @see docs/DESIGN-0.7.1.md section 7.6
  */
@@ -170,16 +171,23 @@ function createDefaultProfile(): object {
  * Workflows are looplia-specific templates, not Claude plugin components.
  * This extracts them from each plugin to ~/.looplia/workflows/ for
  * simple CLI lookup and user custom workflows.
+ *
+ * v0.8.0: Updated to accept pluginsDir parameter for unified plugin structure
+ *
+ * @param targetDir - Root looplia directory (e.g., ~/.looplia)
+ * @param pluginsDir - Directory containing plugins (e.g., ~/.looplia/plugins)
+ * @param pluginNames - List of plugin folder names
  */
 async function extractWorkflows(
   targetDir: string,
+  pluginsDir: string,
   pluginNames: string[]
 ): Promise<void> {
   const workflowsDir = join(targetDir, "workflows");
   await mkdir(workflowsDir, { recursive: true });
 
   for (const pluginName of pluginNames) {
-    const pluginWorkflowsPath = join(targetDir, pluginName, "workflows");
+    const pluginWorkflowsPath = join(pluginsDir, pluginName, "workflows");
     if (!(await pathExists(pluginWorkflowsPath))) {
       continue;
     }
@@ -206,6 +214,8 @@ async function extractWorkflows(
  * This is used when users run `looplia init` after installing via npm.
  * Reads plugin list from marketplace.json for dynamic discovery.
  *
+ * v0.8.0: All plugins are now installed to ~/.looplia/plugins/ (unified structure)
+ *
  * @param targetDir - Target directory (e.g., ~/.looplia)
  * @param sourcePath - Optional source path for bundled plugins. If not provided,
  *                     uses getBundledPluginsPath() which works for npm installs.
@@ -229,16 +239,20 @@ export async function copyPlugins(
   }
   await mkdir(targetDir, { recursive: true });
 
-  // Copy all plugins from marketplace (no merge, keep separate)
+  // v0.8.0: All plugins go to plugins/ subdirectory (unified structure)
+  const pluginsDir = join(targetDir, "plugins");
+  await mkdir(pluginsDir, { recursive: true });
+
+  // Copy all plugins from marketplace to plugins/ directory
   for (const pluginName of pluginNames) {
     const pluginPath = join(bundledPath, pluginName);
     if (await pathExists(pluginPath)) {
-      await cp(pluginPath, join(targetDir, pluginName), { recursive: true });
+      await cp(pluginPath, join(pluginsDir, pluginName), { recursive: true });
     }
   }
 
-  // Extract workflows from plugins to root
-  await extractWorkflows(targetDir, pluginNames);
+  // Extract workflows from plugins/ to root workflows/
+  await extractWorkflows(targetDir, pluginsDir, pluginNames);
 
   // Create sandbox directory
   await mkdir(join(targetDir, "sandbox"), { recursive: true });
@@ -365,20 +379,17 @@ export async function downloadRemotePlugins(
 }
 
 /**
- * Check if looplia is initialized (any plugin exists at ~/.looplia)
+ * Check if looplia is initialized (plugins directory exists with content)
+ *
+ * v0.8.0: Check for plugins/ subdirectory (unified structure)
  */
 export async function isLoopliaInitialized(): Promise<boolean> {
   const pluginPath = getLoopliaPluginPath();
+  const pluginsDir = join(pluginPath, "plugins");
 
   try {
-    const entries = await readdir(pluginPath, { withFileTypes: true });
-    return entries.some(
-      (e) =>
-        e.isDirectory() &&
-        !e.name.startsWith(".") &&
-        e.name !== "sandbox" &&
-        e.name !== "workflows"
-    );
+    const entries = await readdir(pluginsDir, { withFileTypes: true });
+    return entries.some((e) => e.isDirectory() && !e.name.startsWith("."));
   } catch {
     return false;
   }
@@ -402,46 +413,24 @@ export function getDevPluginPaths(
 /**
  * Get plugin paths for production mode
  *
- * In production mode, we scan ~/.looplia for installed plugins.
+ * v0.8.0: Unified structure - all plugins under ~/.looplia/plugins/
+ * This includes first-party (looplia-core, looplia-writer), third-party,
+ * and auto-discovered plugins.
  */
 export async function getProdPluginPaths(): Promise<
   Array<{ type: "local"; path: string }>
 > {
   const loopliaPath = getLoopliaPluginPath();
+  const pluginsDir = join(loopliaPath, "plugins");
   const results: Array<{ type: "local"; path: string }> = [];
 
-  // Scan root level (first-party plugins: looplia-core, looplia-writer)
-  try {
-    const entries = await readdir(loopliaPath, { withFileTypes: true });
-    const pluginDirs = entries
-      .filter(
-        (e) =>
-          e.isDirectory() &&
-          !e.name.startsWith(".") &&
-          e.name !== "sandbox" &&
-          e.name !== "workflows" &&
-          e.name !== "plugins" &&
-          e.name !== "registry"
-      )
-      .map((e) => e.name);
-
-    for (const name of pluginDirs) {
-      results.push({ type: "local", path: join(loopliaPath, name) });
-    }
-  } catch {
-    // Ignore errors reading root
-  }
-
-  // Scan plugins/ directory (third-party plugins from marketplaces)
-  const pluginsDir = join(loopliaPath, "plugins");
+  // v0.8.0: Scan only plugins/ directory (unified structure)
   try {
     const entries = await readdir(pluginsDir, { withFileTypes: true });
-    const thirdPartyDirs = entries
-      .filter((e) => e.isDirectory() && !e.name.startsWith("."))
-      .map((e) => e.name);
-
-    for (const name of thirdPartyDirs) {
-      results.push({ type: "local", path: join(pluginsDir, name) });
+    for (const entry of entries) {
+      if (entry.isDirectory() && !entry.name.startsWith(".")) {
+        results.push({ type: "local", path: join(pluginsDir, entry.name) });
+      }
     }
   } catch {
     // plugins/ directory may not exist yet

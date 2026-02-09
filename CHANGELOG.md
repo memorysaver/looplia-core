@@ -5,6 +5,48 @@ All notable changes to Looplia-Core will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-02-05
+
+### Added
+
+- **Skill Auto-Discovery (v0.8.0)** - Discover and install skills from skills.sh during build
+  - New `researchAndInstallSkills()` function uses Vercel's `npx skills find` CLI
+  - Skills installed to `~/.looplia/plugins/auto-discovery-plugin/`
+  - Auto-selects top 3 skills in batch mode, interactive selection in terminal
+  - `--skip-research` / `--offline` flags to skip discovery phase
+
+- **Auto-Discovery Plugin Module** - New `@looplia-core/provider/discovery` export
+  - `getAutoDiscoveryPluginPath()` - Path to auto-discovery plugin
+  - `ensureAutoDiscoveryPlugin()` - Create plugin structure on demand
+  - `installSkillToAutoDiscovery()` - Install skill SKILL.md to plugin
+  - `searchSkills()` - Search skills.sh via Vercel CLI
+  - `fetchSkillContent()` - Fetch skill content from GitHub
+
+- **Skill Search Command** - New `looplia skill search <query>` subcommand
+  - Search skills.sh registry via `npx skills find`
+  - Interactive mode prompts for skill selection (comma-separated numbers)
+  - Auto-installs selected skills to `~/.looplia/plugins/auto-discovery-plugin/`
+  - Auto-compiles registry after installation for immediate availability
+  - Non-interactive mode displays results without prompting
+
+### Changed
+
+- **Unified Plugin Directory (v0.8.0)** - All plugins now under `~/.looplia/plugins/`
+  - First-party plugins (looplia-core, looplia-writer) installed to `plugins/`
+  - Third-party plugins in `plugins/`
+  - Auto-discovered skills in `plugins/auto-discovery-plugin/`
+  - Simplifies plugin scanning and loading logic
+
+- **getProdPluginPaths()** - Simplified to scan only `~/.looplia/plugins/`
+  - Removed dual scanning of root + plugins/ directories
+  - All plugin types now discovered from unified location
+
+### Breaking Changes
+
+- **Workspace Structure** - Requires re-initialization with `looplia init --force`
+  - Previous installations at `~/.looplia/looplia-core/` no longer detected
+  - Run `rm -rf ~/.looplia && looplia init` to upgrade from v0.7.x
+
 ## [0.7.5] - 2026-01-27
 
 ### Fixed
@@ -924,7 +966,9 @@ The following were considered but **intentionally deferred** to v0.6+:
 
 ---
 
-[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.7.4...HEAD
+[Unreleased]: https://github.com/memorysaver/looplia-core/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/memorysaver/looplia-core/compare/v0.7.5...v0.8.0
+[0.7.5]: https://github.com/memorysaver/looplia-core/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/memorysaver/looplia-core/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/memorysaver/looplia-core/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/memorysaver/looplia-core/compare/v0.7.1...v0.7.2
