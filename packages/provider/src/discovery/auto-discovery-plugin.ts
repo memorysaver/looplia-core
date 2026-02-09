@@ -19,6 +19,7 @@ import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { InstallResult } from "@looplia-core/core";
 import { getLoopliaPluginPath } from "../bootstrap/index";
+import { isValidPathSegment, pathExists } from "../utils/fs";
 
 const AUTO_DISCOVERY_PLUGIN_NAME = "auto-discovery-plugin";
 
@@ -27,18 +28,6 @@ const AUTO_DISCOVERY_PLUGIN_NAME = "auto-discovery-plugin";
  */
 export function getAutoDiscoveryPluginPath(): string {
   return join(getLoopliaPluginPath(), "plugins", AUTO_DISCOVERY_PLUGIN_NAME);
-}
-
-/**
- * Check if a path exists
- */
-async function pathExists(path: string): Promise<boolean> {
-  try {
-    await readdir(path);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 /**
@@ -86,29 +75,42 @@ export async function installSkillToAutoDiscovery(
   skillContent: string,
   sourceUrl?: string
 ): Promise<InstallResult> {
-  await ensureAutoDiscoveryPlugin();
-
-  const skillDir = join(getAutoDiscoveryPluginPath(), "skills", skillName);
-  await mkdir(skillDir, { recursive: true });
-
-  const skillPath = join(skillDir, "SKILL.md");
-  await writeFile(skillPath, skillContent, "utf-8");
-
-  // Store source URL in source.json for registry compilation
-  if (sourceUrl) {
-    const sourcePath = join(skillDir, "source.json");
-    await writeFile(
-      sourcePath,
-      JSON.stringify({ gitUrl: sourceUrl }, null, 2),
-      "utf-8"
-    );
+  if (!isValidPathSegment(skillName)) {
+    throw new Error(`Invalid skill name: ${skillName}`);
   }
 
-  return {
-    skill: skillName,
-    status: "installed",
-    path: skillDir,
-  };
+  try {
+    await ensureAutoDiscoveryPlugin();
+
+    const skillDir = join(getAutoDiscoveryPluginPath(), "skills", skillName);
+    await mkdir(skillDir, { recursive: true });
+
+    const skillPath = join(skillDir, "SKILL.md");
+    await writeFile(skillPath, skillContent, "utf-8");
+
+    // Store source URL in source.json for registry compilation
+    if (sourceUrl) {
+      const sourcePath = join(skillDir, "source.json");
+      await writeFile(
+        sourcePath,
+        JSON.stringify({ gitUrl: sourceUrl }, null, 2),
+        "utf-8"
+      );
+    }
+
+    return {
+      skill: skillName,
+      status: "installed",
+      path: skillDir,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      skill: skillName,
+      status: "failed",
+      error: `Failed to install skill: ${message}`,
+    };
+  }
 }
 
 /**
@@ -133,6 +135,9 @@ export async function listAutoDiscoveredSkills(): Promise<string[]> {
 export async function isSkillAutoDiscovered(
   skillName: string
 ): Promise<boolean> {
+  if (!isValidPathSegment(skillName)) {
+    return false;
+  }
   const skillDir = join(getAutoDiscoveryPluginPath(), "skills", skillName);
   return await pathExists(skillDir);
 }

@@ -5,10 +5,10 @@
  * and fetches skill content from GitHub.
  */
 
-import { exec } from "node:child_process";
+import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 // Regex patterns for parsing skills CLI output (top-level for performance)
 // Format 1: "skill-name - Description (owner/repo)"
@@ -25,6 +25,8 @@ const SKILL_PREFIX_PATTERN = /^skill-/;
 // ANSI escape code pattern for stripping colors
 // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional for ANSI escape sequence
 const ANSI_PATTERN = /\x1b\[[0-9;]*m/g;
+// Valid GitHub owner/repo/skill name segment (alphanumeric, dots, hyphens, underscores)
+const GITHUB_SEGMENT_PATTERN = /^[a-zA-Z0-9._-]+$/;
 
 /**
  * Search result from skills.sh registry
@@ -47,8 +49,8 @@ export async function searchSkills(
   query: string
 ): Promise<SkillSearchResult[]> {
   try {
-    // Run Vercel's skills CLI with 30-second timeout
-    const { stdout } = await execAsync(`npx skills find "${query}"`, {
+    // Run Vercel's skills CLI with 30-second timeout (execFile prevents injection)
+    const { stdout } = await execFileAsync("npx", ["skills", "find", query], {
       timeout: 30_000,
     });
 
@@ -65,7 +67,7 @@ export async function searchSkills(
 /**
  * Derive skill name from repo by removing -skill suffix and skill- prefix
  */
-function deriveSkillName(repo: string): string {
+export function deriveSkillName(repo: string): string {
   return repo
     .replace(SKILL_SUFFIX_PATTERN, "")
     .replace(SKILL_PREFIX_PATTERN, "");
@@ -172,6 +174,13 @@ function tryParseFormat4(line: string): SkillSearchResult | null {
 }
 
 /**
+ * Validate a GitHub owner/repo/skill name segment
+ */
+export function isValidGitHubSegment(s: string): boolean {
+  return s.length > 0 && GITHUB_SEGMENT_PATTERN.test(s);
+}
+
+/**
  * Strip ANSI escape codes from string
  */
 function stripAnsi(str: string): string {
@@ -186,7 +195,7 @@ function stripAnsi(str: string): string {
  * - description
  * - owner/repo
  */
-function parseSkillsOutput(output: string): SkillSearchResult[] {
+export function parseSkillsOutput(output: string): SkillSearchResult[] {
   const results: SkillSearchResult[] = [];
   const lines = output.split("\n").filter((line) => line.trim());
 
@@ -221,6 +230,17 @@ export async function fetchSkillContent(
   repo: string,
   skillName: string
 ): Promise<string> {
+  // Validate inputs to prevent URL manipulation
+  for (const [label, value] of [
+    ["owner", owner],
+    ["repo", repo],
+    ["skillName", skillName],
+  ] as const) {
+    if (!isValidGitHubSegment(value)) {
+      throw new Error(`Invalid ${label}: ${value}`);
+    }
+  }
+
   // Try multiple possible paths for the SKILL.md file
   const paths = [
     `skills/${skillName}/SKILL.md`,

@@ -1054,7 +1054,8 @@ async function researchAndInstallSkills(
         skill.repo,
         skill.name
       );
-      await installSkillToAutoDiscovery(skill.name, content);
+      const sourceUrl = `https://github.com/${skill.owner}/${skill.repo}`;
+      await installSkillToAutoDiscovery(skill.name, content, sourceUrl);
       installedNames.push(skill.name);
       console.log(`  Installed: ${skill.name}`);
     } catch (error) {
@@ -1068,6 +1069,22 @@ async function researchAndInstallSkills(
   }
 
   return installedNames;
+}
+
+/**
+ * Run skill auto-discovery, logging errors non-fatally
+ */
+async function trySkillResearch(
+  description: string,
+  interactive: boolean
+): Promise<void> {
+  try {
+    await researchAndInstallSkills(description, interactive);
+  } catch (error: unknown) {
+    console.warn(
+      `Skill research failed: ${error instanceof Error ? error.message : error}`
+    );
+  }
 }
 
 /**
@@ -1087,17 +1104,10 @@ export async function runBuildCommand(args: string[]): Promise<void> {
 
     // 2. v0.8.0: Skill auto-discovery phase (before registry compilation)
     if (!(parsed.mock || parsed.skipResearch) && parsed.description) {
-      try {
-        await researchAndInstallSkills(
-          parsed.description,
-          isInteractive() && !parsed.noInteractive
-        );
-      } catch {
-        // Skill research failure is non-fatal - continue with local skills
-        console.warn(
-          "Skill research unavailable, continuing with local skills"
-        );
-      }
+      await trySkillResearch(
+        parsed.description,
+        isInteractive() && !parsed.noInteractive
+      );
     }
 
     // 3. v0.7.1: Compile local skill catalog (includes auto-discovered)
@@ -1112,13 +1122,13 @@ export async function runBuildCommand(args: string[]): Promise<void> {
     // 4. Load settings, inject env vars, validate API key (v0.6.10)
     await initializeCommandEnvironment({ mock: parsed.mock });
 
-    // 4. Build /build prompt
+    // 5. Build /build prompt
     const prompt = buildPrompt(parsed);
 
-    // 5. Execute
+    // 6. Execute
     const result = await executeBuild(prompt, workspace, parsed);
 
-    // 6. Render result (v0.7.3: includes CLI-controlled artifact persistence)
+    // 7. Render result (v0.7.3: includes CLI-controlled artifact persistence)
     renderResult(result, workspace);
 
     if (result.status !== "success") {

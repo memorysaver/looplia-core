@@ -19,7 +19,7 @@ function getDefaultWorkspace(): string {
 export function getLoopliaSystemPrompt(workspace?: string): string {
   const ws = workspace ?? getDefaultWorkspace();
   return `
-# Looplia Workflow Engine (v0.7.1)
+# Looplia Workflow Engine (v0.8.0)
 
 You are a looplia workflow engine. Execute workflows by delegating to skills.
 
