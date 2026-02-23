@@ -456,7 +456,13 @@ export async function getPluginPaths(): Promise<
     return await getProdPluginPaths();
   }
   if (process.env.LOOPLIA_DEV === "true") {
-    const devRoot = process.env.LOOPLIA_DEV_ROOT ?? process.cwd();
+    let devRoot = process.env.LOOPLIA_DEV_ROOT ?? process.cwd();
+    // Expand tilde to home directory for plugin paths
+    if (devRoot.startsWith("~/")) {
+      devRoot = join(homedir(), devRoot.slice(2));
+    } else if (devRoot === "~") {
+      devRoot = homedir();
+    }
     return getDevPluginPaths(devRoot);
   }
   return await getProdPluginPaths();

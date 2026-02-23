@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Interactive build mode false error** - `looplia build` no longer shows an error when the workflow file was successfully written but the agent terminated abnormally (non-success SDK subtype). `validation.json` is now the authoritative source of truth for build success, checked regardless of how the agent terminated.
+- **Test env isolation** - Wrapped `getPluginPaths` bootstrap tests in `try/finally` to ensure `LOOPLIA_DEV` and `LOOPLIA_DEV_ROOT` env vars are always restored, even if a test throws.
 
 ## [0.8.0] - 2026-02-05
 

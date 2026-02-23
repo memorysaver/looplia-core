@@ -188,33 +188,111 @@ describe("bootstrap", () => {
       const originalDev = process.env.LOOPLIA_DEV;
       const originalRoot = process.env.LOOPLIA_DEV_ROOT;
 
-      process.env.LOOPLIA_DEV = "true";
-      process.env.LOOPLIA_DEV_ROOT = tempSource.path;
+      try {
+        process.env.LOOPLIA_DEV = "true";
+        process.env.LOOPLIA_DEV_ROOT = tempSource.path;
 
-      const paths = await getPluginPaths();
+        const paths = await getPluginPaths();
 
-      process.env.LOOPLIA_DEV = originalDev;
-      process.env.LOOPLIA_DEV_ROOT = originalRoot;
+        expect(paths.length).toBe(2);
+        expect(paths[0].type).toBe("local");
+        expect(paths[0].path).toContain("looplia-core");
+      } finally {
+        if (originalDev === undefined) {
+          // biome-ignore lint/performance/noDelete: env var cleanup requires actual key removal
+          delete process.env.LOOPLIA_DEV;
+        } else {
+          process.env.LOOPLIA_DEV = originalDev;
+        }
+        if (originalRoot === undefined) {
+          // biome-ignore lint/performance/noDelete: env var cleanup requires actual key removal
+          delete process.env.LOOPLIA_DEV_ROOT;
+        } else {
+          process.env.LOOPLIA_DEV_ROOT = originalRoot;
+        }
+      }
+    });
 
-      expect(paths.length).toBe(2);
-      expect(paths[0].type).toBe("local");
-      expect(paths[0].path).toContain("looplia-core");
+    it("should expand tilde in LOOPLIA_DEV_ROOT", async () => {
+      const originalDev = process.env.LOOPLIA_DEV;
+      const originalRoot = process.env.LOOPLIA_DEV_ROOT;
+
+      try {
+        process.env.LOOPLIA_DEV = "true";
+        process.env.LOOPLIA_DEV_ROOT = "~/test/workspace";
+
+        const paths = await getPluginPaths();
+
+        // Should expand tilde to the OS home directory
+        expect(paths.length).toBe(2);
+        expect(paths[0].path).toContain(`${homedir()}/test/workspace`);
+        expect(paths[0].path).not.toContain("~");
+      } finally {
+        if (originalDev === undefined) {
+          // biome-ignore lint/performance/noDelete: env var cleanup requires actual key removal
+          delete process.env.LOOPLIA_DEV;
+        } else {
+          process.env.LOOPLIA_DEV = originalDev;
+        }
+        if (originalRoot === undefined) {
+          // biome-ignore lint/performance/noDelete: env var cleanup requires actual key removal
+          delete process.env.LOOPLIA_DEV_ROOT;
+        } else {
+          process.env.LOOPLIA_DEV_ROOT = originalRoot;
+        }
+      }
+    });
+
+    it("should expand bare tilde in LOOPLIA_DEV_ROOT", async () => {
+      const originalDev = process.env.LOOPLIA_DEV;
+      const originalRoot = process.env.LOOPLIA_DEV_ROOT;
+
+      try {
+        process.env.LOOPLIA_DEV = "true";
+        process.env.LOOPLIA_DEV_ROOT = "~";
+
+        const paths = await getPluginPaths();
+
+        expect(paths.length).toBe(2);
+        expect(paths[0].path).toContain(homedir());
+        expect(paths[0].path).not.toContain("~");
+      } finally {
+        if (originalDev === undefined) {
+          // biome-ignore lint/performance/noDelete: env var cleanup requires actual key removal
+          delete process.env.LOOPLIA_DEV;
+        } else {
+          process.env.LOOPLIA_DEV = originalDev;
+        }
+        if (originalRoot === undefined) {
+          // biome-ignore lint/performance/noDelete: env var cleanup requires actual key removal
+          delete process.env.LOOPLIA_DEV_ROOT;
+        } else {
+          process.env.LOOPLIA_DEV_ROOT = originalRoot;
+        }
+      }
     });
 
     it("should return prod paths when LOOPLIA_DEV is not set", async () => {
       const originalDev = process.env.LOOPLIA_DEV;
 
-      process.env.LOOPLIA_DEV = undefined;
+      try {
+        process.env.LOOPLIA_DEV = undefined;
 
-      const paths = await getPluginPaths();
+        const paths = await getPluginPaths();
 
-      process.env.LOOPLIA_DEV = originalDev;
-
-      // In prod mode, returns array (may be empty if ~/.looplia doesn't exist)
-      expect(Array.isArray(paths)).toBe(true);
-      // If any paths exist, they should have the correct format
-      if (paths.length > 0) {
-        expect(paths[0].type).toBe("local");
+        // In prod mode, returns array (may be empty if ~/.looplia doesn't exist)
+        expect(Array.isArray(paths)).toBe(true);
+        // If any paths exist, they should have the correct format
+        if (paths.length > 0) {
+          expect(paths[0].type).toBe("local");
+        }
+      } finally {
+        if (originalDev === undefined) {
+          // biome-ignore lint/performance/noDelete: env var cleanup requires actual key removal
+          delete process.env.LOOPLIA_DEV;
+        } else {
+          process.env.LOOPLIA_DEV = originalDev;
+        }
       }
     });
   });

@@ -25,6 +25,15 @@ echo "ZENMUX_API_KEY=your-key" >> .env
 .claude/skills/looplia-e2e/scripts/e2e.sh
 ```
 
+> **Running inside Claude Code?** Use `env -u CLAUDECODE` to allow the CLI to spawn a
+> nested Claude Code subprocess. The `CLAUDECODE` env var is set by the outer session
+> and blocks any nested `claude` invocations:
+> ```bash
+> env -u CLAUDECODE .claude/skills/looplia-e2e/scripts/e2e.sh
+> ```
+> The scripts internally `unset CLAUDECODE` in `setup_test_env()`, so this is only
+> needed if you call `e2e.sh` directly (not via the `looplia-e2e` skill invocation).
+
 ## Modular Test Scripts (v0.8.0)
 
 The E2E tests are modular and can be run individually:
@@ -59,7 +68,7 @@ The script performs these steps:
 1. **Build** - Compiles the CLI from source
 2. **Reset** - Removes test workspace for fresh start
 3. **Init** - Initializes workspace with plugins
-4. **Configure** - Sets provider to ZenMux MiniMax M2.1
+4. **Configure** - Sets provider to ZenMux MiniMax M2.5
 5. **Build Command** - Tests workflow generation with auto-discovery (HN AI news aggregator)
 6. **Run Command** - Executes writing-kit workflow with ai-healthcare.md
 7. **Verify** - Checks outputs, validation state, and auto-discovery results
