@@ -203,7 +203,7 @@ describe("build command integration", () => {
       const result = await executeBatch(builtPrompt, testDir, mockExecutor);
 
       // v0.7.1: prompt now includes --sandbox-id suffix
-      expect(capturedPrompt).toContain("/looplia:build summarize articles");
+      expect(capturedPrompt).toContain("Create a looplia workflow from the following description: summarize articles");
       expect(result.workflowName).toBe("article-summary");
     });
 
@@ -235,7 +235,7 @@ describe("build command integration", () => {
       expect(capturedPrompt).not.toContain("\r");
       // v0.7.1: prompt now includes --sandbox-id suffix
       expect(capturedPrompt).toContain(
-        "/looplia:build test <script>alert('xss')</script> injection"
+        "Create a looplia workflow from the following description: test <script>alert('xss')</script> injection"
       );
     });
   });
@@ -396,7 +396,7 @@ version: 1.0.0
         executePrompt: (inputPrompt, options) => {
           // v0.7.1: prompt now includes --sandbox-id suffix
           expect(inputPrompt).toContain(
-            "/looplia:build analyze videos and extract themes"
+            "Create a looplia workflow from the following description: analyze videos and extract themes"
           );
           // Verify options
           expect(options.workspace).toBe(testDir);

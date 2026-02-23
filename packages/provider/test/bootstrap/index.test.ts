@@ -201,6 +201,27 @@ describe("bootstrap", () => {
       expect(paths[0].path).toContain("looplia-core");
     });
 
+    it("should expand tilde in LOOPLIA_DEV_ROOT", async () => {
+      const originalDev = process.env.LOOPLIA_DEV;
+      const originalRoot = process.env.LOOPLIA_DEV_ROOT;
+      const originalHome = process.env.HOME;
+
+      process.env.LOOPLIA_DEV = "true";
+      process.env.LOOPLIA_DEV_ROOT = "~/test/workspace";
+      process.env.HOME = "/Users/testuser";
+
+      const paths = await getPluginPaths();
+
+      process.env.LOOPLIA_DEV = originalDev;
+      process.env.LOOPLIA_DEV_ROOT = originalRoot;
+      process.env.HOME = originalHome;
+
+      // Should expand tilde to HOME directory
+      expect(paths.length).toBe(2);
+      expect(paths[0].path).toContain("/Users/testuser/test/workspace");
+      expect(paths[0].path).not.toContain("~");
+    });
+
     it("should return prod paths when LOOPLIA_DEV is not set", async () => {
       const originalDev = process.env.LOOPLIA_DEV;
 
