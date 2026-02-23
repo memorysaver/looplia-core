@@ -34,8 +34,8 @@ describe("model-provider", () => {
   });
 
   describe("PRESETS", () => {
-    it("should have 24 presets defined", () => {
-      expect(Object.keys(PRESETS)).toHaveLength(24);
+    it("should have 17 presets defined", () => {
+      expect(Object.keys(PRESETS)).toHaveLength(17);
     });
 
     it("should have required fields for each preset", () => {
@@ -69,8 +69,8 @@ describe("model-provider", () => {
     });
 
     it("should have zenmux presets with baseUrl", () => {
-      expect(PRESETS.ZENMUX_ZAI_GLM47.apiProvider).toBe("zenmux");
-      expect(PRESETS.ZENMUX_ZAI_GLM47.baseUrl).toBe(
+      expect(PRESETS.ZENMUX_MINIMAX_M21.apiProvider).toBe("zenmux");
+      expect(PRESETS.ZENMUX_MINIMAX_M21.baseUrl).toBe(
         "https://zenmux.ai/api/anthropic"
       );
     });
@@ -144,16 +144,16 @@ describe("model-provider", () => {
 
   describe("applyPreset", () => {
     it("should apply preset correctly", () => {
-      const settings = applyPreset("ZENMUX_ZAI_GLM47");
+      const settings = applyPreset("ZENMUX_MINIMAX_M21");
 
       expect(settings.version).toBe("1.0");
-      expect(settings.preset).toBe("ZENMUX_ZAI_GLM47");
+      expect(settings.preset).toBe("ZENMUX_MINIMAX_M21");
       expect(settings.apiProvider.type).toBe("zenmux");
       expect(settings.apiProvider.baseUrl).toBe(
         "https://zenmux.ai/api/anthropic"
       );
-      expect(settings.agents.main).toBe("z-ai/glm-4.7");
-      expect(settings.agents.executor).toBe("z-ai/glm-4.7");
+      expect(settings.agents.main).toBe("minimax/minimax-m2.1");
+      expect(settings.agents.executor).toBe("minimax/minimax-m2.1");
     });
 
     it("should preserve existing authToken when applying preset", () => {
@@ -169,10 +169,10 @@ describe("model-provider", () => {
         },
       };
 
-      const settings = applyPreset("ZENMUX_ZAI_GLM47", existingSettings);
+      const settings = applyPreset("ZENMUX_MINIMAX_M21", existingSettings);
 
       expect(settings.apiProvider.authToken).toBe("sk-existing-token");
-      expect(settings.agents.main).toBe("z-ai/glm-4.7");
+      expect(settings.agents.main).toBe("minimax/minimax-m2.1");
     });
 
     it("should throw error for unknown preset", () => {
@@ -228,25 +228,25 @@ describe("model-provider", () => {
     it("should return configured status with settings", () => {
       const settings: LoopliaSettings = {
         version: "1.0",
-        preset: "ZENMUX_ZAI_GLM47",
+        preset: "ZENMUX_MINIMAX_M21",
         apiProvider: {
           type: "zenmux",
           baseUrl: "https://zenmux.ai/api/anthropic",
           authToken: "sk-test-token",
         },
         agents: {
-          main: "z-ai/glm-4.7",
-          executor: "z-ai/glm-4.7",
+          main: "minimax/minimax-m2.1",
+          executor: "minimax/minimax-m2.1",
         },
       };
 
       const info = getSettingsDisplayInfo(settings);
 
       expect(info.status).toBe("configured");
-      expect(info.preset).toBe("ZENMUX_ZAI_GLM47");
+      expect(info.preset).toBe("ZENMUX_MINIMAX_M21");
       expect(info.provider).toBe("https://zenmux.ai/api/anthropic");
       expect(info.authToken).toBe("sk-test-token");
-      expect(info.agents.main).toBe("z-ai/glm-4.7");
+      expect(info.agents.main).toBe("minimax/minimax-m2.1");
     });
 
     it("should show correct provider display name for anthropic", () => {

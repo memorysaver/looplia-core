@@ -98,19 +98,6 @@ Add the token extraction to your `~/.zshrc` or `~/.bashrc` to automatically set 
 Access multiple AI providers through the ZenMux proxy. Requires `ZENMUX_API_KEY` environment variable.
 
 <Tabs>
-  <TabItem label="Anthropic">
-| Preset | Model | Provider |
-|--------|-------|----------|
-| `ZENMUX_ANTHROPIC_HAIKU45` | anthropic/claude-haiku-4.5 | Anthropic |
-  </TabItem>
-  <TabItem label="Zhipu AI">
-| Preset | Model | Provider |
-|--------|-------|----------|
-| `ZENMUX_ZAI_GLM47` | z-ai/glm-4.7 | Zhipu AI |
-| `ZENMUX_ZAI_GLM47FLASHX` | z-ai/glm-4.7-flashx | Zhipu AI |
-| `ZENMUX_ZAI_GLM46V` | z-ai/glm-4.6v | Zhipu AI |
-| `ZENMUX_ZAI_GLM46VFLASH` | z-ai/glm-4.6v-flash | Zhipu AI |
-  </TabItem>
   <TabItem label="Google">
 | Preset | Model | Provider |
 |--------|-------|----------|
@@ -120,13 +107,12 @@ Access multiple AI providers through the ZenMux proxy. Requires `ZENMUX_API_KEY`
   <TabItem label="Other Providers">
 | Preset | Model | Provider |
 |--------|-------|----------|
+| `ZENMUX_ZAI_GLM5` | z-ai/glm-5 | Zhipu AI |
+| `ZENMUX_MINIMAX_M25LIGHTNING` | minimax/minimax-m2.5-lightning | MiniMax |
+| `ZENMUX_MINIMAX_M25` | minimax/minimax-m2.5 | MiniMax |
 | `ZENMUX_MINIMAX_M21` | minimax/minimax-m2.1 | MiniMax |
-| `ZENMUX_XIAOMI_MIMOV2FLASH` | xiaomi/mimo-v2-flash | Xiaomi |
+| `ZENMUX_QWEN_QWEN35PLUS` | qwen/qwen3.5-plus | Alibaba |
 | `ZENMUX_XAI_GROK41FAST` | x-ai/grok-4.1-fast | xAI |
-| `ZENMUX_DEEPSEEK_V32` | deepseek/deepseek-v3.2 | DeepSeek |
-| `ZENMUX_DEEPSEEK_REASONER` | deepseek/deepseek-reasoner | DeepSeek |
-| `ZENMUX_VOLCENGINE_DOUBAO_SEED` | volcengine/doubao-seed-1.8 | ByteDance |
-| `ZENMUX_MISTRAL_LARGE2512` | mistralai/mistral-large-2512 | Mistral |
 | `ZENMUX_OPENAI_GPT51CODEXMINI` | openai/gpt-5.1-codex-mini | OpenAI |
   </TabItem>
 </Tabs>
@@ -138,7 +124,7 @@ Access multiple AI providers through the ZenMux proxy. Requires `ZENMUX_API_KEY`
 export ZENMUX_API_KEY=sk-zenmux-...
 
 # Apply preset (example: GLM-4.7)
-looplia config provider preset ZENMUX_ZAI_GLM47
+looplia config provider preset ZENMUX_MINIMAX_M21
 
 # Run workflow
 looplia run writing-kit --file article.md
@@ -148,20 +134,14 @@ looplia run writing-kit --file article.md
 
 | Preset | Model | Provider |
 |--------|-------|----------|
-| `ZENMUX_ANTHROPIC_HAIKU45` | anthropic/claude-haiku-4.5 | Anthropic |
-| `ZENMUX_ZAI_GLM47` | z-ai/glm-4.7 | Zhipu AI |
-| `ZENMUX_ZAI_GLM47FLASHX` | z-ai/glm-4.7-flashx | Zhipu AI |
-| `ZENMUX_ZAI_GLM46V` | z-ai/glm-4.6v | Zhipu AI |
-| `ZENMUX_ZAI_GLM46VFLASH` | z-ai/glm-4.6v-flash | Zhipu AI |
+| `ZENMUX_ZAI_GLM5` | z-ai/glm-5 | Zhipu AI |
+| `ZENMUX_MINIMAX_M25LIGHTNING` | minimax/minimax-m2.5-lightning | MiniMax |
+| `ZENMUX_MINIMAX_M25` | minimax/minimax-m2.5 | MiniMax |
 | `ZENMUX_MINIMAX_M21` | minimax/minimax-m2.1 | MiniMax |
 | `ZENMUX_GOOGLE_GEMINI3FLASH` | google/gemini-3-flash-preview | Google |
 | `ZENMUX_GOOGLE_GEMINI3FLASH_FREE` | google/gemini-3-flash-preview-free | Google (Free) |
-| `ZENMUX_XIAOMI_MIMOV2FLASH` | xiaomi/mimo-v2-flash | Xiaomi |
+| `ZENMUX_QWEN_QWEN35PLUS` | qwen/qwen3.5-plus | Alibaba |
 | `ZENMUX_XAI_GROK41FAST` | x-ai/grok-4.1-fast | xAI |
-| `ZENMUX_DEEPSEEK_V32` | deepseek/deepseek-v3.2 | DeepSeek |
-| `ZENMUX_DEEPSEEK_REASONER` | deepseek/deepseek-reasoner | DeepSeek |
-| `ZENMUX_VOLCENGINE_DOUBAO_SEED` | volcengine/doubao-seed-1.8 | ByteDance |
-| `ZENMUX_MISTRAL_LARGE2512` | mistralai/mistral-large-2512 | Mistral |
 | `ZENMUX_OPENAI_GPT51CODEXMINI` | openai/gpt-5.1-codex-mini | OpenAI |
 
 <Aside>
@@ -177,7 +157,6 @@ Access multiple models through OpenRouter with centralized configuration via the
 | Preset | Model | Description |
 |--------|-------|-------------|
 | `OPENROUTER_PRESET` | @preset/looplia-default | User-configured preset |
-| `OPENROUTER_ZAI_GLM47FLASH` | z-ai/glm-4.7-flash | Zhipu AI GLM-4.7-Flash |
 
 ### Setup
 

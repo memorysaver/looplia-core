@@ -84,10 +84,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `extractSandboxResult()` finds sandbox, reads validation.json, returns final artifact
   - Works with any model (no StructuredOutput tool dependency)
 
-- **GLM-4.7 Model Presets** - New presets for GLM models
-  - `ZENMUX_ZAI_GLM47FLASHX` - GLM-4.7-FlashX via ZenMux
-  - `OPENROUTER_ZAI_GLM47FLASH` - GLM-4.7-Flash via OpenRouter
-
 - **OpenRouter and Ollama Provider Presets** - Added support for OpenRouter and Ollama as model provider options
   - New presets: `OPENROUTER_PRESET`, `OLLAMA_GLM47_CLOUD`, `OLLAMA_MINIMAX_M21_CLOUD`
   - OpenRouter uses `@preset/looplia-default` for dashboard-configured models

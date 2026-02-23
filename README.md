@@ -177,7 +177,7 @@ looplia config show
 
 # Configure model provider (v0.6.6)
 looplia config provider show                       # Display current config
-looplia config provider preset ZENMUX_ZAI_GLM47    # Apply preset
+looplia config provider preset ZENMUX_MINIMAX_M21  # Apply preset
 looplia config provider set auth-token sk-ai-xxx   # Set API key
 looplia config provider reset                      # Clear config
 ```
