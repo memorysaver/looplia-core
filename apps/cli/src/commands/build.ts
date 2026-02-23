@@ -109,6 +109,21 @@ export type StreamingBatchExecutor = {
 };
 
 /**
+ * Executor interface for dependency injection in interactive streaming batch tests
+ */
+export type InteractiveStreamingBatchExecutor = {
+  executeInteractiveQueryStreaming: <T>(
+    prompt: string,
+    schema: Record<string, unknown>,
+    config: { workspace: string; buildHooks?: unknown },
+    questionCallback?: QuestionCallback
+  ) => AsyncGenerator<
+    StreamingEvent,
+    { success: boolean; data?: T; error?: { message: string } }
+  >;
+};
+
+/**
  * Parsed command arguments
  */
 export type BuildArgs = {
@@ -624,7 +639,8 @@ export type QuestionCallback = (
 export async function* executeInteractiveStreamingBatch(
   prompt: string,
   workspace: string,
-  questionCallback?: QuestionCallback
+  questionCallback?: QuestionCallback,
+  executorOverride?: InteractiveStreamingBatchExecutor
 ): AsyncGenerator<StreamingEvent, StreamingResult> {
   // v0.7.1: Create sandbox for build session (same pattern as run command)
   const { createSandboxDirectories, generateSandboxId } = await import(
@@ -644,11 +660,6 @@ export async function* executeInteractiveStreamingBatch(
   // Append sandbox-id to prompt so logger can extract it
   const promptWithSandbox = `${prompt} --sandbox-id ${sandboxId}`;
 
-  // Dynamically import interactive executor to avoid circular dependencies
-  const { executeInteractiveQueryStreaming } = await import(
-    "@looplia-core/provider/claude-agent-sdk"
-  );
-
   // Use a simple schema that allows any JSON result
   const schema = {
     type: "object",
@@ -662,7 +673,11 @@ export async function* executeInteractiveStreamingBatch(
   };
 
   // v0.7.5: Pass buildHooks for workflow file validation
-  const generator = executeInteractiveQueryStreaming<BuildResult>(
+  // Dynamically import interactive executor to avoid circular dependencies (unless overridden for tests)
+  const executor =
+    executorOverride ??
+    (await import("@looplia-core/provider/claude-agent-sdk"));
+  const generator = executor.executeInteractiveQueryStreaming<BuildResult>(
     promptWithSandbox,
     schema as Record<string, unknown>,
     { workspace, buildHooks: createBuildHooks() },

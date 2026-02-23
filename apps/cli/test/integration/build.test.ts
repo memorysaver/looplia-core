@@ -20,8 +20,10 @@ import {
   type BuildResult,
   buildPrompt,
   executeBatch,
+  executeInteractiveStreamingBatch,
   executeStreamingBatch,
   getWorkspacePath,
+  type InteractiveStreamingBatchExecutor,
   renderResult,
   type StreamingBatchExecutor,
 } from "../../src/commands/build";
@@ -31,6 +33,8 @@ const SANDBOX_ID_PATTERN = /^build-\d{4}-\d{2}-\d{2}-[a-f0-9]{4}$/;
 // Pattern for --sandbox-id suffix in prompt
 const SANDBOX_ID_SUFFIX_PATTERN =
   /--sandbox-id build-\d{4}-\d{2}-\d{2}-[a-f0-9]{4}$/;
+// Pattern for extracting sandbox ID from prompt (used in interactive mock executor)
+const SANDBOX_ID_EXTRACT_PATTERN = /--sandbox-id (build-[\w-]+)/;
 
 describe("build command integration", () => {
   let testDir: string;
@@ -559,6 +563,78 @@ version: 1.0.0
       expect(result.data?.status).toBe("success");
       expect(result.data?.workflowPath).toBe(expectedWorkflowPath);
       expect(result.data?.workflowName).toBe("streamed-workflow");
+    });
+  });
+
+  describe("executeInteractiveStreamingBatch failure-path validation.json fallback", () => {
+    it("should succeed when interactive executor fails but validation.json was already written", async () => {
+      const expectedWorkflowPath = join(
+        testDir,
+        "workflows",
+        "interactive-workflow.md"
+      );
+
+      const mockExecutor: InteractiveStreamingBatchExecutor = {
+        async *executeInteractiveQueryStreaming<T>(
+          _prompt: string,
+          _schema: Record<string, unknown>,
+          config: { workspace: string; buildHooks?: unknown }
+        ): AsyncGenerator<
+          StreamingEvent,
+          { success: boolean; data?: T; error?: { message: string } }
+        > {
+          // Satisfy AsyncGenerator<StreamingEvent, ...> without emitting any events
+          if (false as boolean) {
+            yield {} as StreamingEvent;
+          }
+          // Simulate agent writing validation.json before terminating abnormally
+          await Promise.resolve();
+          const sandboxIdMatch = _prompt.match(SANDBOX_ID_EXTRACT_PATTERN);
+          if (sandboxIdMatch) {
+            const sandboxDir = join(
+              config.workspace,
+              "sandbox",
+              sandboxIdMatch[1]
+            );
+            const validation = {
+              type: "build",
+              workflow: "interactive-workflow",
+              version: "1.0.0",
+              sandboxId: sandboxIdMatch[1],
+              createdAt: new Date().toISOString(),
+              status: "complete",
+              workflowValidated: true,
+              workflowPath: expectedWorkflowPath,
+              workflowName: "interactive-workflow",
+            };
+            writeFileSync(
+              join(sandboxDir, "validation.json"),
+              JSON.stringify(validation, null, 2),
+              "utf-8"
+            );
+          }
+          return { success: false, error: { message: "Agent failed" } };
+        },
+      };
+
+      const gen = executeInteractiveStreamingBatch(
+        "/looplia:build test",
+        testDir,
+        undefined,
+        mockExecutor
+      );
+
+      // Drain any yielded events (none expected)
+      let next = await gen.next();
+      while (!next.done) {
+        next = await gen.next();
+      }
+
+      const result = next.value;
+      expect(result.success).toBe(true);
+      expect(result.data?.status).toBe("success");
+      expect(result.data?.workflowPath).toBe(expectedWorkflowPath);
+      expect(result.data?.workflowName).toBe("interactive-workflow");
     });
   });
 
