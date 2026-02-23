@@ -16,7 +16,7 @@
  * @see plugins/looplia-core/commands/build.md
  */
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -89,6 +89,38 @@ export type BuildExecutor = {
     data?: BuildResult;
     error?: { message: string };
   }>;
+};
+
+/**
+ * Executor interface for dependency injection in streaming batch tests
+ */
+export type StreamingBatchExecutor = {
+  executePromptStreaming: (
+    prompt: string,
+    opts: { workspace: string; contentId: string }
+  ) => AsyncGenerator<
+    StreamingEvent,
+    {
+      success: boolean;
+      data?: unknown;
+      error?: { type: string; message: string };
+    }
+  >;
+};
+
+/**
+ * Executor interface for dependency injection in interactive streaming batch tests
+ */
+export type InteractiveStreamingBatchExecutor = {
+  executeInteractiveQueryStreaming: <T>(
+    prompt: string,
+    schema: Record<string, unknown>,
+    config: { workspace: string; buildHooks?: unknown },
+    questionCallback?: QuestionCallback
+  ) => AsyncGenerator<
+    StreamingEvent,
+    { success: boolean; data?: T; error?: { message: string } }
+  >;
 };
 
 /**
@@ -445,9 +477,9 @@ export async function executeBatch(
     return result.data as BuildResult;
   }
 
-  // v0.7.5: When buildHooks are used, success with no data means workflow was created
-  // Check validation.json for the result
-  if (result.success && !result.data) {
+  // v0.7.5: Check validation.json when there is no data — covers both success-with-no-data
+  // (buildHooks path) and failure cases (agent may terminate abnormally after writing the file)
+  if (!result.data) {
     const validation = readBuildValidationSync(sandboxDir);
     if (validation?.workflowValidated && validation.workflowPath) {
       return {
@@ -497,7 +529,6 @@ function readBuildValidationSync(
   sandboxDir: string
 ): BuildValidationManifest | undefined {
   try {
-    const { readFileSync } = require("node:fs");
     const content = readFileSync(
       join(sandboxDir, "validation.json"),
       "utf-8"
@@ -520,7 +551,8 @@ function readBuildValidationSync(
  */
 export async function* executeStreamingBatch(
   prompt: string,
-  workspace: string
+  workspace: string,
+  executorOverride?: StreamingBatchExecutor
 ): AsyncGenerator<StreamingEvent, StreamingResult> {
   // v0.7.1: Create sandbox for build session (same pattern as run command)
   const { createSandboxDirectories, generateSandboxId } = await import(
@@ -541,10 +573,12 @@ export async function* executeStreamingBatch(
   const promptWithSandbox = `${prompt} --sandbox-id ${sandboxId}`;
 
   // v0.7.5: Pass buildHooks for workflow file validation
-  const executor = createClaudeAgentExecutor({
-    workspace,
-    buildHooks: createBuildHooks(),
-  });
+  const executor =
+    executorOverride ??
+    createClaudeAgentExecutor({
+      workspace,
+      buildHooks: createBuildHooks(),
+    });
   const generator = executor.executePromptStreaming(promptWithSandbox, {
     workspace,
     contentId: sandboxId,
@@ -560,8 +594,9 @@ export async function* executeStreamingBatch(
   // Map executor result to StreamingResult
   const executorResult = iterResult.value;
 
-  // v0.7.5: Handle success with no data by reading validation.json
-  if (executorResult.success && !executorResult.data) {
+  // v0.7.5: Check validation.json as fallback for both success-with-no-data
+  // and failure cases (agent may terminate abnormally after writing the file)
+  if (!executorResult.data) {
     const validation = readBuildValidationSync(sandboxDir);
     if (validation?.workflowValidated && validation.workflowPath) {
       return {
@@ -604,7 +639,8 @@ export type QuestionCallback = (
 export async function* executeInteractiveStreamingBatch(
   prompt: string,
   workspace: string,
-  questionCallback?: QuestionCallback
+  questionCallback?: QuestionCallback,
+  executorOverride?: InteractiveStreamingBatchExecutor
 ): AsyncGenerator<StreamingEvent, StreamingResult> {
   // v0.7.1: Create sandbox for build session (same pattern as run command)
   const { createSandboxDirectories, generateSandboxId } = await import(
@@ -624,11 +660,6 @@ export async function* executeInteractiveStreamingBatch(
   // Append sandbox-id to prompt so logger can extract it
   const promptWithSandbox = `${prompt} --sandbox-id ${sandboxId}`;
 
-  // Dynamically import interactive executor to avoid circular dependencies
-  const { executeInteractiveQueryStreaming } = await import(
-    "@looplia-core/provider/claude-agent-sdk"
-  );
-
   // Use a simple schema that allows any JSON result
   const schema = {
     type: "object",
@@ -642,7 +673,11 @@ export async function* executeInteractiveStreamingBatch(
   };
 
   // v0.7.5: Pass buildHooks for workflow file validation
-  const generator = executeInteractiveQueryStreaming<BuildResult>(
+  // Dynamically import interactive executor to avoid circular dependencies (unless overridden for tests)
+  const executor =
+    executorOverride ??
+    (await import("@looplia-core/provider/claude-agent-sdk"));
+  const generator = executor.executeInteractiveQueryStreaming<BuildResult>(
     promptWithSandbox,
     schema as Record<string, unknown>,
     { workspace, buildHooks: createBuildHooks() },
@@ -659,8 +694,15 @@ export async function* executeInteractiveStreamingBatch(
   // Map executor result to StreamingResult
   const executorResult = iterResult.value;
 
-  // v0.7.5: Handle success with no data by reading validation.json
-  if (executorResult.success && !executorResult.data) {
+  // AgenticQueryResult<T> is a discriminated union: `data` only exists on the
+  // success branch. Extract it here so TypeScript allows access below.
+  // (Unlike executeStreamingBatch which uses CommandResult<WorkflowResult> — a
+  // flat type with optional data? — and can access .data directly.)
+  const executorData = executorResult.success ? executorResult.data : undefined;
+
+  // v0.7.5: Check validation.json as fallback for both success-with-no-data
+  // and failure cases (agent may terminate abnormally after writing the file)
+  if (!executorData) {
     const validation = readBuildValidationSync(sandboxDir);
     if (validation?.workflowValidated && validation.workflowPath) {
       return {
@@ -677,7 +719,7 @@ export async function* executeInteractiveStreamingBatch(
   if (executorResult.success) {
     return {
       success: true,
-      data: executorResult.data,
+      data: executorData,
     };
   }
   return {
