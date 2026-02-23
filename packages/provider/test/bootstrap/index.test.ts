@@ -198,8 +198,18 @@ describe("bootstrap", () => {
         expect(paths[0].type).toBe("local");
         expect(paths[0].path).toContain("looplia-core");
       } finally {
-        process.env.LOOPLIA_DEV = originalDev;
-        process.env.LOOPLIA_DEV_ROOT = originalRoot;
+        if (originalDev === undefined) {
+          // biome-ignore lint/performance/noDelete: env var cleanup requires actual key removal
+          delete process.env.LOOPLIA_DEV;
+        } else {
+          process.env.LOOPLIA_DEV = originalDev;
+        }
+        if (originalRoot === undefined) {
+          // biome-ignore lint/performance/noDelete: env var cleanup requires actual key removal
+          delete process.env.LOOPLIA_DEV_ROOT;
+        } else {
+          process.env.LOOPLIA_DEV_ROOT = originalRoot;
+        }
       }
     });
 
@@ -218,8 +228,18 @@ describe("bootstrap", () => {
         expect(paths[0].path).toContain(`${homedir()}/test/workspace`);
         expect(paths[0].path).not.toContain("~");
       } finally {
-        process.env.LOOPLIA_DEV = originalDev;
-        process.env.LOOPLIA_DEV_ROOT = originalRoot;
+        if (originalDev === undefined) {
+          // biome-ignore lint/performance/noDelete: env var cleanup requires actual key removal
+          delete process.env.LOOPLIA_DEV;
+        } else {
+          process.env.LOOPLIA_DEV = originalDev;
+        }
+        if (originalRoot === undefined) {
+          // biome-ignore lint/performance/noDelete: env var cleanup requires actual key removal
+          delete process.env.LOOPLIA_DEV_ROOT;
+        } else {
+          process.env.LOOPLIA_DEV_ROOT = originalRoot;
+        }
       }
     });
 
@@ -237,8 +257,18 @@ describe("bootstrap", () => {
         expect(paths[0].path).toContain(homedir());
         expect(paths[0].path).not.toContain("~");
       } finally {
-        process.env.LOOPLIA_DEV = originalDev;
-        process.env.LOOPLIA_DEV_ROOT = originalRoot;
+        if (originalDev === undefined) {
+          // biome-ignore lint/performance/noDelete: env var cleanup requires actual key removal
+          delete process.env.LOOPLIA_DEV;
+        } else {
+          process.env.LOOPLIA_DEV = originalDev;
+        }
+        if (originalRoot === undefined) {
+          // biome-ignore lint/performance/noDelete: env var cleanup requires actual key removal
+          delete process.env.LOOPLIA_DEV_ROOT;
+        } else {
+          process.env.LOOPLIA_DEV_ROOT = originalRoot;
+        }
       }
     });
 
@@ -257,7 +287,12 @@ describe("bootstrap", () => {
           expect(paths[0].type).toBe("local");
         }
       } finally {
-        process.env.LOOPLIA_DEV = originalDev;
+        if (originalDev === undefined) {
+          // biome-ignore lint/performance/noDelete: env var cleanup requires actual key removal
+          delete process.env.LOOPLIA_DEV;
+        } else {
+          process.env.LOOPLIA_DEV = originalDev;
+        }
       }
     });
   });
