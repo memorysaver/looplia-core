@@ -8,16 +8,20 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+import type { StreamingEvent } from "@looplia-core/core";
 
 import {
   type BuildArgs,
   type BuildExecutor,
   type BuildResult,
+  type StreamingBatchExecutor,
   buildPrompt,
   executeBatch,
+  executeStreamingBatch,
   getWorkspacePath,
   renderResult,
 } from "../../src/commands/build";
@@ -441,6 +445,99 @@ version: 1.0.0
 
       expect(path1).toBe(path2);
       expect(path1).toContain(".looplia");
+    });
+  });
+
+  describe("executeBatch failure-path validation.json fallback", () => {
+    it("should succeed when executor fails but validation.json was already written", async () => {
+      const expectedWorkflowPath = join(testDir, "workflows", "my-workflow.md");
+
+      const mockExecutor: BuildExecutor = {
+        executePrompt: (_prompt, options) => {
+          // Simulate agent writing validation.json before terminating abnormally
+          const sandboxDir = join(options.workspace, "sandbox", options.contentId);
+          const validation = {
+            type: "build",
+            workflow: "my-workflow",
+            version: "1.0.0",
+            sandboxId: options.contentId,
+            createdAt: new Date().toISOString(),
+            status: "complete",
+            workflowValidated: true,
+            workflowPath: expectedWorkflowPath,
+            workflowName: "my-workflow",
+          };
+          writeFileSync(
+            join(sandboxDir, "validation.json"),
+            JSON.stringify(validation, null, 2),
+            "utf-8"
+          );
+          return Promise.resolve({
+            success: false,
+            error: { message: "Agent failed" },
+          });
+        },
+      };
+
+      const result = await executeBatch("/looplia:build test", testDir, mockExecutor);
+
+      expect(result.status).toBe("success");
+      expect(result.workflowPath).toBe(expectedWorkflowPath);
+      expect(result.workflowName).toBe("my-workflow");
+    });
+  });
+
+  describe("executeStreamingBatch failure-path validation.json fallback", () => {
+    it("should succeed when streaming executor fails but validation.json was already written", async () => {
+      const expectedWorkflowPath = join(testDir, "workflows", "streamed-workflow.md");
+
+      const mockExecutor: StreamingBatchExecutor = {
+        executePromptStreaming: async function* (
+          _prompt: string,
+          opts: { workspace: string; contentId: string }
+        ): AsyncGenerator<
+          StreamingEvent,
+          { success: boolean; data?: unknown; error?: { type: string; message: string } }
+        > {
+          // Satisfy the AsyncGenerator<StreamingEvent, ...> yield type without emitting anything
+          if (false as boolean) {
+            yield {} as StreamingEvent;
+          }
+          // Simulate agent writing validation.json before terminating abnormally
+          const sandboxDir = join(opts.workspace, "sandbox", opts.contentId);
+          const validation = {
+            type: "build",
+            workflow: "streamed-workflow",
+            version: "1.0.0",
+            sandboxId: opts.contentId,
+            createdAt: new Date().toISOString(),
+            status: "complete",
+            workflowValidated: true,
+            workflowPath: expectedWorkflowPath,
+            workflowName: "streamed-workflow",
+          };
+          writeFileSync(
+            join(sandboxDir, "validation.json"),
+            JSON.stringify(validation, null, 2),
+            "utf-8"
+          );
+          return { success: false };
+        },
+      };
+
+      const gen = executeStreamingBatch("/looplia:build test", testDir, mockExecutor);
+
+      // Drain any yielded events (none expected)
+      let next = await gen.next();
+      while (!next.done) {
+        next = await gen.next();
+      }
+
+      const result = next.value;
+      expect(result.success).toBe(true);
+      expect(result.data?.status).toBe("success");
+      expect(result.data?.workflowPath).toBe(expectedWorkflowPath);
+      expect(result.data?.workflowName).toBe("streamed-workflow");
     });
   });
 
