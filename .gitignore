@@ -44,6 +44,9 @@ coverage
 .nyc_output
 test-workspace
 
+# Git worktrees
+.worktrees
+
 # Misc
 *.tgz
 .cache
