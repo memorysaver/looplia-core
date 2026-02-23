@@ -90,9 +90,9 @@ Auth Token: sk-ant-***...***
 Available Presets:
   ANTHROPIC_CLAUDE_HAIKU
   ANTHROPIC_CLAUDE_SONNET
-  ZENMUX_ZAI_GLM47
+  ZENMUX_MINIMAX_M21
   ZENMUX_GOOGLE_GEMINI3FLASH
-  ... (22 total)
+  ... (17 total)
 ```
 
 ### Apply a Preset
@@ -154,11 +154,10 @@ You can change models at any time by updating the preset - no need to reconfigur
   <TabItem label="ZenMux Proxy">
 | Preset | Model | Provider |
 |--------|-------|----------|
-| `ZENMUX_ZAI_GLM47` | glm-4.7 | Zhipu AI |
+| `ZENMUX_MINIMAX_M21` | minimax/minimax-m2.1 | MiniMax |
 | `ZENMUX_GOOGLE_GEMINI3FLASH` | gemini-3-flash | Google |
 | `ZENMUX_OPENAI_GPT51MINI` | gpt-5.1-codex-mini | OpenAI |
 | `ZENMUX_XAI_GROK41FAST` | grok-4.1-fast | xAI |
-| `ZENMUX_DEEPSEEK_REASONER` | deepseek-reasoner | DeepSeek |
 | `ZENMUX_MINIMAX_M21` | minimax-m21 | MiniMax |
 | ... | ... | ... |
   </TabItem>
@@ -170,8 +169,8 @@ Example:
 # Use Claude Haiku for faster, cheaper runs
 looplia config provider preset ANTHROPIC_CLAUDE_HAIKU
 
-# Use ZenMux with GLM-4.7
-looplia config provider preset ZENMUX_ZAI_GLM47
+# Use ZenMux with MiniMax-M2.1
+looplia config provider preset ZENMUX_MINIMAX_M21
 ```
 
 ### Set Individual Values

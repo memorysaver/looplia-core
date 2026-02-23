@@ -48,7 +48,7 @@ Examples:
   looplia config style --tone expert --word-count 1500
   looplia config style --voice first-person
   looplia config provider show
-  looplia config provider preset ZENMUX_ZAI_GLM47
+  looplia config provider preset ZENMUX_MINIMAX_M21
   looplia config provider set auth-token sk-ai-v1-xxx
   looplia config show
 `);
@@ -71,19 +71,15 @@ Available presets:
   CLAUDE_CODE_SUBSCRIPTION_HAIKU   Claude Haiku via subscription (macOS)
   CLAUDE_CODE_SUBSCRIPTION_SONNET  Claude Sonnet via subscription (macOS)
   CLAUDE_CODE_SUBSCRIPTION_OPUS    Claude Opus via subscription (macOS)
-  ZENMUX_ANTHROPIC_HAIKU45         ZenMux Claude Haiku 4.5
-  ZENMUX_ZAI_GLM47                 ZenMux GLM-4.7
-  ZENMUX_ZAI_GLM47FLASHX           ZenMux GLM-4.7-FlashX
-  ZENMUX_ZAI_GLM46VFLASH           ZenMux GLM-4.6v-Flash
+  ZENMUX_ZAI_GLM5                  ZenMux GLM-5
+  ZENMUX_MINIMAX_M25LIGHTNING      ZenMux MiniMax-M2.5-Lightning
+  ZENMUX_MINIMAX_M25               ZenMux MiniMax-M2.5
   ZENMUX_MINIMAX_M21               ZenMux MiniMax-M2.1
   ZENMUX_GOOGLE_GEMINI3FLASH       ZenMux Gemini-3-Flash
   ZENMUX_GOOGLE_GEMINI3FLASH_FREE  ZenMux Gemini-3-Flash (Free)
-  ZENMUX_XIAOMI_MIMOV2FLASH        ZenMux MiMo-v2-Flash
+  ZENMUX_QWEN_QWEN35PLUS           ZenMux Qwen3.5-Plus
   ZENMUX_XAI_GROK41FAST            ZenMux Grok-4.1-Fast
-  ZENMUX_DEEPSEEK_V32              ZenMux DeepSeek-v3.2
-  ZENMUX_MISTRAL_LARGE2512         ZenMux Mistral-Large-2512
   OPENROUTER_PRESET                OpenRouter (user-configured preset)
-  OPENROUTER_ZAI_GLM47FLASH        OpenRouter GLM-4.7-Flash
   OLLAMA_GLM47_CLOUD               Ollama GLM-4.7 Cloud
   OLLAMA_MINIMAX_M21_CLOUD         Ollama MiniMax-M2.1 Cloud
 
@@ -101,7 +97,7 @@ API keys (set in .env - looplia auto-maps based on provider):
   OLLAMA_API_KEY      For Ollama (optional, defaults to "ollama")
 
 Examples:
-  looplia config provider preset ZENMUX_ZAI_GLM47
+  looplia config provider preset ZENMUX_MINIMAX_M21
   looplia config provider preset OPENROUTER_PRESET
   looplia config provider preset OLLAMA_GLM47_CLOUD
   looplia config provider show
@@ -363,7 +359,7 @@ function runProviderWizard(): void {
   console.log("====================\n");
   console.log("Available options:\n");
   console.log("1. Apply a preset:");
-  console.log("   looplia config provider preset ZENMUX_ZAI_GLM47");
+  console.log("   looplia config provider preset ZENMUX_MINIMAX_M21");
   console.log("   looplia config provider preset ANTHROPIC_CLAUDE_HAIKU");
   console.log("");
   console.log("2. Configure manually:");
