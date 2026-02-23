@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **New ZenMux Model Presets** - Added support for the latest models
+  - `ZENMUX_ZAI_GLM5` - GLM-5 via ZenMux
+  - `ZENMUX_MINIMAX_M25LIGHTNING` - MiniMax-M2.5-Lightning via ZenMux
+  - `ZENMUX_MINIMAX_M25` - MiniMax-M2.5 via ZenMux
+  - `ZENMUX_QWEN_QWEN35PLUS` - Qwen3.5-Plus via ZenMux
+
+### Removed
+
+- **Deprecated Provider Presets** - Removed unsupported presets
+  - `OPENROUTER_ZAI_GLM47FLASH` - GLM-4.7-Flash via OpenRouter
+  - `ZENMUX_ANTHROPIC_HAIKU45` - Claude Haiku 4.5 via ZenMux
+  - `ZENMUX_ZAI_GLM47` - GLM-4.7 via ZenMux
+  - `ZENMUX_ZAI_GLM47FLASHX` - GLM-4.7-FlashX via ZenMux
+  - `ZENMUX_ZAI_GLM46VFLASH` - GLM-4.6v-Flash via ZenMux
+  - `ZENMUX_ZAI_GLM46V` - GLM-4.6v via ZenMux
+  - `ZENMUX_XIAOMI_MIMOV2FLASH` - MiMo-v2-Flash via ZenMux
+  - `ZENMUX_DEEPSEEK_V32` - DeepSeek-v3.2 via ZenMux
+  - `ZENMUX_DEEPSEEK_REASONER` - DeepSeek-Reasoner via ZenMux
+  - `ZENMUX_VOLCENGINE_DOUBAO_SEED` - Doubao-Seed-1.8 via ZenMux
+  - `ZENMUX_MISTRAL_LARGE2512` - Mistral-Large-2512 via ZenMux
+
 ### Fixed
 
 - **Interactive build mode false error** - `looplia build` no longer shows an error when the workflow file was successfully written but the agent terminated abnormally (non-success SDK subtype). `validation.json` is now the authoritative source of truth for build success, checked regardless of how the agent terminated.
