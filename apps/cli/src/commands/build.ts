@@ -560,8 +560,9 @@ export async function* executeStreamingBatch(
   // Map executor result to StreamingResult
   const executorResult = iterResult.value;
 
-  // v0.7.5: Handle success with no data by reading validation.json
-  if (executorResult.success && !executorResult.data) {
+  // v0.7.5: Check validation.json as fallback for both success-with-no-data
+  // and failure cases (agent may terminate abnormally after writing the file)
+  if (!executorResult.data) {
     const validation = readBuildValidationSync(sandboxDir);
     if (validation?.workflowValidated && validation.workflowPath) {
       return {
@@ -659,8 +660,12 @@ export async function* executeInteractiveStreamingBatch(
   // Map executor result to StreamingResult
   const executorResult = iterResult.value;
 
-  // v0.7.5: Handle success with no data by reading validation.json
-  if (executorResult.success && !executorResult.data) {
+  // Extract data safely - only accessible on the success branch of the discriminated union
+  const executorData = executorResult.success ? executorResult.data : undefined;
+
+  // v0.7.5: Check validation.json as fallback for both success-with-no-data
+  // and failure cases (agent may terminate abnormally after writing the file)
+  if (!executorData) {
     const validation = readBuildValidationSync(sandboxDir);
     if (validation?.workflowValidated && validation.workflowPath) {
       return {
@@ -677,7 +682,7 @@ export async function* executeInteractiveStreamingBatch(
   if (executorResult.success) {
     return {
       success: true,
-      data: executorResult.data,
+      data: executorData,
     };
   }
   return {

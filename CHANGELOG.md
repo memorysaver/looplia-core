@@ -5,6 +5,12 @@ All notable changes to Looplia-Core will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Interactive build mode false error** - `looplia build` no longer shows an error when the workflow file was successfully written but the agent terminated abnormally (non-success SDK subtype). `validation.json` is now the authoritative source of truth for build success, checked regardless of how the agent terminated.
+
 ## [0.8.0] - 2026-02-05
 
 ### Added
