@@ -203,7 +203,9 @@ describe("build command integration", () => {
       const result = await executeBatch(builtPrompt, testDir, mockExecutor);
 
       // v0.7.1: prompt now includes --sandbox-id suffix
-      expect(capturedPrompt).toContain("Create a looplia workflow from the following description: summarize articles");
+      expect(capturedPrompt).toContain(
+        "Create a looplia workflow from the following description: summarize articles"
+      );
       expect(result.workflowName).toBe("article-summary");
     });
 

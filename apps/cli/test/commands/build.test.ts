@@ -141,7 +141,9 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      expect(result).toBe("Create a looplia workflow from the following description: summarize articles");
+      expect(result).toBe(
+        "Create a looplia workflow from the following description: summarize articles"
+      );
     });
 
     it("should return just /build when no description", () => {
@@ -152,7 +154,9 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      expect(result).toBe("Create a looplia workflow from the following description:");
+      expect(result).toBe(
+        "Create a looplia workflow from the following description:"
+      );
     });
 
     it("should sanitize newlines from description", () => {
@@ -163,7 +167,9 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      expect(result).toBe("Create a looplia workflow from the following description: analyze videos and create");
+      expect(result).toBe(
+        "Create a looplia workflow from the following description: analyze videos and create"
+      );
       expect(result).not.toContain("\n");
       expect(result).not.toContain("\r");
     });
@@ -176,7 +182,9 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      expect(result).toBe("Create a looplia workflow from the following description: line1 line2");
+      expect(result).toBe(
+        "Create a looplia workflow from the following description: line1 line2"
+      );
     });
 
     it("should limit description to 500 chars", () => {
@@ -188,7 +196,8 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      const prefix = "Create a looplia workflow from the following description:";
+      const prefix =
+        "Create a looplia workflow from the following description:";
       // prefix + space + 500 chars
       expect(result.length).toBe(prefix.length + 1 + 500);
       expect(result).toBe(`${prefix} ${"a".repeat(500)}`);
@@ -202,7 +211,9 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      expect(result).toBe("Create a looplia workflow from the following description: summarize articles");
+      expect(result).toBe(
+        "Create a looplia workflow from the following description: summarize articles"
+      );
     });
 
     it("should handle description with only whitespace", () => {
@@ -215,7 +226,9 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      expect(result).toBe("Create a looplia workflow from the following description:");
+      expect(result).toBe(
+        "Create a looplia workflow from the following description:"
+      );
     });
 
     it("should include --name flag in prompt when provided", () => {
@@ -241,7 +254,9 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      expect(result).toBe("Create a looplia workflow from the following description: --name my-workflow");
+      expect(result).toBe(
+        "Create a looplia workflow from the following description: --name my-workflow"
+      );
     });
 
     it("should sanitize --name to safe filename characters", () => {
@@ -254,7 +269,9 @@ describe("build command", () => {
       };
       const result = buildPrompt(args);
       // Special characters replaced with hyphens, consecutive hyphens collapsed
-      expect(result).toBe("Create a looplia workflow from the following description: --name my-workflow test");
+      expect(result).toBe(
+        "Create a looplia workflow from the following description: --name my-workflow test"
+      );
     });
 
     it("should collapse consecutive hyphens in --name", () => {
@@ -266,7 +283,9 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      expect(result).toBe("Create a looplia workflow from the following description: --name my-workflow-name test");
+      expect(result).toBe(
+        "Create a looplia workflow from the following description: --name my-workflow-name test"
+      );
     });
 
     it("should omit --name when it becomes empty after sanitization", () => {
@@ -279,7 +298,9 @@ describe("build command", () => {
       };
       const result = buildPrompt(args);
       // --name should not be included since sanitized name is empty
-      expect(result).toBe("Create a looplia workflow from the following description: test");
+      expect(result).toBe(
+        "Create a looplia workflow from the following description: test"
+      );
     });
 
     it("should limit --name to 50 characters", () => {
@@ -292,7 +313,9 @@ describe("build command", () => {
       };
       const result = buildPrompt(args);
       // Name should be truncated to 50 chars
-      expect(result).toBe(`Create a looplia workflow from the following description: --name ${"a".repeat(50)} test`);
+      expect(result).toBe(
+        `Create a looplia workflow from the following description: --name ${"a".repeat(50)} test`
+      );
     });
 
     it("should trim whitespace from --name", () => {
@@ -304,7 +327,9 @@ describe("build command", () => {
         help: false,
       };
       const result = buildPrompt(args);
-      expect(result).toBe("Create a looplia workflow from the following description: --name my-workflow test");
+      expect(result).toBe(
+        "Create a looplia workflow from the following description: --name my-workflow test"
+      );
     });
   });
 

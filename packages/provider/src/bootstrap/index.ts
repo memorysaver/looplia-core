@@ -459,7 +459,9 @@ export async function getPluginPaths(): Promise<
     let devRoot = process.env.LOOPLIA_DEV_ROOT ?? process.cwd();
     // Expand tilde to home directory for plugin paths
     if (devRoot.startsWith("~/")) {
-      devRoot = devRoot.replace("~", process.env.HOME || "");
+      devRoot = join(homedir(), devRoot.slice(2));
+    } else if (devRoot === "~") {
+      devRoot = homedir();
     }
     return getDevPluginPaths(devRoot);
   }
