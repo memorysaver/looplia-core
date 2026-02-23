@@ -100,7 +100,11 @@ export type StreamingBatchExecutor = {
     opts: { workspace: string; contentId: string }
   ) => AsyncGenerator<
     StreamingEvent,
-    { success: boolean; data?: unknown; error?: { type: string; message: string } }
+    {
+      success: boolean;
+      data?: unknown;
+      error?: { type: string; message: string };
+    }
   >;
 };
 

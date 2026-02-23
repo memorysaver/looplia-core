@@ -18,12 +18,12 @@ import {
   type BuildArgs,
   type BuildExecutor,
   type BuildResult,
-  type StreamingBatchExecutor,
   buildPrompt,
   executeBatch,
   executeStreamingBatch,
   getWorkspacePath,
   renderResult,
+  type StreamingBatchExecutor,
 } from "../../src/commands/build";
 
 // Sandbox ID pattern for contentId validation (v0.7.1: build-YYYY-MM-DD-XXXX)
@@ -455,7 +455,11 @@ version: 1.0.0
       const mockExecutor: BuildExecutor = {
         executePrompt: (_prompt, options) => {
           // Simulate agent writing validation.json before terminating abnormally
-          const sandboxDir = join(options.workspace, "sandbox", options.contentId);
+          const sandboxDir = join(
+            options.workspace,
+            "sandbox",
+            options.contentId
+          );
           const validation = {
             type: "build",
             workflow: "my-workflow",
@@ -479,7 +483,11 @@ version: 1.0.0
         },
       };
 
-      const result = await executeBatch("/looplia:build test", testDir, mockExecutor);
+      const result = await executeBatch(
+        "/looplia:build test",
+        testDir,
+        mockExecutor
+      );
 
       expect(result.status).toBe("success");
       expect(result.workflowPath).toBe(expectedWorkflowPath);
@@ -489,21 +497,30 @@ version: 1.0.0
 
   describe("executeStreamingBatch failure-path validation.json fallback", () => {
     it("should succeed when streaming executor fails but validation.json was already written", async () => {
-      const expectedWorkflowPath = join(testDir, "workflows", "streamed-workflow.md");
+      const expectedWorkflowPath = join(
+        testDir,
+        "workflows",
+        "streamed-workflow.md"
+      );
 
       const mockExecutor: StreamingBatchExecutor = {
-        executePromptStreaming: async function* (
+        async *executePromptStreaming(
           _prompt: string,
           opts: { workspace: string; contentId: string }
         ): AsyncGenerator<
           StreamingEvent,
-          { success: boolean; data?: unknown; error?: { type: string; message: string } }
+          {
+            success: boolean;
+            data?: unknown;
+            error?: { type: string; message: string };
+          }
         > {
           // Satisfy the AsyncGenerator<StreamingEvent, ...> yield type without emitting anything
           if (false as boolean) {
             yield {} as StreamingEvent;
           }
           // Simulate agent writing validation.json before terminating abnormally
+          await Promise.resolve();
           const sandboxDir = join(opts.workspace, "sandbox", opts.contentId);
           const validation = {
             type: "build",
@@ -525,7 +542,11 @@ version: 1.0.0
         },
       };
 
-      const gen = executeStreamingBatch("/looplia:build test", testDir, mockExecutor);
+      const gen = executeStreamingBatch(
+        "/looplia:build test",
+        testDir,
+        mockExecutor
+      );
 
       // Drain any yielded events (none expected)
       let next = await gen.next();
