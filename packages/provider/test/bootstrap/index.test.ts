@@ -216,16 +216,8 @@ describe("bootstrap", () => {
         expect(paths[0].path).toContain(`${homedir()}/test/workspace`);
         expect(paths[0].path).not.toContain("~");
       } finally {
-        if (originalDev === undefined) {
-          delete process.env.LOOPLIA_DEV;
-        } else {
-          process.env.LOOPLIA_DEV = originalDev;
-        }
-        if (originalRoot === undefined) {
-          delete process.env.LOOPLIA_DEV_ROOT;
-        } else {
-          process.env.LOOPLIA_DEV_ROOT = originalRoot;
-        }
+        process.env.LOOPLIA_DEV = originalDev;
+        process.env.LOOPLIA_DEV_ROOT = originalRoot;
       }
     });
 

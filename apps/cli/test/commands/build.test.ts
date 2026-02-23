@@ -133,7 +133,7 @@ describe("build command", () => {
   });
 
   describe("buildPrompt", () => {
-    it("should create /build prompt from description", () => {
+    it("should create build prompt from description", () => {
       const args: BuildArgs = {
         description: "summarize articles",
         noInteractive: false,
@@ -146,7 +146,7 @@ describe("build command", () => {
       );
     });
 
-    it("should return just /build when no description", () => {
+    it("should return build prompt when no description", () => {
       const args: BuildArgs = {
         description: "",
         noInteractive: false,
