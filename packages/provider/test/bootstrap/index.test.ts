@@ -188,17 +188,19 @@ describe("bootstrap", () => {
       const originalDev = process.env.LOOPLIA_DEV;
       const originalRoot = process.env.LOOPLIA_DEV_ROOT;
 
-      process.env.LOOPLIA_DEV = "true";
-      process.env.LOOPLIA_DEV_ROOT = tempSource.path;
+      try {
+        process.env.LOOPLIA_DEV = "true";
+        process.env.LOOPLIA_DEV_ROOT = tempSource.path;
 
-      const paths = await getPluginPaths();
+        const paths = await getPluginPaths();
 
-      process.env.LOOPLIA_DEV = originalDev;
-      process.env.LOOPLIA_DEV_ROOT = originalRoot;
-
-      expect(paths.length).toBe(2);
-      expect(paths[0].type).toBe("local");
-      expect(paths[0].path).toContain("looplia-core");
+        expect(paths.length).toBe(2);
+        expect(paths[0].type).toBe("local");
+        expect(paths[0].path).toContain("looplia-core");
+      } finally {
+        process.env.LOOPLIA_DEV = originalDev;
+        process.env.LOOPLIA_DEV_ROOT = originalRoot;
+      }
     });
 
     it("should expand tilde in LOOPLIA_DEV_ROOT", async () => {
